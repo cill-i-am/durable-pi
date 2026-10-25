@@ -1,0 +1,32 @@
+$ vitest run
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/memory-latency.test.ts (4 tests | 1 failed) 6081ms
+   × bounds text materialization and preserves exact prompt bytes including Unicode and NUL 5245ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-latency.test.ts > bounds text materialization and preserves exact prompt bytes including Unicode and NUL
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/memory-latency.test.ts:127:4
+    125| )
+    126|
+    127| it.effect(
+       |    ^
+    128|   "bounds text materialization and preserves exact prompt bytes includ…
+    129|   () =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 290 passed (291)
+      Tests  1 failed | 3312 passed (3313)
+   Start at  17:44:41
+   Duration  50.78s (tests 63%, import 34%, transform 2%, setup 1%)
+
+    Isolate  291 workers spawned · ~114ms startup each (spawn + environment, per file)
+             at least ~3.58s faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.

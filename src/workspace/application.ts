@@ -1,15 +1,18 @@
-import { Clock, Effect } from "effect"
+import { Effect } from "effect"
 
-import { Workspace } from "./workspace"
+import type { WorkspaceUnavailable } from "./files"
+import { Workspace, type PreparationClaim } from "./workspace"
 
+/** The domain machine owns eligibility and retry deadlines. Lifecycle observes
+ * the next durable wake after one joined preparation attempt. */
 export const workspaceExtractionCycle = Effect.fn("Workspace.extractionCycle")(
-  function* () {
+  function* (
+    onClaim?: (
+      claim: PreparationClaim
+    ) => Effect.Effect<void, WorkspaceUnavailable>
+  ) {
     const workspace = yield* Workspace
-    const worked = yield* workspace.extractNext()
-    if (!(yield* workspace.extractionPending())) return undefined
-    return (yield* Clock.currentTimeMillis) + (worked ? 1000 : 30000)
+    yield* workspace.extractNext(onClaim)
+    return yield* workspace.nextPreparationWake()
   }
-)
-export const workspaceExtractionFailure = Clock.currentTimeMillis.pipe(
-  Effect.map((now) => now + 60000)
 )

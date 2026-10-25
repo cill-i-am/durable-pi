@@ -1,0 +1,37 @@
+
+Running 1 test using 1 worker
+
+(node:2479) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released (1.3s)
+
+
+  1) [desktop] › tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "recorders": 0,
+    -   "stops": 1,
+    +   "stops": 0,
+        "uploads": 0,
+      }
+
+      255 |       uploads: (window as unknown as Probe).recorded.length,
+      256 |     }))
+    > 257 |   ).toEqual({ stops: 1, recorders: 0, uploads: 0 })
+          |     ^
+      258 |   await page
+      259 |     .getByRole("button", { name: "Record voice message", exact: true })
+      260 |     .click()
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/file-media-lifecycle.spec.ts:257:5
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-cance-8c352-the-late-stream-is-released-desktop/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-cance-8c352-the-late-stream-is-released-desktop/error-context.md
+
+  1 failed
+    [desktop] › tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released 

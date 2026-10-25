@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { readFile,writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { makeAgentEditor } from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-editor-owner.ts'
+import { makeAgentCatalog } from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-catalog-owner.ts'
+import { makeAgentArchive } from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-archive-owner.ts'
+import { makeAgentStatuses } from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-statuses-owner.ts'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi'
+const require=createRequire(root+'/package.json')
+const { Effect,Deferred,Fiber,Scope,Exit,Cause,Context }=await import(require.resolve('effect'))
+const { send }=await import(require.resolve('@xstate/effect'))
+const manifest=JSON.parse(await readFile('/private/tmp/f10-freeze-manifest.json','utf8'))
+const source=Object.fromEntries(await Promise.all(Object.keys(manifest.files).map(async p=>[p,createHash('sha256').update(await readFile(root+'/'+p)).digest('hex')])))
+const profile={id:'home',slug:'home',name:'Home',instructions:'',status:'active',revision:1,createdAt:'today',updatedAt:'today'} as any
+const evidence:any={source,results:[]}
+for(const kind of ['editor','catalog','archive','statuses']){
+ const result=await Effect.runPromise(Effect.gen(function*(){
+  const scope=yield* Scope.make(),entered=yield* Deferred.make<void>(),aborted=yield* Deferred.make<void>()
+  let reject!:(cause:unknown)=>void,callbacks=0,listeners=0
+  const request=(signal:AbortSignal)=>new Promise<any>((_,fail)=>{
+   reject=fail; signal.addEventListener('abort',()=>Effect.runSync(Deferred.succeed(aborted,undefined)),{once:true});Effect.runSync(Deferred.succeed(entered,undefined))
+  })
+  let owner:any
+  if(kind==='editor')owner=yield* makeAgentEditor({id:profile.id,agent:profile},{save:(_,signal)=>request(signal),reconcile:async()=>{callbacks++},close:()=>{callbacks++}}).pipe(Scope.provide(scope))
+  if(kind==='catalog')owner=yield* makeAgentCatalog(request).pipe(Scope.provide(scope))
+  if(kind==='archive')owner=yield* makeAgentArchive({write:(_,signal)=>request(signal),reconcile:async()=>{callbacks++}}).pipe(Scope.provide(scope))
+  if(kind==='statuses')owner=yield* makeAgentStatuses({read:request,membership:()=> 'home:active',visible:()=>true,listen:()=>{listeners++;return()=>{listeners--}}}).pipe(Scope.provide(scope))
+  if(kind==='editor')yield* send(owner.actor,{type:'SAVE'})
+  if(kind==='archive'){yield* send(owner.actor,{type:'REQUEST',agent:profile,archived:true});yield* send(owner.actor,{type:'CONFIRM'})}
+  yield* Deferred.await(entered);owner.revoke()
+  const closing=yield* Effect.forkChild(Effect.exit(Scope.close(scope,Exit.void)))
+  yield* Deferred.await(aborted);yield* Effect.yieldNow
+  const held=closing.pollUnsafe()===undefined
+  const annotation=Context.makeUnsafe(new Map([['f10/native-cleanup',{source:kind,phase:'after-abort'}]]))
+  const failure=Cause.makeFailReason({message:'native checked cleanup failed',owner:kind}).annotate(annotation)
+  const interrupted=Cause.makeInterruptReason(91073).annotate(annotation)
+  reject(Cause.fromReasons([failure,interrupted]))
+  const exit=yield* Fiber.join(closing)
+  const reasons=Exit.isFailure(exit)?exit.cause.reasons:[]
+  const savedFail=reasons.some((r:any)=>r._tag==='Fail'&&r.error.owner===kind||r._tag==='Die'&&r.defect?._tag==='Fail'&&r.defect.error.owner===kind&&r.defect.annotations.get('f10/native-cleanup')?.source===kind)
+  const savedInterrupt=reasons.some((r:any)=>r._tag==='Interrupt'&&r.fiberId===91073&&r.annotations.get('f10/native-cleanup')?.source===kind)
+  return {kind,held,callbacks,listeners,status:exit._tag,savedFail,savedInterrupt,reasons:reasons.map((r:any)=>({tag:r._tag,fiberId:r.fiberId,defect:r.defect,error:r.error,annotations:[...r.annotations]}))}
+ }))
+ evidence.results.push(result)
+}
+console.log(JSON.stringify(evidence,null,2));await writeFile('/private/tmp/f10-independent/cleanup-evidence.json',JSON.stringify(evidence,null,2))
+for(const result of evidence.results){assert.equal(result.held,true,result.kind+' joins actual native settlement');assert.equal(result.callbacks,0,result.kind+' fences late callbacks');assert.equal(result.listeners,0,result.kind+' releases listeners');assert.equal(result.savedFail,true,result.kind+' must retain annotated checked cleanup failure without Die');assert.equal(result.savedInterrupt,true,result.kind+' must retain original annotated native Interrupt')}

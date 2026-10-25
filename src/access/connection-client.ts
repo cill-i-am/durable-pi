@@ -21,19 +21,27 @@ export interface ConnectionClient {
   tools: (
     record: SavedConnection
   ) => Effect.Effect<RemoteTool[], ConnectionTransportError>
-  connect: (
+  register: (
     record: SavedConnection,
     origin: string
   ) => Effect.Effect<void, ConnectionTransportError>
+  connect: (
+    record: SavedConnection
+  ) => Effect.Effect<boolean, ConnectionTransportError>
   remove: (id: string) => Effect.Effect<void, ConnectionTransportError>
   discover: (id: string) => Effect.Effect<void, ConnectionTransportError>
   isCallback: (
     request: Request
   ) => Effect.Effect<boolean, ConnectionTransportError>
   callback: (
-    request: Request
+    request: Request,
+    eligible: () => boolean
   ) => Effect.Effect<
-    { authenticated: boolean; connectionId: string | undefined },
+    {
+      authenticated: boolean
+      connectionId: string | undefined
+      revision: number
+    },
     ConnectionTransportError
   >
   establish: (id: string) => Effect.Effect<void, ConnectionTransportError>

@@ -1,0 +1,31 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+ ❯ tests/conversation-resume.test.ts (4 tests | 1 failed) 5018ms
+   × forwards only an acknowledged cursor on reconnect and stops on fresh authorization denial 5004ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-resume.test.ts > forwards only an acknowledged cursor on reconnect and stops on fresh authorization denial
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/conversation-resume.test.ts:16:1
+     14| })
+     15|
+     16| it("forwards only an acknowledged cursor on reconnect and stops on fre…
+       | ^
+     17|   vi.useFakeTimers()
+     18|   const cursor = crypto.randomUUID(),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 301 passed (302)
+      Tests  1 failed | 3421 passed (3422)
+   Start at  21:05:29
+   Duration  123.11s (tests 61%, import 37%, transform 1%, setup 1%)
+
+     Import  1212 modules were evaluated 2307 times · 82.53s total, 37% of tracked time
+             ~13.81s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+

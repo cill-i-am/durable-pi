@@ -1,0 +1,2 @@
+Second code input 654321
+{"resetTokenABA":"fenced; new form and hash retained","sessionABA":"old revocation joined; no late read or notice","recoveryReview":"locked until explicit acknowledgement","busy":false,"urls":1,"revoked":1,"verify":[{"code":"123456","trustDevice":false},{"code":"654321","trustDevice":false}],"pageErrors":[]}

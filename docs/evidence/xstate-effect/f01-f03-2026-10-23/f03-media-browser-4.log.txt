@@ -1,0 +1,23 @@
+
+Running 14 tests using 1 worker
+
+(node:1410) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released (573ms)
+  ✓   2 [desktop] › tests/browser/file-media-lifecycle.spec.ts:263:1 › finish waits for native final data before releasing and uploading once (456ms)
+  ✓   3 [desktop] › tests/browser/file-media-lifecycle.spec.ts:299:1 › unmount joins late permission without recording or uploading (407ms)
+  ✓   4 [desktop] › tests/browser/file-media-lifecycle.spec.ts:320:1 › denied microphone retains an enabled explicit retry (381ms)
+  ✓   5 [desktop] › tests/browser/file-media-lifecycle.spec.ts:334:1 › transcript and text previews fence late results across the same file ID on another agent (664ms)
+  ✓   6 [desktop] › tests/browser/file-media-lifecycle.spec.ts:379:1 › video preview clears prior frames and aborts pending resources on unmount (588ms)
+  ✓   7 [desktop] › tests/browser/file-media-lifecycle.spec.ts:422:1 › switching agents waits for the previous microphone owner before a new acquisition (531ms)
+(node:1422) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   8 [mobile] › tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released (585ms)
+  ✓   9 [mobile] › tests/browser/file-media-lifecycle.spec.ts:263:1 › finish waits for native final data before releasing and uploading once (438ms)
+  ✓  10 [mobile] › tests/browser/file-media-lifecycle.spec.ts:299:1 › unmount joins late permission without recording or uploading (407ms)
+  ✓  11 [mobile] › tests/browser/file-media-lifecycle.spec.ts:320:1 › denied microphone retains an enabled explicit retry (381ms)
+  ✓  12 [mobile] › tests/browser/file-media-lifecycle.spec.ts:334:1 › transcript and text previews fence late results across the same file ID on another agent (672ms)
+  ✓  13 [mobile] › tests/browser/file-media-lifecycle.spec.ts:379:1 › video preview clears prior frames and aborts pending resources on unmount (586ms)
+  ✓  14 [mobile] › tests/browser/file-media-lifecycle.spec.ts:422:1 › switching agents waits for the previous microphone owner before a new acquisition (508ms)
+
+  14 passed (8.9s)

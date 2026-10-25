@@ -1,0 +1,1 @@
+{"sdk":"installed Better Auth passkey SDK","browser":"Chromium virtual CTAP2 authenticator","registration":[{"kind":"create","active":true}],"authentication":[{"kind":"get","active":true}],"verificationPosts":2,"credentialMatches":true,"externalRequests":0,"pageErrors":[]}

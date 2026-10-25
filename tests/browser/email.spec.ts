@@ -75,6 +75,7 @@ test("enable and revoke an address; uncertain replies require an explicit resend
   await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
   await page.goto("/agents/home/settings/general")
   await page.getByRole("button", { name: "Enable email", exact: true }).click()
+  await expect.poll(() => view.address).not.toBeNull()
   await expect(page.getByLabel("Private email address")).toHaveValue(
     view.address!
   )

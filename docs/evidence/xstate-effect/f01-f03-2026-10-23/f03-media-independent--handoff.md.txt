@@ -1,0 +1,9 @@
+# Independent F03 media review
+
+Closed clear on all exact source and dependency hashes in `/private/tmp/f03-media-final-source.json`; no production edits. Read the capture machine/resource/React scope, preview machine/transport/scope, audio cleanup, file-details machine and keyed callers.
+
+A fresh actual-resource probe (`probe.mts`, `probe.log`, `evidence.json` in this directory) drives immediate Finish once recording becomes visible, then Cancel while the native stop event is held after its final chunk. It proves no upload, no early track release, exactly one native stop and both tracks released only after native stop joins. It separately holds the actual transcript response body during scope closure: closure stays pending after abort, joins that body and admits no second pagination request. These proofs use the production machine/capture/preview modules with local synthetic browser capabilities.
+
+All 16 affected actor/resource tests pass in `focused.log`, retaining existing denied permission, late acquisition, cross-owner microphone permit, final data, size/time limits, malformed event, failed track cleanup and complete compound Cause assertions. The owner’s 16 browser cases and negative track-release control are existing evidence; this review did not repeat browser or broad gates.
+
+No additional defect was found in this bounded read. Native browser encoders, real microphone hardware and hosted provider delivery remain outside the proof. The root composed built-application gate remains required.

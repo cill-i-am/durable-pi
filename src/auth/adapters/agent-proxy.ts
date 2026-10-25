@@ -65,6 +65,14 @@ export async function agentProxy(
       const failures: Cause.Reason<never>[] = []
       for (const work of [
         active ? cleanup(active.close) : Effect.void,
+        active?.settled
+          ? nativeOperation(
+              () => active.settled!,
+              (cause) => {
+                throw cause
+              }
+            )
+          : Effect.void,
         encoded ? releaseUnreadResponse(encoded) : Effect.void,
         response
           ? active
@@ -162,6 +170,7 @@ export async function agentProxy(
               () => revalidate(owner.id),
               (cause) => reportService(cause, "website")
             )
+            if (session.settled) bindings.own(session.settled)
             return session.response
           }),
         (cause) => {

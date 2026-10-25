@@ -27,7 +27,13 @@ it.effect(
     Effect.gen(function* () {
       const f = yield* conversationFixture()
       const root = Effect.runSync(
-        f.store.admit({ operationId: "root", text: "hello" })
+        f.store.admit(
+          { operationId: "root", text: "hello" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       ).turn
       const use = f.db.use
       let queries = 0
@@ -36,7 +42,12 @@ it.effect(
           queries++
           return use(body)
         })
-      const layer = sqliteConversationJournal(f.db, f.store, f.memoryLedger)
+      const layer = sqliteConversationJournal(
+        f.db,
+        f.store,
+        f.memoryLedger,
+        f.maintenance
+      )
       expect(queries).toBe(0)
       const journal = yield* ConversationJournal.pipe(Effect.provide(layer))
       expect(queries).toBe(0)
@@ -79,7 +90,13 @@ it.effect(
       }
       const f = yield* conversationFixture(db)
       const root = Effect.runSync(
-        f.store.admit({ operationId: "root", text: "hello" })
+        f.store.admit(
+          { operationId: "root", text: "hello" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       ).turn
       fail = true
       expect(
@@ -112,10 +129,16 @@ it.effect(
       )
       yield* f.memory.writeNote("MEMORY.md", "private note", earlier.id)
       const root = Effect.runSync(
-        f.store.admit({
-          operationId: "root",
-          text: "new question",
-        })
+        f.store.admit(
+          {
+            operationId: "root",
+            text: "new question",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       ).turn
       const prompt = yield* f.journal.prompt(root.id, "be careful")
       const content = JSON.parse(prompt!)
@@ -137,7 +160,13 @@ it.effect("rolls Memory append back when prompt pinning fails", () =>
   Effect.gen(function* () {
     const f = yield* conversationFixture()
     const root = Effect.runSync(
-      f.store.admit({ operationId: "root", text: "hello" })
+      f.store.admit(
+        { operationId: "root", text: "hello" },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     f.db.run(
       "CREATE TRIGGER reject_prompt BEFORE UPDATE OF prompt ON chat_turns WHEN NEW.prompt IS NOT NULL BEGIN SELECT RAISE(ABORT,'pin failed'); END"
@@ -156,17 +185,25 @@ it.effect("rejects a separate Memory transaction group before writes", () =>
   Effect.gen(function* () {
     const f = yield* conversationFixture()
     const root = Effect.runSync(
-      f.store.admit({ operationId: "root", text: "hello" })
+      f.store.admit(
+        { operationId: "root", text: "hello" },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     const journal = makeConversationJournal(
       f.store,
       {
         transactionGroup: {},
+        hasSources: (sources) => f.memoryLedger.hasSources(sources),
         append: (...args) => f.memoryLedger.append(...args),
         render: () => f.memoryLedger.render(),
         notes: () => f.memoryLedger.notes(),
       },
-      f.materialization
+      f.materialization,
+      f.maintenance
     )
     expect(
       yield* journal.prompt(root.id, "").pipe(Effect.result)
@@ -181,7 +218,13 @@ it.effect("rolls activity, archives and consumed inputs back together", () =>
   Effect.gen(function* () {
     const f = yield* conversationFixture()
     const root = Effect.runSync(
-      f.store.admit({ operationId: "root", text: "hello" })
+      f.store.admit(
+        { operationId: "root", text: "hello" },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     const observation = {
       ...empty,
@@ -207,10 +250,22 @@ it.effect("rejects stale completion before writing unanswered notes", () =>
   Effect.gen(function* () {
     const f = yield* conversationFixture()
     const root = Effect.runSync(
-      f.store.admit({ operationId: "root", text: "hello" })
+      f.store.admit(
+        { operationId: "root", text: "hello" },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     Effect.runSync(
-      f.store.admit({ operationId: "steer", text: "use blue", mode: "steer" })
+      f.store.admit(
+        { operationId: "steer", text: "use blue", mode: "steer" },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     )
     expect(
       yield* f.journal.complete(
@@ -230,7 +285,13 @@ it.effect(
     Effect.gen(function* () {
       const f = yield* conversationFixture()
       const root = Effect.runSync(
-        f.store.admit({ operationId: "root", text: "hello" })
+        f.store.admit(
+          { operationId: "root", text: "hello" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       ).turn
       const outcomes = [{ id: root.id, delivery: "unanswered" as const }]
       f.db.run(
@@ -266,23 +327,158 @@ it.effect(
     Effect.gen(function* () {
       const f = yield* conversationFixture()
       const root = Effect.runSync(
-        f.store.admit({ operationId: "root", text: "hello" })
+        f.store.admit(
+          { operationId: "root", text: "hello" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       ).turn
       const journal = makeConversationJournal(
         f.store,
         {
           transactionGroup: f.db,
+          hasSources: (sources) => f.memoryLedger.hasSources(sources),
           append: f.memoryLedger.append.bind(f.memoryLedger),
           notes: f.memoryLedger.notes.bind(f.memoryLedger),
           render: () => {
             throw new Error("programming defect")
           },
         },
-        f.materialization
+        f.materialization,
+        f.maintenance
       )
       const exit = yield* journal.prompt(root.id, "").pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
       expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
       expect(yield* f.memory.total()).toBe(0)
+    })
+)
+
+it.effect(
+  "fences prompt, archive and completion writes by the same native owner",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* conversationFixture()
+      yield* f.store.admit(
+        { operationId: "owned-root", text: "question" },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
+      const root = (yield* f.store.claimControl(
+        "owned-root",
+        "native-owner",
+        Date.now() + 60_000
+      ))!
+      expect(
+        yield* f.journal.prompt(root.id, "instructions", "stale-owner")
+      ).toBeUndefined()
+      expect(yield* f.memory.total()).toBe(0)
+      expect(
+        yield* f.journal.prompt(root.id, "instructions", "native-owner")
+      ).toBeDefined()
+      const count = yield* f.memory.total()
+      const observed = {
+        ...empty,
+        archives: [
+          {
+            source: "native-answer",
+            kind: "talk" as const,
+            text: "answer",
+          },
+        ],
+        consumed: [root.id],
+      }
+      yield* f.journal.archive(root.id, observed, "stale-owner")
+      expect(yield* f.memory.total()).toBe(count)
+      expect((yield* f.store.get(root.id))?.delivery).toBe("queued")
+      expect(
+        yield* f.journal.complete(
+          root,
+          [{ id: root.id, delivery: "unanswered" }],
+          "",
+          null,
+          "stale-owner"
+        )
+      ).toBe(false)
+      expect(yield* f.memory.total()).toBe(count)
+      yield* f.journal.archive(root.id, observed, "native-owner")
+      expect((yield* f.store.get(root.id))?.delivery).toBe("consumed")
+      expect(yield* f.memory.total()).toBe(count + 1)
+      expect(
+        yield* f.journal.complete(
+          root,
+          [{ id: root.id, delivery: "answered" }],
+          "answer",
+          null,
+          "native-owner"
+        )
+      ).toBe(true)
+      expect((yield* f.store.get(root.id))?.control?.owner).toBe("native-owner")
+      yield* f.store.releaseControl(root.id, "native-owner", true)
+      expect((yield* f.store.get(root.id))?.control?.owner).toBeNull()
+    })
+)
+
+it.effect(
+  "rejects duplicate completion members before appending unanswered Memory notes",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* conversationFixture()
+      for (const operationId of ["root", "child"])
+        yield* f.store.admit(
+          {
+            operationId,
+            text: operationId,
+            mode: operationId === "root" ? "followUp" : "steer",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
+      const root = (yield* f.store.get("root"))!
+      expect(
+        yield* f.journal.complete(
+          root,
+          [
+            { id: "root", delivery: "unanswered" },
+            { id: "root", delivery: "unanswered" },
+          ],
+          "",
+          null
+        )
+      ).toBe(false)
+      expect(yield* f.memory.total()).toBe(0)
+      expect((yield* f.store.get("child"))?.status).toBe("queued")
+    })
+)
+
+it.effect(
+  "does not archive an unpinned child prompt after its root stops",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* conversationFixture()
+      for (const id of ["root", "child"])
+        yield* f.store.admit(
+          {
+            operationId: id,
+            text: id,
+            mode: id === "root" ? "followUp" : "steer",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
+      yield* f.store.requestStop("root", {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+      expect(yield* f.journal.prompt("child", "instructions")).toBeUndefined()
+      expect(yield* f.memory.total()).toBe(0)
+      expect((yield* f.store.get("child"))?.prompt).toBeNull()
     })
 )

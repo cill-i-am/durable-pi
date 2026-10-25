@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Clock, Effect, Schema } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AgentId, homeAgentId, type AgentProfile } from "../src/agents/domain"
@@ -53,6 +53,8 @@ async function fixture() {
     approval = false,
     wakes = 0
   const app = whatsappApplication(store, {
+    reconcile: () => Effect.void,
+    armReply: () => Effect.void,
     configured: () => true,
     contactUrl: () => null,
     profiles: () => Effect.succeed(profiles),
@@ -72,7 +74,10 @@ async function fixture() {
     admit: (agent, input) =>
       Effect.gen(function* () {
         admissions.push({ agent, id: input.operationId })
-        return yield* conversations.admit(input)
+        const now = yield* Clock.currentTimeMillis
+        return yield* conversations.admit(input, undefined, [], undefined, {
+          discoveryDeadline: now + 60_000,
+        })
       }).pipe(Effect.orDie),
     turn: (_agent, id) =>
       conversations.get(id).pipe(
@@ -186,11 +191,13 @@ describe("durable WhatsApp delivery", () => {
     await run(f.app.pump())
     expect(f.sends).toHaveLength(1)
     await expect(
-      run(f.store.retry(input.id, false, crypto.randomUUID()))
+      run(
+        f.store.retry(input.id, false, crypto.randomUUID(), Date.now() + 60_000)
+      )
     ).rejects.toThrow()
     const operationId = crypto.randomUUID()
-    await run(f.store.retry(input.id, true, operationId))
-    await run(f.store.retry(input.id, true, operationId))
+    await run(f.store.retry(input.id, true, operationId, Date.now() + 60_000))
+    await run(f.store.retry(input.id, true, operationId, Date.now() + 60_000))
     f.clear()
     await run(f.app.pump())
     expect(f.sends).toHaveLength(2)
@@ -222,6 +229,12 @@ describe("durable WhatsApp delivery", () => {
     const f = await fixture(),
       input = await incoming()
     await run(f.app.receive(input))
+    // Keep work discovery live so this test isolates the provider's reply window.
+    f.db.run(
+      "UPDATE whatsapp_messages SET work_deadline=? WHERE id=?",
+      Date.now() + WHATSAPP_WINDOW_MS + 60_000,
+      input.id
+    )
     vi.setSystemTime(Date.now() + WHATSAPP_WINDOW_MS)
     await run(f.app.pump())
     expect((await run(f.store.get(input.id)))?.state).toBe("expired")
@@ -229,7 +242,9 @@ describe("durable WhatsApp delivery", () => {
     await run(f.app.receive(await incoming("wamid.new")))
     await run(f.app.pump())
     expect(f.admissions.map((item) => item.id)).not.toContain(input.id)
-    await run(f.store.retry(input.id, false, crypto.randomUUID()))
+    await run(
+      f.store.retry(input.id, false, crypto.randomUUID(), Date.now() + 60_000)
+    )
     await run(f.app.pump())
     expect(f.admissions.map((item) => item.id)).toContain(input.id)
   })

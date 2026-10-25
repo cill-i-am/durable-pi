@@ -1,0 +1,41 @@
+Negative control: remove the stale-observation epoch fence.
+Expected: held lookup must fail fresh-work protection.
+
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/family-model-authority.test.ts (12 tests | 2 failed | 10 skipped) 137ms
+   × discards a delayed lookup after another admission changes membership, initialized=false 83ms
+   × discards a delayed lookup after another admission changes membership, initialized=true 53ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/family-model-authority.test.ts > discards a delayed lookup after another admission changes membership, initialized=false
+ FAIL  tests/family-model-authority.test.ts > discards a delayed lookup after another admission changes membership, initialized=true
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/family-model-authority.test.ts:445:7
+    443|     expect(
+    444|       await Effect.runPromise(member.coordination.closed("fresh-after-…
+    445|     ).toBe(false)
+       |       ^
+    446|     expect(member.pause).toHaveBeenCalledTimes(initialized ? 1 : 0)
+    447|   }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 10 skipped (12)
+   Start at  09:09:39
+   Duration  1.84s (import 74%, transform 18%, tests 8%)
+
+
+Negative-control exit: 1
+Original source restored after the test.

@@ -1,0 +1,72 @@
+{
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "sourceHashes": {
+    "src/features/browser/browser.machine.ts": "838c60bcad7187948431a06e3f485aadf7e64decfdc17cbfa476b6662341f310",
+    "src/features/browser/browser-owner.ts": "d36bfc11c78055beaae20d0ac0657ba6eb058be258ef3ee372ecc026ed843afd",
+    "src/features/browser/use-browser.ts": "ba4049df214346e0e7d7ff5bfef0604f6d7edc3d5b4077d3b55caeb186f2fb01",
+    "src/features/browser/browser-preview.machine.ts": "1e415623fe4e7f8bb4894ea5d75744580f8dd133443fe5220e4472323b0bc33f",
+    "src/features/browser/browser-preview.tsx": "fe180d275ff4fdf5fce0bcfae9d1d8897aff960105a9976c2c0fe66104c10a92",
+    "src/features/browser/browser-controls.tsx": "95b6b0bb3a18e03930909e6f42f5aa5ac73f9310fe2db7e99435df4a0160a0bc",
+    "src/features/browser/browser-workbench.tsx": "717be833b1f7bab4959e50200748d42d1837d9adc7902da8d3b311d6621f1f4b",
+    "tests/browser-ui-lifecycle.test.ts": "49c2718deb811f34ab46e2cb25ac97f5423e52005c4428488ef20ae60b4f8902",
+    "tests/browser/browser-tools.spec.ts": "bf4e894fa6fabf79f26d933d78f6a80ea6ad5a7454e053b410b7e2806a41fcf2"
+  },
+  "focusedTests": 7,
+  "scopedTypecheck": "passed",
+  "scopedLint": "passed",
+  "scopedFormat": "passed",
+  "originalMountedProbe": "same script failed old and passed new; both screenshot-readiness and stale agent generation observed",
+  "negativeControls": {
+    "previewIdentity": "temporary esbuild transform; expected assertion failure",
+    "freshCloseGeneration": "temporary Vitest transform; expected body identity failure"
+  },
+  "evidence": {
+    "unit-final.log": "961fb944e958d30482c689b2be53c45d1d955bd42f2b9c99a89b719121a42d5b",
+    "final-src__features__browser__browser-controls.tsx": "95b6b0bb3a18e03930909e6f42f5aa5ac73f9310fe2db7e99435df4a0160a0bc",
+    "negative-close.log": "dc3f313a515294ca5afd9b42e1965bae05845c228e1edb1e7e46f3b95eccd96a",
+    "final-src__features__browser__browser-workbench.tsx": "717be833b1f7bab4959e50200748d42d1837d9adc7902da8d3b311d6621f1f4b",
+    "after-initial.log": "929c5b74d55968672a53b69dd9f57c4b4126828462a74bb4b310915acefb7880",
+    "format-final.log": "52f967323fe995bb5ecd0bcaff2236346c6d798e1cf80e11d2c4a61241c281ff",
+    "unit-initial.log": "734312dd9f3685752280fd9d98664074156266065390af3214e28ffd3095f830",
+    "type-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "browser-view-probe.mjs": "9d507e9e1ae923afcb00b0a87859ec87c68782fc8e5481bf2122c5a8006403cf",
+    "type-initial.log": "8d46a5d24c961903a33002ba475d35498c8fc45dbb70e1578095489a5c566cb0",
+    "final-tests__browser__browser-tools.spec.ts": "bf4e894fa6fabf79f26d933d78f6a80ea6ad5a7454e053b410b7e2806a41fcf2",
+    "final-src__features__browser__browser-preview.tsx": "fe180d275ff4fdf5fce0bcfae9d1d8897aff960105a9976c2c0fe66104c10a92",
+    "final-src__features__browser__browser.machine.ts": "838c60bcad7187948431a06e3f485aadf7e64decfdc17cbfa476b6662341f310",
+    "final-src__features__browser__browser-preview.machine.ts": "1e415623fe4e7f8bb4894ea5d75744580f8dd133443fe5220e4472323b0bc33f",
+    "final-src__features__browser__use-browser.ts": "ba4049df214346e0e7d7ff5bfef0604f6d7edc3d5b4077d3b55caeb186f2fb01",
+    "browser-preview-negative.mjs": "d3b34cf8aac605d0f776a3dd618a2271e2abc66c88802c1473d0dd5ce9ec0a88",
+    "lint-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "negative-preview.log": "575c50c3fd8100554e1034fba3eb8557b93b91a62f26f9faf3a13856b7340cda",
+    "tsconfig.json": "06607bf3b4837714b3abc2c537e9491a132c637870e39da274e924fe9a691cf5",
+    "negative-close.config.mjs": "ba52f231758f5cbe94f168148d48fe7e560f07c0f333b7255696fcccf67bb4bc",
+    "before.log": "adbca4c0411b82226f5979a9b92957e209f7d9a825987aeb9f3826867c6eecfa",
+    "final-src__features__browser__browser-owner.ts": "d36bfc11c78055beaae20d0ac0657ba6eb058be258ef3ee372ecc026ed843afd",
+    "final-tests__browser-ui-lifecycle.test.ts": "49c2718deb811f34ab46e2cb25ac97f5423e52005c4428488ef20ae60b4f8902",
+    "lint-initial.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "use-browser.before.ts": "b15fe9095b6280d93ec6daa8f8327d9080f6dc78f6ce014bbc17f1b32b190072",
+    "browser-controls.before.tsx": "155fd0589182b69da2a62b2d2df5b6f98bbc8466ca8418a40424b2594a102910",
+    "after.log": "929c5b74d55968672a53b69dd9f57c4b4126828462a74bb4b310915acefb7880"
+  },
+  "limits": "Focused local Effect actor tests plus isolated mounted React/Chromium proof with all agent network intercepted. Full application/browser gate owned by parent, no provider calls.",
+  "sourceFrozen": true,
+  "typeConfig": "/private/tmp/f05-browser-ui/tsconfig.json",
+  "commands": {
+    "focused": "node_modules/.bin/vitest run --configLoader native --cache false tests/browser-ui-lifecycle.test.ts --maxWorkers=2",
+    "type": "node_modules/.bin/tsc --noEmit --project /private/tmp/f05-browser-ui/tsconfig.json",
+    "mounted": "node /private/tmp/f05-browser-ui/browser-view-probe.mjs",
+    "closeNegative": "node_modules/.bin/vitest run --configLoader native --cache false --config /private/tmp/f05-browser-ui/negative-close.config.mjs tests/browser-ui-lifecycle.test.ts --maxWorkers=2 -t explicit Close",
+    "previewNegative": "node /private/tmp/f05-browser-ui/browser-preview-negative.mjs"
+  },
+  "exitCodes": {
+    "focused": 0,
+    "type": 0,
+    "lint": 0,
+    "format": 0,
+    "oldMounted": 1,
+    "newMounted": 0,
+    "closeNegative": 1,
+    "previewNegative": 1
+  }
+}

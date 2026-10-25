@@ -1,0 +1,38 @@
+
+Running 6 tests using 1 worker
+
+(node:96468) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released (474ms)
+(node:96476) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 tests/browser/file-media-lifecycle.spec.ts:265:1 › finish waits for native final data before releasing and uploading once (489ms)
+  ✓  3 tests/browser/file-media-lifecycle.spec.ts:301:1 › unmount joins late permission without recording or uploading (434ms)
+  ✓  4 tests/browser/file-media-lifecycle.spec.ts:322:1 › denied microphone retains an enabled explicit retry (404ms)
+  ✓  5 tests/browser/file-media-lifecycle.spec.ts:336:1 › transcript and text previews fence late results across the same file ID on another agent (643ms)
+  ✓  6 tests/browser/file-media-lifecycle.spec.ts:381:1 › video preview clears prior frames and aborts pending resources on unmount (583ms)
+
+
+  1) tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 1
+
+      259 |     .getByRole("button", { name: "Record voice message", exact: true })
+      260 |     .click()
+    > 261 |   expect(await page.evaluate(() => (window as unknown as Probe).micCalls)).toBe(
+          |                                                                            ^
+      262 |     2
+      263 |   )
+      264 | })
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/file-media-lifecycle.spec.ts:261:76
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-cance-8c352-the-late-stream-is-released/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-cance-8c352-the-late-stream-is-released/error-context.md
+
+  1 failed
+    tests/browser/file-media-lifecycle.spec.ts:226:1 › cancelled acquisition prevents restart until the late stream is released 
+  5 passed (4.7s)

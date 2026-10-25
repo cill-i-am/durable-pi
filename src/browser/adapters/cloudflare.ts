@@ -7,10 +7,12 @@ import puppeteer, {
   type Page,
   type HTTPRequest,
 } from "@cloudflare/puppeteer"
+import { createEffectActor } from "@xstate/effect"
 import { Clock, Effect, Exit, Schema } from "effect"
 import type { Scope } from "effect"
 
 import { orDieAll } from "../../shared/effect"
+import { browserConnectionMachine } from "../connection.machine"
 import {
   BROWSER_IDLE_MS,
   BROWSER_SESSION_MS,
@@ -159,15 +161,13 @@ export class CloudflareBrowser implements BrowserDriver {
         function disconnect(value: Browser) {
           return (closing ??= Promise.resolve().then(() => value.disconnect()))
         }
-        // The timer belongs to this call. Scope closure joins a disconnect already in flight.
-        yield* Effect.sleep("30 seconds").pipe(
-          Effect.andThen(
+        // The actor owns the deadline; the native finalizer joins the same disconnect.
+        yield* createEffectActor(
+          browserConnectionMachine(
             Effect.promise(() => disconnect(browser)).pipe(
-              Effect.exit,
               Effect.uninterruptible
             )
-          ),
-          Effect.forkScoped
+          )
         )
         const pages = yield* native(() => browser.pages())
         for (const page of pages.slice(0, 10)) {

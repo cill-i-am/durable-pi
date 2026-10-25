@@ -51,27 +51,34 @@ export function routineFixture(
     get: (id: string) => run(service.get(id)),
     runs: () => run(service.runs()),
     inFlight: () => run(service.inFlight()),
-    save: (input: SaveRoutine) => run(service.save(input)),
-    setStatus: (input: SetRoutineStatus) => run(service.setStatus(input)),
-    runNow: (input: RunRoutineNow) => run(service.runNow(input)),
+    save: (input: SaveRoutine) => run(service.save(input, now() + 60_000)),
+    setStatus: (input: SetRoutineStatus) =>
+      run(service.setStatus(input, now() + 60_000)),
+    runNow: (input: RunRoutineNow) =>
+      run(service.runNow(input, now() + 60_000)),
     cancelOperation: (id: string) => run(service.cancelOperation(id)),
     claimDue: () => run(service.claimDue()),
     deliver: (
       admit: (
-        value: RoutineRun
-      ) => void | Effect.Effect<unknown, ConversationFailure>
+        value: RoutineRun,
+        discoveryDeadline: number
+      ) => void | Effect.Effect<unknown, ConversationFailure>,
+      discoveryDeadline: number
     ) =>
       run(
-        service.deliver({
-          transactionGroup: db,
-          admit: (value) =>
-            Effect.suspend(() => {
-              const work = admit(value)
-              return Effect.isEffect(work)
-                ? work.pipe(Effect.as(value.turnId))
-                : Effect.succeed(value.turnId)
-            }),
-        })
+        service.deliver(
+          {
+            transactionGroup: db,
+            admit: (value, deadline) =>
+              Effect.suspend(() => {
+                const work = admit(value, deadline)
+                return Effect.isEffect(work)
+                  ? work.pipe(Effect.as(value.turnId))
+                  : Effect.succeed(value.turnId)
+              }),
+          },
+          discoveryDeadline
+        )
       ),
     finish: (
       id: string,
@@ -106,7 +113,17 @@ export function webhookFixture(
       eventId: string,
       payload: string,
       payloadHash: string
-    ) => run(service.accept(id, hash, eventId, payload, payloadHash)),
+    ) =>
+      run(
+        service.accept(
+          id,
+          hash,
+          eventId,
+          payload,
+          payloadHash,
+          Date.now() + 60_000
+        )
+      ),
   }
 }
 

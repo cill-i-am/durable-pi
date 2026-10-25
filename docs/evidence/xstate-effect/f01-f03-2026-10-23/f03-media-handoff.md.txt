@@ -1,0 +1,22 @@
+# F03 media handoff
+
+Source is frozen in `/private/tmp/f03-media-final-source.json`; it records 15 owned paths and two shared dependency hashes. Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi`.
+
+Implemented official scoped Effect actors for voice recording, file preview reads and file-details mutations. Capture cancellation joins late permission, native stop and all track releases before restart; a scoped microphone permit also spans cross-agent React remounts. Native final audio chunks are retained before upload, and timer/byte limits are preserved. Preview render and actor fences prevent stale agent/file results. Native audio controls remain; detached audio elements pause and release src. Complete late Die-containing Causes are observed through the shared fileWorkFailures helper.
+
+Checks:
+- 16 focused actor/resource tests passed: `/private/tmp/f03-media-unit-final.log`.
+- 16 actual Chromium cases (8 desktop, 8 mobile) passed: `/private/tmp/f03-media-browser-final.log`.
+- Bundle-only negative control removes track.stop; unchanged original cancellation assertion fails with stops=0 instead of 1: `/private/tmp/f03-media-browser-negative.log`.
+- Scoped TypeScript, architecture lint and format checks passed: `/private/tmp/f03-media-{types,lint,format}-final.log`.
+- Original before proof untouched: `/private/tmp/f03-before/probe.mjs`, `evidence.json`.
+
+Commands from worktree:
+```
+/opt/homebrew/opt/node@24/bin/node node_modules/vitest/vitest.mjs run --configLoader native --cache false tests/voice-recorder-machine.test.ts tests/file-preview-machine.test.ts
+PATH=/opt/homebrew/opt/node@24/bin:$PATH node_modules/.bin/playwright test --config /private/tmp/f03-media-playwright.config.ts
+F03_NEGATIVE_RELEASE=1 PATH=/opt/homebrew/opt/node@24/bin:$PATH node_modules/.bin/playwright test --config /private/tmp/f03-media-playwright.config.ts --project desktop -g 'cancelled acquisition'
+PATH=/opt/homebrew/opt/node@24/bin:$PATH node_modules/.bin/tsc --noEmit -p /private/tmp/f03-media-tsconfig.json
+```
+
+The browser fixture bundles actual components and uses held synthetic microphone, recorder and fetch capabilities. It proves ownership and lifecycle behavior; it does not claim live microphone/encoding or hosted-provider delivery. Existing built-app audio.spec.ts was strengthened to keep Reload disabled until cancelled permission settles, but its execution belongs to the root composed integration gate. No shared package/tracking/Git/full-gate modifications were performed.

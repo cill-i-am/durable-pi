@@ -1,0 +1,101 @@
+{
+  "base": "7ce831dc97ce655d9da80fc06d907e3b3030edaa",
+  "artifacts": [
+    {
+      "file": "routine-runner-before.log.txt",
+      "sha256": "3fc84476a356c60719d751878c664ec524b4413e0a65ed9fb4010ebbebaece2b",
+      "source": "/private/tmp/routine-runner-before.log"
+    },
+    {
+      "file": "routine-runner-after-first.log.txt",
+      "sha256": "35e16d5f8f0cf85efa33cdcec6e47b111471632b68b3089ec56b4b68d3a62676",
+      "source": "/private/tmp/routine-runner-after-first.log"
+    },
+    {
+      "file": "routine-runner-focused.log.txt",
+      "sha256": "ab0b88141c82b5745b763907059454809488a0cb99ecf41401563d70a2f0f2fd",
+      "source": "/private/tmp/routine-runner-focused.log"
+    },
+    {
+      "file": "routine-runner-cause-control.log.txt",
+      "sha256": "3db997e5b5e352ed65f93d1cd570d2bb1ab609da8195038b1df528ad3f63dd0a",
+      "source": "/private/tmp/routine-runner-cause-control.log"
+    },
+    {
+      "file": "routine-runner-cause-after.log.txt",
+      "sha256": "1552d3eca4a3cb38b40db01a732d3da999602c88cc435363b55cfa32b1a44bdd",
+      "source": "/private/tmp/routine-runner-cause-after.log"
+    },
+    {
+      "file": "routine-runner-native-binding-control.log.txt",
+      "sha256": "57d4ed49b37ac6126178dc5700160da3ce742d893ff357c0775e880534062522",
+      "source": "/private/tmp/routine-runner-native-binding-control.log"
+    },
+    {
+      "file": "routine-runner-native-join-before.log.txt",
+      "sha256": "439b77cd2f2ce44bf74259335874842081aca2c5b1970ff3fbfef3631a010d18",
+      "source": "/private/tmp/routine-runner-native-join-before.log"
+    },
+    {
+      "file": "routine-runner-focused-final.log.txt",
+      "sha256": "aa9bdfbf60c90ec2102de7b35fbb4b0971d6dd877853c4d13e1e54ea5a25d13d",
+      "source": "/private/tmp/routine-runner-focused-final.log"
+    },
+    {
+      "file": "routine-runner-static-complete.log.txt",
+      "sha256": "f21fc57716259a0551fd631c4f9ffb033692256ebe5adc86b56028e441132278",
+      "source": "/private/tmp/routine-runner-static-complete.log"
+    },
+    {
+      "file": "routine-runner-unit-complete.log.txt",
+      "sha256": "3a86c5c65bc84f0e84877a2b504bceecedcd854ed76721055adb6097732a9737",
+      "source": "/private/tmp/routine-runner-unit-complete.log"
+    },
+    {
+      "file": "routine-runner-build-complete.log.txt",
+      "sha256": "cd3d777701e39991fd86b5940d11c89aaa5119a8e44d03d7a196bf0efe85583e",
+      "source": "/private/tmp/routine-runner-build-complete.log"
+    },
+    {
+      "file": "routine-runner-routes-complete.log.txt",
+      "sha256": "f282d7dba702934a4718e64c20cb9e74ff7048a4edab5d58fc5b60b31ffb9dfa",
+      "source": "/private/tmp/routine-runner-routes-complete.log"
+    },
+    {
+      "file": "routine-runner-workers-complete.log.txt",
+      "sha256": "2e0524f78523f542bfb4e37a30c14e148409d7292bb197502510d817325b07a1",
+      "source": "/private/tmp/routine-runner-workers-complete.log"
+    },
+    {
+      "file": "routine-runner-native-personal-complete.log.txt",
+      "sha256": "281615c3ee5ac5415da0bd40a96ccdcf006566c91ae9fe5fca855acbf94c30eb",
+      "source": "/private/tmp/routine-runner-native-personal-complete.log"
+    },
+    {
+      "file": "routine-runner-native-routines.log.txt",
+      "sha256": "33c23ff58e917079a2373c0e73934649d30e44634bdd0aa746e45de0a39b871a",
+      "source": "/private/tmp/routine-runner-native-routines.log"
+    },
+    {
+      "file": "routine-runner-native-conversation.log.txt",
+      "sha256": "702208749d6d18dbf0411996cede139acd0b3af9375d859093df5ca87d93bbe5",
+      "source": "/private/tmp/routine-runner-native-conversation.log"
+    },
+    {
+      "file": "routine-runner-publication-secrets.log.txt",
+      "sha256": "26066d46b57cf04141e7286bf3e74d80c582421e53f90f3258b999d45315653f",
+      "source": "/private/tmp/routine-runner-publication-secrets.log"
+    }
+  ],
+  "sources": {
+    "scripts/test-communication-runtime.mjs": "bbac7b574b8c36730f4e999eeee4e4336d70a8bcb9739cbdb33f8e825c8ea15f",
+    "src/agent/worker.ts": "42b8a637a3e0a5f30dbcc6d789b6926379028992ce2e03ee6d8815157c1740ed",
+    "src/conversations/adapters/lifecycle.ts": "23f92f42a46b65c77ac10b561db9005b9539ee416af062c9796e6480c4f5f1f8",
+    "src/routines/adapters/lifecycle.ts": "bb234565710e7f05764d9322fc1d51598982189cfae7b7b00335150b667bcb3f",
+    "src/routines/runner.machine.ts": "9d0a209da0d4917160c56f86af90b38ce7cb58fdc009db55ba7bf5b2dbc1c460",
+    "tests/conversation-runner.test.ts": "80c3f8942ababa3b6880aa2016c7f5627d444e99e09d55febb5d393bbc4c0c95",
+    "tests/routine-runner.test.ts": "8b9bb195cdfd7286afffee54a11159a21931271913c1ef9790ee9facda8af1b3",
+    "tests/runtime/communication-worker.ts": "485cc030d5f1d500ea82049892d35baa8512a521f5e61cfb4f9267977455c688",
+    "tests/runtime/personal-agent-worker.ts": "d072e8367b27056127aebf43a42f5e58fd1cd0f40ec567c6b2385b3660c66266"
+  }
+}

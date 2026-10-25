@@ -1,0 +1,1 @@
+{"agent":"new","selection":{"revision":7,"skills":[]},"busy":false,"ready":true}

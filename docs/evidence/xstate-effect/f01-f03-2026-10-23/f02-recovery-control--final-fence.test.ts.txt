@@ -1,0 +1,8 @@
+import {expect,it,vi} from 'vitest'
+import {createRecovery} from './recovery'
+it('a guard registered at reload admission prevents native navigation',()=>{
+ const reload=vi.fn(), recovery=createRecovery('a'.repeat(40),reload)
+ recovery.subscribe(()=>{if(recovery.snapshot().reloading) recovery.block('draft','Unsaved draft')})
+ expect(recovery.reload()).toBe(false)
+ expect(reload).not.toHaveBeenCalled()
+})

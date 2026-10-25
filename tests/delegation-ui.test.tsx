@@ -89,3 +89,61 @@ describe("delegated work presentation", () => {
     expect(html).toContain("Keep it concise")
   })
 })
+
+describe("background cleanup controls", () => {
+  it.each(["pending", "unconfirmed"] as const)(
+    "keeps %s Stop actionable without showing a stopped child or restoring steering",
+    (stop) => {
+      const html = render({
+        ...group,
+        status: "cancelled",
+        background: {
+          delivery: "cancelled",
+          stop,
+          error: "Remote Stop needs acknowledgement.",
+          reportId: "same-report",
+        },
+      })
+      expect(html).toContain("Retry stop")
+      expect(html).toContain(
+        stop === "pending" ? "Stop pending" : "Stop unconfirmed"
+      )
+      expect(html).not.toContain("Stopped with parent")
+      expect(html).not.toContain("Steer Research")
+      expect(html).not.toContain("Retry connection")
+      expect(html).not.toContain('data-status="running"')
+    }
+  )
+  it.each(["none", "confirmed"] as const)(
+    "hides completed cleanup controls for %s",
+    (stop) => {
+      const html = render({
+        ...group,
+        status: "cancelled",
+        background: {
+          delivery: "cancelled",
+          stop,
+          error: null,
+          reportId: "same-report",
+        },
+      })
+      expect(html).not.toContain("Retry stop")
+      expect(html).not.toContain("Stop group")
+    }
+  )
+  it("keeps unconfirmed cleanup actionable after report delivery", () => {
+    const html = render({
+      ...group,
+      status: "completed",
+      background: {
+        delivery: "delivered",
+        stop: "unconfirmed",
+        error: "Remote Stop is unconfirmed.",
+        reportId: "same-report",
+      },
+    })
+    expect(html).toContain("Retry stop")
+    expect(html).toContain("Stop unconfirmed")
+    expect(html).not.toContain("Retry connection")
+  })
+})

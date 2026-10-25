@@ -202,3 +202,145 @@ it.effect(
       expect(yield* status()).toEqual({ state: "unavailable", turnId: "next" })
     })
 )
+
+it.effect(
+  "keeps uncertain roots readable from saved facts without observing unavailable native work",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* conversationFixture()
+      const id = "uncertain"
+      yield* f.store.admit({
+        operationId: id,
+        text: "keep the original message",
+      })
+      const saved = [{ id: "saved", type: "text", text: "Saved answer" }]
+      f.db.run(
+        "INSERT INTO chat_activity VALUES (?,?)",
+        id,
+        JSON.stringify(saved)
+      )
+      const observe = vi.fn(() =>
+        Effect.die(new Error("native observation must not run"))
+      )
+      const snapshot = conversationSnapshot(
+        f.conversations,
+        { observe },
+        f.journal,
+        () => Effect.succeed(metadata)
+      )
+      for (const unconfirmed of ["handoff", "observe", "stop"] as const) {
+        f.db.run(
+          "UPDATE chat_turns SET status=?,session_id='original-native-session',answer='Saved answer',revision=7,control=? WHERE id=?",
+          unconfirmed === "stop" ? "stopping" : "running",
+          JSON.stringify({
+            owner: "private-cleanup-owner",
+            deadline: 123456,
+            unconfirmed,
+          }),
+          id
+        )
+        const state = yield* snapshot()
+        expect(state.turns[0]).toMatchObject({
+          id,
+          revision: 7,
+          controlUnconfirmed: unconfirmed,
+          controlBusy: true,
+          answer: "Saved answer",
+          activity: saved,
+        })
+        expect(JSON.stringify(state)).not.toContain("private-cleanup-owner")
+        expect(JSON.stringify(state)).not.toContain("123456")
+      }
+      expect(observe).not.toHaveBeenCalled()
+      f.db.run(
+        "UPDATE chat_turns SET control=? WHERE id=?",
+        JSON.stringify({ owner: null, deadline: null, unconfirmed: "stop" }),
+        id
+      )
+      expect((yield* snapshot()).turns[0]?.controlBusy).toBeUndefined()
+    })
+)
+
+it.effect("keeps unconfirmed status independent of native approval reads", () =>
+  Effect.gen(function* () {
+    const awaitingApproval = vi.fn(() =>
+      Effect.die(new Error("approval read must not run"))
+    )
+    const status = runtimeStatusEffect(
+      {
+        statusTurns: () =>
+          Effect.succeed({
+            active: {
+              id: "original",
+              status: "stopping" as const,
+              controlUnconfirmed: "stop" as const,
+            },
+          }),
+      },
+      {
+        archived: () => Effect.succeed(false),
+        awaitingApproval,
+        planBlocked: () => Effect.succeed(false),
+      }
+    )
+    expect(yield* status()).toEqual({
+      state: "unavailable",
+      turnId: "original",
+    })
+    expect(awaitingApproval).not.toHaveBeenCalled()
+  })
+)
+
+it.effect(
+  "projects exhausted legacy uncertainty without reopening native observation",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* conversationFixture()
+      yield* f.store.admit({
+        operationId: "exhausted",
+        text: "original message",
+      })
+      const observe = vi.fn(() =>
+        Effect.die(new Error("exhausted native work must not be observed"))
+      )
+      const snapshot = conversationSnapshot(
+        f.conversations,
+        { observe },
+        f.journal,
+        () => Effect.succeed(metadata)
+      )
+      for (const [status, session, phase] of [
+        ["preparing", null, "handoff"],
+        ["running", "original-session", "observe"],
+        ["stopping", "original-session", "stop"],
+      ] as const) {
+        f.db.run(
+          "UPDATE chat_turns SET status=?,session_id=?,answer='Saved answer',control=? WHERE id='exhausted'",
+          status,
+          session,
+          JSON.stringify({
+            attempts: 3,
+            owner: null,
+            deadline: null,
+            unconfirmed: null,
+          })
+        )
+        expect((yield* snapshot()).turns[0]).toMatchObject({
+          id: "exhausted",
+          answer: "Saved answer",
+          controlUnconfirmed: phase,
+        })
+        expect(
+          yield* runtimeStatusEffect(f.conversations, {
+            archived: () => Effect.succeed(false),
+            awaitingApproval: () =>
+              Effect.die(
+                new Error("exhausted work must not query native approvals")
+              ),
+            planBlocked: () => Effect.succeed(false),
+          })()
+        ).toEqual({ state: "unavailable", turnId: "exhausted" })
+      }
+      expect(observe).not.toHaveBeenCalled()
+    })
+)

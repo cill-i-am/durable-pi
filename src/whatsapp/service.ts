@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect"
 
 import { AgentId, type AgentProfile } from "../agents/domain"
+import { admitReply } from "../replies/admission"
 import { replyDeliveryProgress } from "../replies/progress"
 import { preserveFatal } from "../shared/effect"
 import type { WhatsAppStore } from "./adapters/sqlite"
@@ -9,11 +10,13 @@ import {
   WhatsAppUnavailable,
   type ConfigureWhatsApp,
   type IncomingWhatsApp,
+  RetryWhatsApp,
   type WhatsAppFailure,
 } from "./contracts"
 import { whatsappPump, type WhatsAppPumpHost } from "./pump"
 
 export interface WhatsAppHost extends WhatsAppPumpHost {
+  reconcile: () => Effect.Effect<void, WhatsAppFailure>
   profiles: () => Effect.Effect<readonly AgentProfile[], WhatsAppFailure>
   configured: () => boolean
   contactUrl: () => string | null
@@ -36,8 +39,11 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
             message: "This WhatsApp message ID belongs to different content.",
           })
         // Admission may have committed before wake acknowledgement was lost.
-        yield* host.wake()
-        return false
+        return yield* admitReply({
+          arm: host.armReply,
+          accept: () => Effect.succeed(false),
+          wake: host.wake(),
+        })
       }
       const settings = yield* store.settings()
       if (!settings.enabled) return false
@@ -58,15 +64,33 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
           reply =
             "That agent is unavailable. Send /agents to see your active agents."
       }
-      const accepted = yield* store.receive(input, route ?? settings.agentId, {
-        reply,
-        route,
+      return yield* admitReply({
+        arm: host.armReply,
+        accept: (deadline) =>
+          store.receive(
+            input,
+            route ?? settings.agentId,
+            { reply, route, generation: settings.generation },
+            deadline
+          ),
+        wake: host.wake(),
       })
-      yield* host.wake()
-      return accepted
+    })
+  const retry = (input: typeof RetryWhatsApp.Type) =>
+    admitReply({
+      arm: host.armReply,
+      accept: (deadline) =>
+        store.retry(
+          input.id,
+          input.acknowledgeDuplicateRisk,
+          input.operationId,
+          deadline
+        ),
+      wake: host.wake(),
     })
   const view = () =>
     Effect.gen(function* () {
+      yield* host.reconcile()
       const settings = yield* store.settings()
       const profiles = yield* host.profiles()
       return {
@@ -118,7 +142,7 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
         ),
       }
     })
-  return { configure, receive, view, pump: whatsappPump(store, host) }
+  return { configure, receive, retry, view, pump: whatsappPump(store, host) }
 }
 
 export function whatsappResponse<T>(

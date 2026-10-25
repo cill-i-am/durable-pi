@@ -1,0 +1,45 @@
+{
+  "review": "F14 query bounded independent review",
+  "outcome": "two findings repaired; unchanged rechecks green; no remaining concrete issue in reviewed scope",
+  "at": "2026-10-23T20:03:22.659516+00:00",
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "head": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+  "sources": {
+    "src/features/activity/query.machine.ts": "ba2b951ec704c6f77cea29668aadc2b3908b124bfb670faa4fa3006a5ce2a4a4",
+    "src/features/activity/query-owner.ts": "2291e60e83d73f3940d6dded5b50e9cf029e5e98ba5f92750c332682da9b5801",
+    "src/features/activity/use-activity-query.ts": "4a4ff6ce15148d7a2167b33ec7ff82059010593bf3b26b9b498fde82c2aa57b3",
+    "src/features/activity/use-plans.ts": "8492a4b3951564046b3efa253abf9a719387baf9b0b941004c42f6c22a7c3ffd",
+    "src/features/activity/activity-timeline.tsx": "d37eb63262bf33a0312519b895cd2bf772421d3d17147ac1e5ac551b9b99af78",
+    "src/features/activity/activity-record.tsx": "3530a0a5f133bd2b7dc9f9c2236b3c468b55a50a594c08a8ee84d821bbb8905f",
+    "src/features/activity/run-timeline.tsx": "59209fb541a6da8dc0d7bb5070eca6717e2e5de9f09dbecd8be32437b0ba2f4a",
+    "src/features/activity/inference-runs.tsx": "625890327ddb2b38ad65b30af1cd62f35dadd0765329b1a680829ca77948dd10",
+    "src/features/activity/activity-workbench.tsx": "b25880b275a7bb0efc27c446e5ffadfa64afc5d25e980d6ad9dd888c61df6786",
+    "tests/activity-query-owner.test.ts": "81d0fc2fa66afe7b5d425ffeb816d89c81ae3ae3546ad7abd2a8d45541371d7f",
+    "tests/browser/activity-query.spec.ts": "4800c4a81dafae6c82f29eab5b6246f71b5ba497d457a10872cafc6e662841a0",
+    "tests/browser/fixtures/activity-query.tsx": "77d158e78c33de0886eef4d13307ee0bb40c148da6c82a5a0278bf73a1b19b2b"
+  },
+  "ownerManifestSha256": "1041fcf0b6568b05cdc5e4bdcb56ca197bcb104173418ff0bf0d41e06816086c",
+  "evidence": {
+    "plan-identity.mjs": "c6331d4cfb6a46063210a892fecafbc8c763b95744b9cb6eef0835a0fab994ce",
+    "plan-identity-before.log": "dce33f317e451488328aa2aaba5f08f0bc60c775a7f06abfc8e323abb81ff559",
+    "plan-identity-final.log": "66d4d3af8fc8c337f093d8d7d30ff34bed2d1b0c16cb8b9fd0602899bbc7c83f",
+    "history-identity.mjs": "ea2086a1e1db5ef59eb0b0960208e643c6331835f7145282cef79c9b2cbd7025",
+    "history-identity-before.log": "1128cc9c408366be645a7dc5157c81e756b1d00594f5db559a645299183f04cf",
+    "history-identity-after.log": "53f87d762e6fc50711b3d7fbca2904a01d018b899bb42d8be512ebd0c2abf573",
+    "annotated-cleanup.mts": "2993623e980236509ba0d1a1ab7b02037f34567147e6037fc3c006d3cbd9ae22",
+    "annotated-cleanup.log": "4f24514b0555555ca8c0c05e1802492cc9a2df65bfebfc98982ac2c5b3b89ad7",
+    "annotated-cleanup-initial-strict-equality.log": "57b0cf2530d3cbe5d4050833c4e898b9bb474dc847aaf08985472136bd7ab29c",
+    "focused-final.log": "7c3669f1e42001314baf7710b71396f2efcbd21abc958241a938e9d964e8c8a3",
+    "review.md": "111ccec2b9bcb14fa47e979ffe9e47e2cbbe05a91c79aa41d598358f3bce6720"
+  },
+  "independentChecks": {
+    "focused": "28/28 in3files",
+    "identity": "2/2 exact unchanged probes",
+    "compoundCleanup": "held native Fail+annotated Interrupt without Die passed"
+  },
+  "limits": [
+    "synthetic local HTTP; no provider effects",
+    "bounded read-only review, no broad gates",
+    "initial private PlanInspector exported only in isolated reviewer bundle"
+  ]
+}

@@ -1,197 +1,94 @@
-import { Schema } from "effect"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react"
 
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
-import { FileInfo, FileList, MAX_ATTACHMENTS } from "@/workspace/files"
+import type { FileInfo } from "@/workspace/files"
 
-import { attachmentSelectable, preparingFile } from "./preparation"
-import { uploadFile, type UploadAttempt } from "./uploads"
+import { makeFilesCache } from "./file-cache"
+import type { FileAction, UploadAttempt } from "./file-types"
+import { makeFilesOwner, type FilesOwner } from "./files-owner"
+import { attachmentSelectable } from "./preparation"
 
 export function useFiles(
   agentId: string,
   initialSelection: readonly FileInfo[] = []
 ) {
-  const [files, setFiles] = useState<readonly FileInfo[]>([])
-  const [selected, setSelected] =
-    useState<readonly FileInfo[]>(initialSelection)
-  const [uploads, setUploads] = useState<UploadAttempt[]>([])
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [processing, setProcessing] = useState(false)
-  const revision = useRef(0)
-  const busy = useRef(false)
-  const api = agentApi(agentId)
-  const refresh = useCallback(async () => {
-    const expected = ++revision.current
-    setLoading(true)
-    try {
-      const result = Schema.decodeUnknownSync(FileList)(
-        await agentApi(agentId)("files")
-      )
-      if (expected === revision.current) {
-        setFiles(result.files)
-        setSelected((current) =>
-          current.map(
-            (file) => result.files.find((saved) => saved.id === file.id) ?? file
+  // Initial draft references restore once for this agent. Owner changes remount
+  // the workspace; changing the agent creates a disjoint pure-data cache.
+  // oxlint-disable-next-line react/exhaustive-deps
+  const cache = useMemo(() => makeFilesCache(initialSelection), [agentId])
+  const data = useSyncExternalStore(cache.subscribe, cache.read, cache.read)
+  const [live, setLive] = useState<{
+    owner: FilesOwner
+    view: ReturnType<FilesOwner["read"]>
+  } | null>(null)
+  useEffect(() => {
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owner = yield* makeFilesOwner(agentId, cache)
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owner.subscribe(() => {
+              if (mounted) setLive({ owner, view: owner.read() })
+            })
+          ),
+          (unsubscribe) => Effect.sync(unsubscribe)
+        )
+        if (mounted) setLive({ owner, view: owner.read() })
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
           )
         )
-        setError("")
-      }
-    } catch (cause) {
-      if (expected === revision.current)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load files."
-        )
-    } finally {
-      if (expected === revision.current) setLoading(false)
-    }
-  }, [agentId])
-  const extracting = files.some(preparingFile)
-  useEffect(() => {
-    if (!extracting) return
-    return poll(refresh)
-  }, [extracting, refresh])
-  function select(file: FileInfo) {
-    setSelected((current) =>
-      current.some((item) => item.id === file.id)
-        ? current
-        : current.length >= MAX_ATTACHMENTS
-          ? current
-          : [...current, file]
-    )
-  }
-  async function runUpload(attempt: UploadAttempt) {
-    setUploads((current) => [
-      ...current.filter((item) => item.id !== attempt.id),
-      { ...attempt, status: "uploading" },
-    ])
-    try {
-      const file = await uploadFile(agentId, attempt)
-      revision.current++
-      setLoading(false)
-      setFiles((current) => [
-        file,
-        ...current.filter((item) => item.id !== file.id),
-      ])
-      if (attempt.attach) select(file)
-      setUploads((current) => current.filter((item) => item.id !== attempt.id))
-      await refresh()
-    } catch (cause) {
-      setUploads((current) =>
-        current.map((item) =>
-          item.id === attempt.id
-            ? {
-                ...attempt,
-                status: "failed",
-                error:
-                  cause instanceof Error
-                    ? cause.message
-                    : "Upload interrupted. Retry.",
-              }
-            : item
-        )
       )
     }
-  }
-  async function upload(chosen: readonly File[], attach: boolean) {
-    if (busy.current) return
-    const capacity = attach
-      ? MAX_ATTACHMENTS - selected.length
-      : MAX_ATTACHMENTS
-    if (chosen.length > capacity) {
-      setError(`Choose up to ${capacity} more files.`)
-      return
-    }
-    busy.current = true
-    setProcessing(true)
-    setError("")
-    try {
-      for (const file of chosen)
-        await runUpload({
-          attach,
-          id:
-            files.find(
-              (saved) =>
-                saved.status === "uploading" &&
-                !saved.trashed &&
-                saved.name === file.name &&
-                saved.size === file.size
-            )?.id ?? crypto.randomUUID(),
-          file,
-          status: "uploading",
-        })
-    } finally {
-      busy.current = false
-      setProcessing(false)
-    }
-  }
-  async function retry(attempt: UploadAttempt) {
-    if (busy.current) return
-    if (attempt.attach && selected.length >= MAX_ATTACHMENTS) {
-      setError("Remove a message attachment before retrying this upload.")
-      return
-    }
-    busy.current = true
-    setProcessing(true)
-    try {
-      await runUpload(attempt)
-    } finally {
-      busy.current = false
-      setProcessing(false)
-    }
-  }
-  async function mutate(
-    id: string,
-    action: "trash" | "restore" | "rename" | "extract",
-    name?: string
-  ) {
-    try {
-      const updated = Schema.decodeUnknownSync(FileInfo)(
-        await api(`files/${id}/${action}`, { name })
-      )
-      revision.current++
-      setLoading(false)
-      setFiles((current) =>
-        current.map((file) => (file.id === id ? updated : file))
-      )
-      setSelected((current) =>
-        current.flatMap((file) =>
-          file.id !== id ? [file] : updated.trashed ? [] : [updated]
-        )
-      )
-      setError("")
-      await refresh()
-      return true
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not update this file."
-      )
-      return false
-    }
-  }
+  }, [agentId, cache])
+  const owner = live?.owner.cache === cache ? live.owner : null
+  const view = owner ? live!.view : null
+  const refresh = useCallback(
+    () => (owner ? Effect.runPromise(owner.refresh()) : Promise.resolve()),
+    [owner]
+  )
   return {
     agentId,
-    files,
-    selected,
-    uploads,
-    error,
-    loading,
+    ...data,
+    uploads: view?.uploads ?? [],
+    error: view?.error ?? "",
+    loading: view?.loading ?? true,
+    uploading: view?.uploading ?? false,
+    attachmentsReady: data.selected.every(attachmentSelectable),
     refresh,
-    select,
-    upload,
-    retry,
-    mutate,
-    uploading: processing,
-    attachmentsReady: selected.every(attachmentSelectable),
-    remove: (id: string) =>
-      setSelected((current) => current.filter((file) => file.id !== id)),
-    clear: (ids: readonly string[]) =>
-      setSelected((current) =>
-        current.filter((file) => !ids.includes(file.id))
-      ),
-    dismiss: (id: string) =>
-      setUploads((current) => current.filter((item) => item.id !== id)),
+    select: cache.select,
+    upload: (chosen: readonly File[], attach: boolean) =>
+      owner
+        ? Effect.runPromise(owner.upload(chosen, attach))
+        : Promise.resolve(),
+    retry: (attempt: UploadAttempt) =>
+      owner ? Effect.runPromise(owner.retry(attempt)) : Promise.resolve(),
+    mutate: (id: string, action: FileAction, name?: string) =>
+      owner
+        ? Effect.runPromise(owner.mutate(id, action, name))
+        : Promise.resolve(false),
+    remove: (id: string) => cache.remove([id]),
+    clear: cache.remove,
+    dismiss: (id: string) => {
+      if (owner) Effect.runFork(owner.dismiss(id))
+    },
   }
 }
 export type FilesState = ReturnType<typeof useFiles>

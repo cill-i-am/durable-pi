@@ -73,29 +73,6 @@ export function requireAgentCapacity(active: number) {
         "Archive a bot before creating or restoring another. You can have 32 active bots.",
     })
 }
-export function agentCreationReplay(
-  previous: string | undefined,
-  creation: string
-) {
-  if (previous === undefined) return false
-  if (previous !== creation)
-    throw new AgentConflict({
-      message: "This creation request belongs to another bot.",
-    })
-  return true
-}
-export function agentArchiveChange(
-  current: AgentProfile,
-  archived: boolean,
-  active: number
-) {
-  if (current.id === homeAgentId && archived)
-    throw new AgentConflict({
-      message: "Your original personal assistant stays available.",
-    })
-  if (!archived && current.status === "archived") requireAgentCapacity(active)
-  return archived ? ("archived" as const) : ("active" as const)
-}
 export const originalAgent = (now: string): AgentProfile => ({
   id: homeAgentId,
   slug: "personal-assistant",

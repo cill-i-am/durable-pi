@@ -5,9 +5,28 @@ import type {
   Api,
 } from "@earendil-works/pi-ai"
 import { AssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream"
-import { Cause, Context, Effect, Exit, Fiber, Layer } from "effect"
+import { createEffectActor, waitFor, type EffectActor } from "@xstate/effect"
+import {
+  Cause,
+  Clock,
+  Context,
+  Effect,
+  Equal,
+  Exit,
+  Layer,
+  Scope,
+} from "effect"
 
 import { fatalCause, orDieAll } from "../../shared/effect"
+import {
+  claimModelRequest,
+  consumeModelStream,
+  modelStreamRequestMachine,
+  modelStreamsMachine,
+  newModelRequestReservation,
+  newModelStreamConsumer,
+  type ModelStreamOutcome,
+} from "../model-stream.machine"
 
 export const MAX_PROVIDER_BYTES = 16 * 1024 * 1024
 export const MAX_PENDING_MODEL_EVENTS = 128
@@ -47,8 +66,29 @@ export class PiModelRequest {
   private fatal?: Cause.Cause<unknown>
   private readonly retained = new Set<Cause.Cause<unknown>>()
   private terminal?: Extract<AssistantMessageEvent, { type: "done" | "error" }>
-  private overflow = false
-  private expired = false
+  private outcome: ModelStreamOutcome = { reason: "ended" }
+  private actor?: EffectActor<ReturnType<typeof modelStreamRequestMachine>>
+  private readonly events: {
+    type: "STOP" | "INTERRUPT" | "OVERFLOW" | "EXPIRE"
+  }[] = []
+  private iterator?: AsyncIterator<AssistantMessageEvent>
+  private event?: AssistantMessageEvent
+  private closing?: Promise<void>
+  private reservation = newModelRequestReservation()
+  readonly id = crypto.randomUUID()
+  private maximumAt = Infinity
+  claim(now: number) {
+    const previous = this.reservation
+    this.reservation = claimModelRequest(previous)
+    if (previous === this.reservation) return false
+    this.maximumAt = now + MAX_MODEL_STREAM_MILLIS
+    return true
+  }
+  private send(type: "STOP" | "INTERRUPT" | "OVERFLOW" | "EXPIRE") {
+    if (!this.actor) this.events.push({ type })
+    else if (this.actor.getSnapshot().status === "active")
+      this.actor.send({ type })
+  }
   private resolve!: (exit: Exit.Exit<void>) => void
   readonly settled = new Promise<Exit.Exit<void>>((resolve) => {
     this.resolve = resolve
@@ -67,17 +107,34 @@ export class PiModelRequest {
     this.stream = new OwnedModelStream(this)
   }
   abort() {
+    this.send("STOP")
+    this.controller.abort()
+  }
+  interrupt() {
+    this.send("INTERRUPT")
     this.controller.abort()
   }
   expire() {
-    this.expired = true
-    this.abort()
+    this.send("EXPIRE")
+    this.controller.abort()
   }
   private retain(cause: Cause.Cause<unknown>) {
     if (this.retained.has(cause)) return
     this.retained.add(cause)
-    if (Cause.hasDies(cause) || Cause.hasInterrupts(cause))
-      this.fatal = this.fatal ? Cause.combine(this.fatal, cause) : cause
+    if (Cause.hasDies(cause) || Cause.hasInterrupts(cause)) {
+      const reasons = [
+        ...(this.fatal?.reasons ?? []),
+        ...fatalCause(cause).reasons,
+      ]
+      this.fatal = Cause.fromReasons(
+        reasons.filter(
+          (reason, index) =>
+            !reasons
+              .slice(0, index)
+              .some((prior) => Equal.equals(prior, reason))
+        )
+      )
+    }
   }
   async callback<T>(start: () => Promise<T>): Promise<T> {
     const work = Promise.resolve().then(() => {
@@ -126,14 +183,18 @@ export class PiModelRequest {
             ])
             if (results[0].status === "rejected") throw results[0].reason
           } catch (cause) {
-            this.retain(Cause.die(cause))
+            this.retain(
+              fatalCause(Cause.isCause(cause) ? cause : Cause.die(cause))
+            )
             failed = true
             failure = cause
           }
           try {
             reader.releaseLock()
           } catch (cause) {
-            this.retain(Cause.die(cause))
+            this.retain(
+              fatalCause(Cause.isCause(cause) ? cause : Cause.die(cause))
+            )
             if (!failed) failure = cause
             failed = true
           }
@@ -147,6 +208,7 @@ export class PiModelRequest {
             try {
               reading = reader.read()
               const next = await reading.catch((cause) => {
+                if (Cause.isCause(cause)) this.retain(cause)
                 ended = true
                 throw cause
               })
@@ -158,8 +220,8 @@ export class PiModelRequest {
               }
               bytes += next.value.byteLength
               if (bytes > MAX_PROVIDER_BYTES) {
-                this.overflow = true
-                this.abort()
+                this.send("OVERFLOW")
+                this.controller.abort()
                 throw new Error("Provider response exceeded the supported size")
               }
               target.enqueue(next.value)
@@ -178,67 +240,102 @@ export class PiModelRequest {
       })
     })
   }
-  private async close() {
-    // A native SDK may stop awaiting credentials/fetch after abort. Their late
-    // results still belong to this request, including newly acquired bodies.
-    this.abort()
-    while (this.pending.size) await Promise.allSettled([...this.pending])
-    await Promise.allSettled([...this.bodies].map((close) => close()))
-  }
-  readonly effect = Effect.callback<void>((resume, signal) => {
-    const abort = () => this.abort()
-    signal.addEventListener("abort", abort, { once: true })
-    this.callerSignal?.addEventListener("abort", abort, { once: true })
-    if (signal.aborted || this.callerSignal?.aborted) this.abort()
-    const work = (async () => {
-      let iterator: AsyncIterator<AssistantMessageEvent> | undefined
+  private close() {
+    return (this.closing ??= (async () => {
+      this.controller.abort()
+      // Late acquisition, SDK callbacks and native reads keep their ownership.
+      while (this.pending.size) await Promise.allSettled([...this.pending])
       try {
-        if (this.signal.aborted) return
-        iterator = (await this.source(this))[Symbol.asyncIterator]()
-        for (;;) {
-          const next = await iterator.next()
-          if (next.done) break
-          const event = next.value
-          if (event.type === "done" || event.type === "error") {
-            this.terminal = event
-            break
-          }
-          if (!this.stream.publish(event)) {
-            this.overflow = true
-            this.abort()
-            break
-          }
-        }
+        await this.iterator?.return?.()
       } catch (cause) {
-        this.retain(Cause.isCause(cause) ? cause : Cause.die(cause))
-      } finally {
-        this.abort()
-        // Return is a native resource operation too; never drop a failed release.
-        try {
-          await iterator?.return?.()
-        } catch (cause) {
-          this.retain(Cause.die(cause))
-        }
-        await this.close()
-        signal.removeEventListener("abort", abort)
-        this.callerSignal?.removeEventListener("abort", abort)
+        this.retain(fatalCause(Cause.isCause(cause) ? cause : Cause.die(cause)))
       }
-    })()
-    work.then(
-      () =>
-        resume(
-          this.fatal ? Effect.failCause(this.fatal).pipe(orDieAll) : Effect.void
-        ),
-      (cause) => resume(Effect.die(cause))
-    )
-    return Effect.promise(() => work).pipe(
-      Effect.andThen(
-        Effect.suspend(() =>
-          this.fatal ? Effect.failCause(this.fatal).pipe(orDieAll) : Effect.void
+      while (this.pending.size) await Promise.allSettled([...this.pending])
+      await Promise.allSettled([...this.bodies].map((close) => close()))
+    })())
+  }
+  private native<T>(start: () => Promise<T>): Effect.Effect<T> {
+    return Effect.callback<T>((resume, signal) => {
+      const abort = () => this.abort()
+      signal.addEventListener("abort", abort, { once: true })
+      const work = Promise.resolve().then(start)
+      this.pending.add(work)
+      work
+        .then(
+          (value) => resume(Effect.succeed(value)),
+          (cause) => {
+            const failure = Cause.isCause(cause) ? cause : Cause.die(cause)
+            this.retain(failure)
+            resume(Effect.failCause(failure).pipe(orDieAll))
+          }
+        )
+        .finally(() => {
+          this.pending.delete(work)
+          signal.removeEventListener("abort", abort)
+        })
+      return Effect.promise(() =>
+        work.then(
+          () => undefined,
+          () => undefined
         )
       )
+    })
+  }
+  readonly effect = Effect.scoped(
+    Effect.gen({ self: this }, function* () {
+      const abort = () => this.abort()
+      this.callerSignal?.addEventListener("abort", abort, { once: true })
+      if (this.callerSignal?.aborted) this.abort()
+      yield* Effect.addFinalizer(() =>
+        Effect.promise(() => this.close()).pipe(
+          Effect.andThen(
+            Effect.sync(() =>
+              this.callerSignal?.removeEventListener("abort", abort)
+            )
+          )
+        )
+      )
+      const now = yield* Clock.currentTimeMillis
+      this.actor = yield* createEffectActor(
+        modelStreamRequestMachine({
+          stopped: () => this.signal.aborted,
+          acquire: this.native(async () => {
+            if (!this.signal.aborted)
+              this.iterator = (await this.source(this))[Symbol.asyncIterator]()
+          }),
+          read: this.native(async () => {
+            if (this.signal.aborted) return "ended" as const
+            const next = await this.iterator!.next()
+            if (next.done) return "ended" as const
+            this.event = next.value
+            if (next.value.type === "done" || next.value.type === "error") {
+              this.terminal = next.value
+              return "terminal" as const
+            }
+            return "event" as const
+          }),
+          publish: Effect.sync(() => this.stream.publish(this.event!)),
+          close: Effect.promise(() => this.close()),
+          abort: Effect.sync(() => this.controller.abort()),
+          lifetime: Math.max(0, this.maximumAt - now),
+        })
+      )
+      for (const event of this.events.splice(0)) this.actor.send(event)
+      const settled = yield* waitFor(
+        this.actor,
+        (state) => state.status === "done"
+      ).pipe(Effect.orDie)
+      this.outcome = settled.output!
+      if (Exit.isFailure(settled.output!.exit))
+        this.retain(settled.output!.exit.cause)
+    })
+  ).pipe(
+    Effect.onExit(() =>
+      Effect.suspend(() =>
+        this.fatal ? Effect.failCause(this.fatal).pipe(orDieAll) : Effect.void
+      )
     )
-  })
+  )
   private completion?: Promise<Exit.Exit<void>>
   complete(exit: Exit.Exit<void>): Effect.Effect<void> {
     return Effect.callback<void>((resume) => {
@@ -255,26 +352,28 @@ export class PiModelRequest {
       return Effect.promise(() => work).pipe(Effect.asVoid)
     })
   }
-  private async finish(exit: Exit.Exit<void>): Promise<Exit.Exit<void>> {
+  private terminalEvent(exit: Exit.Exit<void>) {
     let event = this.terminal
     if (
       Exit.isFailure(exit) ||
       !event ||
-      this.overflow ||
-      this.expired ||
+      this.outcome.reason === "overflow" ||
+      this.outcome.reason === "expired" ||
+      this.outcome.reason === "cancelled" ||
       this.callerSignal?.aborted
     ) {
       const aborted =
-        !this.overflow &&
-        !this.expired &&
-        (this.callerSignal?.aborted ||
+        this.outcome.reason !== "overflow" &&
+        this.outcome.reason !== "expired" &&
+        (this.outcome.reason === "cancelled" ||
+          this.callerSignal?.aborted ||
           (Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)))
       const message = failedMessage(
         this.model,
         !!aborted,
-        this.overflow
+        this.outcome.reason === "overflow"
           ? "Provider stream exceeded the supported buffer or response size."
-          : this.expired
+          : this.outcome.reason === "expired"
             ? "The provider request timed out."
             : aborted
               ? "The model request was cancelled."
@@ -286,6 +385,10 @@ export class PiModelRequest {
         error: message,
       }
     }
+    return event
+  }
+  private async finish(exit: Exit.Exit<void>): Promise<Exit.Exit<void>> {
+    const event = this.terminalEvent(exit)
     let completion: Exit.Exit<void> = Exit.void
     try {
       await this.finished(event)
@@ -313,7 +416,7 @@ export class PiModelRequest {
 
 class OwnedModelStream extends AssistantMessageEventStream {
   private queued = 0
-  private consuming = false
+  private consumer = newModelStreamConsumer()
   private resultDrain?: Promise<void>
   constructor(private readonly request: PiModelRequest) {
     super()
@@ -333,7 +436,10 @@ class OwnedModelStream extends AssistantMessageEventStream {
     if (Exit.isFailure(exit)) throw exit.cause
   }
   override async *[Symbol.asyncIterator](): AsyncGenerator<AssistantMessageEvent> {
-    this.consuming = true
+    const admission = consumeModelStream(this.consumer, "ITERATE")
+    this.consumer = admission.state
+    if (!admission.commands.includes("ITERATE"))
+      throw new Error("This model stream already has a consumer.")
     try {
       const iterator = super[Symbol.asyncIterator]()
       for (;;) {
@@ -344,13 +450,15 @@ class OwnedModelStream extends AssistantMessageEventStream {
       }
       await this.join()
     } finally {
+      this.consumer = consumeModelStream(this.consumer, "RELEASE").state
       this.request.abort()
       await this.join()
     }
   }
   override async result(): Promise<AssistantMessage> {
-    if (!this.consuming) {
-      this.consuming = true
+    const admission = consumeModelStream(this.consumer, "RESULT")
+    this.consumer = admission.state
+    if (admission.commands.includes("DRAIN")) {
       this.resultDrain = (async () => {
         const iterator = super[Symbol.asyncIterator]()
         for (;;) {
@@ -358,7 +466,9 @@ class OwnedModelStream extends AssistantMessageEventStream {
           if (next.done) break
           this.queued = Math.max(0, this.queued - 1)
         }
-      })()
+      })().finally(() => {
+        this.consumer = consumeModelStream(this.consumer, "RELEASE").state
+      })
     }
     const value = await super.result()
     await this.join()
@@ -378,71 +488,67 @@ export class PiModelStreams extends Context.Service<
 export const piModelStreamsLayer = Layer.effect(
   PiModelStreams,
   Effect.gen(function* () {
-    const scope = yield* Effect.scope
-    const active = new Set<{ fiber?: Fiber.Fiber<void> }>()
-    let closed = false,
-      fatal: Cause.Cause<never> | undefined
+    // Keep queued admissions launchable while the layer's finalizer drains them.
+    // The resource scope closes only after shutdown and the owner actor join.
+    const scope = yield* Scope.make()
+    yield* Effect.addFinalizer((exit) => Scope.close(scope, exit))
+    const active = new Map<string, PiModelRequest>()
+    const owner = yield* createEffectActor(
+      modelStreamsMachine({
+        maximum: MAX_ACTIVE_MODEL_STREAMS,
+        abort: Effect.sync(() => {
+          for (const request of active.values()) request.interrupt()
+        }),
+        launch: (task, refusal) =>
+          Effect.forkIn(
+            task.run(refusal).pipe(
+              Effect.onExit((exit) =>
+                Effect.sync(() => {
+                  active.delete(task.id)
+                  owner.send({ type: "RELEASE", id: task.id, exit })
+                })
+              )
+            ),
+            scope
+          ).pipe(Effect.asVoid),
+      })
+    )
     const shutdown = () =>
       Effect.uninterruptible(
         Effect.gen(function* () {
-          closed = true
-          yield* Effect.forEach(
-            [...active],
-            (entry) =>
-              entry.fiber ? Fiber.interrupt(entry.fiber) : Effect.void,
-            { concurrency: "unbounded" }
-          )
-          if (fatal) return yield* Effect.failCause(fatal)
+          owner.send({ type: "CLOSE" })
+          const stopped = yield* waitFor(
+            owner,
+            (state) =>
+              state.matches("draining") && state.context.active.length === 0
+          ).pipe(Effect.orDie)
+          if (stopped.context.fatal)
+            return yield* Effect.failCause(stopped.context.fatal)
         })
       )
     yield* Effect.addFinalizer(shutdown)
     return PiModelStreams.of({
       shutdown,
       start: (request) =>
-        Effect.uninterruptible(
-          Effect.gen(function* () {
-            if (closed || active.size >= MAX_ACTIVE_MODEL_STREAMS) {
-              yield* Effect.forkIn(
-                request.decline(
-                  closed
-                    ? "Model requests are currently unavailable."
-                    : "Too many model requests are active. Wait for some work to finish."
-                ),
-                scope
-              )
-              return
-            }
-            const entry: { fiber?: Fiber.Fiber<void> } = {}
-            active.add(entry)
-            entry.fiber = yield* Effect.forkIn(
-              Effect.scoped(
-                Effect.gen(function* () {
-                  const deadline = yield* Effect.forkScoped(
-                    Effect.sleep(MAX_MODEL_STREAM_MILLIS).pipe(
-                      Effect.andThen(Effect.sync(() => request.expire()))
-                    )
-                  )
-                  yield* request.effect.pipe(
-                    Effect.ensuring(Fiber.interrupt(deadline))
-                  )
-                })
-              ).pipe(
-                Effect.onExit((exit) => request.complete(exit)),
-                Effect.onExit((exit) =>
-                  Effect.sync(() => {
-                    active.delete(entry)
-                    if (Exit.isFailure(exit) && Cause.hasDies(exit.cause)) {
-                      closed = true
-                      fatal = fatal
-                        ? Cause.combine(fatal, exit.cause)
-                        : exit.cause
-                    }
-                  })
-                )
-              ),
-              scope
-            )
-          })
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            Effect.sync(() => {
+              if (!request.claim(now)) return
+              active.set(request.id, request)
+              owner.send({
+                type: "START",
+                task: {
+                  id: request.id,
+                  run: (refusal) =>
+                    refusal
+                      ? request.decline(refusal)
+                      : request.effect.pipe(
+                          Effect.onExit((exit) => request.complete(exit))
+                        ),
+                },
+              })
+            })
+          )
         ),
     })
   })

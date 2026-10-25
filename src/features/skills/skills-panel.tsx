@@ -15,9 +15,10 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import type { SaveSkill, Skill, SkillDocument } from "@/skills/contracts"
+import type { SaveSkill, Skill } from "@/skills/contracts"
 
 import { HostedSkillImport, SkillSourceLabel } from "./hosted-skill-import"
+import { useSkillView } from "./use-skill-view"
 import { useSkills, type SkillsState } from "./use-skills"
 
 type SkillsPanelProps = {
@@ -32,7 +33,7 @@ type SkillsPanelProps = {
 
 export function SkillsPanel({ agentId, ...props }: SkillsPanelProps) {
   return agentId ? (
-    <AssignedSkillsPanel {...props} agentId={agentId} />
+    <AssignedSkillsPanel key={agentId} {...props} agentId={agentId} />
   ) : (
     <SkillLibraryPanel {...props} />
   )
@@ -51,17 +52,14 @@ function SkillLibraryPanel({
   }, [open, refresh])
   const [tab, setTab] = useState("library")
   const showArchived = tab === "archived"
-  const [draft, setDraft] = useState<SaveSkill | null>(null)
-  const [history, setHistory] = useState<{
-    skill: Skill
-    versions: readonly SkillDocument[]
-  } | null>(null)
-  const [historyBusy, setHistoryBusy] = useState(false)
-  const [localError, setLocalError] = useState("")
+  const view = useSkillView()
+  const { draft, history, historyBusy, importing, hosted: hostedImport } = view
   const input = useRef<HTMLInputElement>(null)
-  const historyRequest = useRef(0)
-  const [importing, setImporting] = useState(false)
-  const [hostedImport, setHostedImport] = useState(false)
+  const setDraft = (value: SaveSkill | null) => {
+    if (!value) view.event({ type: "CANCEL" })
+    else if (draft) view.setFields(value)
+    else view.event({ type: "EDIT", draft: value })
+  }
   const cannotReplace =
     state.busy ||
     !state.ready ||
@@ -69,38 +67,18 @@ function SkillLibraryPanel({
     !!draft ||
     importing ||
     hostedImport
-  function leaveView() {
-    historyRequest.current++
-    setHistoryBusy(false)
-    setImporting(false)
-    setHostedImport(false)
-  }
-  function newSkill() {
-    leaveView()
-    setDraft({
-      id: crypto.randomUUID(),
-      expectedRevision: 0,
-      name: "",
-      body: "",
+  const leaveView = () => view.event({ type: "LEAVE" })
+  const newSkill = () =>
+    view.event({
+      type: "EDIT",
+      draft: {
+        id: crypto.randomUUID(),
+        expectedRevision: 0,
+        name: "",
+        body: "",
+      },
     })
-    setHistory(null)
-    setLocalError("")
-  }
-  async function versions(skill: Skill) {
-    const revision = ++historyRequest.current
-    setHistoryBusy(true)
-    setLocalError("")
-    try {
-      const value = await state.versions(skill.id)
-      if (revision === historyRequest.current)
-        setHistory({ skill, versions: value.versions })
-    } catch {
-      if (revision === historyRequest.current)
-        setLocalError("Could not load revision history.")
-    } finally {
-      if (revision === historyRequest.current) setHistoryBusy(false)
-    }
-  }
+  const versions = (skill: Skill) => view.event({ type: "HISTORY", skill })
   const editing = draft !== null
   useEffect(() => {
     onPendingChange?.(state.busy || editing || importing || hostedImport)
@@ -122,7 +100,6 @@ function SkillLibraryPanel({
           onValueChange={(value) => {
             leaveView()
             setTab(String(value))
-            setHistory(null)
           }}
         >
           <TabsList>
@@ -151,9 +128,7 @@ function SkillLibraryPanel({
               <DropdownMenuItem
                 onClick={() => {
                   leaveView()
-                  setHistory(null)
-                  setHostedImport(true)
-                  setLocalError("")
+                  view.event({ type: "HOSTED" })
                 }}
               >
                 From Executor
@@ -172,75 +147,35 @@ function SkillLibraryPanel({
           hidden
           tabIndex={-1}
           aria-label="Import skill Markdown"
-          onChange={async (event) => {
+          onChange={(event) => {
             const file = event.target.files?.[0]
             event.target.value = ""
-            if (!file || cannotReplace) return
-            setLocalError("")
-            if (file.size > 64_000) {
-              setLocalError(
-                "Choose a Markdown file up to 64 KB and 16,000 characters."
-              )
-              return
-            }
-            leaveView()
-            const expected = historyRequest.current
-            setImporting(true)
-            try {
-              const body = await file.text()
-              if (expected !== historyRequest.current) return
-              if (body.length > 16_000 || !body.trim()) {
-                setLocalError("Use 1 to 16,000 characters.")
-                return
-              }
-              setDraft({
-                id: crypto.randomUUID(),
-                expectedRevision: 0,
-                name: file.name.replace(/\.(md|txt)$/i, "").slice(0, 80),
-                body,
-              })
-              setHistory(null)
-            } catch {
-              if (expected === historyRequest.current)
-                setLocalError("Could not read this file.")
-            } finally {
-              if (expected === historyRequest.current) setImporting(false)
-            }
+            if (file && !cannotReplace)
+              view.event({ type: "FILE", file, id: crypto.randomUUID() })
           }}
         />
       </div>
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
-        {(state.error || localError) && (
-          <Alert>
-            <AlertDescription>
-              {localError || state.error}
-              <Button
-                size="xs"
-                variant="link"
-                disabled={state.busy}
-                onClick={() => {
-                  setLocalError("")
-                  void refresh()
-                }}
-              >
-                Reload
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+        <SkillProblem state={state} view={view} />
         {state.loading && (
           <p className="text-sm text-muted-foreground">Loading skills…</p>
         )}
         {hostedImport ? (
           <HostedSkillImport
-            onCancel={() => setHostedImport(false)}
+            onCancel={() => view.event({ type: "CANCEL" })}
             onPreview={(value) => {
-              setDraft(value)
-              setHostedImport(false)
+              view.event({ type: "EDIT", draft: value })
             }}
           />
         ) : draft ? (
-          <SkillEditor state={state} draft={draft} setDraft={setDraft} />
+          <SkillEditor
+            state={state}
+            draft={draft}
+            setDraft={setDraft}
+            onSaved={() =>
+              view.event({ type: "SAVED", generation: view.generation })
+            }
+          />
         ) : history ? (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
@@ -248,7 +183,7 @@ function SkillLibraryPanel({
               <Button
                 size="xs"
                 variant="ghost"
-                onClick={() => setHistory(null)}
+                onClick={() => view.event({ type: "CANCEL" })}
               >
                 Back to library
               </Button>
@@ -278,7 +213,6 @@ function SkillLibraryPanel({
                           body: version.body,
                           source: version.source,
                         })
-                        setHistory(null)
                       }}
                     >
                       Restore as a new revision
@@ -307,7 +241,6 @@ function SkillLibraryPanel({
                       body: skill.body,
                       source: skill.source,
                     })
-                    setHistory(null)
                   }}
                   onHistory={() => void versions(skill)}
                 />
@@ -374,6 +307,16 @@ function AssignedSkillsPanel({
           <Alert>
             <AlertDescription>
               {state.error}
+              {state.failed && (
+                <Button
+                  size="xs"
+                  variant="link"
+                  disabled={state.busy}
+                  onClick={() => void state.retry()}
+                >
+                  Retry same change
+                </Button>
+              )}
               <Button
                 size="xs"
                 variant="link"
@@ -475,6 +418,63 @@ function AssignedSkillsPanel({
   )
 }
 
+function SkillProblem({
+  state,
+  view,
+}: {
+  state: SkillsState
+  view: ReturnType<typeof useSkillView>
+}) {
+  const { error: localError, draft } = view
+  if (!state.error && !localError && !state.failed) return null
+  return (
+    <Alert>
+      <AlertDescription>
+        {localError ||
+          state.error ||
+          "The previous update was not confirmed. Review the saved state before retrying."}
+        {state.failed && (
+          <Button
+            size="xs"
+            variant="link"
+            disabled={state.busy}
+            onClick={() => {
+              const failed = state.failed
+              const generation = view.generation
+              const sameDraft =
+                failed?.kind === "save" &&
+                draft &&
+                JSON.stringify(failed.input) ===
+                  JSON.stringify({
+                    ...draft,
+                    name: draft.name.trim(),
+                    body: draft.body.trim(),
+                  })
+              void state.retry().then((result) => {
+                if (result && sameDraft)
+                  view.event({ type: "SAVED", generation })
+              })
+            }}
+          >
+            Retry same change
+          </Button>
+        )}
+        <Button
+          size="xs"
+          variant="link"
+          disabled={state.busy}
+          onClick={() => {
+            view.event({ type: "CLEAR_ERROR" })
+            void state.refresh()
+          }}
+        >
+          Reload
+        </Button>
+      </AlertDescription>
+    </Alert>
+  )
+}
+
 function SkillRow({
   skill,
   state,
@@ -566,7 +566,9 @@ function SkillEditor({
   state,
   draft,
   setDraft,
+  onSaved,
 }: {
+  onSaved: () => void
   state: ReturnType<typeof useSkills>
   draft: SaveSkill
   setDraft: (draft: SaveSkill | null) => void
@@ -588,7 +590,7 @@ function SkillEditor({
           name: draft.name.trim(),
           body: draft.body.trim(),
         })
-        if (saved) setDraft(null)
+        if (saved) onSaved()
       }}
     >
       <h3 className="font-medium">

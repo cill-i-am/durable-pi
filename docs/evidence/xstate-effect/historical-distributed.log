@@ -1,0 +1,2 @@
+{"probe":"background-remote-stop-outage","stopResult":{"accepted":true},"parentStatus":"cancelled","stopCallsAfterTwoReconciliations":1,"nextWake":null,"futureModelRequestsAuthorized":false,"result":"confirmed: remote stop is not durably retried"}
+{"probe":"reply-same-isolate-checkpoint-failure","providerCalls":1,"stateAfterStorageRecoveredAndPumpRetried":"sending","confirmedParts":0,"nextWake":null,"stateAfterExplicitOnStartRecovery":"uncertain","result":"confirmed: pump cannot recover sending intent without onStart/recover"}

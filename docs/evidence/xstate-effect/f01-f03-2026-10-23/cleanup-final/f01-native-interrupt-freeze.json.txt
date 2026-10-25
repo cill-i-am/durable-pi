@@ -1,0 +1,7 @@
+{
+  "src/features/conversation/connection-owner.ts": "ba24e41817a27ef2e307578f27731f76732889b9610cfcd52132e46587b8aba5",
+  "src/features/conversation/submission-owner.ts": "889c6248bec9c8e29ed92fc3cfca22dd6284fd73d4bee5160f2f0d16775d32ee",
+  "src/features/conversation/turn-command-owner.ts": "c7e48cdc4107ba7fe149d788473c830aff2afe432e42c177ea68ec36cb4caecb",
+  "tests/conversation-connection-machine.test.ts": "9f6f5da4ea4296e46607f3c1857f85a6a07759ddc40af96218e522b6732aa36d",
+  "tests/conversation-submission-machine.test.ts": "f22435110e65c192d30b98e7299230fe10481c22e79f394267c0952230a43816"
+}

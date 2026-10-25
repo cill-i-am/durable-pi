@@ -1,0 +1,21 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts (4 tests | 1 failed | 3 skipped) 122ms
+   × reload callers settle if an already owned version check fails concurrently 121ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f01-f02-independent.test.ts > reload callers settle if an already owned version check fails concurrently
+AssertionError: expected 'unsettled' not to be 'unsettled' // Object.is equality
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts:30:130
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  17:33:32
+   Duration  904ms (import 47%, transform 35%, tests 15%, setup 2%)
+

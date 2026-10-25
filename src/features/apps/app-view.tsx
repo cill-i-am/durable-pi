@@ -16,7 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AppCanvas } from "./app-canvas"
 import { useApp } from "./use-app"
 
-export function AppView({
+export function AppView(props: Parameters<typeof AppViewContent>[0]) {
+  return <AppViewContent key={`${props.agentId}/${props.id}`} {...props} />
+}
+function AppViewContent({
   agentId,
   id,
   initialVersion,
@@ -177,8 +180,13 @@ export function AppView({
                     {new Date(event.createdAt).toLocaleString()} ·{" "}
                     {event.delivery === "queued"
                       ? "Sent to conversation"
-                      : "Waiting for bot"}
+                      : event.delivery === "cancelled"
+                        ? "Cancelled"
+                        : event.delivery === "exhausted"
+                          ? "Delivery stopped"
+                          : "Waiting for bot"}
                   </span>
+                  {event.deliveryMessage && <p>{event.deliveryMessage}</p>}
                   <p className="max-h-28 overflow-auto break-words whitespace-pre-wrap">
                     {event.text}
                   </p>

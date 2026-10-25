@@ -1,4 +1,4 @@
-import { Effect, Exit } from "effect"
+import { Clock, Effect, Exit } from "effect"
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
@@ -78,15 +78,23 @@ function fixture() {
     sends = 0,
     admissions = 0
   let sendError: EmailSendFailed | undefined
+  // This fixture's admission host supplies a finite synthetic discovery lease.
+  const admit = (input: Submission) =>
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        conversations.admit(input, undefined, [], undefined, {
+          discoveryDeadline: now + 60_000,
+        })
+      )
+    )
   const pump = emailPump(records, {
+    armReply: () => Effect.void,
     active: () => Effect.sync(() => active),
     admit: (input: Submission) =>
       Effect.suspend(() => {
         if (!connected) return Effect.fail(new EmailUnavailable())
         admissions++
-        return conversations
-          .admit(input)
-          .pipe(Effect.mapError(() => new EmailUnavailable()))
+        return admit(input).pipe(Effect.mapError(() => new EmailUnavailable()))
       }),
     turn: (id) => conversations.get(id).pipe(Effect.orDie),
     send: (_record, _reply) =>
@@ -118,6 +126,7 @@ function fixture() {
     db,
     records,
     conversations,
+    admit,
     input,
     pump,
     complete,
@@ -291,10 +300,16 @@ describe("inbound MIME boundary", () => {
 describe("durable receipt and reply delivery", () => {
   it("deduplicates before admission and rejects an identity reused for changed content", async () => {
     const f = fixture()
-    expect(run(f.records.receive(f.input, 1))).toBe(true)
-    expect(run(f.records.receive(f.input, 1))).toBe(false)
+    expect(run(f.records.receive(f.input, 1, Date.now() + 60_000))).toBe(true)
+    expect(run(f.records.receive(f.input, 1, Date.now() + 60_000))).toBe(false)
     expect(() =>
-      run(f.records.receive({ ...f.input, fingerprint: "b".repeat(64) }, 1))
+      run(
+        f.records.receive(
+          { ...f.input, fingerprint: "b".repeat(64) },
+          1,
+          Date.now() + 60_000
+        )
+      )
     ).toThrow()
     await Effect.runPromise(f.pump())
     expect(f.admissions()).toBe(1)
@@ -308,9 +323,9 @@ describe("durable receipt and reply delivery", () => {
   })
   it("replays lost admission acknowledgement with the same operation ID", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     run(
-      f.conversations.admit({
+      f.admit({
         operationId: f.input.id,
         text: "Subject: Dinner\n\nHelp with dinner.",
         mode: "followUp",
@@ -322,9 +337,11 @@ describe("durable receipt and reply delivery", () => {
   })
   it("retains emails while the model is disconnected and sends the committed answer once", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     f.connected(false)
-    expect(await Effect.runPromise(f.pump())).toBeGreaterThan(Date.now())
+    await expect(Effect.runPromise(f.pump())).rejects.toMatchObject({
+      _tag: "EmailUnavailable",
+    })
     expect(run(f.records.get(f.input.id))?.state).toBe("queued")
     f.connected(true)
     await Effect.runPromise(f.pump())
@@ -339,22 +356,22 @@ describe("durable receipt and reply delivery", () => {
   })
   it("does not resend a provider call interrupted before its result was committed", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
     f.complete()
-    run(f.records.update(f.input.id, "waiting", "sending"))
+    run(f.records.claim(f.input.id, "answer", () => Effect.succeed(true)))
     const reopened = new EmailStore(f.db)
     run(reopened.recover())
     expect(run(reopened.get(f.input.id))?.state).toBe("uncertain")
     await Effect.runPromise(f.pump())
     expect(f.sends()).toBe(0)
-    expect(run(reopened.receive(f.input, 1))).toBe(false)
+    expect(run(reopened.receive(f.input, 1, Date.now() + 60_000))).toBe(false)
   })
   it.each([false, true])(
     "persists a rejected or uncertain send without automatic replay (uncertain=%s)",
     async (uncertain) => {
       const f = fixture()
-      run(f.records.receive(f.input, 1))
+      run(f.records.receive(f.input, 1, Date.now() + 60_000))
       await Effect.runPromise(f.pump())
       f.complete()
       f.fail(uncertain)
@@ -366,17 +383,24 @@ describe("durable receipt and reply delivery", () => {
       )
       if (uncertain)
         expect(() =>
-          run(f.records.retry(f.input.id, false, crypto.randomUUID()))
+          run(
+            f.records.retry(
+              f.input.id,
+              false,
+              crypto.randomUUID(),
+              Date.now() + 60_000
+            )
+          )
         ).toThrow()
       const operation = crypto.randomUUID()
-      run(f.records.retry(f.input.id, true, operation))
-      run(f.records.retry(f.input.id, true, operation))
+      run(f.records.retry(f.input.id, true, operation, Date.now() + 60_000))
+      run(f.records.retry(f.input.id, true, operation, Date.now() + 60_000))
       expect(run(f.records.get(f.input.id))?.state).toBe("waiting")
     }
   )
   it("revokes the address generation and cancels unsent replies on disable", () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     const disable = {
       operationId: crypto.randomUUID(),
       enabled: false,
@@ -394,35 +418,45 @@ describe("durable receipt and reply delivery", () => {
     )
     expect(run(f.records.settings()).generation).toBe(2)
     expect(() =>
-      run(f.records.receive({ ...f.input, id: crypto.randomUUID() }, 1))
+      run(
+        f.records.receive(
+          { ...f.input, id: crypto.randomUUID() },
+          1,
+          Date.now() + 60_000
+        )
+      )
     ).toThrow()
   })
   it("remembers older retry receipts after another tab retries and the reply fails again", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
     f.complete()
     f.fail(true)
     await Effect.runPromise(f.pump())
     const first = crypto.randomUUID(),
       second = crypto.randomUUID()
-    run(f.records.retry(f.input.id, true, first))
+    run(f.records.retry(f.input.id, true, first, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
-    run(f.records.retry(f.input.id, true, second))
+    run(f.records.retry(f.input.id, true, second, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
     expect(f.sends()).toBe(3)
-    run(f.records.retry(f.input.id, true, first))
+    run(f.records.retry(f.input.id, true, first, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
     expect(f.sends()).toBe(3)
     expect(run(f.records.get(f.input.id))?.state).toBe("uncertain")
-    expect(() => run(f.records.retry(f.input.id, false, first))).toThrow()
     expect(() =>
-      run(f.records.retry(crypto.randomUUID(), true, first))
+      run(f.records.retry(f.input.id, false, first, Date.now() + 60_000))
+    ).toThrow()
+    expect(() =>
+      run(
+        f.records.retry(crypto.randomUUID(), true, first, Date.now() + 60_000)
+      )
     ).toThrow()
   })
   it("checks authority again when claiming a completed reply", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
     f.complete()
     expect(
@@ -434,29 +468,43 @@ describe("durable receipt and reply delivery", () => {
   })
   it("bounds retries while retaining their replay receipts", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
-    run(f.records.update(f.input.id, "waiting", "failed"))
+    f.db.run(
+      "UPDATE email_messages SET state = 'failed' WHERE id = ?",
+      f.input.id
+    )
     const first = crypto.randomUUID()
     for (let n = 0; n < 100; n++) {
       run(
         f.records.retry(
           f.input.id,
           false,
-          n === 0 ? first : crypto.randomUUID()
+          n === 0 ? first : crypto.randomUUID(),
+          Date.now() + 60_000
         )
       )
-      run(f.records.update(f.input.id, "waiting", "failed"))
+      f.db.run(
+        "UPDATE email_messages SET state = 'failed' WHERE id = ?",
+        f.input.id
+      )
     }
     expect(() =>
-      run(f.records.retry(f.input.id, false, crypto.randomUUID()))
+      run(
+        f.records.retry(
+          f.input.id,
+          false,
+          crypto.randomUUID(),
+          Date.now() + 60_000
+        )
+      )
     ).toThrow()
-    run(f.records.retry(f.input.id, false, first))
+    run(f.records.retry(f.input.id, false, first, Date.now() + 60_000))
     expect(run(f.records.get(f.input.id))?.state).toBe("failed")
   })
   it("refuses delivery after archival", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     await Effect.runPromise(f.pump())
     f.complete()
     f.active(false)
@@ -467,8 +515,16 @@ describe("durable receipt and reply delivery", () => {
   it("enforces the pending inbox bound without discarding existing receipts", () => {
     const f = fixture()
     for (let n = 0; n < 20; n++)
-      run(f.records.receive({ ...f.input, id: crypto.randomUUID() }, 1))
-    const exit = Effect.runSyncExit(f.records.receive(f.input, 1))
+      run(
+        f.records.receive(
+          { ...f.input, id: crypto.randomUUID() },
+          1,
+          Date.now() + 60_000
+        )
+      )
+    const exit = Effect.runSyncExit(
+      f.records.receive(f.input, 1, Date.now() + 60_000)
+    )
     expect(Exit.isFailure(exit)).toBe(true)
     expect(run(f.records.pending())).toHaveLength(20)
   })
@@ -476,7 +532,7 @@ describe("durable receipt and reply delivery", () => {
 describe("provider binding", () => {
   it("builds threaded replies and escapes HTML", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     const messages: EmailMessageBuilder[] = []
     const send = async (
       message: EmailMessage | EmailMessageBuilder
@@ -510,7 +566,7 @@ describe("provider binding", () => {
     "classifies provider failure without guessing delivery: $uncertain",
     async ({ error, uncertain }) => {
       const f = fixture()
-      run(f.records.receive(f.input, 1))
+      run(f.records.receive(f.input, 1, Date.now() + 60_000))
       const result = await Effect.runPromiseExit(
         sendEmailReply(
           {
@@ -530,7 +586,7 @@ describe("provider binding", () => {
   )
   it("keeps a provider response without a usable receipt uncertain", async () => {
     const f = fixture()
-    run(f.records.receive(f.input, 1))
+    run(f.records.receive(f.input, 1, Date.now() + 60_000))
     const result = await Effect.runPromiseExit(
       sendEmailReply(
         { send: async () => ({ messageId: "" }) },

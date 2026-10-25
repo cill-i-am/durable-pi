@@ -1,13 +1,15 @@
-import { Cause, Clock, Deferred, Effect } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Cause, Clock, Deferred, Effect, Exit, Ref } from "effect"
 
-import type {
+import {
   AccessDenied,
-  AccessConflict,
-  AccessStorageError,
-  AccessMode,
+  type AccessConflict,
+  type AccessStorageError,
+  type AccessMode,
 } from "./contracts"
 import type { AccessLedger, ToolIntent, ToolOperation } from "./ledger"
 import { scopedReceiptFact, type ReceiptQuery } from "./receipt"
+import { accessRunMachine } from "./run.machine"
 
 export class AccessGate {
   private changed = Deferred.makeUnsafe<void>()
@@ -117,36 +119,80 @@ export class AccessGate {
             () => Effect.void
           )
         )
-      let waiting = false
-      const operation = yield* this.store.begin(intent, (id) =>
-        this.canRun(id, intent.tool)
-      )
-      this.notify()
-      for (;;) {
-        const change = this.changed
-        const decision = yield* this.store.claim(intent.id, recoverable, (id) =>
-          this.canRun(id, intent.tool)
-        )
-        if (decision === "pending") {
-          if (!waiting) yield* observe("tool.waiting")
-          waiting = true
-          yield* this.wait(change, operation.expiresAt)
-          continue
-        }
-        if (typeof decision === "object") {
-          yield* observe("tool.replayed")
-          return yield* Effect.sync(() => JSON.parse(decision.result) as T)
-        }
-        try {
+      // The official host joins invoked work on shutdown but discards its late
+      // output. Retain failure diagnostics so cancellation cannot erase a defect.
+      const executionFailure = yield* Ref.make<
+        Cause.Cause<AccessError | TError> | undefined
+      >(undefined)
+      const machine = accessRunMachine({
+        begin: this.store
+          .begin(intent, (id) => this.canRun(id, intent.tool))
+          .pipe(Effect.tap(() => Effect.sync(() => this.notify()))),
+        claim: (expiresAt, waiting) =>
+          Effect.gen({ self: this }, function* () {
+            // Capture before the claim so a decision between claim and wait
+            // registration cannot be lost.
+            const change = this.changed
+            const decision = yield* this.store.claim(
+              intent.id,
+              recoverable,
+              (id) => this.canRun(id, intent.tool)
+            )
+            return {
+              decision,
+              wake: (waiting ? Effect.void : observe("tool.waiting")).pipe(
+                Effect.andThen(this.wait(change, expiresAt))
+              ),
+            }
+          }),
+        replay: (result) =>
+          observe("tool.replayed").pipe(
+            Effect.andThen(Effect.sync(() => JSON.parse(result) as T))
+          ),
+        execute: Effect.gen({ self: this }, function* () {
           yield* observe("tool.dispatched")
+          // Claim and execution are distinct actor turns. Recheck the current
+          // run at the consequential boundary after that mailbox gap.
+          if (!(yield* this.canRun(intent.turnId, intent.tool)))
+            return yield* new AccessDenied({ message: "The reply has ended." })
           const result = yield* work
           yield* this.store.finish(intent.id, JSON.stringify(result))
           yield* observe("tool.finished")
           return result
-        } finally {
-          this.notify()
-        }
-      }
+        }).pipe(
+          Effect.ensuring(Effect.sync(() => this.notify())),
+          Effect.onExit((exit) =>
+            Exit.isFailure(exit)
+              ? Ref.set(executionFailure, exit.cause)
+              : Effect.void
+          )
+        ),
+      })
+      return yield* Effect.gen(function* () {
+        const actor = yield* createEffectActor(machine)
+        const settled = yield* waitFor(
+          actor,
+          (snapshot) => snapshot.status === "done"
+        ).pipe(Effect.orDie)
+        return yield* settled.context.outcome!
+      }).pipe(
+        Effect.scoped,
+        Effect.onExit((exit) =>
+          Effect.gen(function* () {
+            if (!Exit.isFailure(exit) || !Cause.hasInterrupts(exit.cause))
+              return
+            const failure = yield* Ref.get(executionFailure)
+            const reasons =
+              failure?.reasons.filter(
+                (reason) =>
+                  reason._tag !== "Interrupt" &&
+                  !exit.cause.reasons.includes(reason)
+              ) ?? []
+            if (reasons.length)
+              return yield* Effect.failCause(Cause.fromReasons(reasons))
+          })
+        )
+      )
     })
   }
 }

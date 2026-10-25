@@ -1,9 +1,8 @@
 import { Schema } from "effect"
 import { ArrowUpRight, ChevronDown } from "lucide-react"
-import { useState } from "react"
 
 import { ActivityConversation } from "@/activity/contracts"
-import type { RunActivity, RunEvent } from "@/activity/run"
+import type { RunActivity, RunEvent, RunCursor } from "@/activity/run"
 import { CopyButton } from "@/components/copy-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +12,9 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible"
-import { agentApi } from "@/http/client"
+
+import { activityJsonRequest } from "./query-owner"
+import { useActivityQuery } from "./use-activity-query"
 
 const tracesUrl =
   "https://dash.cloudflare.com/862c7693f07f3e0cdca26eae399bf5e4/observability/traces"
@@ -35,30 +36,32 @@ export function RunTimeline({
   run: RunActivity
   agentId: string
 }) {
-  const [older, setOlder] = useState<RunActivity | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState("")
-  const page = older ?? run
-  async function earlier() {
-    if (!page.next || busy) return
-    setBusy(true)
-    setError("")
-    try {
-      const query = new URLSearchParams({ cursor: JSON.stringify(page.next) })
+  const {
+    data: older,
+    busy,
+    error,
+    refresh,
+    clear,
+  } = useActivityQuery<RunActivity, RunCursor>({
+    key: JSON.stringify(["run-history", agentId, run.runId]),
+    auto: false,
+    read: async (signal, cursor) => {
+      const query = new URLSearchParams({ cursor: JSON.stringify(cursor) })
       const result = Schema.decodeUnknownSync(ActivityConversation)(
-        await agentApi(agentId)(
-          `activity/conversations/${encodeURIComponent(run.runId)}?${query}`
+        await activityJsonRequest(
+          agentId,
+          `activity/conversations/${encodeURIComponent(run.runId)}?${query}`,
+          signal
         )
       )
-      if (!result.run)
+      if (!result.run || result.run.runId !== run.runId)
         throw new Error("Run details are unavailable. Reload and try again.")
-      setOlder(result.run)
-    } catch {
-      setError("Earlier run records could not load. Try again.")
-    } finally {
-      setBusy(false)
-    }
-  }
+      return result.run
+    },
+    errorMessage: "Earlier run records could not load. Try again.",
+  })
+  const page = older ?? run
+  const earlier = () => (page.next ? refresh(page.next) : Promise.resolve())
   return (
     <section aria-label="Run timeline" className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -159,10 +162,7 @@ export function RunTimeline({
             variant="ghost"
             size="sm"
             disabled={busy}
-            onClick={() => {
-              setOlder(null)
-              setError("")
-            }}
+            onClick={() => void clear()}
           >
             Latest records
           </Button>

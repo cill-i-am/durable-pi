@@ -1,0 +1,41 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/conversation-runner.test.ts > retains failed exhaustion settlement during shutdown (defect false)
+[21:10:18.260] ERROR (#2100): Conversation job exhausted { job: 'pump' } native failure
+
+stdout | tests/conversation-runner.test.ts > retains failed exhaustion settlement during shutdown (defect true)
+[21:10:18.266] ERROR (#2166): Conversation job exhausted { job: 'pump' } native failure
+
+ ❯ tests/conversation-runner.test.ts (50 tests | 2 failed) 128ms
+   × retains failed exhaustion settlement during shutdown (defect false) 6ms
+   × retains failed exhaustion settlement during shutdown (defect true) 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-runner.test.ts > retains failed exhaustion settlement during shutdown (defect false)
+ FAIL  tests/conversation-runner.test.ts > retains failed exhaustion settlement during shutdown (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/conversation-runner.test.ts:1023:9
+    1021|           (reason) => reason._tag === "Fail" && reason.error === check…
+    1022|         )
+    1023|       ).toBe(true)
+       |         ^
+    1024|       expect(
+    1025|         result.reasons.some(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 48 passed (50)
+   Start at  21:10:17
+   Duration  459ms (import 46%, tests 35%, transform 16%, setup 2%, worker 1%)
+

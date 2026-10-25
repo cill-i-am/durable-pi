@@ -1,0 +1,1 @@
+PASS actual Lifecycle exhausted-epoch crash window: exactly3 unowned callbacks, persisted summary plus surviving running row, cold autonomous alarm without a fourth dispatch; explicit Retry mints a new epoch even with an old SDK row, and stale UI retry cannot clear the next failure.

@@ -1,0 +1,358 @@
+$ node scripts/test-communication-runtime.mjs
+PASS native agent coordination: authenticated human provenance, nonblocking spawn, child discovery/question, addressed reply, automatic findings, resuming the original native session, and atomic membership fencing of 25 completed main sessions with queued mail and retained history.
+PASS native maintenance: foreground progress during held IO, no overlapping attempts, wake during completion retained, and persisted recovery after SIGKILL.
+PASS native chat: production admission, context pinning, Pi reply and turn completion all finish while the summary model and backup IO remain held.
+PASS native ChatGPT sign-in: default Workers fetch, PKCE exchange, remote JWKS identity validation, durable credential install, one-use replay and refused redirects.
+PASS native voice: shared original/transcript storage, agent transcript input and text reply, dedupe and restart without resend; AI/provider inference is synthetic.
+PASS native WhatsApp images: production workspace upload and vision admission, common share_image tool, complete multipart text and a private image send, dedupe and restart persistence.
+PASS native WhatsApp: production actor admission, one Pi reply, webhook dedupe and sent restart without resend.
+PASS native email: MIME to production actor, one Pi reply, webhook dedupe, sent restart, and SIGKILL during provider send without resend.
+PASS website SSE gzip: small initial event and later heartbeat arrive before EOF, cloned Response is encoded once, cancellation reaches the source exactly once and a late source error fails the native body reader.
+PASS native Effect SQLite DO driver: rollback/nesting/interruption/defect, automatic yields with a queued reader, native synchronous writes, query-only rejection, pre-commit failure, lost acknowledgement with committed state and real commit-failure recovery.
+PASS native Terminal client and relay: one original command/replay, real WebSocket binary/resize relay, disconnect/reconnect, invalid input closes, and session Save/checkpoint.
+PASS native PersonalAgent HTTP proxy: actual retained host, Terminal session admission, WebSocket upgrade, binary/resize relay and Save.
+PASS native Dynamic Worker Loader: production Execution handler, bundled runner/code loading, bounded JSON/logs, outbound network denied.
+PASS native loop recovery: SIGKILL at third failure, same committed round replayed once, fifth failure stops, blocked restart dispatches no new calls.
+PASS native Effect SQL read compatibility with the actual committed Pi journal, without mutation or a second harness.
+PASS native retained HttpApi catalog: preserved wire/status, safe expected failure, fatal defect/interruption/compound cause and invalid-result rejection.
+PASS native Objects/Planning/Delegation commits: callback rollback, separate raw/compound settlement faults and joined late defects retain both causes without changing Pi journal entries.
+PASS native BackgroundGroup RPC: explicit Exit preserves expected failures, defects, interruption and compound Causes; legacy Promise projection demonstrates the lost meanings.
+PASS native reverse parent/account RPC: retained host handlers preserve complete Causes through actual DO calls in both directions.
+PASS native connection/tool/skill owner RPC: actual retained handlers preserve complete outcomes, reject invalid operations and redact private diagnostics across DO calls.
+PASS native profile/status/configuration/connection RPC: complete outcomes and actual previous-version DO fallback, including owner and mailbox identity arguments.
+PASS native task controls: original records, queued cancellation before model dispatch, exact retry and a newer request preserved.
+PASS native read-only deployment revisions through the production Worker and actual PersonalAgent catalogue/actors.
+PASS native Activity/webhook outcomes, actual previous-version read fallback and composed gateway routing through real PersonalAgent objects.
+PASS native website -> Agent gateway -> PersonalAgent -> Terminal: private HTTP, actual generated app execution and replay, real upgraded binary/resize relay, fresh session revocation and stopped rechecks.
+PASS native Pi run_command completion/Stop fencing and BackgroundGroup active provider shutdown joins held reader cleanup before runtime disposal.
+PASS full PersonalAgent: native actor Layer activation (5 -> 6 across restart), conversation pump, Pi completion, real parent/two-child delegation and sealed restart state, real parent/background-DO/two-child execution and report reconciliation with exact restart state, atomic background report admission/acknowledgement, read-only Activity HTTP/RPC and exact saved-run restart state, Terminal HTTP/import/export/cancel with exact receipt and byte restart state, private archive export, code HTTP replay and uncertain-intent recovery without redispatch, credential rotation intent survives SIGKILL without refresh replay, usage terminal fences and deduplicated totals survive restart, ordered disposal joining held provider/credential/SSE/summary/export/download/execution work, and fresh activation after restart without another conversation model request.
+PASS workerd 1.20261002.1: private Effect RPC, two SQLite DOs, sender restart before delivery, lost acknowledgment after acceptance, recipient/result-delivery restart, unique task admission, invalid/version/owner rejection native Pi interruption/recovery, single continuation and coexisting Pi/Lifecycle alarms.
+$ node scripts/test-conversation-runtime.mjs
+PASS native held-submit: owner retained until joined cancellation; no overlapping native command or stopped-session reuse.
+PASS native held-abort: owner retained until joined cancellation; no overlapping native command or stopped-session reuse.
+WAIT native SIGKILL recovery: health-only startup; no Durable Object requests until the real discovery lease expires.
+PASS native no-poke recovery: early-empty sixty-second admission discovery and lost acknowledgement reconcile the same durable native request without another synthetic provider call.
+PASS native exhausted-write outage: repeated wakes and cold restoration preserve the spent budget; Check observes only, and revisioned Retry Stop confirms cancellation.
+PASS native session reuse: a later addressed request uses the original Pi conversation and a distinct request receipt after prior ownership is released. All provider responses are synthetic.
+$ node scripts/test-routines-runtime.mjs
+{"case":"bundled-source-evidence","bundle":"158126c8f2f1c0eb71ab939903af06f5fe07677df4cc11372652c208d575d2c2","sourceHashes":{"src/access/connections.ts":"0194fd3db3512dac785e6b34fe2c2cbcd3d28f1bf477b94f473f6b0e3ba1e918","src/access/contracts.ts":"21044fa3a8e7dc479a5150b745fc9bb8a1faaa8e94b172b4c8a7adeeeaded5e9","src/access/executor.ts":"310e812058e8382ab0e3ce387b1ede1381fca2497cbf760068b15f7de82500aa","src/conversations/adapters/lifecycle.ts":"54e857183c6ec7829bcd8d4485db7ce1a747ad1ca9bb725677f66cb761b1c6a3","src/conversations/adapters/pi-execution.ts":"f199c789a03a61cc77ce0837e254f7c201ad7a4b473ca876e61f85517b62a39a","src/conversations/adapters/pi-reply.ts":"736f8f49487e51798e7a4507b2853775edd0957f0cb49fab70a542db5c16cb1e","src/conversations/adapters/pi-timeline.ts":"0ad67342aa5bf7bb449ba545e7298ddca0788de73ee2929781863249648505ce","src/conversations/adapters/schema.ts":"6367702028dced132788f190a630049d793be13401fb8023be1e86485f397bc3","src/conversations/adapters/sqlite-journal.ts":"9ebb40784b9b8feed05984fdd707a8e94d96f747c95bf8695181688173d83e75","src/conversations/adapters/sqlite-turns.ts":"c198afc03a339b3eeb999de664cfc59586203693b680300cc4a9f7adf280f4ed","src/conversations/contracts.ts":"9e64d57294edc06dd79e65887cc7568ef6d525783580d4fce5deff0e39d22c82","src/conversations/domain.ts":"3e48f0b25ebb9d4af2de543f08f31e56d23292d7949381718e0995aefadb9dfc","src/conversations/execution.ts":"a7124e4f76e56d525a2f78d5b0c9acf8c56993726ce69570ca6ef3ad77378e3c","src/conversations/input.machine.ts":"aeac89223e6511a49e7007accff30d9784fad21c2b78a20e4915b5509799e83f","src/conversations/journal.ts":"08ecec5de533055d2e876d1a0013e0fe3319f13fce5307b0daa53a92aa0e1a4a","src/conversations/prompt.ts":"118cf9c94aea6d478e3b93ec1a6914a0974b4a1cde9289792251c4104228c1bd","src/conversations/pump.machine.ts":"a7111a3d44d97a330019225f3adeef11319434469c67410af59baf9eec6ec59a","src/conversations/pump.ts":"7875d5400fe95d85434d78d0144bd88012580e4e759f2e22a440ee4f182182fc","src/conversations/recovery-discovery.machine.ts":"0e53997efd17f3e2d684c2a6b9155bc2e4c093f93a848b0b09bd9b1e6b75ab3b","src/conversations/recovery.ts":"93fb3d1546dd275448ed5bf008e65320f7a2a3d2223cdf19e9560765e224e49d","src/conversations/root-run.machine.ts":"985d15fed62db3ebb1dfdb7b67c33bc6a8e87709aed036477fd2c263b808b881","src/conversations/service.ts":"ae2bc2e68f7b560316d34667d62f64de56f70de68485c059281dc89bb30b2cac","src/conversations/status.ts":"1401b808e47d3ab4ce29665e65d316dda75a2eeeaf60ba9d59c2ccdfa48231b7","src/conversations/turns.ts":"bda90ca12794b51edd723a15c369da94681f3610caf750203665f4cb48d2b31a","src/coordination/contracts.ts":"9abe7235e81534b8eff6022437af12e16589efcb8ff46b1c1bfa48907c294d85","src/inference/policy.ts":"78517253f484be7abadb4b906cf1272a0f99851db706448e22e5bdb31389e5b9","src/inference/selection.ts":"4482516b4d056295ad743717e661eca6e760827a54a9c61a18f9329d04f4ae7e","src/memory/adapters/schema.ts":"aaf50928643b655e3f1cc4edac10fa3989b019729f26478f8c591fd4d6d2ecad","src/memory/adapters/sqlite.ts":"50c2d03b89c18ac6d2f56ecac07557bf319050db9806a4fb98530a955b007c16","src/memory/domain.ts":"48887a49d1dc61b6f2ac6f020dd98ad5c54e9bc9781fc87b599ee5faf3c56fce","src/memory/ledger.ts":"b197b5c17579d4796c3e9c2c043b71d99b8b60030b6df8094c5b6d07ea0a2b8e","src/memory/policy.ts":"2fccc6c4bb2795af11ba87367a1ccde5c59cbf6f355f1a3dd85c4058d54dc9db","src/memory/records.ts":"06f79456677338002d051799f82e31065d145d155b1f7443748f18ba2a2c7e89","src/memory/repository.ts":"8e0ae80fc572846ab8cac59b7f3435f0200a52cec499cab4f0b74fdcdb1db59d","src/memory/service.ts":"446071d6b0f8395cfb6ac23964c7589612cebfba04e70f601bd85b1b082f2fa7","src/messages/identity.ts":"6826b17deeda2d767d373c4035bbf41cf86e9efa3c4293a7765d907b1eb62140","src/routines/adapters/lifecycle.ts":"9909d9d951278d52c7596b316facb678298759933f593da14c44198b34ff92d2","src/routines/adapters/schema.ts":"1f0d2b11e13f7f9ddc6005c2e2120c48ce1d137c12edc3b6d6e38ba1dec75cbd","src/routines/adapters/sqlite.ts":"bb77be8e7cffb95ee783d6a2e49db5a8da5fc6f8103438cf6e49fa418c0b6700","src/routines/application.ts":"55e794df2347a24afc782cb1f9c44f09353f958e23047a5c591e278ca5c1cce2","src/routines/contracts.ts":"0a47bd4b0edafb0841cfa72fb79bd43eb52c18e3a4e30a0ce85eb64927882dd6","src/routines/discovery.machine.ts":"383ff921c2b4ff9df29e1c566096248c83969647452f24b578c977c43b3fcee3","src/routines/domain.ts":"12e914fc0fa56618c3e79605b01df8586615d87cf3b2f638b5d685eb881db7b4","src/routines/persistence.ts":"a32a21eef9b21ce601da197ee32496769af641b87397c4c85cf0fc4a35dd6492","src/routines/pump.machine.ts":"5fa343acc4a6579b005eecef3eae5d06b5257debe1b841c2b3144c389946d108","src/routines/pump.ts":"07a00374942e18d89164165ebbe82ccd2c06b17435c07f60d6a45b4a7ca0fc1f","src/routines/routine.machine.ts":"9b6ff1be6d1d8da4a36ac0dc165031307c9cf5ce73ce79ac124f6c0e962728fa","src/routines/run.machine.ts":"42b9dabb7cbf6290986ddd6ee89d6572587780e49eb0d1a268d3c81a584cb29b","src/routines/service.ts":"0ff636f95beae2d40090f9593aad12eddc8116c51f7212654ed22ec5cf1a2587","src/shared/effect.ts":"75587bface6c2ddf87156a108653d78c1b698ad6c3e0c34ecd559880cc6b65ba","src/shared/interop.ts":"e26c8e53d77156a55eb47b4ca25b0b0c7f93eb5740ba652e862e4950b868662c","src/skills/contracts.ts":"ade5efe4a40cb8a3b42f8411512b9d8947c0ba80fcce677b9fa5b2b206f02b83","src/skills/source.ts":"8f90b9464b4aa001e5ce910f39214750de01260dee2c50cf2ba933c4c0cb8615","src/storage/durable-object.ts":"01f800ba5eefc9a9e20627ad91cd3b54725e00e0578f338532e3d2ff09ad7499","src/storage/effect.ts":"675f88a838ec8bf8bc4d91c3260ff28c4174648467ab400f8d84ad16237b93ea","src/storage/expressions.ts":"78be5d0c4a59254b418c775ea13a8ed41ab6eb606919898f287a52a7340b290e","src/storage/migration-manifest.ts":"90f7beb766cb08d83672a23e45a954dca968a3547819b89c1e7d6c0181df0448","src/storage/migration-schema.ts":"b5b85566629ac1f5b90460e8489e7750c703b1845975eecccaebdb4c20768e56","src/storage/migrations.ts":"0915ec0f273148500771df5ffe7ed5c758d0a780f578c194363248e582b229df","src/storage/sqlite.ts":"f9c832074b14981c40092d36f92f06314ba1c3c007e56be0e0042f4c9c179642","src/webhooks/activation.machine.ts":"0f438507684e8fb0676e4983d7c3f8fa9ffa9f66c05988dcfb3ff5424e164376","src/webhooks/adapters/schema.ts":"dd061fa40823893b4ee049047d608b8977ff37fa4b83719c9e2af04830f2f674","src/webhooks/adapters/sqlite.ts":"c1f5d7feb7545d49d6c6ba3394b8a346955aec5e57eebf6658aea653ea99a00b","src/webhooks/admission.machine.ts":"ae1050455e3d1c510d8c2aa9ecdce287e85493c9468b6e035916c3f0cda9ea7d","src/webhooks/application.ts":"c5791a2c8d9c6c4587be965e2291dc3a07382085e6274656c4335b3378e59a34","src/webhooks/contracts.ts":"d642f432ec8077283b65b598774152dce12c1f814924982d6c781b36bcc6181b","src/webhooks/persistence.ts":"179eda4c7cc4efdfad485656f641d5451864fc83a1fed3a79ab35d951c2d8627","src/webhooks/service.ts":"52620927db38b555168d7751a66e7d0c5e6d7ee4fbc6ba45cbecb9b93bb74137","src/workspace/audio.ts":"7d64e189ed5cb4691728fa01fa0d5dc0d0ff8b367002e426ebd323c23c339676","src/workspace/files.ts":"d390efbfd5010aee11cceb2db3288096ce3bb00077b4c973367ab732cf786c0f","src/workspace/video.ts":"633dad7599c10adcca8aad79e77f7581b7408ee2876a5bea0d63adb3fb8ca06b","tests/runtime/database.ts":"3738dcb584769311ef584786292e2c37df90db1669bcc751d3a3b34c810ca19f","tests/runtime/routines-worker.ts":"b9a3389b245ae41098e3893b53c89000a1879776b40892bb1ab284dd17cafb98"}}
+{"case":"waiting-for-retained-alarm","brokenWake":false,"deadline":1792766797414,"objectRequestsDuringRecovery":0}
+{"case":"retained-native-restart","name":"webhook","run":"06cb9dd7-9490-442f-b65e-05fb939e2a09","turn":"7f733d78-4069-4b10-b7e7-5aeb263ad288","receipt":14,"calls":1,"alarms":9,"boots":2}
+{"case":"retained-native-restart","name":"manual","run":"5d5b7060-6823-46af-83de-ecf8d2cb7d3e","turn":"99d5fd02-0735-40e5-9f5c-372079defe2b","receipt":14,"calls":1,"alarms":9,"boots":2}
+{"case":"pause-and-stop-before-native-dispatch","pending":"cancelled","admitted":"queued","stopped":"cancelled","calls":0}
+PASS B11 actual RoutineRunner/Routines/Webhooks/Conversation/SQLite/Pi retained discovery, original run/event/turn and native receipt identities, dedupe, Pause/Stop and two SIGKILL/restarts; workerd 1.20261002.1. Synthetic authority/provider; no live external execution or full PersonalAgent authorization claim.
+$ node scripts/test-apps-runtime.mjs
+WAIT Apps SIGKILL recovery: health-only startup, no object requests until real discovery deadline plus native completion margin.
+PASS native Apps: retained empty discovery, real shared admission and Pi receipt after no-poke SIGKILL, bounded SDK exhaustion, second restart and exact receipt replay.
+Apps native evidence: /var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/apps-native-positive-47899-evidence.json
+$ node scripts/test-drizzle-runtime.mjs
+{"mode":"commit","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"nested","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"nested-caught","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":1,"first":{"id":0,"value":"recorded"}},"rows":{"count":1,"first":{"id":0,"value":"recorded"}},"persisted":{"count":1,"first":{"id":0,"value":"recorded"}}}
+{"mode":"nested-uncaught","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"interrupt","status":200,"admitted":true,"finalized":true,"reasons":["Interrupt"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"defect","status":200,"admitted":true,"finalized":true,"reasons":["Die"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"yield-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"before-commit","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"lost-ack","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"stock-suspension","status":200,"reasons":["Die"],"resumed":true,"rows":{"count":1,"first":{"id":2,"value":"orphan"}},"persisted":{"count":1,"first":{"id":2,"value":"orphan"}}}
+{"mode":"pi-rollback-app-write","status":200,"returnedBeforePiRelease":false,"piError":true,"appReasons":[],"rows":{"count":1,"first":{"id":1,"value":"app-success"}},"persisted":{"count":1,"first":{"id":1,"value":"app-success"}}}
+{"mode":"app-rollback-pi-write","status":200,"returnedBeforeAppRelease":false,"piError":false,"appReasons":["Fail"],"cached":{"value":1},"piDocuments":1,"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"external-interrupt","status":200,"reasons":["Interrupt"],"finalized":true,"rows":{"count":1,"first":{"id":3,"value":"after-cancellation"}},"persisted":{"count":1,"first":{"id":3,"value":"after-cancellation"}}}
+{"mode":"rollback-settlement","status":200,"admitted":true,"finalized":true,"reasons":["Fail","Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"pi-rollback-app-statement","status":200,"returnedBeforePiRelease":true,"piError":true,"appReasons":[],"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"app-rollback-lifecycle-write","status":200,"returnedBeforeAppRelease":true,"appReasons":["Fail"],"savedJob":null,"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"alchemy-commit","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"alchemy-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"alchemy-nested","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"conversation-stream","status":200,"delivered":true,"cursorFrames":2,"handoffFrames":0,"released":1}
+{"mode":"conversation-milestones","status":200,"delivered":true,"cursorFrames":2,"handoffFrames":2,"released":1}
+{"mode":"conversation-handoff","status":200,"stages":{"count":7,"first":"control-start"},"capacityBounded":true,"released":true,"overflowReleased":true,"abortReleased":true,"privateDataAbsent":true}
+{"mode":"guarded-commit","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"guarded-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-nested","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"guarded-nested-caught","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":1,"first":{"id":0,"value":"recorded"}},"rows":{"count":1,"first":{"id":0,"value":"recorded"}},"persisted":{"count":1,"first":{"id":0,"value":"recorded"}}}
+{"mode":"guarded-nested-uncaught","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-interrupt","status":200,"admitted":true,"finalized":true,"reasons":["Interrupt"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-defect","status":200,"admitted":true,"finalized":true,"reasons":["Die"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-yield-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-before-commit","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-lost-ack","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+{"mode":"guarded-rollback-settlement","status":200,"admitted":true,"finalized":true,"reasons":["Fail","Die"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-suspension","status":200,"reasons":["Die","Interrupt"],"resumed":false,"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-uninterruptible-finalizer","status":200,"reasons":["Die","Interrupt"],"rolledBackBeforeCleanup":true,"finalizerReasons":["Fail"],"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-context","status":200,"reasons":[],"rows":{"count":1,"first":{"id":1,"value":"retained:1234"}},"persisted":{"count":1,"first":{"id":1,"value":"retained:1234"}}}
+{"mode":"guarded-escaped-builder","status":200,"reasons":["Fail"],"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-detached-child","status":200,"reasons":[],"childReasons":["Die"],"rows":{"count":1,"first":{"id":1,"value":"committed"}},"persisted":{"count":1,"first":{"id":1,"value":"committed"}}}
+{"mode":"guarded-pi-rollback-app-statement","status":200,"returnedBeforePiRelease":false,"piError":true,"appReasons":[],"rows":{"count":1,"first":{"id":1,"value":"app-success"}},"persisted":{"count":1,"first":{"id":1,"value":"app-success"}}}
+{"mode":"guarded-app-rollback-lifecycle-write","status":200,"returnedBeforeAppRelease":true,"appReasons":["Die","Interrupt"],"savedJob":{"id":"probe","capability":"host","fn":"probe","time":1792766943967,"singleflight":false,"exclusive":false,"recoveryLoop":false,"createdAt":1792766883},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-queued-cancellation","status":200,"cancellationJoinedBeforePiRelease":false,"reasons":["Interrupt"],"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-pi-harness","status":200,"sameStorage":true,"listedBeforeRelease":false,"sessionCount":1,"observed":{"count":22,"first":"scanTasks"},"persisted":{"count":0}}
+{"mode":"guarded-migrations","status":200,"migrated":true,"retained":{"text":"retained"},"bootstrap":{"first":{"statements":200,"durationMs":36},"reactivation":{"statements":2,"durationMs":0},"audit":{"statements":2,"durationMs":1}},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-activity","status":200,"activity":{"turn":{"id":"native-activity","status":"running","session_id":null,"created_at":"2026-10-16T00:00:00.000Z","started_at":null,"finished_at":null},"rows":[{"key":"accepted:native-activity","at":"2026-10-16T00:00:00.000Z","reference":"native-activity","kind":"run","title":"Request accepted","status":"accepted"}]},"rows":{"count":0},"persisted":{"count":0}}
+{"mode":"guarded-conversation-members","status":200,"counts":{"count":3,"first":48},"hidden":true,"bindings":{"count":2,"first":"root-0"},"duringRollback":2,"rollback":"Failure","afterRollback":1}
+{"mode":"guarded-conversation-activities","status":200,"counts":{"count":3,"first":48},"parity":true,"singleTransactions":100,"bulkTransactions":1,"replyCounts":{"count":3,"first":48},"replyParity":true,"replyVisibleOnly":true,"visibleOnly":true,"during":true,"rollback":"Failure","afterRollback":1}
+{"mode":"guarded-access-operation","status":200,"result":"saved receipt","operations":{"count":5,"first":{"id":"pending","turnId":"turn","tool":"test","input":"{}","createdAt":1792766884261,"expiresAt":1792767784261,"status":"pending","revision":0,"schemaVersion":1,"workflowVersion":1,"grantRevision":0,"result":null,"decision":null}}}
+{"mode":"guarded-agent-availability","status":200,"profiles":{"count":3,"first":{"id":"00000000-0000-4000-8000-000000000001","slug":"synthetic-1","name":"Synthetic 1","instructions":"retained instructions","status":"active","revision":2,"createdAt":"2026-10-23T14:48:04.324Z","updatedAt":"2026-10-23T14:48:04.326Z","schemaVersion":1,"workflowVersion":1,"creation":"{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Synthetic 1\",\"instructions\":\"retained instructions\"}"}},"configuration":{"owner":"owner","instructions":"retained instructions","revision":1,"status":"archived"},"generation":{"schemaVersion":1,"workflowVersion":1,"membershipId":"new-membership"}}
+PASS Agent availability: native restart preserves profiles, raw creation replay, admission revision and membership generation without repeating cleanup.
+PASS Access machine: native restart preserves receipts, waiting approval, recovery and revocation fences; one external effect.
+PASS native Drizzle proof: 49 transaction/interoperability cases and 41 persisted-state checks after SIGKILL/restart.
+$ node scripts/test-whatsapp-runtime.mjs
+Reply outages: terminal domain-write failure, finite queue exhaustion, explicit status repair, newer-admission fencing, expired-work isolation and orphan SIGKILL restoration passed for email and WhatsApp.
+Reply discovery: empty-scan lease retention, commit-during-scan fencing, newer native queue intent, and lost-wake SIGKILL recovery via real alarms passed for email and WhatsApp.
+Attachment preparation: native SQLite request and PDF job survived SIGKILL and resumed with the original ID. Multipart email/WhatsApp: native receipt checkpoints, restart without resend, and explicit retry skipping confirmed parts passed. WhatsApp Chat SDK state: native SQLite facets, locking, list bounds and restart persistence passed.
+$ node scripts/test-background-stop-runtime.mjs
+PASS native background Stop: bounded outage recovery, early empty lease, SIGKILL alarm recovery, stale exhaustion fence and exact identities across two restarts
+$ node scripts/test-memory-runtime.mjs
+PASS memory growth, multi-batch rollback, restore/bootstrap, and 123 MB Unicode/NUL backlog on workerd 2026-10-02
+$ node scripts/test-upstream-runtime.mjs
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service upstream: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+workerd/server/server.c++:6895: error: Uncaught exception: workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1489: failed: remote.jsg.Error: Stream was cancelled.
+stack: 105b9e49f 105b9e9db 1057f29db 1057e7158 1057e7d0f 107c0bb5f 105582343 10558311b 1055836df 104a31dcf 1079b9edf 1079babe3 1079bb577 1079814ec
+[
+  {
+    "mode": "baseline",
+    "actorDoneMs": 212.223333,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "1eb78076-f29a-45de-8314-821a6e8d3ebd",
+        "at": 193.389583,
+        "afterSendMs": -12.148792000000014
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 208.620375,
+        "afterSendMs": 3.0819999999999936
+      },
+      {
+        "stage": "headers",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 210.406542,
+        "afterSendMs": 4.868167
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 413.463292,
+        "afterSendMs": 207.92491700000002
+      },
+      {
+        "stage": "complete",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 413.99075,
+        "afterSendMs": 208.452375
+      }
+    ]
+  },
+  {
+    "mode": "gate",
+    "actorDoneMs": 707.5328750000001,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "56beebae-b633-407e-a731-28e2f1d3e149",
+        "at": 477.060417,
+        "afterSendMs": -12.137500000000045
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 491.94525,
+        "afterSendMs": 2.747332999999969
+      },
+      {
+        "stage": "headers",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 493.042292,
+        "afterSendMs": 3.844374999999957
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 703.262875,
+        "afterSendMs": 214.064958
+      },
+      {
+        "stage": "complete",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 703.614458,
+        "afterSendMs": 214.416541
+      }
+    ]
+  },
+  {
+    "mode": "unread",
+    "actorDoneMs": 710.2627090000001,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "4e0bbb30-5430-4d10-82b0-8f38e1a8a321",
+        "at": 1254.355792,
+        "afterSendMs": -11.125915999999961
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1267.824458,
+        "afterSendMs": 2.3427500000000236
+      },
+      {
+        "stage": "headers",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1269.305958,
+        "afterSendMs": 3.8242499999998927
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1471.051917,
+        "afterSendMs": 205.57020899999998
+      },
+      {
+        "stage": "complete",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1471.303875,
+        "afterSendMs": 205.82216700000004
+      }
+    ]
+  },
+  {
+    "mode": "abort-headers",
+    "actorDoneMs": 56.9865420000001,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "21c76878-ef6b-4637-89f7-5b3d80371430",
+        "at": 2041.799958,
+        "afterSendMs": -11.712416999999732
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "abort-headers",
+        "attemptId": "attempt",
+        "at": 2057.026375,
+        "afterSendMs": 3.5140000000001237
+      },
+      {
+        "stage": "failed",
+        "turnId": "abort-headers",
+        "attemptId": "attempt",
+        "at": 2109.25775,
+        "afterSendMs": 55.74537500000042
+      }
+    ]
+  },
+  {
+    "mode": "cancel-body",
+    "actorDoneMs": 7.335958000000119,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "af17c942-9928-4b62-8337-85d3dd7a5bc6",
+        "at": 2174.454542,
+        "afterSendMs": -11.134000000000015
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "cancel-body",
+        "attemptId": "attempt",
+        "at": 2188.939625,
+        "afterSendMs": 3.351083000000017
+      },
+      {
+        "stage": "headers",
+        "turnId": "cancel-body",
+        "attemptId": "attempt",
+        "at": 2190.507042,
+        "afterSendMs": 4.918500000000222
+      },
+      {
+        "stage": "failed",
+        "turnId": "cancel-body",
+        "attemptId": "attempt",
+        "at": 2191.904542,
+        "afterSendMs": 6.316000000000258
+      }
+    ]
+  },
+  {
+    "mode": "slow-observer",
+    "actorDoneMs": 210.1424579999998,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "a9ea1c2f-48bb-4083-b617-629a7f937981",
+        "at": 2255.917583,
+        "afterSendMs": -10.94904200000019
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 2774.826542,
+        "afterSendMs": 507.9599169999997
+      },
+      {
+        "stage": "headers",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 3277.917708,
+        "afterSendMs": 1011.0510829999998
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 3782.194708,
+        "afterSendMs": 1515.3280829999999
+      },
+      {
+        "stage": "complete",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 4285.729833,
+        "afterSendMs": 2018.8632080000002
+      }
+    ]
+  },
+  {
+    "mode": "past-expiry",
+    "actorDoneMs": 61176.007125000004,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "5b82617c-a58c-46fa-ba78-35e23d07a49e",
+        "at": 4351.918042,
+        "afterSendMs": -12.12512499999957
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "past-expiry",
+        "attemptId": "attempt",
+        "at": 4366.268,
+        "afterSendMs": 2.224833000000217
+      }
+    ]
+  }
+]
+Independent upstream, actor gate, unread consumer, pre-header abort and body cancellation controls passed.
+$ node scripts/test-xstate-runtime.mjs
+{"name":"committed","state":"complete","calls":1,"dispatches":2,"receipt":8,"wake":null}
+{"name":"lost","state":"complete","calls":1,"dispatches":2,"receipt":8,"wake":null}
+PASS XState/Effect native intent, lost acknowledgement, alarm recovery and two SIGKILL/restarts; workerd 1.20261002.1.

@@ -1,0 +1,19 @@
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+[15:18:45.083] ERROR (#88): Communication job exhausted { job: 'bot-communication:pump' } {
+  _tag: 'CommunicationError',
+  code: 'storage',
+  message: 'Synthetic failure before any domain claim.'
+}
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+Forcing reset of hung job bot-communication:pump (started 1s ago)
+[15:18:48.727] ERROR (#157): Communication job exhausted { job: 'bot-communication:pump' } {
+  _tag: 'CommunicationError',
+  code: 'storage',
+  message: 'Synthetic failure before any domain claim.'
+}
+[15:18:49.255] ERROR (#294): Communication job exhausted { job: 'bot-communication:pump' } {
+  _tag: 'CommunicationError',
+  code: 'storage',
+  message: 'Synthetic failure before any domain claim.'
+}
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.

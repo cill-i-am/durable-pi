@@ -1,0 +1,12 @@
+Independent read-only review -- 23 October 2026
+Reviewer: /root/frontend_resources/hooks_scan/sound_review
+Current F15 source reread after the map camera correction. No source changes follow this review.
+
+No concrete findings in the current tree.
+
+- Map: Replacement waits for close completion and blocks after failed release (src/features/rich-results/places-map.machine.ts:169). Native acquisitions have scoped finalizers; disposal fences selection and joins pending work (src/features/rich-results/places-map-resource.ts:151). Tests cover held release, latest-view selection, stale completion, and cleanup failure.
+- Audio: Overlapping clicks have independent actors sharing the component's context. Finalizer failures enter the machine outcome; late shutdown failures reach the host logger (src/hooks/interaction-sound.machine.ts:43, src/hooks/use-interaction-sound.ts:26). The browser test now explicitly suspends native audio and verifies resume (tests/browser/interaction-sound.spec.ts:95).
+- Highlighter: Language changes replace observations, with an immediate render-time language fence (src/hooks/use-highlighted-code.ts:67). Borrowers do not dispose the module's shared Shiki core.
+- Question: The machine admits one append per edit revision (src/features/rich-results/question.machine.ts:46). The actual callback preserves existing draft text and does not submit (src/features/conversation/conversation.tsx:133).
+
+Proof limits: I performed no execution. Native resume/close overlap remains covered by simulated barriers. Highlighter race tests use injected loaders; they do not establish concurrent shared-Shiki loading or mounted-hook race behavior. Parent's browser gate remains authoritative.

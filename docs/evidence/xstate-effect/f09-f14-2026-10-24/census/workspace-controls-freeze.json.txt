@@ -1,0 +1,9 @@
+{
+  "src/app/workspace-navigation.tsx": "52930c00bffd87177cba9cefdf80cf6bb49d3359de7d4c3f9ffbd231ee047e7c",
+  "src/app/workspace-link-error.tsx": "38ba72d4adf8678da5ea16c9bb2f3eb3118308316ea4e03311b754312d343afa",
+  "src/app/workspace-command.machine.ts": "a525dae154ad7fe9d0964f845f5770b92473de7afca9d6ebf5de4ebb0177c65c",
+  "src/app/use-workspace-command.ts": "658ec4b99a0d7fad59876ed357643a560bdfbf5f0af943f4372d1f641f12816f",
+  "src/app/workspace-link-retry.machine.ts": "90b07ce96fc4303c6d11acd20f8d27c047afa3c8290a3b7f54e9f0215e3adfe4",
+  "src/app/use-workspace-link-retry.ts": "b36060fdc12a204c46ce799408686d81fa7622e426b8630cbac3ea00d2e98d67",
+  "tests/workspace-control-lifetimes.test.ts": "902bdc6af74d612efb810d89267703a0feeae1ff5545d27b0c3060106ac13060"
+}

@@ -1,0 +1,6 @@
+{
+  "src/http/client.ts": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+  "src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+  "tests/http-client-lifetime.test.ts": "8c1e25b0c323880035d5132c0a8a0e4d2f6deb4828c9de45293131de845a82be",
+  "tests/native-operation-lifetime.test.ts": "cb82bf319c9ba446039d794157afe7e0b7a5cda203267956f34aa2b6e60efca4"
+}

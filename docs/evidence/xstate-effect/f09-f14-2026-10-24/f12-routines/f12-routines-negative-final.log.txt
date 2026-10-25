@@ -1,0 +1,39 @@
+
+Running 1 test using 1 worker
+
+(node:43461) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:254:1 › A to B to A navigation cannot let an old save close the current editor (6.1s)
+
+
+  1) [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:254:1 › A to B to A navigation cannot let an old save close the current editor 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('#value')
+    Expected substring: "\"applied\":0"
+    Received string:    "{\"agent\":\"alpha\",\"view\":\"A\",\"applied\":1,\"routines\":{\"data\":{\"routines\":[{\"id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"title\":\"alpha\",\"prompt\":\"Read notes\",\"schedule\":{\"type\":\"webhook\"},\"status\":\"paused\",\"revision\":2,\"nextAt\":null,\"createdAt\":1,\"updatedAt\":1}],\"runs\":[]},\"busy\":false,\"attempt\":null,\"stopId\":null,\"error\":\"\"},\"hook\":{\"info\":{\"routineId\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"enabled\":false,\"revision\":1,\"accepted\":0},\"key\":null,\"attempt\":null,\"busy\":false}}"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('#value') with timeout 5000ms
+      - waiting for locator('#value')
+        14 × locator resolved to <pre id="value">{"agent":"alpha","view":"A","applied":1,"routines…</pre>
+           - unexpected value "{"agent":"alpha","view":"A","applied":1,"routines":{"data":{"routines":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","title":"alpha","prompt":"Read notes","schedule":{"type":"webhook"},"status":"paused","revision":2,"nextAt":null,"createdAt":1,"updatedAt":1}],"runs":[]},"busy":false,"attempt":null,"stopId":null,"error":""},"hook":{"info":{"routineId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","enabled":false,"revision":1,"accepted":0},"key":null,"attempt":null,"busy":false}}"
+
+
+      271 |   await page.evaluate(() => (window as unknown as ProbeWindow).pending[0]!())
+      272 |   await expect(page.locator("#value")).toContainText('"status":"paused"')
+    > 273 |   await expect(page.locator("#value")).toContainText('"applied":0')
+          |                                        ^
+      274 | })
+      275 | test("webhook retry preserves the secret and a newer revision prevents disclosure", async ({
+      276 |   page,
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/routines-ui-lifecycle.spec.ts:273:40
+
+    Error Context: test-results/routines-ui-lifecycle-A-to-50449-ve-close-the-current-editor-desktop/error-context.md
+
+    Error Context: test-results/routines-ui-lifecycle-A-to-50449-ve-close-the-current-editor-desktop/error-context.md
+
+  1 failed
+    [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:254:1 › A to B to A navigation cannot let an old save close the current editor 

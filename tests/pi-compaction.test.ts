@@ -20,7 +20,7 @@ import {
   watchEvents,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { Effect, ManagedRuntime } from "effect"
+import { Clock, Effect, ManagedRuntime } from "effect"
 import { expect, it } from "vitest"
 
 import { guardedTools } from "../src/access/adapters/pi"
@@ -97,10 +97,20 @@ it.each(["continue", "restart", "cancel"])(
       thinking: "off",
     })
     const root = Effect.runSync(
-      store.admit({
-        operationId: crypto.randomUUID(),
-        text: constraint,
-      })
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            {
+              operationId: crypto.randomUUID(),
+              text: constraint,
+            },
+            undefined,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
     ).turn
     let harness: Harness,
       firstProcess = true,
@@ -298,11 +308,21 @@ it.each(["continue", "restart", "cancel"])(
       access.notify()
       await enteredTool.promise
       const steer = Effect.runSync(
-        store.admit({
-          operationId: crypto.randomUUID(),
-          text: steering,
-          mode: "steer",
-        })
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            store.admit(
+              {
+                operationId: crypto.randomUUID(),
+                text: steering,
+                mode: "steer",
+              },
+              undefined,
+              undefined,
+              undefined,
+              { discoveryDeadline: now + 60_000 }
+            )
+          )
+        )
       ).turn
       const steerCommand = {
         type: "input" as const,
@@ -528,24 +548,54 @@ it("pins the active run budget across selection changes and storage reopen, then
       ]
   )
   const first = Effect.runSync(
-    turns.admit({
-      operationId: crypto.randomUUID(),
-      text: "First task",
-    })
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        turns.admit(
+          {
+            operationId: crypto.randomUUID(),
+            text: "First task",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: now + 60_000 }
+        )
+      )
+    )
   ).turn
   Effect.runSync(turns.setSettings({ model: "small", thinking: "off" }))
   const second = Effect.runSync(
-    turns.admit({
-      operationId: crypto.randomUUID(),
-      text: "Next task",
-    })
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        turns.admit(
+          {
+            operationId: crypto.randomUUID(),
+            text: "Next task",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: now + 60_000 }
+        )
+      )
+    )
   ).turn
   const steer = Effect.runSync(
-    turns.admit({
-      operationId: crypto.randomUUID(),
-      text: "Keep this constraint",
-      mode: "steer",
-    })
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        turns.admit(
+          {
+            operationId: crypto.randomUUID(),
+            text: "Keep this constraint",
+            mode: "steer",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: now + 60_000 }
+        )
+      )
+    )
   ).turn
   expect(steer.model).toBe("large")
   expect(settings.compaction?.reserveTokens).toBe(160000)

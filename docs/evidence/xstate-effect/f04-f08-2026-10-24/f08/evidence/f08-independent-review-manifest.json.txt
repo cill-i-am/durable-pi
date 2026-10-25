@@ -1,0 +1,53 @@
+{
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "source": {
+    "src/features/auth/auth-contracts.ts": "4da73595b68e2b27d55966fbac1d038582e4032875a1d20f30d6d2619708261b",
+    "src/features/auth/auth-owner.ts": "38ce5bf539307299988a8d6c50dee85ee8cb9940020a799ff9c1f33a9cc4486f",
+    "src/features/auth/auth-entry.machine.ts": "dab5d7b557cf9c8112119774d002d2d33c141db033d28650175c31f0ceb8cdd9",
+    "src/features/auth/auth-entry.ts": "5801bb244607d481712f18ecf60e3399e553d460408d48e220f25342f44a9823",
+    "src/features/auth/login.tsx": "93d87dfadd25796732393ec86dd911f5828e922d09aa57cd0c84da35242e531f",
+    "src/features/auth/password-recovery.tsx": "3b299c69abe3ffe8b6520d605605eb58d709a7146c6523b4c5faa4321e731bb0",
+    "src/features/auth/two-factor-challenge.tsx": "01266de083cbfd6977b25132bbb4c7163e03630c8150fdc5ab65c6e92d84c5ad",
+    "src/features/auth/passkey-sign-in.tsx": "b8e3779de8b6e02c7b20c3eb520c66be7c20b29047d9943d3e9b0d21ff4d2265",
+    "src/features/auth/passkey-errors.ts": "0717ade0936f65e73f1c64613557a756e65543c67ee45b1180eb5a87b8e73be0",
+    "src/features/auth/photo.machine.ts": "946c470721c6ba9693de4a9bd283999a972356cc4e72a94724f18ddc0add7b76",
+    "src/features/auth/photo-owner.ts": "6c5f51b7ac392d72f8ccf4e2c26377f5725d2fecd508711b350734e7f624cce8",
+    "src/features/auth/profile-photo.tsx": "ba68249a34185f9c3e96cfe2d3048eb97c7de5e95e10572a3e9321f8e66e4e90",
+    "src/features/auth/factor.machine.ts": "883803a60a2c0bb6a6ef5572297c967c43a121109ba043cff1d31224c1c636d0",
+    "src/features/auth/factor-owner.ts": "760ffcf14225901e75a0bfd4d8ebeffef941f5291a06262713cafa6cf06c8598",
+    "src/features/auth/factor-settings.tsx": "15715c366d4399f61d4430fb22415cf8b40c4a416d1890d47216e1bcf3dfb5ce",
+    "src/features/auth/passkeys.machine.ts": "2f196f512c9719e6be1da71ee27a63121f73c835981ee137fc62153ac8828851",
+    "src/features/auth/passkeys-owner.ts": "abfed3aeb33a87c426bf0bd61c6b60bdce72109cec0152470f334cdfa723813a",
+    "src/features/auth/passkey-settings.tsx": "f7608e1d8209650721eb44b75d294be45e458df18c9a462a9f7909988cea327f",
+    "src/features/auth/security.machine.ts": "5c81cfad04d4b0482369b49775d67b1507b4011a4a4ec1b2e318b2e299e61033",
+    "src/features/auth/security-owner.ts": "1f239f3b55dd632c145cf13cedd2393c0ddadfc10fabffa838ec3e05fbd278fc",
+    "src/features/auth/account-security.tsx": "8b2955e2f720b8d7f6315cdba20912ac5bbc0903647a19964e66310f31263f01",
+    "tests/auth-ui-lifecycle.test.ts": "20853f160571d779688a8efc4cc4b1e61308704891746e6ed150d9aaa17103d1",
+    "docs/xstate-effect-auth-ui.md": "bd02cefcd98c44d7ad81863b6ec65097e1e5bf93e63ff9f7deccc23d96856a8c"
+  },
+  "constraints": [
+    "F05 unchanged",
+    "no Git/package/shared config changes",
+    "synthetic auth endpoints only"
+  ],
+  "supersedes": "source-freeze.json",
+  "repair": "Preserve native compound Interrupt reasons and annotated defects after joined auth cleanup",
+  "changed": [
+    "src/features/auth/auth-owner.ts",
+    "tests/auth-ui-lifecycle.test.ts"
+  ],
+  "review": {
+    "closedAt": "2026-10-23T19:50:36.615697+00:00",
+    "remainingConcreteFindings": 0,
+    "evidence": {
+      "/private/tmp/f08-compound-cleanup-review.mts": "a04188a4436c42c2d21b32eed3f4436a77b64c7ba5e246a80ac140d33b787c55",
+      "/private/tmp/f08-compound-cleanup-before.log": "44f796e80d087cbf364cc1f63470d780b496dab54808d03b1ab0a35e9e9a2846",
+      "/private/tmp/f08-compound-cleanup-independent-after.log": "114f596ec673149f8397231c6722536a34c56ae05431f21617a2c5cf329e9ab8",
+      "/private/tmp/f08-held-native-review.mjs": "1fcf3439f337537ed05d9a1a9799a8262682fd1001d751afc5b73f5089a1b764",
+      "/private/tmp/f08-held-native-review.log": "62c9a79acde0e5d270ef29c9ce442953257e344542038c473ff38e491c37e967",
+      "/private/tmp/f08-auth-ui/native-passkey.log": "4cf6d2f7e8dc76557e7c7f6017039443316c5b4bacb8b42965bdf18b19e57b2b",
+      "/private/tmp/f08-auth-ui/mounted-security-final.log": "81ebbea4e93ac36b7a6dc3e7fe48823f3f2a01b40001b07e63ed44e3a79598fe",
+      "/private/tmp/f08-auth-ui/negative-owner.log": "fd62ad3819308b1fe1b6e90dbde9e1169c629902459fe35025490b58b1cb4175"
+    }
+  }
+}

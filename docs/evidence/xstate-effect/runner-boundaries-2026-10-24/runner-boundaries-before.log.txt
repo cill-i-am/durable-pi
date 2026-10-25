@@ -1,0 +1,44 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/runner-boundaries.test.ts (4 tests | 4 failed) 23ms
+   ❯ coordination native Effect boundary (1)
+     × preserves a complete checked Effect failure during a queue read 19ms
+   ❯ apps native Effect boundary (1)
+     × preserves a complete checked Effect failure during a queue read 3ms
+   ❯ email native Effect boundary (1)
+     × preserves a complete checked Effect failure during a queue read 0ms
+   ❯ whatsapp native Effect boundary (1)
+     × preserves a complete checked Effect failure during a queue read 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/runner-boundaries.test.ts > coordination native Effect boundary > preserves a complete checked Effect failure during a queue read
+ FAIL  tests/runner-boundaries.test.ts > apps native Effect boundary > preserves a complete checked Effect failure during a queue read
+ FAIL  tests/runner-boundaries.test.ts > email native Effect boundary > preserves a complete checked Effect failure during a queue read
+ FAIL  tests/runner-boundaries.test.ts > whatsapp native Effect boundary > preserves a complete checked Effect failure during a queue read
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ assertCause tests/runner-boundaries.test.ts:32:33
+     30|   ])
+     31| function assertCause(result: unknown, original: Cause.Cause<unknown>) {
+     32|   expect(Cause.isCause(result)).toBe(true)
+       |                                 ^
+     33|   if (!Cause.isCause(result)) throw new Error("Expected complete runne…
+     34|   for (const reason of original.reasons) {
+ ❯ tests/runner-boundaries.test.ts:130:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  21:59:42
+   Duration  310ms (import 71%, transform 15%, tests 10%, setup 3%, worker 1%)
+

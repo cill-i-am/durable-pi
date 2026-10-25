@@ -1,0 +1,34 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/terminal-claim.test.ts (18 tests | 4 failed | 14 skipped) 2124ms
+   ❯ Terminal atomic claimant at scheduler budget 128 (3)
+     × dispatches one duplicate behind a real SQLite transaction (held=false) 993ms
+     × dispatches one duplicate behind a real SQLite transaction (held=true) 279ms
+   ❯ Terminal atomic claimant at scheduler budget 32 (3)
+     × dispatches one duplicate behind a real SQLite transaction (held=false) 483ms
+     × dispatches one duplicate behind a real SQLite transaction (held=true) 367ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-claim.test.ts > Terminal atomic claimant at scheduler budget 128 > dispatches one duplicate behind a real SQLite transaction (held=false)
+ FAIL  tests/terminal-claim.test.ts > Terminal atomic claimant at scheduler budget 128 > dispatches one duplicate behind a real SQLite transaction (held=true)
+ FAIL  tests/terminal-claim.test.ts > Terminal atomic claimant at scheduler budget 32 > dispatches one duplicate behind a real SQLite transaction (held=false)
+ FAIL  tests/terminal-claim.test.ts > Terminal atomic claimant at scheduler budget 32 > dispatches one duplicate behind a real SQLite transaction (held=true)
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ tests/terminal-claim.test.ts:92:35
+     90|         f.finish.resolve(0)
+     91|         await Promise.all([a.completion, b.completion])
+     92|         expect(f.runtime.execute).toHaveBeenCalledTimes(1)
+       |                                   ^
+     93|         expect(Effect.runSync(f.store.get(input.id))?.status).toBe("su…
+     94|         expect(Effect.runSync(f.store.occupied())).toBe(false)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 14 skipped (18)
+   Start at  11:35:04
+   Duration  336.01s (transform 97%, import 3%, tests 1%)
+

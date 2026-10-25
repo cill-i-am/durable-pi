@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict'
+import { ObjectStore } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/store.ts'
+const id='11111111-1111-4111-8111-111111111111'
+const input={id,operationId:'22222222-2222-4222-8222-222222222222',expectedRevision:0,action:{type:'create' as const,title:'Preserved',notes:'',tasks:[]}}
+const summary={id,type:'project_checklist',title:'Newly created',revision:1,completed:0,total:0,archived:false,lastEvent:1}
+const failures:string[]=[]
+async function check(name:string,work:()=>Promise<void>){try{await work();console.log('PASS',name)}catch(e){failures.push(name);console.log('FAIL',name,String(e))}}
+await check('older list cannot erase a newer completed refresh',async()=>{
+ let release!:(x:unknown)=>void,calls=0
+ const store=new ObjectStore(async<T>()=>++calls===1?await new Promise(r=>release=r) as T:{objects:[summary]} as T,'refresh')
+ const old=store.refresh();await store.refresh();release({objects:[]});await old
+ assert.equal(store.getSnapshot().list[0]?.id,id)
+})
+await check('unreadable browser draft bytes block mutation and survive',async()=>{
+ let disk='{"schemaVersion":99,"draft":"keep"}',writes=0
+ const original=disk
+ const store=new ObjectStore(async<T>()=>{writes++;throw Error('Offline')},'drafts')
+ store.connect({getItem:()=>disk,setItem:(_k,v)=>{disk=v}})
+ await store.submit(input)
+ assert.equal(disk,original);assert.equal(writes,0)
+})
+await check('invalid cancellation acknowledgement retains original mutation',async()=>{
+ let disk=JSON.stringify([input])
+ const store=new ObjectStore(async<T>(path:string)=>path==='objects/cancel'?{applied:'yes'} as T:Promise.reject(Error('Offline')),'cancel')
+ store.connect({getItem:()=>disk,setItem:(_k,v)=>{disk=v}})
+ await store.cancel(id)
+ assert.equal(store.getSnapshot().pending[id]?.operationId,input.operationId)
+})
+console.log(JSON.stringify({failures}));process.exitCode=failures.length?1:0

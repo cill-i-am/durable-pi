@@ -1,0 +1,30 @@
+{
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "capturedAt": "2026-10-23T20:00:01.928864+00:00",
+  "files": {
+    "src/features/apps/app-canvas.tsx": "7f32f0fd6f75b833d9e04146cf659eb582158adf384c4f911d60e58cbbe5044d",
+    "src/features/apps/app-form.machine.ts": "5de90c95c7f2b11a9a6fcd396aebd76f4245727710934a8033f8b60002358451",
+    "src/features/apps/app-list.machine.ts": "3f9e59dbadb77a30c771bd2f2929dff1a60ab5db3b46d2f738463a4b2ab33d54",
+    "src/features/apps/app-owner.ts": "25d8c4d9c9bc2857d60899b70dc44ef5316170a3e92a6203ebcfb47766391dd1",
+    "src/features/apps/app-ui.machine.ts": "ab0882bf1d8c85951665722695fadb7b07228bf9d3ddc94e83c56a34e00aef60",
+    "src/features/apps/app-view.tsx": "a89e39400ab9f514d6e1c9a90692b7f23ccf9f149e559e559e6f3aaadacb676a",
+    "src/features/apps/apps-workbench.tsx": "165763b7bbab8f180f4a17d70715c509f265f2d7b144d57e9685515f9c0e82ca",
+    "src/features/apps/index.ts": "8413cb2acc0123d5816add98ea31c3d4a4a789555a3e77dc2f349d574d9a5873",
+    "src/features/apps/inline-app.tsx": "5728b529fc06e5c4c3e3d296329fdc34737032980ba37f508635880a09cc6796",
+    "src/features/apps/use-app-form.ts": "b29ad94f20c0c664db98358db2e51c35bd7119505a72abb94fc855e78ef2aa6e",
+    "src/features/apps/use-app-list.ts": "317bf0572f4758b4cb4fbb60dca02bef526615a060e7aca26fa415d3afd15113",
+    "src/features/apps/use-app.ts": "8a44157a494d1fdcf355d06ba4b26a8d17e24fb4a1789a89aa2c4471dad054d8",
+    "src/features/apps/web-canvas-owner.ts": "1f0a41cbc358af00093804278c0515bd2e8d5128c28314d7f2b3ac7f38d0e1c7",
+    "src/features/apps/web-canvas.machine.ts": "c1571abf987af2984e9d851ed8a7e1c7ba613a1bf92dadf30eb0ea63306e3966",
+    "src/features/apps/web-canvas.tsx": "22968ce73d209f3c4268ff05f038c43465478d6ab8020e220de5c0dd31c913b6",
+    "src/features/apps/web-frame.ts": "da485b2fa765a748a81a813c0c5876d7c99917e57a1f7fd529cfc3ff9bdfed55",
+    "tests/apps-ui-lifecycle.test.ts": "2fbd08cce35f5c84e7d8a13e636b3bda17654179d9b9f6c1851c4bff54cbb558",
+    "tests/browser/apps-mounted.spec.ts": "0c43dfc5b8fc0ec84a48edfde5c0a40035825cec50a4415a374a39ea571b2bad",
+    "tests/browser/fixtures/apps-lifecycle.tsx": "b8437e21341b155f97447b201b60249ec8f835d7c2e2804ed03bb50a2aabd45c",
+    "docs/xstate-effect-apps-ui.md": "1fb7279fc979003db29c9eef29013f859c5a3a9f45b93c739f580278dd27421a",
+    "src/http/client.ts": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+    "src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+    "tests/http-client-lifetime.test.ts": "8c1e25b0c323880035d5132c0a8a0e4d2f6deb4828c9de45293131de845a82be",
+    "tests/native-operation-lifetime.test.ts": "cb82bf319c9ba446039d794157afe7e0b7a5cda203267956f34aa2b6e60efca4"
+  }
+}

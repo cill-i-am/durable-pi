@@ -1,4 +1,4 @@
-import { Context, Effect, Exit, Layer, Scope } from "effect"
+import { Clock, Context, Effect, Exit, Layer, Scope } from "effect"
 
 import { BotConfigurationStore } from "../../src/agents/adapters/configuration"
 import { homeAgentId } from "../../src/agents/domain"
@@ -49,6 +49,10 @@ export async function probeAttachments(
             "native-attachments",
             () => Effect.succeed(true),
             {
+              // This store-only fixture resumes extraction manually after
+              // restart; the finite lease is not proof of alarm recovery.
+              arm: () =>
+                Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
               document: () =>
                 Effect.succeed({
                   text: "NATIVE_PREPARATION_RESTART_OK",
@@ -80,7 +84,11 @@ export async function probeAttachments(
           })
           yield* conversations.admit(
             { operationId: id, text: "Read after restart", files: [fileId] },
-            yield* prepareAttachments(workspace, [fileId])
+            yield* prepareAttachments(workspace, [fileId]),
+            [],
+            undefined,
+            // This store-only probe resumes extraction explicitly after restart.
+            { discoveryDeadline: Date.now() + 60_000 }
           )
         } else {
           yield* workspace.extractNext()

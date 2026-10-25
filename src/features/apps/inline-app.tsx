@@ -11,15 +11,31 @@ const Reference = Schema.Struct({
   title: Schema.String,
   publishedVersion: Revision,
 })
-export function InlineApp({
-  agentId,
-  output,
-  onPendingChange,
-}: {
+type Props = {
   agentId: string
   output: string
   onPendingChange?: (key: string, pending: boolean) => void
-}) {
+}
+export function InlineApp({ output, ...props }: Props) {
+  let reference: typeof Reference.Type
+  try {
+    reference = Schema.decodeUnknownSync(Reference)(JSON.parse(output))
+  } catch {
+    return null
+  }
+  return (
+    <InlineAppContent
+      key={`${props.agentId}/${reference.appId}`}
+      {...props}
+      reference={reference}
+    />
+  )
+}
+function InlineAppContent({
+  agentId,
+  reference,
+  onPendingChange,
+}: Omit<Props, "output"> & { reference: typeof Reference.Type }) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const key = useId()
@@ -30,12 +46,6 @@ export function InlineApp({
     },
     [key, onPendingChange]
   )
-  let reference: typeof Reference.Type
-  try {
-    reference = Schema.decodeUnknownSync(Reference)(JSON.parse(output))
-  } catch {
-    return null
-  }
   return (
     <section
       className="flex min-w-0 flex-col gap-4 rounded-lg border p-4"

@@ -1,0 +1,53 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | tests/conversation-submission-machine.test.ts > failed persistence retains the draft and admits no network request
+[17:19:23.747] ERROR (#1): Error [AssertionError]: expected true to be false // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:91:42 {
+  actual: true,
+  expected: false,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stderr | tests/conversation-submission-machine.test.ts > failed persistence retains the draft and admits no network request
+Event "xstate.effect.resolve" to actor "0.conversation-submission.answering" was not delivered (stopped).
+
+ ❯ tests/conversation-submission-machine.test.ts (8 tests | 1 failed | 7 skipped) 25ms
+   × failed persistence retains the draft and admits no network request 25ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-submission-machine.test.ts > failed persistence retains the draft and admits no network request
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/conversation-submission-machine.test.ts:91:42
+     89|           }),
+     90|       })
+     91|       expect(yield* owner.submit(input)).toBe(false)
+       |                                          ^
+     92|       expect(sends).toBe(0)
+     93|       expect(owner.actor.getSnapshot().context.pending?.text).toBe(inp…
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1697:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  17:19:23
+   Duration  345ms (import 71%, transform 14%, tests 11%, setup 3%, worker 1%)
+

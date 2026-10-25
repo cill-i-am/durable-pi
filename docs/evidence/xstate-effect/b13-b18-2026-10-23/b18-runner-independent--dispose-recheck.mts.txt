@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict'
+import { DatabaseSync } from 'node:sqlite'
+import { Lifecycle } from 'agents/lifecycle'
+import { Effect } from 'effect'
+import { BackupRunner } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/backup-lifecycle.ts'
+const db = new DatabaseSync(`/private/tmp/b18-runner-independent/dispose-repaired-${process.pid}.sqlite`)
+const kv = new Map(), retained: Promise<void>[] = [], restoring = Promise.withResolvers<void>(), restoreRelease = Promise.withResolvers<void>(), nativeEntered = Promise.withResolvers<void>(), nativeRelease = Promise.withResolvers<void>()
+let disposed = false, stepCalls = 0, startedAfterDispose = false
+const storage = { sql: { exec: (sql: string, ...params: any[]) => db.prepare(sql).all(...params) }, get: async (key: string) => kv.get(key), put: async (key: string, value: any) => { kv.set(key, value) }, delete: async (key: string) => kv.delete(key), setAlarm: async () => {}, deleteAlarm: async () => {}, sync: async () => {} }
+const runner = new BackupRunner<unknown>({ run: Effect.runPromise,
+  restore: () => Effect.promise(async () => { restoring.resolve(); await restoreRelease.promise }),
+  step: claim => Effect.gen(function* () { stepCalls++; startedAfterDispose = disposed; yield* claim({attemptId:'after-dispose',target:'watermark',attempts:1}); yield* Effect.promise(async () => { nativeEntered.resolve(); await nativeRelease.promise }); return undefined }),
+  exhaust: () => Effect.void,
+  retain: work => { retained.push(work) },
+})
+const lifecycle = new Lifecycle({ ctx: { id: { name: 'b18-dispose' }, storage, blockConcurrencyWhile: (work: any) => work(), waitUntil: (work: any) => retained.push(work) } } as any)
+lifecycle.use(runner)
+await lifecycle.start()
+await runner.wake()
+const dispatch = lifecycle.alarm()
+await restoring.promise
+const disposal = runner.dispose().then(() => { disposed = true })
+await new Promise(resolve => setImmediate(resolve))
+assert.equal(disposed, false, 'dispose must remain pending while admitted restore is held')
+restoreRelease.resolve()
+await dispatch
+await disposal
+console.log('POST_DISPOSE_NATIVE_ADMISSION', JSON.stringify({ disposed, stepCalls, startedAfterDispose, jobs: db.prepare('SELECT * FROM cf_agents_jobs').all() }))
+nativeRelease.resolve()
+await Promise.all(retained)
+db.close()
+assert.equal(stepCalls, 0, 'dispose must fence dispatch that is still awaiting restore')

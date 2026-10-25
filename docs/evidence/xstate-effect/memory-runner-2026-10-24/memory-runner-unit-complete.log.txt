@@ -1,0 +1,50 @@
+$ vitest run --maxWorkers=2
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+[vitest-pool]: Timeout terminating forks worker for test files /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/workspace-reply-files.test.ts.
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 2 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/delegation-family-revocation.test.ts.
+ ❯ node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.1TqnEahn.js:5921:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:644:9
+ ❯ process.processTimers node:internal/timers:618:7
+ ❯ Pool.schedule node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.1TqnEahn.js:5921:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.1TqnEahn.js:5418:58
+ ❯ listOnTimeout node:internal/timers:685:17
+ ❯ process.processTimers node:internal/timers:618:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/workspace-ingress.test.ts.
+ ❯ node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.1TqnEahn.js:5921:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ process.processTimers node:internal/timers:615:9
+ ❯ Pool.schedule node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.1TqnEahn.js:5921:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.1TqnEahn.js:5418:58
+ ❯ listOnTimeout node:internal/timers:685:17
+ ❯ process.processTimers node:internal/timers:618:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  328 passed (328)
+      Tests  3712 passed (3712)
+     Errors  2 errors
+   Start at  20:28:52
+   Duration  1552.01s (tests 63%, import 35%, transform 1%, setup 1%)
+
+     Import  1350 modules were evaluated 2579 times · 124.03s total, 35% of tracked time
+             ~21.18s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+
+[ELIFECYCLE] Test failed. See above for more details.

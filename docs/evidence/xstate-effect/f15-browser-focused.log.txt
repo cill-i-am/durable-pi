@@ -1,0 +1,34 @@
+[WebServer] (node:99352) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 16 tests using 1 worker
+
+(node:99381) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (4.1s)
+  ✓   2 [desktop] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.5s)
+  ✓   3 [desktop] › tests/browser/rich-results.spec.ts:32:1 › a shopping shortlist survives workspace expansion and questions append to an unsent draft (3.9s)
+  ✓   4 [desktop] › tests/browser/rich-results.spec.ts:103:1 › table search and sorting survive expansion and govern the exported CSV (2.9s)
+  ✓   5 [desktop] › tests/browser/rich-results.spec.ts:146:1 › weather adapts from a dated weekend comparison to a detailed day and a compact week (2.4s)
+  ✓   6 [desktop] › tests/browser/rich-results.spec.ts:219:1 › map leases survive selection, theme replacement and route teardown without stale canvases (3.4s)
+  ✓   7 [desktop] › tests/browser/rich-results.spec.ts:270:1 › closing a map during a held style request releases it and leaves the next map usable (3.0s)
+  ✓   8 [desktop] › tests/browser/rich-results.spec.ts:312:1 › loaded syntax highlighting preserves code text and unsupported-language fallback (2.4s)
+(node:99561) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   9 [mobile] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (4.0s)
+  ✓  10 [mobile] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.4s)
+  ✓  11 [mobile] › tests/browser/rich-results.spec.ts:32:1 › a shopping shortlist survives workspace expansion and questions append to an unsent draft (4.9s)
+  ✓  12 [mobile] › tests/browser/rich-results.spec.ts:103:1 › table search and sorting survive expansion and govern the exported CSV (3.1s)
+  ✓  13 [mobile] › tests/browser/rich-results.spec.ts:146:1 › weather adapts from a dated weekend comparison to a detailed day and a compact week (2.5s)
+  ✓  14 [mobile] › tests/browser/rich-results.spec.ts:219:1 › map leases survive selection, theme replacement and route teardown without stale canvases (3.2s)
+  ✓  15 [mobile] › tests/browser/rich-results.spec.ts:270:1 › closing a map during a held style request releases it and leaves the next map usable (3.5s)
+  ✓  16 [mobile] › tests/browser/rich-results.spec.ts:312:1 › loaded syntax highlighting preserves code text and unsupported-language fallback (2.6s)
+
+  16 passed (52.4s)

@@ -1,0 +1,11 @@
+$ node scripts/build-workers.mjs
+
+  dist/workers/agent/worker.js                         15.0mb ⚠️
+  dist/workers/workspace/adapters/document-worker.js    3.3mb ⚠️
+  dist/workers/terminal/worker.js                       2.4mb ⚠️
+  dist/workers/terminal/adapters/native-worker.js       1.9mb ⚠️
+  dist/workers/email/worker.js                          1.5mb ⚠️
+  dist/workers/whatsapp/worker.js                       1.2mb ⚠️
+  dist/workers/execution/worker.js                    984.2kb
+
+⚡ Done in 826ms

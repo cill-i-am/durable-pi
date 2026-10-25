@@ -1,0 +1,38 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/session-socket.test.ts (17 tests | 1 failed | 16 skipped) 24ms
+   × a successful held check cannot renew an already expired lease before the timer runs 24ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/session-socket.test.ts > a successful held check cannot renew an already expired lease before the timer runs
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "expired input",
+    ]
+
+
+Number of calls: 1
+
+ ❯ tests/session-socket.test.ts:139:24
+    137|     a.message("expired input")
+    138|     await vi.advanceTimersByTimeAsync(0)
+    139|     expect(b.send).not.toHaveBeenCalled()
+       |                        ^
+    140|     expect(a.close).toHaveBeenCalledWith(1008, "Sign in again")
+    141|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 skipped (17)
+   Start at  16:32:02
+   Duration  300ms (import 70%, transform 14%, tests 12%, setup 3%, worker 1%)
+

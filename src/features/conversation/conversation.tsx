@@ -18,7 +18,6 @@ import {
 } from "lucide-react"
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -68,11 +67,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ChatState } from "@/conversations/contracts"
-import {
-  ThinkingLevel,
-  type Submission,
-  type SubmissionMode,
-} from "@/conversations/turns"
+import { ThinkingLevel, type SubmissionMode } from "@/conversations/turns"
 import { ApprovalCard } from "@/features/access"
 import { useFamily } from "@/features/family/context"
 import {
@@ -83,17 +78,17 @@ import {
 import { MessageFileControls } from "@/features/files/message-file-controls"
 import { markReady } from "@/features/performance"
 import { AnswerExplorer } from "@/features/rich-results/explorer"
-import { agentApi } from "@/http/client"
 import type { Profile, JobType } from "@/inference/policy"
 
-import { submissionAttempt, rejectedModelAttempt } from "./commands"
 import { useMessageDeliveryDefault } from "./delivery-preference"
 import { ModelMenu } from "./model-menu"
 import { QueuedTurnAnchor } from "./queued-turn-anchor"
+import { RecoveryControls } from "./recovery-controls"
 import { TurnDelivery } from "./turn-delivery"
 import { TurnReply } from "./turn-reply"
 import type { ComposerDraftState } from "./use-composer-draft"
 import type { useConversation } from "./use-conversation"
+import { useConversationCommands } from "./use-conversation-commands"
 
 export function Conversation({
   composerDraft,
@@ -130,7 +125,6 @@ export function Conversation({
   onAppPendingChange?: (key: string, pending: boolean) => void
 }) {
   const archived = agent.status === "archived"
-  const api = useMemo(() => agentApi(agent.id), [agent.id])
   const { text: draft, profile, job } = composerDraft.value
   const setDraft = (change: string | ((text: string) => string)) =>
     composerDraft.update((current) => ({
@@ -142,17 +136,21 @@ export function Conversation({
   const answerPrompt = archived
     ? undefined
     : (prompt: string) => {
-        setDraft((current) =>
+        void setDraft((current) =>
           current.trim() ? `${current}\n\n${prompt}` : prompt
         )
         requestAnimationFrame(() => composerInput.current?.focus())
       }
   const [dragging, setDragging] = useState(false)
   const dragDepth = useRef(0)
-  const [error, setError] = useState("")
-  const [retrying, setRetrying] = useState<string | null>(null)
-  const retryKeys = useRef(new Map<string, string>())
-  const pending = useRef<Submission | null>(composerDraft.value.attempt)
+  const commands = useConversationCommands(
+    agent.id,
+    composerDraft,
+    files,
+    conversation.submit,
+    setSending
+  )
+  const { error, retrying } = commands
   const { state, error: connectionError, reload } = conversation
   const active = state?.turns.find((t) =>
     ["queued", "preparing", "running", "stopping"].includes(t.status)
@@ -174,66 +172,31 @@ export function Conversation({
     if (composerInput.current && !composerInput.current.disabled)
       markReady("composer")
   }, [state])
-  async function send(text: string, mode: SubmissionMode) {
-    if (archived) return false
-    setSending(true)
-    setError("")
-    pending.current = submissionAttempt(
-      pending.current,
+  function send(text: string, mode: SubmissionMode) {
+    if (archived || !composerDraft.ready || composerDraft.unreadable)
+      return Promise.resolve(false)
+    return commands.send({
       text,
       mode,
-      files.selected.map((file) => file.id),
+      files: files.selected.map((file) => file.id),
       profile,
-      job
+      job,
+    })
+  }
+  function retry(id: string) {
+    commands.retry(
+      id,
+      !archived &&
+        !state?.turns.some(
+          (turn) =>
+            turn.controlUnconfirmed &&
+            (turn.id === id ||
+              turn.steering?.some((member) => member.id === id))
+        )
     )
-    composerDraft.update({ attempt: pending.current })
-    try {
-      const submittedFiles = pending.current.files ?? []
-      await conversation.submit(pending.current)
-      files.clear(submittedFiles)
-      pending.current = null
-      composerDraft.update((current) => ({
-        attempt: null,
-        profile: "auto",
-        job: "conversation",
-        files: current.files.filter(
-          (file) => !submittedFiles.includes(file.id)
-        ),
-      }))
-      return true
-    } catch (e) {
-      if (rejectedModelAttempt(e)) {
-        pending.current = null
-        composerDraft.update({ attempt: null })
-      }
-      setError(e instanceof Error ? e.message : "Could not send")
-      return false
-    } finally {
-      setSending(false)
-    }
   }
-  async function retry(id: string) {
-    if (archived || retrying) return
-    setRetrying(id)
-    setError("")
-    const operationId = retryKeys.current.get(id) ?? crypto.randomUUID()
-    retryKeys.current.set(id, operationId)
-    try {
-      await api("retry", { turnId: id, operationId })
-      retryKeys.current.delete(id)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not retry.")
-    } finally {
-      setRetrying(null)
-    }
-  }
-  async function stop() {
-    if (!active) return
-    try {
-      await api("cancel", { operationId: active.id })
-    } catch {
-      setError("Could not stop the turn. Try again.")
-    }
+  function stop() {
+    if (active) commands.cancel(active.id)
   }
   return (
     <section
@@ -385,7 +348,7 @@ export function Conversation({
                           variant="ghost"
                           disabled={archived || sending || !!draft}
                           onClick={() => {
-                            setDraft(suggestion.text)
+                            void setDraft(suggestion.text)
                             composerInput.current?.focus()
                           }}
                         >
@@ -434,11 +397,7 @@ export function Conversation({
                               <TurnDelivery
                                 turn={turn}
                                 waiting={waiting}
-                                onCancel={() =>
-                                  void api("cancel", {
-                                    operationId: turn.id,
-                                  }).catch(() => setError("Could not cancel."))
-                                }
+                                onCancel={() => commands.cancel(turn.id)}
                               />
                             </BubbleContent>
                           </Bubble>
@@ -467,9 +426,18 @@ export function Conversation({
                           )}
                           agentName={agent.name}
                           agentId={agent.id}
-                          onRetry={(id) => void retry(id)}
+                          onRetry={
+                            turn.controlUnconfirmed
+                              ? undefined
+                              : (id) => void retry(id)
+                          }
                           retrying={retrying}
                           canRetry={!archived && !!state.connected && !retrying}
+                        />
+                        <RecoveryControls
+                          turn={turn}
+                          agentId={agent.id}
+                          refresh={reload}
                         />
                         {state.access?.approvals
                           .filter((value) => value.turnId === turn.id)
@@ -531,7 +499,10 @@ export function Conversation({
             active={!!active}
             working={conversationWorking(active, state)}
             stopping={active?.status === "stopping"}
-            pending={sending || files.uploading}
+            pending={
+              !commands.ready ||
+              composerUnavailable(sending, files, composerDraft)
+            }
             hasAttachments={files.selected.length > 0}
             attachments={
               <ComposerAttachments
@@ -560,7 +531,7 @@ export function Conversation({
                   onProfile={setProfile}
                   job={job}
                   onJob={setJob}
-                  disabled={sending || !!pending.current}
+                  disabled={sending || !!commands.pending}
                   selection={{
                     model: state?.model ?? "",
                     thinking: Schema.is(ThinkingLevel)(state?.thinking)
@@ -835,6 +806,7 @@ function conversationWorking(
   return (
     !!active &&
     ["queued", "preparing", "running"].includes(active.status) &&
+    !active.controlUnconfirmed &&
     !state?.access?.approvals.some((approval) => approval.status === "pending")
   )
 }
@@ -889,4 +861,12 @@ function messageText(
     default:
       return turn.text
   }
+}
+
+function composerUnavailable(
+  sending: boolean,
+  files: FilesState,
+  draft: ComposerDraftState
+) {
+  return sending || files.uploading || !draft.ready || draft.unreadable
 }

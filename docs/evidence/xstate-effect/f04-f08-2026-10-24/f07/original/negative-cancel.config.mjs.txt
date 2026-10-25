@@ -1,0 +1,2 @@
+import base from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/vitest.config.ts'
+export default {...base,plugins:[{name:'f07-invalid-cancel-ack',enforce:'pre',transform(code,id){if(!id.endsWith('/src/features/objects/store.ts'))return;const before='this.request("objects/cancel", { operationId })';if(!code.includes(before))throw Error('Missing acknowledgement schema');return {code:code.replace(before,'this.request("objects/cancel", { operationId }).pipe(Effect.map(() => ({ applied: true })))'),map:null}}}]}

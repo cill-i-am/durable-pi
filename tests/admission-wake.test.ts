@@ -116,12 +116,22 @@ function fixture() {
   const wakes: (string | null)[] = []
   const botConfiguration = new BotConfigurationStore(db)
   const skills = new SkillStore(db)
+  const pump = Effect.runSync(conversationFixture(db))
   const host: PersonalAgentTest = Object.create(PersonalAgentTest.prototype)
   Object.assign(host, {
     conversations,
     actorRuntime: runtime,
     ctx: { waitUntil: vi.fn() },
     conversationService: runtime.runSync(Conversations),
+    // Prototype hosts skip field initializers. Keep one real pump per host so
+    // HTTP reconciliation shares its joined-release receipts across requests.
+    conversationPump: conversationPump(
+      runtime.runSync(Conversations),
+      pump.memory,
+      pump.journal,
+      pump.execution,
+      pump.host
+    ),
     configurationService: { read: () => Effect.succeed(undefined) },
     connections: { defaults: () => Effect.succeed([]) },
     remoteSelection: {
@@ -135,6 +145,7 @@ function fixture() {
     modelConnected: async () => true,
     accountModelCatalog: async () => catalog,
     runner: {
+      armDiscovery: async () => Date.now() + 60_000,
       wake: async () => {
         wakes.push(Effect.runSync(conversations.active())?.id ?? null)
       },
@@ -160,6 +171,7 @@ function fixture() {
           Effect.sync(
             () => Effect.runSync(botConfiguration.read())?.status === "archived"
           ),
+        prearm: () => Effect.promise(() => host.runner.armDiscovery()),
         catalog: () =>
           conversationNativeOperation("read model catalog", () =>
             host.accountModelCatalog()
@@ -202,6 +214,10 @@ function wireSummaryRetry(
         catalog: () =>
           conversationNativeOperation("read summary model catalog", () =>
             host.accountModelCatalog()
+          ),
+        arm: () =>
+          conversationNativeOperation("arm memory discovery", () =>
+            host.compactor.armDiscovery()
           ),
         wake: () =>
           conversationNativeOperation("wake memory compaction", () =>
@@ -340,12 +356,18 @@ it("repairs a failed summary retry wake on exact replay, without another route r
   for (let attempt = 0; attempt < 3; attempt++)
     Effect.runSync(memory.failNode(part, 10000))
   let wakes = 0
+  const prearmed: number[] = []
   Object.defineProperty(host, "memory", { value: memory })
   Object.assign(host, {
     db,
     summaryRoutes,
     lifecycle: { start: async () => {} },
     compactor: {
+      armDiscovery: async () => {
+        const deadline = Date.now() + 60_000
+        prearmed.push(deadline)
+        return deadline
+      },
       wake: async () => {
         if (++wakes === 1) throw new Error("Wake acknowledgement lost")
       },
@@ -360,10 +382,13 @@ it("repairs a failed summary retry wake on exact replay, without another route r
     })
   try {
     expect((await host.fetch(request())).ok).toBe(false)
+    expect(prearmed).toHaveLength(1)
+    expect(prearmed[0]).toBeGreaterThan(Date.now())
     expect(Effect.runSync(memory.issues())).toEqual([])
     expect(db.all("SELECT * FROM summary_routes")).toHaveLength(2)
     expect(await (await host.fetch(request())).json()).toEqual({ ok: true })
     expect(wakes).toBe(2)
+    expect(prearmed).toHaveLength(1)
     expect(db.all("SELECT * FROM summary_routes")).toHaveLength(2)
     expect(Effect.runSync(memory.entry(0))?.text).toBe("Original source")
   } finally {
@@ -440,7 +465,10 @@ it("rejects a delayed retry for an older summary revision after the newer retry 
     db,
     summaryRoutes,
     lifecycle: { start: async () => {} },
-    compactor: { wake: async () => {} },
+    compactor: {
+      armDiscovery: async () => Date.now() + 60_000,
+      wake: async () => {},
+    },
   })
   wireSummaryRetry(host, db, ledger, summaryRoutes)
   let lookups = 0,
@@ -550,10 +578,16 @@ it("sends the pinned independent memory model through the installed Responses ad
 it("completes foreground work despite blocked summaries, then delivers a ready background report", async () => {
   const { host, conversations, runtime, db, wakes } = fixture()
   const source = Effect.runSync(
-    conversations.admit({
-      operationId: crypto.randomUUID(),
-      text: "Draft in background",
-    })
+    conversations.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Draft in background",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
   ).turn
   Effect.runSync(
     conversations.finish(
@@ -564,10 +598,16 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
     )
   )
   const foreground = Effect.runSync(
-    conversations.admit({
-      operationId: crypto.randomUUID(),
-      text: "Another question",
-    })
+    conversations.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Another question",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
   ).turn
   const route = { ...resolveRoute("conversation"), contextWindow: 8192 }
   let parentDone = false
@@ -589,7 +629,8 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
         taskId: 73,
         route,
         memory: "",
-      }
+      },
+      Number.MAX_SAFE_INTEGER
     )
   ).handoff
   parentDone = true
@@ -625,13 +666,15 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
         active: () => conversations.active().pipe(Effect.map((turn) => !!turn)),
         backgroundActive: () =>
           conversations.active().pipe(Effect.map((turn) => !!turn?.origin)),
+        prearm: () => Effect.promise(() => host.runner.armDiscovery()),
         wakeConversation: () => Effect.promise(() => host.runner.wake()),
+        armBackground: () => Effect.void,
         wakeBackground: () => Effect.void,
         notify: () => Effect.sync(() => host.notifyConversation()),
         admission: {
           transactionGroup: db,
           stop: () => Effect.void,
-          admit: (h, report) =>
+          admit: (h, report, discoveryDeadline) =>
             conversations
               .admit(
                 {
@@ -645,7 +688,8 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
                 },
                 undefined,
                 [],
-                h.route
+                h.route,
+                { discoveryDeadline }
               )
               .pipe(Effect.map((admission) => admission.turn.id)),
         },

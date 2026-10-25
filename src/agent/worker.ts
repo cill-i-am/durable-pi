@@ -21,6 +21,7 @@ import { DurableObject } from "cloudflare:workers"
 import {
   Scheduler,
   Cause,
+  Clock,
   Exit,
   Layer,
   ManagedRuntime,
@@ -101,6 +102,7 @@ import {
   type AgentFailure,
   agentRpc,
   agentRpcNative,
+  observeAgentRpc,
 } from "../agents/adapters/rpc"
 import { sqliteAgentCatalog } from "../agents/adapters/sqlite"
 import {
@@ -126,8 +128,19 @@ import {
   AgentSynchronizationError,
   AgentRuntimeUnavailable,
 } from "../agents/domain"
+import type { FamilyState, FamilyAdmissionError } from "../agents/family"
+import {
+  FamilyAdmission,
+  type FamilyAdmissionReceipt,
+  familyAdmissionApplication,
+} from "../agents/family-admission"
 import { webExecutor } from "../apps/adapters/code"
+import {
+  appConfiguration,
+  invalidateArchivedApps,
+} from "../apps/adapters/configuration"
 import { appsRequest } from "../apps/adapters/http"
+import { AppEventRunner } from "../apps/adapters/lifecycle"
 import { appTools } from "../apps/adapters/pi"
 import { AppStore } from "../apps/adapters/sqlite"
 import { AppStorageError } from "../apps/contracts"
@@ -142,6 +155,7 @@ import { browserTools } from "../browser/adapters/tools"
 import { Browser } from "../browser/browser"
 import { BrowserStorageError } from "../browser/repository"
 import { communicationRequest } from "../communication/adapters/http"
+import { CommunicationRunner } from "../communication/adapters/lifecycle"
 import { personalCommunication } from "../communication/adapters/personal-agent"
 import { isMailboxRequest } from "../communication/adapters/rpc"
 import {
@@ -149,12 +163,17 @@ import {
   communicationInstructions,
 } from "../communication/adapters/tools"
 import { Communication } from "../communication/communication"
+import type { CommunicationError } from "../communication/contracts"
 import { webCryptoRecoveryLayer } from "../conversations/adapters/crypto"
 import {
   ConversationCheckpoint,
   conversationEvents,
 } from "../conversations/adapters/events"
 import { admissionResponse } from "../conversations/adapters/http-admission"
+import {
+  ConversationRunner,
+  observeConversationSchedule,
+} from "../conversations/adapters/lifecycle"
 import {
   piConversationLayer,
   conversationNativeOperation,
@@ -171,9 +190,15 @@ import {
   messageAdmission,
 } from "../conversations/admission"
 import { resumeAttachments } from "../conversations/attachments"
-import { retryMessage, stopConversation } from "../conversations/commands"
+import {
+  checkConversationReply,
+  retryConversationStop,
+  retryMessage,
+  stopConversation,
+} from "../conversations/commands"
 import {
   CancelInput,
+  RecoveryInput,
   SendInput,
   type ChatState,
 } from "../conversations/contracts"
@@ -181,8 +206,14 @@ import {
   ConversationExecution,
   ConversationExecutionError,
 } from "../conversations/execution"
-import { ConversationJournal } from "../conversations/journal"
-import { conversationPump } from "../conversations/pump"
+import {
+  ConversationJournal,
+  type ConversationMemoryDiscovery,
+} from "../conversations/journal"
+import {
+  conversationPump,
+  type ConversationControlAttempt,
+} from "../conversations/pump"
 import {
   RunRecovery,
   recoveryApplication,
@@ -199,10 +230,16 @@ import {
 } from "../conversations/status"
 import {
   ConversationStorageError,
+  conversationUnconfirmed,
   ModelSettings,
   type Submission,
   type Turn,
 } from "../conversations/turns"
+import {
+  CoordinationRunner,
+  observeCoordinationSchedule,
+} from "../coordination/adapters/lifecycle"
+import type { CoordinationFailure } from "../coordination/contracts"
 import { personalCoordination } from "../coordination/personal-agent"
 import {
   coordinationTools,
@@ -211,6 +248,7 @@ import {
   coordinationToolNames,
 } from "../coordination/tools"
 import { backgroundRequest } from "../delegation/adapters/background-http"
+import { BackgroundRunner } from "../delegation/adapters/background-lifecycle"
 import { SqliteBackgroundMailbox } from "../delegation/adapters/background-mailbox"
 import {
   BackgroundParentRequest,
@@ -219,7 +257,6 @@ import {
 } from "../delegation/adapters/background-parent"
 import { backgroundRemote } from "../delegation/adapters/background-rpc"
 import { delegationsRequest } from "../delegation/adapters/http"
-import { backgroundNative } from "../delegation/adapters/interop"
 import { piDelegationLedger } from "../delegation/adapters/pi"
 import {
   delegationTool,
@@ -267,9 +304,13 @@ import {
   type Actor,
   type MessageProvenance,
 } from "../messages/identity"
+import { ReplyRunner } from "../replies/adapters/lifecycle"
+import { admitReply } from "../replies/admission"
 import { replyDeliveryProgress } from "../replies/progress"
 import { jsonRequest } from "../shared/http"
+import { nativeOperation, nativeResponse } from "../shared/interop"
 import { localTaskControls } from "../tasks/adapters/personal-agent"
+import { readTaskResponse } from "../tasks/adapters/response"
 import { taskTools, taskInstructions } from "../tasks/adapters/tools"
 import { taskCommand, type TaskCommand } from "../tasks/commands"
 import { TaskControlError, TaskReference } from "../tasks/contracts"
@@ -281,6 +322,7 @@ import {
   WhatsAppOutcome,
   WhatsAppRequest,
   whatsappNative,
+  whatsappRemote,
   whatsappRpc,
 } from "../whatsapp/adapters/rpc"
 import { WhatsAppStore } from "../whatsapp/adapters/sqlite"
@@ -362,6 +404,10 @@ import {
   validateRoute,
 } from "../inference/policy"
 import { InferenceUsage, usageApplication } from "../inference/usage"
+import {
+  BackupRunner,
+  BackupRecoveryChanged,
+} from "../memory/adapters/backup-lifecycle"
 import { SqliteBackupStatus } from "../memory/adapters/backup-status"
 import { bucketLayer } from "../memory/adapters/bucket"
 import { webCryptoLayer } from "../memory/adapters/crypto"
@@ -376,11 +422,18 @@ import { piModelSummaryProvider } from "../memory/adapters/pi-model"
 import { summaryRetryAuthority } from "../memory/adapters/retry-authority"
 import { sqliteMemoryLayer } from "../memory/adapters/sqlite"
 import { summaryInput } from "../memory/adapters/summary-input"
+import {
+  SummaryRunner,
+  SummaryRecoveryChanged,
+} from "../memory/adapters/summary-lifecycle"
 import { memoryTools } from "../memory/adapters/tools"
 import {
   memoryMaintenance,
   memoryImport,
   runMemoryBackup,
+  restoreMemoryBackup,
+  exhaustMemoryBackup,
+  retryMemoryBackup,
   memoryReport,
   type MemorySchedulingError,
   type MemoryHost,
@@ -389,7 +442,8 @@ import {
   MemoryBackupStatus,
   backupStatusApplication,
 } from "../memory/backup-status"
-import { Part } from "../memory/domain"
+import { BackupRetry } from "../memory/backup.machine"
+import { Part, type MemoryError } from "../memory/domain"
 import { ImportInput } from "../memory/import"
 import { MemoryTransaction } from "../memory/ledger"
 import { MemoryRepository } from "../memory/repository"
@@ -440,6 +494,7 @@ import type { PlanSource, PlanControl, PlanEvidence } from "../planning/plans"
 import { Planning, planningApplication } from "../planning/service"
 import { richResultTools } from "../rich-results/adapters/tools"
 import { routinesRequest } from "../routines/adapters/http"
+import { RoutineRunner } from "../routines/adapters/lifecycle"
 import { routineTools } from "../routines/adapters/pi"
 import { sqliteRoutinePersistence } from "../routines/adapters/sqlite"
 import { RoutineId } from "../routines/contracts"
@@ -451,7 +506,7 @@ import {
   type RoutineError,
   routineApplication,
 } from "../routines/service"
-import { preserveFatal } from "../shared/effect"
+import { preserveFatal, fatalCause } from "../shared/effect"
 import { importSkillsRequest } from "../skills/adapters/hosted"
 import {
   readSkillJson,
@@ -496,24 +551,26 @@ import { transcribeAudio } from "../workspace/adapters/audio"
 import { documentService } from "../workspace/adapters/document-service"
 import { filesRequest } from "../workspace/adapters/http"
 import { prepareImage } from "../workspace/adapters/images"
+import {
+  WorkspaceRunner,
+  observeWorkspaceSchedule,
+} from "../workspace/adapters/lifecycle"
 import { workspaceLayer } from "../workspace/adapters/storage"
 import { workspaceTools } from "../workspace/adapters/tools"
 import { videoService } from "../workspace/adapters/video-service"
 import { WorkspaceAdmission } from "../workspace/admission"
-import {
-  workspaceExtractionCycle,
-  workspaceExtractionFailure,
-} from "../workspace/application"
+import { workspaceExtractionCycle } from "../workspace/application"
 import {
   WorkspaceUnavailable,
   WorkspaceReadOnly,
   messageArchiveText,
+  type FileError,
 } from "../workspace/files"
 import { Workspace } from "../workspace/workspace"
 import { agentGateway } from "./adapters/gateway"
 import { agentJson, agentNative, agentResponse } from "./adapters/http"
-import { MaintenanceRunner } from "./adapters/maintenance-runner"
 import { proxyTerminalRequest } from "./adapters/terminal"
+import { makeUpstreamObserver } from "./adapters/upstream"
 import { agentSettings, contextProjectionBytes } from "./compaction"
 import { SYSTEM_PROMPT } from "./prompts"
 
@@ -528,19 +585,16 @@ declare global {
   }
 }
 
-class TurnRunner extends LifecycleCapability {
+abstract class TurnRunner extends LifecycleCapability {
   constructor(
     readonly owner: PersonalAgent,
-    readonly capability = "personal-chat"
+    readonly capability: string
   ) {
     super(capability)
   }
   async wake() {
     await this.lifecycle.jobs.push({
-      id:
-        this.capability === "personal-chat"
-          ? "pump"
-          : `${this.capability}:pump`,
+      id: `${this.capability}:pump`,
       fn: "pump",
       time: Date.now(),
       singleflight: true,
@@ -548,191 +602,101 @@ class TurnRunner extends LifecycleCapability {
       recoveryLoop: true,
     })
   }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    try {
-      return await this.owner.step()
-    } finally {
-      this.owner.notifyConversation()
-    }
-  }
+  abstract onJob(): Promise<LifecycleJobOutcome>
 }
 
-class CommunicationRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "bot-communication")
-  }
-  async wake() {
-    await this.lifecycle.jobs.push({
-      id: "bot-communication:pump",
-      fn: "pump",
-      time: Date.now() + 1000,
-      singleflight: true,
-      recoveryLoop: true,
-      hungTimeoutSeconds: 30,
-    })
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.communication.runtime.runPromise(
-      Effect.flatMap(Communication, (app) => app.pump())
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class BackgroundRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "background-groups")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    const next = await this.owner.stepBackground()
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class CoordinationRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "agent-coordination")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.coordination.pump().pipe(Effect.provide(WorkerTelemetry))
-    )
-    this.owner.notifyConversation()
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class AppEventRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "app-events")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.appPump.run().pipe(Effect.provide(WorkerTelemetry))
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class RoutineRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "routines")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.routinePump.run().pipe(Effect.provide(WorkerTelemetry))
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-  async onJobError(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.routinePump.retry()
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class EmailRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "email")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    return this.owner.stepEmail()
-  }
-}
-
-class WhatsAppRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "whatsapp")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    return this.owner.stepWhatsApp()
-  }
-}
-
-class MemoryRunner extends MaintenanceRunner {
-  constructor(owner: PersonalAgent, retain: (work: Promise<void>) => void) {
-    super(
-      "memory-compactor",
-      async () => {
-        if (!(await owner.familyAdmission())) return
-        return owner.actorRuntime.runPromise(
-          owner.memoryMaintenance
-            .compact()
-            .pipe(Effect.provide(WorkerTelemetry))
-        )
-      },
-      retain
-    )
-  }
-}
 class ActorServices extends LifecycleCapability {
   constructor(readonly owner: PersonalAgent) {
     super("effect-services")
   }
   async dispose() {
-    // Stop provider admission and accepted account refreshes together: provider
-    // waiters must join refresh settlement, which requires its owner to stop too.
+    const maintenance = await Promise.allSettled([
+      this.owner.compactor.dispose(),
+      this.owner.backups.dispose(),
+    ])
+    // Stop provider admission, account refreshes and accepted runner work together.
+    // Accepted callbacks retain their runtime and SQL until native work settles;
+    // their provider waiters also need provider/credential shutdown to progress.
     await Effect.runPromise(
-      this.owner.actorRuntime
-        .runSync(PiModelStreams)
-        .shutdown()
-        .pipe(
-          Effect.exit,
-          Effect.zip(
-            this.owner.credentialService.shutdown().pipe(Effect.exit),
-            { concurrent: true }
-          ),
-          Effect.flatMap(([streams, credentials]) => {
-            if (Exit.isFailure(streams) && Exit.isFailure(credentials))
-              return Effect.failCause(
-                Cause.combine(streams.cause, credentials.cause)
-              )
-            if (Exit.isFailure(streams)) return Effect.failCause(streams.cause)
-            if (Exit.isFailure(credentials))
-              return Effect.failCause(credentials.cause)
-            return Effect.void
-          }),
-          Effect.ensuring(this.owner.communication.runtime.disposeEffect),
-          Effect.ensuring(this.owner.actorRuntime.disposeEffect),
-          Effect.ensuring(Scope.close(this.owner.storageScope, Exit.void))
-        )
-    )
-  }
-}
-class BackupRunner extends MaintenanceRunner {
-  constructor(owner: PersonalAgent, retain: (work: Promise<void>) => void) {
-    super(
-      "memory-backups",
-      () =>
-        owner.actorRuntime.runPromise(
-          runMemoryBackup(owner.backupPrefix()).pipe(
-            Effect.provide(WorkerTelemetry)
+      Effect.all(
+        [
+          this.owner.actorRuntime
+            .runSync(PiModelStreams)
+            .shutdown()
+            .pipe(Effect.exit),
+          this.owner.credentialService.shutdown().pipe(Effect.exit),
+          this.owner.shutdownUpstream.pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.coordinationRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.appEvents.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.runner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.routineRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.communicationRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.extraction.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.backgroundRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.emailRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.whatsappRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+        ],
+        { concurrency: "unbounded" }
+      ).pipe(
+        Effect.flatMap((outcomes) => {
+          const cause = outcomes.reduce(
+            (combined, outcome) =>
+              Exit.isFailure(outcome)
+                ? Cause.combine(combined, outcome.cause)
+                : combined,
+            Cause.empty as Cause.Cause<unknown>
           )
-        ),
-      retain
+          return cause.reasons.length === 0
+            ? Effect.void
+            : Effect.failCause(cause)
+        }),
+        Effect.ensuring(this.owner.communication.runtime.disposeEffect),
+        Effect.ensuring(this.owner.actorRuntime.disposeEffect),
+        Effect.ensuring(Scope.close(this.owner.storageScope, Exit.void)),
+        Effect.ensuring(
+          Effect.suspend(() => {
+            const failures = maintenance.flatMap((result) =>
+              result.status === "rejected"
+                ? (Cause.isCause(result.reason)
+                    ? result.reason
+                    : Cause.die(result.reason)
+                  ).reasons
+                : []
+            )
+            return failures.length
+              ? Effect.failCause(fatalCause(Cause.fromReasons(failures)))
+              : Effect.void
+          })
+        )
+      )
     )
-  }
-}
-
-class ExtractionRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "workspace-extraction")
-  }
-  onJob(): Promise<LifecycleJobOutcome> {
-    return this.owner.actorRuntime
-      .runPromise(workspaceExtractionCycle())
-      .then((next) => (next === undefined ? undefined : { rescheduleAt: next }))
-  }
-  onJobError(): Promise<LifecycleJobOutcome> {
-    return this.owner.actorRuntime
-      .runPromise(workspaceExtractionFailure)
-      .then((next) => ({ rescheduleAt: next }))
   }
 }
 
@@ -963,6 +927,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   private readonly catalogLayer = sqliteAgentCatalog(this.db)
   readonly actorRuntime = ManagedRuntime.make(
     Layer.mergeAll(
+      this.familyAdmissionLayer(),
       terminalAuthoritySyncLayer(
         this.env.TERMINAL_SERVICE,
         this.ctx.id.toString()
@@ -1031,13 +996,58 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           active: () => this.active().pipe(Effect.map((turn) => !!turn)),
           backgroundActive: () =>
             this.active().pipe(Effect.map((turn) => !!turn?.origin)),
-          wakeConversation: () => backgroundNative(() => this.runner.wake()),
+          prearm: () =>
+            observeConversationSchedule("arm conversation discovery", () =>
+              this.runner.armDiscovery()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Conversation recovery could not be scheduled.",
+                  })
+              )
+            ),
+          wakeConversation: () =>
+            observeConversationSchedule("wake conversation", () =>
+              this.runner.wake()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Conversation recovery could not be scheduled.",
+                  })
+              )
+            ),
+          armBackground: (deadline) =>
+            observeConversationSchedule("arm background discovery", () =>
+              this.backgroundRunner.armBackground(deadline)
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Background recovery could not be scheduled.",
+                  })
+              )
+            ),
           wakeBackground: () =>
-            backgroundNative(() => this.backgroundRunner.wake()),
+            observeConversationSchedule("wake background work", () =>
+              this.backgroundRunner.wake()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Background recovery could not be scheduled.",
+                  })
+              )
+            ),
           notify: () => Effect.sync(() => this.notifyConversation()),
           admission: {
             transactionGroup: this.db,
-            admit: (handoff, report) =>
+            admit: (handoff, report, discoveryDeadline) =>
               this.conversations
                 .admit(
                   {
@@ -1055,53 +1065,86 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                   },
                   undefined,
                   [],
-                  handoff.route
+                  handoff.route,
+                  { discoveryDeadline }
                 )
                 .pipe(Effect.map((admission) => admission.turn.id)),
-            stop: (reportId) =>
-              this.conversations.requestStop(reportId).pipe(Effect.asVoid),
+            stop: (reportId, options) =>
+              this.conversations
+                .requestStop(reportId, options)
+                .pipe(Effect.asVoid),
           },
         }
       ),
-      delegationApplication(this.delegationLedger, {
-        current: (id, conversationId) =>
-          Effect.gen({ self: this }, function* () {
-            const turn = yield* this.conversations.get(id)
-            return (
-              turn?.status === "running" &&
-              turn.session_id === String(conversationId) &&
-              (yield* this.routineAuthority.canRun(id)) &&
-              (yield* this.botConfiguration.read())?.status !== "archived"
-            )
-          }).pipe(
-            Effect.mapError(
-              () =>
-                new DelegationFailure({
-                  code: "unavailable",
-                  message: "Could not confirm the parent request.",
-                })
-            )
-          ),
-        cancelled: (id) =>
-          Effect.gen({ self: this }, function* () {
-            return (
-              ["stopping", "cancelled", "failed"].includes(
-                (yield* this.conversations.get(id))?.status ?? "cancelled"
-              ) ||
-              (yield* this.botConfiguration.read())?.status === "archived" ||
-              (yield* this.coordination.store.closed(id)) ||
-              !(yield* this.routineAuthority.canRun(id))
-            )
-          }).pipe(
-            Effect.mapError(
-              () =>
-                new DelegationFailure({
-                  code: "unavailable",
-                  message: "Could not confirm the parent request.",
-                })
-            )
-          ),
-      }),
+      delegationApplication(
+        this.delegationLedger,
+        {
+          current: (id, conversationId) =>
+            Effect.gen({ self: this }, function* () {
+              const turn = yield* this.conversations.get(id)
+              return (
+                turn?.status === "running" &&
+                turn.session_id === String(conversationId) &&
+                (yield* this.routineAuthority.canRun(id)) &&
+                (yield* this.botConfiguration.read())?.status !== "archived"
+              )
+            }).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not confirm the parent request.",
+                  })
+              )
+            ),
+          cancelled: (id) =>
+            Effect.gen({ self: this }, function* () {
+              return (
+                ["stopping", "cancelled", "failed"].includes(
+                  (yield* this.conversations.get(id))?.status ?? "cancelled"
+                ) ||
+                (yield* this.botConfiguration.read())?.status === "archived" ||
+                (yield* this.coordination.store.closed(id)) ||
+                !(yield* this.routineAuthority.canRun(id))
+              )
+            }).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not confirm the parent request.",
+                  })
+              )
+            ),
+        },
+        {
+          arm: () =>
+            observeCoordinationSchedule("arm coordination discovery", () =>
+              this.coordinationRunner.armDiscovery()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message:
+                      "Could not retain recovery for the delegated task.",
+                  })
+              )
+            ),
+          wake: () =>
+            observeCoordinationSchedule("wake coordination", () =>
+              this.coordinationRunner.wake()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not wake the delegated task.",
+                  })
+              )
+            ),
+        }
+      ),
       credentialApplication(
         this.credentialLedger,
         this.createCredentialRefresher(),
@@ -1162,7 +1205,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       backupStatusApplication(this.backupStatusLedger),
       this.catalogLayer,
       agentCatalogHttp.pipe(Layer.provide(this.catalogLayer)),
-      configurationApplication(this.botConfiguration),
+      configurationApplication(
+        appConfiguration(this.db, this.botConfiguration, this.apps)
+      ),
       recoveryApplication(this.recovery).pipe(
         Layer.provide(webCryptoRecoveryLayer)
       ),
@@ -1179,11 +1224,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ),
           image: prepareImage(this.env.IMAGES),
           audio: transcribeAudio(this.env.AI),
+          arm: (): Effect.Effect<number, WorkspaceUnavailable> =>
+            observeWorkspaceSchedule("arm file preparation discovery", () =>
+              this.extraction.armDiscovery()
+            ),
         }
       ),
       Layer.unwrap(
         Effect.map(MemoryTransaction, (memory) =>
-          sqliteConversationJournal(this.db, this.conversations, memory)
+          sqliteConversationJournal(this.db, this.conversations, memory, {
+            arm: () => this.memoryDiscoveryProgram(),
+          })
         )
       ).pipe(Layer.provideMerge(sqliteMemoryLayer(this.db))),
       webCryptoLayer,
@@ -1197,7 +1248,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         () => this.env.MODEL_ID,
         () => this.coordinationTools
       ),
-      connectionApplication(this.connectionStore, this.connectionClient),
+      connectionApplication(this.connectionStore, this.connectionClient, () =>
+        connectionNative(() => this.connectionAuthority())
+      ),
       appApplication(this.apps),
       skillApplication(this.skills),
       planningApplication(
@@ -1264,6 +1317,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     active: () =>
       this.conversationService.active().pipe(Effect.map((turn) => !!turn)),
     notify: () => Effect.sync(() => this.notifyConversation()),
+    armCompactor: () =>
+      memoryWake("arm compactor", () => this.compactor.armDiscovery()).pipe(
+        Effect.map((deadline) => ({
+          deadline,
+          current: () => this.compactor.discoveryCurrent(deadline),
+        }))
+      ),
+    armBackup: () =>
+      memoryWake("arm backup", () => this.backups.armDiscovery()),
     wakeCompactor: () =>
       memoryWake("wake compactor", () => this.compactor.wake()),
     wakeBackup: () => memoryWake("wake backup", () => this.backups.wake()),
@@ -1311,11 +1373,22 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           Effect.map((configuration) => configuration?.status !== "archived")
         ),
     modelConnected: () => this.modelConnectedProgram(),
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ).pipe(
+        Effect.mapError(
+          () =>
+            new AgentSynchronizationError({
+              operation: "arm conversation discovery",
+            })
+        )
+      ),
     wakeConversation: () =>
       agentNativeOperation("wake conversation", () => this.runner.wake()),
     admission: {
       transactionGroup: this.db,
-      admit: (event) =>
+      admit: (event, discoveryDeadline) =>
         Effect.gen({ self: this }, function* () {
           return (yield* this.conversations.admit(
             {
@@ -1335,7 +1408,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                     cause,
                   })
               )
-            )).skills
+            )).skills,
+            undefined,
+            { discoveryDeadline }
           )).turn.id
         }),
     },
@@ -1349,12 +1424,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     TerminalAuthoritySync
   )
   readonly configurationHost: AgentConfigurationHost<
+    | AgentStorageError
     | Effect.Error<ReturnType<typeof synchronizeTerminalAuthority>>
     | Effect.Error<ReturnType<Workspace["Service"]["extractionPending"]>>
     | Effect.Error<ReturnType<Apps["Service"]["pending"]>>
     | Effect.Error<ReturnType<Routines["Service"]["nextWake"]>>
   > = {
-    invalidateApps: () => Effect.sync(() => this.webApps.invalidate()),
+    invalidateApps: () =>
+      invalidateArchivedApps(this.db, this.botConfiguration, () =>
+        this.webApps.invalidate()
+      ),
     syncTerminal: (projection) => this.terminalAuthoritySync.sync(projection),
     wakeBrowser: () =>
       agentNativeOperation("wake browser cleanup", () =>
@@ -1428,6 +1507,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           Effect.map((configuration) => configuration?.status === "archived")
         ),
     catalog: () => this.catalogProgram(),
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ),
     wake: () =>
       Effect.gen({ self: this }, function* () {
         yield* conversationNativeOperation("wake conversation", () =>
@@ -1468,32 +1551,119 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationService,
     this.messageAdmission
   )
-  private readonly stopConversationCommand = stopConversation(
-    this.conversationService,
+  private readonly conversationStopHost = {
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ),
+    wake: () =>
+      observeConversationSchedule("wake conversation", () =>
+        this.runner.wake()
+      ),
+    wakeBackground: () =>
+      observeConversationSchedule("wake background work", async () => {
+        await this.backgroundRunner.wake()
+        await this.coordinationRunner.wake()
+      }),
+    notify: () =>
+      Effect.sync(() => {
+        this.access.notify()
+        this.notifyConversation()
+      }),
+  }
+  readonly stopConversation = stopConversation(
     {
-      wake: () =>
-        conversationNativeOperation("wake conversation", () =>
-          this.runner.wake()
+      requestStop: (id, options) =>
+        conversationTransactions(this.db).atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* this.coordination.stop(id).pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationStorageError({
+                    operation: "stop agent session",
+                    cause,
+                  })
+              )
+            )
+            const root = yield* this.conversations.requestStop(id, options)
+            if (root)
+              yield* this.accessStore.cancel(root).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ConversationStorageError({
+                      operation: "revoke conversation access",
+                      cause,
+                    })
+                )
+              )
+            return root
+          })
         ),
+    },
+    this.conversationStopHost
+  )
+  private readonly stopRoutine = stopConversation(
+    {
+      requestStop: (id, options) =>
+        conversationTransactions(this.db).atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            const run = yield* this.routines.requestStopRun(id)
+            if (!run || (run.status !== "queued" && run.status !== "stopping"))
+              return undefined
+            const root = yield* this.conversations.requestStop(
+              run.turnId,
+              options
+            )
+            yield* this.accessStore.cancel(run.turnId).pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationStorageError({
+                    operation: "revoke routine access",
+                    cause,
+                  })
+              )
+            )
+            return root
+          })
+        ),
+    },
+    {
+      ...this.conversationStopHost,
       wakeBackground: () =>
-        conversationNativeOperation("wake background work", async () => {
-          await this.backgroundRunner.wake()
-          await this.coordinationRunner.wake()
-        }),
-      notify: () => Effect.sync(() => this.notifyConversation()),
+        this.conversationStopHost
+          .wakeBackground()
+          .pipe(
+            Effect.andThen(
+              observeConversationSchedule("wake routines", () =>
+                this.routineRunner.wake()
+              )
+            )
+          ),
     }
   )
-  readonly stopConversation = (id: string) =>
-    this.coordination.stop(id).pipe(
-      Effect.mapError(
-        (cause) =>
-          new ConversationStorageError({
-            operation: "stop agent session",
-            cause,
-          })
+  readonly retryConversationStop = retryConversationStop(
+    this.conversationService,
+    this.conversationStopHost
+  )
+  readonly checkConversationReply = checkConversationReply({
+    inspect: (id, revision) =>
+      this.conversationPump.run("inspect", { id, revision }).pipe(
+        Effect.mapError((cause) => {
+          switch (cause._tag) {
+            case "PlanFailure":
+            case "RoutineConflict":
+            case "RoutineStorageError":
+              return new ConversationExecutionError({
+                operation: "check conversation",
+                cause,
+              })
+            default:
+              return cause
+          }
+        })
       ),
-      Effect.andThen(this.stopConversationCommand(id))
-    )
+    notify: () => Effect.sync(() => this.notifyConversation()),
+  })
   readonly emailStore = new EmailStore(this.db)
   readonly whatsappStore = new WhatsAppStore(this.db)
   private wakeWhatsApp() {
@@ -1527,10 +1697,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   private importWhatsAppMedia(owner: string, id: string, media: WhatsAppMedia) {
     return importWhatsAppMedia(this.workspaceService, (source) =>
       Effect.gen({ self: this }, function* () {
-        const result = yield* whatsappNative(async () => {
+        const result = yield* whatsappRemote(async () => {
           const bridge = await getAgentByName(this.env.WHATSAPP, owner)
           return bridge.downloadMedia(source)
-        })
+        }).pipe(
+          Effect.mapError((error) =>
+            error._tag === "WhatsAppStorageError"
+              ? new WhatsAppUnavailable()
+              : error
+          )
+        )
         if (!result.ok)
           return yield* result.retryable
             ? new WhatsAppUnavailable()
@@ -1566,7 +1742,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         const agent = yield* profile(id)
         if (agent?.status !== "active") return yield* new WhatsAppUnavailable()
         const peer = this.env.AGENT.getByName(agentObjectName(owner, id))
-        yield* agentRpcNative(() =>
+        yield* observeAgentRpc(() =>
           agentRpc(peer).configure(owner, agent, owner)
         ).pipe(Effect.mapError(() => new WhatsAppUnavailable()))
         return peer
@@ -1577,12 +1753,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     ): Effect.Effect<WhatsAppMediaExport, WhatsAppFailure> =>
       agentId === homeAgentId
         ? exportWhatsAppMedia(this.workspaceService, id)
-        : whatsappNative(() =>
+        : whatsappRemote(() =>
             whatsappRpc(
               this.env.AGENT.getByName(agentObjectName(owner, agentId))
             ).exportMedia(owner, id)
           )
     return whatsappApplication(this.whatsappStore, {
+      reconcile: () => whatsappNative(() => this.whatsappRunner.reconcile()),
+      armReply: (deadline) =>
+        whatsappNative(() => this.whatsappRunner.armReply(deadline)),
       control: (body, id) =>
         agentNative("control task from WhatsApp", (signal) =>
           this.taskAction(taskCommand(body)!, id, signal)
@@ -1607,7 +1786,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               record.media
             )
           const peer = yield* connected(record.agentId)
-          return yield* whatsappNative(() =>
+          return yield* whatsappRemote(() =>
             whatsappRpc(peer).importMedia(owner, record.id, record.media!)
           )
         }),
@@ -1621,7 +1800,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           if (input.origin?.kind !== "whatsapp")
             return yield* new WhatsAppUnavailable()
           const origin = input.origin
-          return yield* whatsappNative(() =>
+          return yield* whatsappRemote(() =>
             whatsappRpc(peer).submit(owner, {
               id: input.operationId,
               body: input.text,
@@ -1634,7 +1813,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       turn: (id, turnId) =>
         id === homeAgentId
           ? this.whatsappTurn(turnId)
-          : whatsappNative(() =>
+          : whatsappRemote(() =>
               whatsappRpc(
                 this.env.AGENT.getByName(agentObjectName(owner, id))
               ).turn(owner, turnId)
@@ -1666,10 +1845,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async stepWhatsApp(): Promise<LifecycleJobOutcome> {
     if (!(await this.familyAdmission())) return
-    if (!(await this.run(this.whatsappStore.pending())).length) return undefined
-    const identity = await this.run(this.communication.mailbox.identity())
-    const next = await this.run(this.whatsapp(identity.owner).pump())
-    return next === undefined ? undefined : { rescheduleAt: next }
+    return modelCallback(
+      this.actorRuntime.runPromiseExit(
+        Effect.gen({ self: this }, function* () {
+          if (!(yield* this.whatsappStore.pending()).length) return undefined
+          const identity = yield* this.communication.mailbox.identity()
+          const next = yield* this.whatsapp(identity.owner).pump()
+          return next === undefined ? undefined : { rescheduleAt: next }
+        }).pipe(Effect.provide(WorkerTelemetry))
+      )
+    )
   }
   async whatsappV1(raw: unknown): Promise<Schema.Json> {
     const work = Effect.gen({ self: this }, function* () {
@@ -1735,6 +1920,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return WhatsAppOutcome.encode(await this.actorRuntime.runPromiseExit(work))
   }
   readonly emailPump = emailPump(this.emailStore, {
+    armReply: (deadline) =>
+      agentNative("arm email reply recovery", () =>
+        this.emailRunner.armReply(deadline)
+      ).pipe(Effect.mapError(() => new EmailUnavailable())),
     control: (record) =>
       agentNative("control task from email", (signal) =>
         this.taskAction(taskCommand(record.body)!, undefined, signal)
@@ -1799,7 +1988,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         const profile =
           id === homeAgentId
             ? yield* this.catalog.requireActive(id)
-            : yield* agentRpcNative(() =>
+            : yield* observeAgentRpc(() =>
                 agentRpc(this.env.AGENT.getByName(configuration.owner)).profile(
                   id
                 )
@@ -1816,6 +2005,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   private emailView(owner: string, id: AgentId) {
     return Effect.gen({ self: this }, function* () {
+      yield* agentNative("reconcile email", () =>
+        this.emailRunner.reconcile()
+      ).pipe(
+        Effect.mapError(
+          () => new EmailStorageError({ operation: "reconcile email" })
+        )
+      )
       const settings = yield* this.emailStore.settings()
       const configured = this.emailReady()
       const address =
@@ -1938,14 +2134,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             )
         }
       }
-      const accepted = yield* this.emailStore.receive(
-        email,
-        settings.generation
-      )
-      yield* agentNative("wake email", () => this.emailRunner.wake()).pipe(
-        Effect.mapError(() => new EmailUnavailable())
-      )
-      return accepted
+      return yield* admitReply({
+        arm: (deadline) =>
+          agentNative("arm email acceptance", () =>
+            this.emailRunner.armReply(deadline)
+          ).pipe(Effect.mapError(() => new EmailUnavailable())),
+        accept: (deadline) =>
+          this.emailStore.receive(email, settings.generation, deadline),
+        wake: agentNative("wake email", () => this.emailRunner.wake()).pipe(
+          Effect.mapError(() => new EmailUnavailable())
+        ),
+      })
     }).pipe(
       Effect.mapError((error) =>
         error._tag === "AgentStorageError" || error._tag === "AgentConflict"
@@ -1956,7 +2155,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async stepEmail(): Promise<LifecycleJobOutcome> {
     if (!(await this.familyAdmission())) return
-    const next = await this.run(this.emailPump())
+    const next = await modelCallback(
+      this.actorRuntime.runPromiseExit(
+        this.emailPump().pipe(Effect.provide(WorkerTelemetry))
+      )
+    )
     return next === undefined ? undefined : { rescheduleAt: next }
   }
   readonly retrySummary = memorySummaryRetry(
@@ -1966,6 +2169,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationService,
     {
       catalog: () => this.catalogProgram(),
+      arm: () =>
+        conversationNativeOperation("arm memory compaction", () =>
+          this.compactor.armDiscovery()
+        ),
       wake: () =>
         conversationNativeOperation("wake memory compaction", () =>
           this.compactor.wake()
@@ -2006,17 +2213,33 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   readonly routinePump = routinePump<
     | Effect.Error<ReturnType<PersonalAgent["modelConnectedProgram"]>>
+    | FamilyAdmissionError
     | AgentSynchronizationError
     | ConversationError
     | AccessError
   >(this.routines, {
     getTurn: (id) => this.conversations.get(id),
     modelConnected: () => this.modelConnectedProgram(),
+    canAdmit: () =>
+      this.actorRuntime
+        .runSync(FamilyAdmission)
+        .admit.pipe(Effect.map(Boolean)),
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ).pipe(
+        Effect.mapError(
+          () =>
+            new AgentSynchronizationError({
+              operation: "arm conversation discovery",
+            })
+        )
+      ),
     wakeConversation: () =>
       agentNativeOperation("wake conversation", () => this.runner.wake()),
     admission: {
       transactionGroup: this.db,
-      admit: (run) =>
+      admit: (run, discoveryDeadline) =>
         Effect.gen({ self: this }, function* () {
           return (yield* this.conversations.admit(
             {
@@ -2036,16 +2259,21 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                     cause,
                   })
               )
-            )).skills
+            )).skills,
+            undefined,
+            { discoveryDeadline }
           )).turn.id
         }),
     },
-    stop: (id) =>
-      Effect.gen({ self: this }, function* () {
-        yield* this.conversations.requestStop(id)
-        yield* this.accessStore.cancel(id)
-        this.access.notify()
-      }),
+    stop: (id, discoveryDeadline) =>
+      conversationTransactions(this.db)
+        .atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* this.conversations.requestStop(id, { discoveryDeadline })
+            yield* this.accessStore.cancel(id)
+          })
+        )
+        .pipe(Effect.tap(() => Effect.sync(() => this.access.notify()))),
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
   readonly objects: typeof Objects.Service = this.actorRuntime.runSync(Objects)
@@ -2266,8 +2494,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.run(this.background.read(id))
   }
   async stepBackground() {
-    if (!(await this.familyAdmission())) return
-    return this.run(this.background.step())
+    const authorized = !!(await this.familyAdmission())
+    return modelCallback(
+      this.actorRuntime.runPromiseExit(
+        this.background.step(authorized).pipe(Effect.provide(WorkerTelemetry))
+      )
+    )
   }
   readonly delegations: typeof Delegation.Service =
     this.actorRuntime.runSync(Delegation)
@@ -2341,104 +2573,109 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   }
-  /** Every execution boundary reads live membership. The persisted membership
-   * generation also prevents old scheduled work resuming after a new invite. */
-  private familyTransition?: Promise<void>
-  private familyRevision?: symbol
-  async familyAdmission() {
-    for (;;) {
-      const revision = this.familyRevision
-      const state = await this.run(this.familyStateProgram())
-      const previous = await this.ctx.storage.get<string | null>(
-        "family-membership-generation"
+  protected familyAdmissionLayer(): ReturnType<
+    typeof familyAdmissionApplication
+  > {
+    return familyAdmissionApplication({
+      read: () => this.familyStateProgram(),
+      generation: () =>
+        Effect.promise(() =>
+          this.ctx.storage.get("family-membership-generation")
+        ),
+      write: (record) =>
+        Effect.promise(() =>
+          this.ctx.storage.put("family-membership-generation", record)
+        ),
+      fence: () => this.fenceFamilyGeneration(),
+    })
+  }
+  private fenceFamilyGeneration(): Effect.Effect<void, FamilyAdmissionError> {
+    return Effect.gen({ self: this }, function* () {
+      // Discovery is useful for cleanup but can never be a prerequisite for
+      // revoking authority. Every original root retains its native identity.
+      const discovery = yield* Effect.exit(
+        observeConversationSchedule("arm revoked conversation cleanup", () =>
+          this.runner.armDiscovery()
+        )
       )
-      // Discard lookups begun before another admission changed the generation.
-      if (revision !== this.familyRevision) continue
-      if (this.familyTransition) {
-        await this.familyTransition
-        continue
+      const stopOptions = Exit.isSuccess(discovery)
+        ? { discoveryDeadline: discovery.value }
+        : {
+            unconfirmedError:
+              "Access ended and Stop was saved, but cleanup could not be scheduled. Check the reply or try Stop again.",
+          }
+      for (const routine of yield* this.routines.list()) {
+        if (routine.status !== "active") continue
+        yield* this.routines.setStatus({
+          id: routine.id,
+          expectedRevision: routine.revision,
+          operationId: crypto.randomUUID(),
+          status: "paused",
+        })
       }
-      if (
-        (!state && previous !== null) ||
-        (state && previous !== undefined && previous !== state.membershipId)
-      ) {
-        this.familyRevision = Symbol()
-        // Join only generation changes. A waiter rechecks live membership and
-        // cannot admit new work before an older cleanup finishes.
-        const transition = (async () => {
-          const sessions = await this.run(
-            Effect.gen({ self: this }, function* () {
-              const sessions: string[] = []
-              for (const routine of yield* this.routines.list()) {
-                if (routine.status !== "active") continue
-                yield* this.routines.setStatus({
-                  id: routine.id,
-                  expectedRevision: routine.revision,
-                  operationId: crypto.randomUUID(),
-                  status: "paused",
-                })
-                const run = yield* this.routines.cancelPendingRun(routine.id)
-                if (run?.status === "queued") {
-                  yield* this.conversations.requestStop(run.turnId)
-                  yield* this.access.cancel(run.turnId)
-                }
-              }
-              for (const turn of yield* this.conversations.unfinished()) {
-                yield* this.conversations.requestStop(turn.id)
-                yield* this.access.cancel(turn.id)
-                if (turn.session_id) sessions.push(turn.session_id)
-              }
-              yield* this.coordination.store.closeAll()
-              for (const id of yield* this.delegationLedger.catalog()) {
-                const group = yield* this.delegationLedger.group(id)
-                yield* this.coordination.store.close(group.turnId)
-                this.ctx.waitUntil(
-                  this.run(this.delegations.reconcile(group.turnId))
-                )
-              }
-              let offset = 0
-              while (true) {
-                const groups = yield* this.backgroundMailbox.list(offset)
-                if (!groups.length) break
-                for (const group of groups) {
-                  if (["done", "failed", "cancelled"].includes(group.status))
-                    continue
-                  yield* this.background.requestStop(group.id)
-                  this.ctx.waitUntil(this.run(this.background.stop(group.id)))
-                }
-                offset += groups.length
-              }
-              return sessions
-            })
-          )
-          // Abort after recording stop intent. Owned cleanup can finish after a
-          // revoked tool callback returns, rather than waiting on that callback.
-          for (const session of sessions)
-            this.ctx.waitUntil(
-              this.run(this.conversationExecution.abort(session))
-            )
-          await this.ctx.storage.put(
-            "family-membership-generation",
-            state?.membershipId ?? null
-          )
-        })()
-        this.familyTransition = transition
-        try {
-          await transition
-        } finally {
-          this.familyTransition = undefined
-        }
-        continue
-      }
-      if (previous !== (state?.membershipId ?? null)) {
-        this.familyRevision = Symbol()
-        await this.ctx.storage.put(
-          "family-membership-generation",
-          state?.membershipId ?? null
+      const pendingRoutine = yield* this.routines.inFlight()
+      if (pendingRoutine?.status === "pending")
+        yield* this.routines.cancelPendingRun(pendingRoutine.id)
+      for (const turn of yield* this.conversations.unfinished()) {
+        yield* conversationTransactions(this.db).atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* this.conversations.requestStop(turn.id, stopOptions)
+            yield* this.accessStore.cancel(turn.id)
+          })
         )
       }
-      return state
-    }
+      yield* this.coordination.store.closeAll()
+      for (const id of yield* this.delegationLedger.catalog()) {
+        const group = yield* this.delegationLedger.group(id)
+        yield* this.delegations.revoke(group.turnId)
+        yield* this.coordination.store.close(group.turnId)
+        this.ctx.waitUntil(
+          this.run(
+            this.delegations.reconcile(group.turnId, { allowDispatch: false })
+          )
+        )
+      }
+      let offset = 0
+      while (true) {
+        const groups = yield* this.backgroundMailbox.list(offset)
+        if (!groups.length) break
+        for (const group of groups) {
+          if (["done", "failed", "cancelled"].includes(group.status)) continue
+          yield* this.background.requestStop(group.id)
+          this.ctx.waitUntil(this.run(this.background.stop(group.id)))
+        }
+        offset += groups.length
+      }
+      this.access.notify()
+      // The owned pump performs native Stop after generation fencing finishes.
+      // An unowned delayed abort could otherwise reach a later continuation.
+      this.ctx.waitUntil(this.runner.wake())
+      if (Exit.isFailure(discovery))
+        yield* Effect.logError(
+          "Revoked conversation cleanup is unconfirmed",
+          discovery.cause
+        )
+    })
+  }
+  /** Every boundary gets a fresh lookup. Generation changes are owned by the
+   * host scope and survive an individual caller leaving. */
+  familyAdmission(signal?: AbortSignal): Promise<FamilyState | null> {
+    return modelCallback(
+      this.actorRuntime.runPromiseExit(
+        FamilyAdmission.use((service) => service.admit).pipe(
+          Effect.provide(WorkerTelemetry)
+        ),
+        { signal }
+      )
+    )
+  }
+  private connectionAuthority(): Promise<FamilyAdmissionReceipt | null> {
+    return this.actorRuntime
+      .runPromiseExit(FamilyAdmission.use((service) => service.receipt))
+      .then((exit) => {
+        if (Exit.isFailure(exit)) throw exit.cause
+        return exit.value
+      })
   }
   protected familyModelOwnerProgram() {
     return accountNative(async () => {
@@ -2553,56 +2790,37 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   }
   private readonly conversationLatency = new ConversationLatency()
-  private upstreamProbe?: {
-    id: string
-    sink: WritableStream<Uint8Array>
-    claimed: boolean
-    abort: AbortController
-    work: Promise<unknown>
-  }
-  async observeUpstream(id: string, sink: WritableStream<Uint8Array>) {
-    if (this.upstreamProbe) {
-      await sink.abort().catch(() => {})
-      return false
-    }
-    const abort = new AbortController()
-    const lease = {
-      id,
-      sink,
-      claimed: false,
-      abort,
-      work: Promise.resolve() as Promise<unknown>,
-    }
-    this.upstreamProbe = lease
-    lease.work = this.actorRuntime.runPromiseExit(
-      Effect.sleep(60_000).pipe(
-        Effect.ensuring(
-          Effect.promise(async () => {
-            if (this.upstreamProbe === lease) this.upstreamProbe = undefined
-            if (!lease.claimed) await sink.abort().catch(() => {})
-          })
-        )
-      ),
-      { signal: abort.signal }
+  private readonly upstreamObservation = this.actorRuntime.runPromise(
+    makeUpstreamObserver.pipe(
+      Effect.provideService(Scope.Scope, this.storageScope)
     )
-    this.ctx.waitUntil(lease.work)
-    return true
+  )
+  readonly shutdownUpstream = Effect.promise(
+    () => this.upstreamObservation
+  ).pipe(Effect.flatMap((observer) => observer.shutdown))
+  async observeUpstream(id: string, sink: WritableStream<Uint8Array>) {
+    const observer = await this.upstreamObservation
+    const admitted = await this.actorRuntime.runPromise(
+      observer.observe(id, sink)
+    )
+    if (admitted)
+      this.ctx.waitUntil(this.actorRuntime.runPromiseExit(observer.settled(id)))
+    return admitted
   }
   async releaseUpstream(id: string) {
-    const lease = this.upstreamProbe
-    if (lease?.id !== id) return
-    lease.abort.abort()
-    await lease.work
+    const observer = await this.upstreamObservation
+    await this.actorRuntime.runPromise(observer.release(id))
   }
   readonly models = createAgentModels(this.credentials, {
-    fetch: (fallback, input, init, correlation) => {
-      const probe = this.upstreamProbe
-      if (!probe || probe.claimed || !correlation) return fallback(input, init)
-      probe.claimed = true
+    fetch: async (fallback, input, init, correlation) => {
+      if (!correlation) return fallback(input, init)
+      const observer = await this.upstreamObservation
+      const sink = await this.actorRuntime.runPromise(observer.consume)
+      if (!sink) return fallback(input, init)
       return observedUpstreamFetch(
         this.ctx.exports.UpstreamRelay,
         new Request(input, init),
-        probe.sink,
+        sink,
         correlation
       )
     },
@@ -2909,7 +3127,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             ),
             ...routineTools(
               this.routines,
-              () => this.routineRunner.wake(),
+              () => this.routineRunner.armDiscovery(),
               (operation, signal) => this.run(operation, { signal })
             ),
             ...workspaceTools(
@@ -3042,7 +3260,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       thinkingLevel: "medium",
     },
   })
-  readonly communicationRunner = new CommunicationRunner(this)
+  readonly communicationRunner: CommunicationRunner<CommunicationError> =
+    new CommunicationRunner<CommunicationError>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: (onAttempt) =>
+        modelCallback(
+          this.communication.runtime.runPromiseExit(
+            Effect.flatMap(Communication, (app) => app.pump(onAttempt))
+          )
+        ),
+      exhaust: (attempt, _error, eligible) =>
+        Effect.flatMap(Clock.currentTimeMillis, (now) =>
+          this.communication.mailbox.exhaustControl(attempt, now, eligible)
+        ),
+      restore: () =>
+        Effect.flatMap(Clock.currentTimeMillis, (now) =>
+          this.communication.mailbox.restoreControl(now)
+        ),
+      nextWake: () => this.communication.mailbox.nextWake(),
+      notify: () => this.notifyConversation(),
+    })
   readonly conversationPump = conversationPump<
     | ConversationExecutionError
     | PlanFailure
@@ -3059,8 +3296,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationJournal,
     this.conversationExecution,
     {
-      prepareFiles: (turn) =>
-        this.resumeAttachments(turn).pipe(
+      prepareRuntime: (turn) =>
+        Effect.gen({ self: this }, function* () {
+          this.foregroundSizing = turn
+          this.installRemoteTools(
+            yield* this.refreshRemoteTools().pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationExecutionError({
+                    operation: "prepare conversation tools",
+                    cause,
+                  })
+              )
+            )
+          )
+        }),
+      prepareFiles: (turn, owner) =>
+        this.resumeAttachments(turn, owner).pipe(
           Effect.mapError(
             (cause) =>
               new ConversationExecutionError({
@@ -3071,6 +3323,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ),
       canRun: (id) =>
         Effect.gen({ self: this }, function* () {
+          const family = yield* conversationNativeOperation(
+            "verify conversation family access",
+            (signal) => this.familyAdmission(signal)
+          )
+          if (
+            !family ||
+            (yield* this.configurationService.read())?.status === "archived"
+          )
+            return false
           const allowed = yield* this.routines.canRun(id)
           const origin = (yield* this.conversations.get(id))?.origin
           return (
@@ -3158,7 +3419,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ),
     }
   )
-  readonly backgroundRunner = new BackgroundRunner(this)
+  readonly backgroundRunner: BackgroundRunner<unknown> =
+    new BackgroundRunner<unknown>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: () => this.stepBackground(),
+      exhaust: (current) => this.background.exhaustRecovery(current),
+      nextWake: () => this.background.nextWake(),
+    })
   readonly runtimeStatusProgram = runtimeStatusEffect<
     AgentConflict | AgentStorageError | AccessError,
     never
@@ -3190,29 +3457,222 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         })
       ),
   })
-  readonly snapshotProgram = conversationSnapshot(
+  private readonly readConversationSnapshot = conversationSnapshot(
     this.conversationService,
     this.conversationExecution,
     this.conversationJournal,
     () => this.snapshotMetadata(),
     (ids) => this.workspaceService.replyFilesForTurns(ids)
   )
-  readonly coordinationRunner = new CoordinationRunner(this)
-  readonly runner = new TurnRunner(this)
-  readonly compactor = new MemoryRunner(this, (work) =>
-    this.ctx.waitUntil(work)
-  )
-  readonly backups = new BackupRunner(this, (work) => this.ctx.waitUntil(work))
-  readonly extraction = new ExtractionRunner(this)
+  readonly snapshotProgram = () =>
+    this.conversationPump
+      .reconcile()
+      .pipe(Effect.andThen(this.readConversationSnapshot()))
+  readonly coordinationRunner: CoordinationRunner<CoordinationFailure> =
+    new CoordinationRunner<CoordinationFailure>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: async () => {
+        let allowDispatch = false
+        try {
+          allowDispatch = !!(await this.familyAdmission())
+        } catch (cause) {
+          if (
+            Cause.isCause(cause) &&
+            (Cause.hasDies(cause) || Cause.hasInterrupts(cause))
+          )
+            throw cause
+          await this.actorRuntime.runPromise(
+            Effect.logError(
+              "Coordination authority refresh failed; continuing cleanup only",
+              cause
+            ).pipe(Effect.provide(WorkerTelemetry))
+          )
+        }
+        return modelCallback(
+          this.actorRuntime.runPromiseExit(
+            this.coordination
+              .pump({ allowDispatch })
+              .pipe(Effect.provide(WorkerTelemetry))
+          )
+        )
+      },
+      restore: () => this.coordination.restore(),
+      exhaust: (current) => this.coordination.exhaust(current),
+      nextWake: () => this.coordination.nextWake(),
+      notify: () => this.notifyConversation(),
+    })
+  readonly runner: ConversationRunner<unknown> =
+    new ConversationRunner<unknown>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: async (onAttempt) => {
+        const outcome = await this.step(onAttempt)
+        return outcome && outcome !== "yield" ? outcome.rescheduleAt : undefined
+      },
+      exhaust: (attempt, _error, eligible) =>
+        this.conversations.exhaustControl(
+          attempt.rootId,
+          attempt.revision,
+          attempt.phase,
+          attempt.phase === "stop"
+            ? "Stop could not be confirmed. Check the reply or try Stop again."
+            : "This reply could not be confirmed. Check the reply before continuing.",
+          eligible
+        ),
+      restore: () =>
+        Effect.gen({ self: this }, function* () {
+          yield* this.conversations.restoreControl()
+          const active = yield* this.conversations.active()
+          if (!active?.control?.unconfirmed || !active.session_id) return
+          const checked = yield* Effect.exit(
+            this.conversationPump.run("inspect", {
+              id: active.id,
+              revision: active.revision,
+            })
+          )
+          if (Exit.isFailure(checked))
+            yield* Effect.logError(
+              "Conversation cold recovery remains unconfirmed",
+              checked.cause
+            )
+        }),
+      nextWake: () =>
+        this.conversations
+          .active()
+          .pipe(
+            Effect.map((turn) =>
+              turn && !conversationUnconfirmed(turn) ? Date.now() : undefined
+            )
+          ),
+      notify: () => this.notifyConversation(),
+    })
+  readonly compactor: SummaryRunner<
+    | MemoryError
+    | MemorySchedulingError
+    | ConversationError
+    | FamilyAdmissionError,
+    MemoryRepository | SummaryModel | FamilyAdmission
+  > = new SummaryRunner({
+    run: (work, options) =>
+      this.actorRuntime.runPromise(
+        work.pipe(Effect.provide(WorkerTelemetry)),
+        options
+      ),
+    step: () =>
+      FamilyAdmission.use((service) => service.admit).pipe(
+        Effect.flatMap((active) =>
+          active ? this.memoryMaintenance.compact() : Effect.succeed(undefined)
+        )
+      ),
+    settle: () => this.memoryMaintenance.reconcile(),
+    nextWake: () => this.memoryMaintenance.nextWake(),
+    restore: () => this.memory.restoreSummaryClaims(),
+    notify: () => this.notifyConversation(),
+    retain: (work) => this.ctx.waitUntil(work),
+  })
+  readonly backups: BackupRunner<
+    Effect.Error<ReturnType<typeof runMemoryBackup>>,
+    Effect.Services<ReturnType<typeof runMemoryBackup>>
+  > = new BackupRunner<
+    Effect.Error<ReturnType<typeof runMemoryBackup>>,
+    Effect.Services<ReturnType<typeof runMemoryBackup>>
+  >({
+    run: (work, options) =>
+      this.actorRuntime.runPromise(
+        work.pipe(Effect.provide(WorkerTelemetry)),
+        options
+      ),
+    step: (onClaim) => runMemoryBackup(this.backupPrefix(), onClaim),
+    restore: () => restoreMemoryBackup(),
+    notify: () => this.notifyConversation(),
+    exhaust: (claim, current) => exhaustMemoryBackup(claim, current),
+    retain: (work) => this.ctx.waitUntil(work),
+  })
+  readonly extraction: WorkspaceRunner<FileError> =
+    new WorkspaceRunner<FileError>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: (onClaim) =>
+        modelCallback(
+          this.actorRuntime.runPromiseExit(workspaceExtractionCycle(onClaim))
+        ),
+      restore: () => this.workspaceService.restorePreparation(),
+      nextWake: () => this.workspaceService.nextPreparationWake(),
+      exhaust: (claim, current) =>
+        this.workspaceService.exhaustPreparation(claim, current),
+      notify: () => this.notifyConversation(),
+    })
   readonly browserCleanup = new BrowserRunner(this)
   readonly webApps = new WebApps(
     this.appService,
     webExecutor(this.env.EXECUTION_SERVICE)
   )
-  readonly appEvents = new AppEventRunner(this)
-  readonly routineRunner = new RoutineRunner(this)
-  readonly emailRunner = new EmailRunner(this)
-  readonly whatsappRunner = new WhatsAppRunner(this)
+  readonly appEvents = new AppEventRunner<
+    Effect.Error<ReturnType<PersonalAgent["appPump"]["run"]>>
+  >({
+    run: (work) => this.actorRuntime.runPromise(work),
+    pump: async () => {
+      if (!(await this.familyAdmission())) return undefined
+      return modelCallback(
+        this.actorRuntime.runPromiseExit(
+          this.appPump.run().pipe(Effect.provide(WorkerTelemetry))
+        )
+      )
+    },
+    next: () => this.appService.nextDelivery(),
+    exhaust: (current, expiredOnly) =>
+      this.appService.exhaustDelivery(current, expiredOnly),
+  })
+  readonly routineRunner = new RoutineRunner<
+    Effect.Error<ReturnType<PersonalAgent["routinePump"]["run"]>>
+  >({
+    owner: this.db,
+    run: (work) => this.actorRuntime.runPromise(work),
+    step: async (onAttempt) => {
+      const allowDispatch = await this.familyAdmission()
+        .then(Boolean)
+        .catch(async (error) => {
+          if (
+            Cause.isCause(error) &&
+            (Cause.hasDies(error) || Cause.hasInterrupts(error))
+          )
+            throw error
+          await this.actorRuntime.runPromise(
+            Effect.logError(
+              "Routine authority refresh failed; retaining cleanup",
+              error
+            )
+          )
+          return false
+        })
+      return modelCallback(
+        this.actorRuntime.runPromiseExit(
+          this.routinePump
+            .run(onAttempt, { allowDispatch })
+            .pipe(Effect.provide(WorkerTelemetry))
+        )
+      )
+    },
+    nextWake: () => this.routines.nextWake(),
+    exhaust: (attempt, current) => this.routines.exhaust(attempt, current),
+    notify: () => this.notifyConversation(),
+  })
+  readonly emailRunner = new ReplyRunner("email", {
+    run: (work) => this.actorRuntime.runPromise(work),
+    pump: () => this.stepEmail(),
+    recover: () => this.emailStore.recover(false),
+    exhaust: (eligible, expiredOnly) =>
+      this.emailStore.exhaustRecovery(eligible, expiredOnly),
+    pending: () => this.emailStore.pending(),
+    nextRecovery: () => this.emailStore.nextRecovery(),
+  })
+  readonly whatsappRunner = new ReplyRunner("whatsapp", {
+    run: (work) => this.actorRuntime.runPromise(work),
+    pump: () => this.stepWhatsApp(),
+    recover: () => this.whatsappStore.recover(false),
+    exhaust: (eligible, expiredOnly) =>
+      this.whatsappStore.exhaustRecovery(eligible, expiredOnly),
+    pending: () => this.whatsappStore.pending(),
+    nextRecovery: () => this.whatsappStore.nextRecovery(),
+  })
   readonly actorServices = new ActorServices(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.mcp)
@@ -3238,27 +3698,27 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
-    await this.coordinationRunner.wake()
+    await this.runner.reconcile()
+    await this.communicationRunner.reconcile()
+    await this.coordinationRunner.reconcile()
     await this.run(this.whatsappStore.recover())
+    await this.whatsappRunner.reconcile()
     if ((await this.run(this.whatsappStore.pending())).length)
       await this.whatsappRunner.wake()
     await this.run(this.emailStore.recover())
+    await this.emailRunner.reconcile()
     if ((await this.run(this.emailStore.pending())).length)
       await this.emailRunner.wake()
-    if ((await this.run(this.communication.mailbox.nextWake())) !== undefined)
-      await this.communicationRunner.wake()
     await this.backgroundRunner.wake()
-    if ((await this.run(this.routineAuthority.nextWake())) !== undefined)
-      await this.routineRunner.wake()
-    if ((await this.run(this.apps.pending())).length)
-      await this.appEvents.wake()
+    await this.routineRunner.reconcile()
+    await this.appEvents.reconcile()
     await this.run(this.executions.recover())
     await this.run(this.browser.recover())
     if (await this.run(this.browser.maintenancePending()))
       await this.browserCleanup.wake()
-    if (await this.run(this.workspaceService.extractionPending()))
-      await this.extraction.wake()
-    if (await this.run(this.active())) await this.runner.wake()
+    await this.extraction.reconcile()
+    await this.compactor.restore()
+    await this.backups.reconcile()
     await this.actorRuntime.runPromise(
       this.memoryMaintenance.recover().pipe(Effect.provide(WorkerTelemetry))
     )
@@ -3705,45 +4165,64 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     current?: AgentId,
     signal?: AbortSignal
   ) {
-    const access = await this.familyAdmission()
+    const access = await this.familyAdmission(signal)
     if (!access) return "Your account access has ended."
     const identity = await this.communication.runtime.runPromise(
-      this.communication.mailbox.identity()
+      this.communication.mailbox.identity(),
+      { signal }
     )
     const root = this.env.AGENT.getByName(access.owner)
     const call = async (
       agent: AgentProfile,
       task?: typeof TaskReference.Type
     ) => {
-      const response = await agentGateway(
-        new Request(
-          `https://agent.internal/api/agent/tasks${task ? "/stop" : ""}?agent=${agent.id}`,
-          {
-            method: task ? "POST" : "GET",
-            headers: {
-              "x-owner-id": access.owner,
-              "content-type": "application/json",
-            },
-            ...(task ? { body: JSON.stringify(task) } : {}),
-            signal,
-          }
+      const exit = await this.actorRuntime.runPromiseExit(
+        Effect.scoped(
+          Effect.gen({ self: this }, function* () {
+            const response = yield* nativeResponse(
+              (requestSignal) =>
+                agentGateway(
+                  new Request(
+                    `https://agent.internal/api/agent/tasks${task ? "/stop" : ""}?agent=${agent.id}`,
+                    {
+                      method: task ? "POST" : "GET",
+                      headers: {
+                        "x-owner-id": access.owner,
+                        "content-type": "application/json",
+                      },
+                      ...(task ? { body: JSON.stringify(task) } : {}),
+                      signal: requestSignal,
+                    }
+                  ),
+                  { AGENT: this.env.AGENT },
+                  this.ctx
+                ),
+              (cause) => {
+                throw cause
+              }
+            )
+            return yield* readTaskResponse(response)
+          })
         ),
-        { AGENT: this.env.AGENT },
-        this.ctx
+        { signal }
       )
-      if (!response.ok) {
-        await response.body?.cancel()
-        throw new TaskControlError({
-          code: response.status === 404 ? "not_found" : "unavailable",
-          message:
-            "This task's state could not be confirmed. Retry the same handle.",
-        })
-      }
-      return response.json<unknown>()
+      if (Exit.isSuccess(exit)) return exit.value
+      const [reason] = exit.cause.reasons
+      if (
+        exit.cause.reasons.length === 1 &&
+        reason?._tag === "Fail" &&
+        Schema.is(TaskControlError)(reason.error)
+      )
+        throw reason.error
+      throw exit.cause
     }
     try {
       return await taskDirectory({
-        profiles: () => agentRpc(root).profiles(),
+        profiles: () =>
+          this.actorRuntime.runPromise(
+            observeAgentRpc(() => agentRpc(root).profiles()),
+            { signal }
+          ),
         list: (agent) => call(agent),
         stop: call,
       })(command, current ?? identity.bot)
@@ -3812,7 +4291,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           path,
           id,
           this.whatsapp(owner),
-          this.whatsappStore,
           () => this.wakeWhatsApp()
         )
       }
@@ -3827,19 +4305,22 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             this.receiveEmail(owner, id, input, attachments),
           configure: (input) => this.configureEmail(input),
           retry: (input) =>
-            this.emailStore
-              .retry(
-                input.id,
-                input.acknowledgeDuplicateRisk,
-                input.operationId
-              )
-              .pipe(
-                Effect.andThen(
-                  agentNative("wake email", () => this.emailRunner.wake()).pipe(
-                    Effect.mapError(() => new EmailUnavailable())
-                  )
-                )
-              ),
+            admitReply({
+              arm: (deadline) =>
+                agentNative("arm email retry", () =>
+                  this.emailRunner.armReply(deadline)
+                ).pipe(Effect.mapError(() => new EmailUnavailable())),
+              accept: (deadline) =>
+                this.emailStore.retry(
+                  input.id,
+                  input.acknowledgeDuplicateRisk,
+                  input.operationId,
+                  deadline
+                ),
+              wake: agentNative("wake email", () =>
+                this.emailRunner.wake()
+              ).pipe(Effect.mapError(() => new EmailUnavailable())),
+            }),
         })
       }
       if (
@@ -4043,7 +4524,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
 
       if (path === "webhooks/incoming" && request.method === "POST")
         return yield* webhookIncoming(this.webhooks, request, () =>
-          webhookNative(() => this.routineRunner.wake())
+          webhookNative(() => this.routineRunner.armDiscovery())
         )
       if (base === "webhooks")
         return yield* webhookOwnerRequest(this.webhooks, request, path)
@@ -4053,7 +4534,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           request,
           path,
           () =>
-            agentNative("wake routines", () => this.routineRunner.wake()).pipe(
+            agentNative("arm routine discovery", () =>
+              this.routineRunner.armDiscovery()
+            ).pipe(
               Effect.catchCause((cause) =>
                 Effect.failCause(
                   Cause.map(
@@ -4068,18 +4551,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               )
             ),
           (id) =>
-            Effect.gen({ self: this }, function* () {
-              yield* agentNative("wake conversation", () => this.runner.wake())
-              yield* agentNative("wake routines", () =>
-                this.routineRunner.wake()
-              )
-              const run = yield* this.routines.cancelPendingRun(id)
-              if (run?.status === "queued") {
-                yield* this.conversationService.requestStop(run.turnId)
-                yield* this.access.cancel(run.turnId)
-              }
-              this.notifyConversation()
-            }).pipe(
+            this.stopRoutine(id).pipe(
               preserveFatal,
               Effect.mapError((cause) => {
                 switch (cause._tag) {
@@ -4144,7 +4616,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 )
               )
             ),
-          this.webApps
+          this.webApps,
+          () =>
+            agentNative("arm app delivery discovery", () =>
+              this.appEvents.armDiscovery()
+            ).pipe(
+              Effect.catchCause((cause) =>
+                Effect.failCause(
+                  Cause.map(
+                    cause,
+                    (error) =>
+                      new AppStorageError({
+                        operation: "arm app delivery discovery",
+                        cause: error,
+                      })
+                  )
+                )
+              )
+            )
         )
       if (base === "execution")
         return yield* executionRequest(this.executions, request, path, (task) =>
@@ -4304,8 +4793,148 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     })
   }
+  private memoryDiscoveryProgram(): Effect.Effect<
+    ConversationMemoryDiscovery,
+    ConversationStorageError
+  > {
+    return Effect.gen({ self: this }, function* () {
+      const summary = yield* this.memoryHost.armCompactor()
+      const backup = yield* this.memoryHost.armBackup()
+      return { summary, backup }
+    }).pipe(
+      preserveFatal,
+      Effect.mapError(
+        (cause) =>
+          new ConversationStorageError({
+            operation: "arm memory publication discovery",
+            cause,
+          })
+      )
+    )
+  }
+  private memoryActionProgram(request: Request, path: string) {
+    return Effect.gen({ self: this }, function* () {
+      if (`${request.method} ${path}` === "POST memory/backup/retry") {
+        const input = yield* agentJson(request, BackupRetry)
+        const lease = yield* conversationNativeOperation(
+          "arm backup recovery",
+          () =>
+            this.backups.armRecovery().catch((error: unknown) => {
+              if (error instanceof BackupRecoveryChanged) return undefined
+              throw error
+            })
+        )
+        if (!lease)
+          return Response.json(
+            {
+              error:
+                "Backup recovery changed or is still running. Refresh its status.",
+            },
+            { status: 409 }
+          )
+        const accepted = yield* Effect.uninterruptible(
+          Effect.gen({ self: this }, function* () {
+            if (!(yield* retryMemoryBackup(input, lease))) return false
+            yield* conversationNativeOperation("wake backup recovery", () =>
+              this.backups.wake()
+            )
+            this.notifyConversation()
+            return true
+          })
+        )
+        return accepted
+          ? Response.json({ ok: true }, { status: 202 })
+          : Response.json(
+              {
+                error:
+                  "Backup recovery changed or expired. Refresh its status and try again.",
+              },
+              { status: 409 }
+            )
+      }
+      if (`${request.method} ${path}` === "POST memory/backup/recover") {
+        const { epoch } = yield* agentJson(
+          request,
+          Schema.Struct({ epoch: Schema.String.check(Schema.isNonEmpty()) })
+        )
+        const lease = yield* conversationNativeOperation(
+          "arm backup scheduler recovery",
+          () =>
+            this.backups.armSchedulerRecovery(epoch).catch((error: unknown) => {
+              if (error instanceof BackupRecoveryChanged) return undefined
+              throw error
+            })
+        )
+        const accepted =
+          lease !== undefined &&
+          (yield* conversationNativeOperation(
+            "retry backup scheduler recovery",
+            () => this.backups.retrySchedulerRecovery(epoch, lease)
+          ))
+        if (!accepted)
+          return Response.json(
+            {
+              error:
+                "Backup scheduler recovery changed or expired. Refresh its status and try again.",
+            },
+            { status: 409 }
+          )
+        this.notifyConversation()
+        return Response.json({ ok: true }, { status: 202 })
+      }
+      if (`${request.method} ${path}` === "POST memory/retry_compaction") {
+        const { epoch } = yield* agentJson(
+          request,
+          Schema.Struct({ epoch: Schema.String.check(Schema.isNonEmpty()) })
+        )
+        const deadline = yield* conversationNativeOperation(
+          "arm compaction recovery",
+          () =>
+            this.compactor.armRecovery(epoch).catch((error: unknown) => {
+              if (error instanceof SummaryRecoveryChanged) return undefined
+              throw error
+            })
+        )
+        const accepted =
+          deadline !== undefined &&
+          (yield* conversationNativeOperation("retry compaction recovery", () =>
+            this.compactor.retryRecovery(epoch, deadline)
+          ))
+        if (!accepted)
+          return Response.json(
+            {
+              error:
+                "Compaction recovery changed or expired. Refresh its status and try again.",
+            },
+            { status: 409 }
+          )
+        this.notifyConversation()
+        return Response.json({ ok: true }, { status: 202 })
+      }
+      if (`${request.method} ${path}` === "POST memory/retry") {
+        const input = yield* agentJson(
+          request,
+          Schema.Struct({
+            ...Part.fields,
+            operationId: CancelInput.fields.operationId,
+          })
+        )
+        yield* this.retrySummary(input)
+        return Response.json({ ok: true })
+      }
+      return new Response("Not found", { status: 404 })
+    })
+  }
   private conversationHttpProgram(request: Request, path: string) {
     return Effect.gen({ self: this }, function* () {
+      // Revocation retains a busy owner. A failed cleanup release must not
+      // prevent Stop from committing while that owner is still recorded.
+      if (`${request.method} ${path}` === "POST cancel") {
+        const input = yield* agentJson(request, CancelInput)
+        yield* this.stopConversation(input.operationId)
+        return Response.json({ ok: true }, { status: 202 })
+      }
+      yield* this.conversationPump.reconcile()
       const url = new URL(request.url)
       if (`${request.method} ${path}` === "GET export")
         return yield* exportResponse(
@@ -4325,17 +4954,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return yield* this.conversationEventsProgram(request)
       if (`${request.method} ${path}` === "GET state")
         return Response.json(yield* this.snapshotProgram())
-      if (`${request.method} ${path}` === "POST memory/retry") {
-        const input = yield* agentJson(
-          request,
-          Schema.Struct({
-            ...Part.fields,
-            operationId: CancelInput.fields.operationId,
-          })
-        )
-        yield* this.retrySummary(input)
-        return Response.json({ ok: true })
-      }
+      if (path.startsWith("memory/"))
+        return yield* this.memoryActionProgram(request, path)
       if (`${request.method} ${path}` === "POST import") {
         const input = yield* agentJson(request, ImportInput, 1_100_000)
         return yield* memoryImportResponse(this.importMemory(input.jsonl))
@@ -4414,9 +5034,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         return yield* admissionResponse(this.retryMessage(input))
       }
-      if (`${request.method} ${path}` === "POST cancel") {
-        const input = yield* agentJson(request, CancelInput)
-        yield* this.stopConversation(input.operationId)
+      if (`${request.method} ${path}` === "POST recovery/check") {
+        const input = yield* agentJson(request, RecoveryInput)
+        yield* this.checkConversationReply(input.operationId, input.revision)
+        return Response.json({ ok: true })
+      }
+      if (`${request.method} ${path}` === "POST recovery/stop") {
+        const input = yield* agentJson(request, RecoveryInput)
+        yield* this.retryConversationStop(input.operationId, input.revision)
         return Response.json({ ok: true }, { status: 202 })
       }
 
@@ -4581,6 +5206,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         Effect.provideService(MemoryRepository, this.memory),
         Effect.provideService(MemoryBackupStatus, this.backupStatus)
       )
+      const compactionRecovery = yield* conversationNativeOperation(
+        "read compaction recovery",
+        () => this.compactor.recovery()
+      )
+      const backupSchedulerRecovery = yield* conversationNativeOperation(
+        "read backup scheduler recovery",
+        () => this.backups.recovery()
+      )
       const usage = yield* this.inferenceUsage.accountTotals().pipe(
         preserveFatal,
         Effect.mapError(
@@ -4595,20 +5228,31 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         runtime,
         access,
         connected,
-        memory: { ...memory, usage },
+        memory: {
+          ...memory,
+          backup: {
+            ...memory.backup,
+            ...(backupSchedulerRecovery
+              ? { schedulerRecovery: backupSchedulerRecovery }
+              : {}),
+          },
+          usage,
+          ...(compactionRecovery ? { compactionRecovery } : {}),
+        },
       }
     })
   }
   async snapshot(): Promise<ChatState> {
     return this.run(this.snapshotProgram())
   }
-  async step(): Promise<LifecycleJobOutcome> {
-    if (!(await this.familyAdmission())) return
-    this.installRemoteTools(await this.run(this.refreshRemoteTools()))
-    const next = await this.actorRuntime.runPromise(
-      this.active().pipe(
-        Effect.andThen(this.conversationPump.run()),
-        Effect.provide(WorkerTelemetry)
+  async step(
+    onAttempt?: (attempt: ConversationControlAttempt) => void
+  ): Promise<LifecycleJobOutcome> {
+    const next = await modelCallback(
+      this.actorRuntime.runPromiseExit(
+        this.conversationPump
+          .run("automatic", undefined, onAttempt)
+          .pipe(Effect.provide(WorkerTelemetry))
       )
     )
     return next === undefined ? undefined : { rescheduleAt: next }

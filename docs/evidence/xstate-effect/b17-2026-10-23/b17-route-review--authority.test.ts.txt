@@ -1,0 +1,102 @@
+import { Cause, Effect, Exit, ManagedRuntime } from 'effect';
+import { expect, it, vi } from 'vitest';
+import { ConnectionStore } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/connections';
+import { connectionApplication, RemoteConnections } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/connection-service';
+import { mcpConnectionClient, type McpManager } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/mcp';
+import { database } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/tests/database';
+const input = { id: `mcp-${'b'.repeat(32)}`, name: 'Independent fixture', url: 'https://mcp.example.com/mcp' };
+const gate = () => { let release!: () => void; const wait = new Promise<void>(resolve => { release = resolve; }); return {wait,release}; };
+const fixture = () => {
+  const db = database(), store = new ConnectionStore(db);
+  let authorized = true, registered = false;
+  const calls: string[] = [];
+  const manager = {
+    listServers: () => registered ? [{ id: input.id, auth_url: null }] : [],
+    mcpConnections: {},
+    listTools: () => [],
+    registerServer: async () => { calls.push('register'); registered = true; return input.id; },
+    connectToServer: async () => { calls.push('connect'); return {state:'connected'}; },
+    discoverIfConnected: async () => { calls.push('discover'); return {}; },
+    removeServer: async () => { calls.push('remove'); registered = false; },
+    isCallbackRequest: () => true,
+    handleCallbackRequest: async () => ({authSuccess:true,serverId:input.id}),
+    establishConnection: async () => { calls.push('establish'); },
+    waitForConnections: async () => {},
+    callTool: async () => ({content:[]}),
+  } as unknown as McpManager;
+  return {db,store,calls,manager,authorize: () => Effect.sync(() => { const deadline=Date.now()+10_000; return authorized ? {deadline,current:() => authorized && Date.now()<deadline} : null; }),revoke: () => {authorized = false;}};
+};
+it.each([['register',6,[]],['connect',10,['register']],['discover',14,['register','connect']]] as const)('does not dispatch %s if authority is revoked while its final ledger read waits', async (stage, readNumber, allowed) => {
+  const f = fixture(), entered = gate(), release = gate();
+  let reads = 0;
+  const ledger = {
+    list: f.store.list.bind(f.store), add: f.store.add.bind(f.store), change: f.store.change.bind(f.store),
+    selection: f.store.selection.bind(f.store), select: f.store.select.bind(f.store),
+    get: (id: string) => Effect.gen(function* () {
+      if (++reads === readNumber) { entered.release(); yield* Effect.promise(() => release.wait); }
+      return yield* f.store.get(id);
+    }),
+  };
+  const runtime = ManagedRuntime.make(connectionApplication(ledger,mcpConnectionClient(f.manager),f.authorize));
+  const service = runtime.runSync(RemoteConnections);
+  const work = Effect.runPromiseExit(service.connect(input,'https://app.example.com'));
+  await entered.wait; f.revoke(); release.release();
+  const outcome = await work;
+  await runtime.dispose();
+  expect(outcome._tag).toBe('Failure');
+  expect(f.calls).toEqual(allowed);
+});
+it('does not commit a new connection after authority is revoked behind SQLite coordination', async () => {
+  const f = fixture(), held = gate(), release = gate(), checked = gate();
+  const holder = Effect.runPromise(f.db.transaction(() => Effect.gen(function* () { held.release(); yield* Effect.promise(() => release.wait); })));
+  await held.wait;
+  const runtime = ManagedRuntime.make(connectionApplication(f.store,mcpConnectionClient(f.manager),() => f.authorize().pipe(Effect.tap(() => Effect.sync(() => checked.release())))));
+  const service = runtime.runSync(RemoteConnections);
+  const work = Effect.runPromiseExit(service.connect(input,'https://app.example.com'));
+  await checked.wait; f.revoke(); release.release();
+  await holder;
+  const outcome = await work;
+  await runtime.dispose();
+  expect(outcome._tag).toBe('Failure');
+  expect(f.calls).toEqual([]);
+  expect(Effect.runSync(f.store.get(input.id))).toBeUndefined();
+});
+it('does not invoke a remote tool when authority is revoked behind its last connection read', async () => {
+  const f = fixture(), entered = gate(), release = gate();
+  Effect.runSync(f.store.add(input));
+  f.manager.listServers = () => [{id:input.id}] as any;
+  f.manager.mcpConnections[input.id] = {connectionState:'ready'} as any;
+  f.manager.listTools = () => [{name:'write_note',description:'Synthetic action',inputSchema:{type:'object',properties:{}}}] as any;
+  f.manager.callTool = async () => {f.calls.push('remote action');return {content:[{type:'text',text:'ran'}]};};
+  let reads = 0;
+  const ledger = {
+    list:f.store.list.bind(f.store),add:f.store.add.bind(f.store),change:f.store.change.bind(f.store),selection:f.store.selection.bind(f.store),select:f.store.select.bind(f.store),
+    get:(id:string) => Effect.gen(function* () {if(++reads===3){entered.release();yield* Effect.promise(() => release.wait);}return yield* f.store.get(id);}),
+  };
+  const runtime=ManagedRuntime.make(connectionApplication(ledger,mcpConnectionClient(f.manager),f.authorize));
+  const service=runtime.runSync(RemoteConnections);
+  const tool=(await Effect.runPromise(service.list()))[0]!.tools[0]!;
+  const work=Effect.runPromise(service.call(tool.name,{}));
+  await entered.wait;f.revoke();release.release();
+  const result=await work;await runtime.dispose();
+  expect(f.calls).toEqual([]);
+  expect(result.isError).toBe(true);
+});
+it('still fences a changed durable generation if fresh family authorization itself waits', async () => {
+  const f=fixture(),entered=gate(),release=gate();
+  let checks=0;
+  const runtime=ManagedRuntime.make(connectionApplication(f.store,mcpConnectionClient(f.manager),() => Effect.gen(function* () {
+    if(++checks===6){entered.release();yield* Effect.promise(() => release.wait);}
+    const deadline=Date.now()+10_000;return {deadline,current:() => Date.now()<deadline};
+  })));
+  const service=runtime.runSync(RemoteConnections);
+  const work=Effect.runPromiseExit(service.connect(input,'https://app.example.com'));
+  await entered.wait;
+  Effect.runSync(f.store.change(input.id,1,false));
+  Effect.runSync(f.store.change(input.id,2,true));
+  release.release();
+  const outcome=await work;await runtime.dispose();
+  expect(outcome._tag).toBe('Failure');
+  expect(f.calls).toEqual(['register']);
+  expect(Effect.runSync(f.store.get(input.id))).toMatchObject({active:true,revision:3});
+});

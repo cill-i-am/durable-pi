@@ -11,6 +11,7 @@ import type {
   Part,
   MemoryNode,
   SummaryJob,
+  SummaryClaim,
   SummaryIssue,
 } from "./domain"
 import type { ArchiveRecord, Watermark } from "./records"
@@ -22,7 +23,14 @@ export interface MemoryLedger {
     body: () => Effect.Effect<TValue, TError, TRequirements>
   ) => Effect.Effect<TValue, TError | MemoryStorageError, TRequirements>
   paused: (part: Part) => Effect.Effect<boolean, MemoryError>
-  retrySummary: (part: Part) => Effect.Effect<boolean, MemoryError>
+  retrySummary: (
+    part: Part,
+    admission?: { deadline: number }
+  ) => Effect.Effect<boolean, MemoryError>
+  /** True when every source already exists; append still validates replay. */
+  hasSources: (
+    sources: readonly string[]
+  ) => Effect.Effect<boolean, MemoryError>
   append: (
     source: string,
     kind: LogKind,
@@ -37,8 +45,22 @@ export interface MemoryLedger {
   node: (part: Part) => Effect.Effect<MemoryNode | undefined, MemoryError>
   nodeCount: () => Effect.Effect<number, MemoryError>
   entry: (id: number) => Effect.Effect<LogEntry | undefined, MemoryError>
-  saveNode: (part: Part, text: string) => Effect.Effect<void, MemoryError>
-  failNode: (part: Part, retryAt: number) => Effect.Effect<boolean, MemoryError>
+  saveNode: (
+    part: Part,
+    text: string,
+    claim?: SummaryClaim
+  ) => Effect.Effect<void, MemoryError>
+  failNode: (
+    part: Part,
+    retryAt: number,
+    claim?: SummaryClaim
+  ) => Effect.Effect<boolean, MemoryError>
+  claimSummary: (
+    part: Part,
+    now: number
+  ) => Effect.Effect<SummaryClaim | undefined, MemoryError>
+  pauseSummary: (claim: SummaryClaim) => Effect.Effect<boolean, MemoryError>
+  restoreSummaryClaims: () => Effect.Effect<void, MemoryError>
   retryAt: () => Effect.Effect<number | undefined, MemoryError>
   issues: () => Effect.Effect<SummaryIssue[], MemoryError>
   next: (

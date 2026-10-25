@@ -1,0 +1,45 @@
+# B16 authenticated session socket handoff
+
+Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi`.
+Base HEAD: `2c5e6f66e25b9985a6915e78dce4de66a1952031`.
+No Git, package, Worker, authorization-policy or live-provider changes.
+
+## Owned source
+
+- `src/auth/session-socket.machine.ts` (new): official `setupEffect` / `createEffectLogic` machine. States `open.idle`, `open.checking`, `closing`, `closed`; context owns lease deadline, next check deadline and close details. Validated frame/close events. Live deadline guards both forwarding and successful authorization completion.
+- `src/auth/adapters/session-socket.ts`: official `createEffectActor` in explicit lifetime scope. Effect owns check/lease timers, listener cleanup, both native endpoints, partial acceptance and actual auth settlement. Removed legacy `closed`, `checking`, mutable deadline and raw interval controller. There is no second authority state.
+- `src/auth/adapters/agent-proxy.ts`: approved narrow composition change. Retains `session.settled` with host on successful handoff; release signals close then joins that same settlement, preserving cleanup defects.
+- `tests/session-socket.test.ts`, `tests/agent-proxy.test.ts`: 36 focused tests total.
+
+## Invariants / parity
+
+1. Initial authority lease is 15 seconds. Successful current authorization can renew only before its live deadline; timer lag cannot revive expired authority.
+2. Both directions check the live clock at machine admission. Closure is terminal and all later events are fenced. Queued close precedes later queued frames.
+3. One read-only auth check is in flight. Checks retain the original 5-second clock cadence; a slow check skips occupied ticks without issuing another check.
+4. UTF-8 and ArrayBuffer frames at 256 KiB pass; anything larger closes both peers with 1009. Revocation/expiry closes with 1008; auth failure closes with 1011.
+5. Scope cleanup attempts every registered listener removal and both endpoint closes, including partial add/accept failures. Full native Cause reasons survive, including repeated defects, Fail and Interrupt reasons.
+6. Socket closure and auth settlement are separate observations. Both sockets/listeners/timers close while held read-only auth is outstanding; the lifetime settlement remains pending until that native check actually settles. Late success cannot reopen; late compound failure remains visible in the joined outcome.
+7. The proxy host positively retains successful socket lifetimes. Failed retention/request cleanup joins actual settlement before returning its combined failure.
+
+## Concrete defect characterized before repair
+
+The old four-test suite passed. An additional test starts held auth at 5 seconds, advances the live wall clock to 15,001 ms without firing the interval callback, resolves auth true, and sends input. Old code renews the expired deadline and forwards `expired input`. The new machine denies it. Baseline and pre-fix red logs are retained below.
+
+## Observable compatibility change
+
+`close()` remains a synchronous callable signal with the same optional close code/reason shape. Official actor mailbox processing is asynchronous, so cleanup failure is now reported through `close.settled` / `session.settled` and the supplied `failed` callback, not thrown synchronously from the signal. Existing production caller is updated to retain/join settlement. Tests explicitly await processing/settlement. Partial construction failures still throw their complete synchronous acquisition/cleanup Cause.
+
+## Verification
+
+All commands use `PATH=/opt/homebrew/opt/node@24/bin:$PATH` in the worktree.
+
+- Existing baseline: `pnpm exec vitest run tests/session-socket.test.ts` — 4/4 passed. `/private/tmp/b16-socket-baseline.log`.
+- Pre-fix characterization — 4 pass, 1 expected failure on expired input. `/private/tmp/b16-socket-characterization.log`.
+- Final positive: `pnpm exec vitest run tests/session-socket.test.ts tests/agent-proxy.test.ts` — 36/36 passed. `/private/tmp/b16-socket-final-tests.log`.
+- Scoped `pnpm exec oxlint --config oxlint.config.ts --deny-warnings` on all five owned files — exit 0. `/private/tmp/b16-socket-final-lint.log`.
+- Scoped `pnpm exec oxfmt --check` on all five owned files — passed. `/private/tmp/b16-socket-final-format.log`.
+- `pnpm exec tsc --noEmit` — no owned-file errors; full worktree blocked only by pre-existing/concurrent unused `Cause` in `tests/upstream-lifecycle.test.ts:1`. `/private/tmp/b16-socket-final-types.log`. Parent owns the composed gate.
+- Negative: `pnpm exec vitest run --config /private/tmp/b16-socket-negative.config.mjs tests/session-socket.test.ts -t 'a successful held check cannot renew'` — intended exit 1, same expired-input forwarding assertion fails. Config transforms only the bundled auth-completion guard from `event.output && work.now() < context.deadline` to `event.output`. `/private/tmp/b16-socket-negative-final.log`.
+- `/private/tmp/b16-socket-source-manifest.json` records SHA-256 of all five final source/test files; all remained unchanged by the mutation run.
+
+Evidence is deterministic synthetic socket/auth behavior, not native workerd or live-provider certification. No broad gates were claimed. Parent owns final docs, independent review, composition and any native suite.

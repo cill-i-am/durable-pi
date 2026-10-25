@@ -20,8 +20,8 @@ export const makeApps = (ledger: AppLedger) =>
     save: Effect.fn("Apps.save")((input) => ledger.save(input)),
     publish: Effect.fn("Apps.publish")((input) => ledger.publish(input)),
     archive: Effect.fn("Apps.archive")((input) => ledger.archive(input)),
-    interact: Effect.fn("Apps.interact")((input, result) =>
-      ledger.interact(input, result)
+    interact: Effect.fn("Apps.interact")((input, result, discoveryDeadline) =>
+      ledger.interact(input, result, discoveryDeadline)
     ),
     interactionReceipt: Effect.fn("Apps.interactionReceipt")((input) =>
       ledger.interactionReceipt(input)
@@ -29,12 +29,25 @@ export const makeApps = (ledger: AppLedger) =>
     interactionSnapshot: Effect.fn("Apps.interactionSnapshot")((input) =>
       ledger.interactionSnapshot(input)
     ),
+    renderSnapshot: Effect.fn("Apps.renderSnapshot")((id, version) =>
+      ledger.renderSnapshot(id, version)
+    ),
+    exhaustDelivery: Effect.fn("Apps.exhaustDelivery")(
+      (eligible, expiredOnly) => ledger.exhaustDelivery(eligible, expiredOnly)
+    ),
+    nextDelivery: Effect.fn("Apps.nextDelivery")(() => ledger.nextDelivery()),
+    deferDelivery: Effect.fn("Apps.deferDelivery")((id, reason, now) =>
+      ledger.deferDelivery(id, reason, now)
+    ),
+    cancelPending: Effect.fn("Apps.cancelPending")((message) =>
+      ledger.cancelPending(message)
+    ),
     pending: Effect.fn("Apps.pending")(() => ledger.pending()),
     cancelOperation: Effect.fn("Apps.cancelOperation")((id) =>
       ledger.cancelOperation(id)
     ),
-    deliverNext: Effect.fn("Apps.deliverNext")((admission) =>
-      ledger.deliverNext(admission)
+    deliverNext: Effect.fn("Apps.deliverNext")((admission, discoveryDeadline) =>
+      ledger.deliverNext(admission, discoveryDeadline)
     ),
   })
 export const appApplication = (ledger: AppLedger) =>

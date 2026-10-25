@@ -1,0 +1,43 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/execution-ui-lifecycle.test.ts > late command cannot select a result after the selected view changes
+[16:54:08.345] ERROR (#1): Error [AssertionError]: expected 'original' not to be 'original' // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/execution-ui-lifecycle.test.ts:72:58 {
+  actual: 'original',
+  expected: 'original',
+  showDiff: true,
+  operator: 'notStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/execution-ui-lifecycle.test.ts (8 tests | 1 failed | 7 skipped) 27ms
+   × late command cannot select a result after the selected view changes 26ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/execution-ui-lifecycle.test.ts > late command cannot select a result after the selected view changes
+AssertionError: expected 'original' not to be 'original' // Object.is equality
+ ❯ tests/execution-ui-lifecycle.test.ts:72:58
+     70|       expect(selected).toEqual([])
+     71|       expect(actor.getSnapshot().context.attempt).toBeNull()
+     72|       expect(actor.getSnapshot().context.detail?.id).not.toBe("origina…
+       |                                                          ^
+     73|     }).pipe(Effect.scoped)
+     74| )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  16:54:07
+   Duration  378ms (import 63%, transform 22%, tests 10%, setup 3%, worker 1%)
+

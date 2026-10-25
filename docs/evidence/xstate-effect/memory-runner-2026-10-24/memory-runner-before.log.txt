@@ -1,0 +1,53 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/memory-summary-runner.test.ts (23 tests | 2 failed) 47ms
+   × joins cold restoration before disposing the Summary runner 4ms
+   × joins accepted Summary admission storage before its resources may close 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-summary-runner.test.ts > joins cold restoration before disposing the Summary runner
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/memory-summary-runner.test.ts:613:22
+    611|   try {
+    612|     await new Promise((resolve) => setImmediate(resolve))
+    613|     expect(disposed).toBe(false)
+       |                      ^
+    614|   } finally {
+    615|     held.release()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/memory-summary-runner.test.ts > joins accepted Summary admission storage before its resources may close
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/memory-summary-runner.test.ts:638:22
+    636|   try {
+    637|     await new Promise((resolve) => setImmediate(resolve))
+    638|     expect(disposed).toBe(false)
+       |                      ^
+    639|   } finally {
+    640|     held.release()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 44 passed (46)
+   Start at  20:12:39
+   Duration  328ms (import 66%, tests 19%, transform 12%, setup 3%, worker 1%)
+

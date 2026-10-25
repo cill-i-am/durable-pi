@@ -1,0 +1,3 @@
+$ node scripts/check-client-upgrade.mjs
+Two real frontend builds: retired asset recovery, draft/file preservation, and zero submissions passed.
+Owned server/browser/builds cleaned up; evidence retained at /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/test-results/client-upgrade

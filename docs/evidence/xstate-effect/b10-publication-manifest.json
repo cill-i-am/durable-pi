@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T15:01:59.163246+00:00",
+  "baseCommit": "c5e3a02eb1025c06f3cd41efb17815fb4577b76a",
+  "sources": {
+    "migrations/agent/20261023134558_workspace_lifecycle/migration.sql": "9c9afeb13f15b4ebe51215e1d1df32d91e3d92165226f31df4e3b0a9c7fa6781",
+    "migrations/agent/20261023134558_workspace_lifecycle/snapshot.json": "8e65d94a568f318a2101920996a29501f2954bf55f5f662243e87874d10862aa",
+    "package.json": "64d05bf51f0db65b44eedd78c0c9aadd2dbe7f7273387e3e7ed31f8965213f15",
+    "scripts/test-workspace-runtime.mjs": "59153751b9ba1e5fd613e6400a938fdbb8f5826837503d3929ad18449af64bc5",
+    "src/agent/worker.ts": "db82eee26dec5311fbf972df82a033d549ebd323894e0d3ac3b658b1853dceb5",
+    "src/storage/migration-manifest.ts": "ccae501e327d348580503626d81fc8aae0a3982ae50be6364eedad8df74b9ba6",
+    "src/workspace/adapters/lifecycle.ts": "300a1537fbe9841bc65fffbc9a68a0e02858fb8598163288b1a7e5b7ced62fc3",
+    "src/workspace/adapters/schema.ts": "f61bf560ec0cbf03de7999fc75f4d001c80b53ca46ce8aa3317d47fdaddc5251",
+    "src/workspace/adapters/sqlite.ts": "09fa8213f0ca860167200a8c148aea2426781a4a3e34f43bf616a70339417a84",
+    "src/workspace/application.ts": "0aa176fda55d5d2460651bc5a03ad750aa02a1ff955a47e4eab434617f9c2bf5",
+    "src/workspace/discovery.machine.ts": "a6d970bab486440c55a58d987a2feeeae10bd6d1e053944d72b9d37c38b6f8d3",
+    "src/workspace/effects.ts": "8a66d043f8e6397f45d329b771cf6ccb936309d0eedc6a80b5b4bcc2a7b1ea4d",
+    "src/workspace/extraction.machine.ts": "789b4837779280a3eb22e841f2f1a0ae113891bebf6aca500e37967c835cc734",
+    "src/workspace/ledger.ts": "98da25b6016381f5b165910affeae2d3159a1ccc3729fb5dd3531f292a6661c8",
+    "src/workspace/preparation.machine.ts": "c4a0ed0caf816a937c39362f10d7522921bfd6f453e77ea4da1dd5bd682698a2",
+    "src/workspace/preparation.ts": "016032a772a74778232646d24a8b0d50ff81ff6b082953176458352f75d0d568",
+    "src/workspace/reservation.machine.ts": "e07d5c30d48c4e3e3d80c64394f95f3200ea578c4468059a51876fff19dc4a4f",
+    "src/workspace/service.ts": "6619eef609c9458c6a8a59bba4caf01c6e837c95c94ff8a5c01548ca5e94cbb9",
+    "src/workspace/upload.machine.ts": "fd1d665224bcc79f1966efdd99a42daaf92d4623e34af711e0cbc2a6171ecbcd",
+    "src/workspace/workspace.ts": "0b3b9413a68493ed4e6e4c58f54dd9b265779b215c2cb8552ca007e3dbcf6aae",
+    "tests/attachment-preparation.test.ts": "a0e726df1972da874b54b32b4c486377c56e270caa9917debf0c74cd43077333",
+    "tests/image-fixture.ts": "ea97ddfcdf7ef504e7c9f5c4d942b018582a8ab6a689141b7b2ca1f00e4d6094",
+    "tests/pdf-extraction.test.ts": "c79e776dd2570ef80096433875b09a45434460e498a0b3bf88449681e28e0728",
+    "tests/runtime/attachment-probe.ts": "1c5eccb6ce8a818248b4c9af70871ce63b9bad7935fb19172ee9ffc41b8baf22",
+    "tests/runtime/workspace-worker.ts": "3f4582a4dace3f20689f0a6f7bf3a2ee903edc94e016c9e0f9b7b578c642444d",
+    "tests/video-preparation.test.ts": "e08f9998ccc379f7570ea1d61822692fdb005b29f18f4f24b417d00164e29c42",
+    "tests/workspace-boundary.test.ts": "0de1887d6e381b54df466df8b48714f0f358394d26dedf769dcd448de9492c6b",
+    "tests/workspace-files.test.ts": "9796ce9235f8e7a5f3622ef46dc3ddef1643943a122876004868800cb91b7439",
+    "tests/workspace-lifecycle.test.ts": "e9a7997b23aa8628cfec9c55f61bf3fa7cf48b5109279c768a67c62fa61af5d8",
+    "tests/workspace-runner.test.ts": "96e4dbdc9e212adf7774a9f4c6e71daac8ebd5c5261ed1edc7008b6f537e4740"
+  },
+  "nativeCheckpointComparison": {
+    "unchanged": [
+      "tests/runtime/workspace-worker.ts",
+      "scripts/test-workspace-runtime.mjs",
+      "src/workspace/adapters/lifecycle.ts",
+      "src/workspace/discovery.machine.ts",
+      "src/workspace/service.ts",
+      "src/workspace/preparation.ts",
+      "src/workspace/preparation.machine.ts",
+      "src/workspace/extraction.machine.ts",
+      "src/workspace/effects.ts",
+      "src/workspace/adapters/sqlite.ts",
+      "src/workspace/adapters/r2.ts"
+    ],
+    "changed": []
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b10-composed-static.log.txt",
+      "original": "/private/tmp/b10-composed-static-1.log",
+      "sha256": "eb0c735eba3cdd6c535a84d3eb6feda83d17df26298fba54f18a87c60ec2a636",
+      "bytes": 655,
+      "scope": "Current combined c5e3a02+B10 static checks."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-composed-unit.log.txt",
+      "original": "/private/tmp/b10-composed-unit-1.log",
+      "sha256": "640e857e1f2f4e892d0d06bb02c231aaf912969c3f1b1393457e71794f8bb577",
+      "bytes": 562,
+      "scope": "Current combined candidate, 2979 tests in264files."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-composed-build.log.txt",
+      "original": "/private/tmp/b10-composed-build-1.log",
+      "sha256": "bce28ef64d23adbb45bbce6230c28e465ed21d3dabebeb6e8cb8e3259f3d59b9",
+      "bytes": 24337,
+      "scope": "Current combined website/routing/allWorker builds."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-composed-native.log.txt",
+      "original": "/private/tmp/b10-composed-workspace-native-1.log",
+      "sha256": "82d21e679f960e121bd8edac62c3de24474a100a7515d2e46809af082c185d85",
+      "bytes": 1209,
+      "scope": "Current combined actualWorkspace native suite."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-browser-checkpoint.log.txt",
+      "original": "/private/tmp/b10-final-browser.log",
+      "sha256": "afdf4a92848f4db65fb32fbe60700b187ba9ca80e6d7093c13346598061e4060",
+      "bytes": 37772,
+      "scope": "Earlier 2c13994+B10 checkpoint:72 browser cases,passkeys,two-build. Frontend unchanged by B10; additional ancestor frontend work has its own proofs."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-whatsapp-checkpoint.log.txt",
+      "original": "/private/tmp/b10-final-whatsapp-runtime.log",
+      "sha256": "d857d0f5aa964a1e4741fbbacc46c7284051ae14f3e22a8485f3a310fbc1935e",
+      "bytes": 763,
+      "scope": "Earlier2c13994+B10 WhatsApp/attachment composition checkpoint;not final composed native gate."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-composed-positive-evidence.json.txt",
+      "original": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/durable-pi-workspace-native-positive-evidence.json",
+      "sha256": "b1ed198464c529c1f45044f0f887d2a77e3f833074fe5c6014874ac78fb243cd",
+      "bytes": 115584,
+      "scope": "Actual final composed Workspace native run; synthetic extractors/durable SQLite bucket, no hosted R2."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-composed-positive-workerd.log.txt",
+      "original": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/durable-pi-workspace-native-positive-workerd.log",
+      "sha256": "a27369ea388cd8cf3315bd25c14998041b6fdc3519c58342410737acc6d5a77d",
+      "bytes": 396,
+      "scope": "Actual final composed Workspace native run; synthetic extractors/durable SQLite bucket, no hosted R2."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-native-negative.log.txt",
+      "original": "/private/tmp/b10-workspace-native-negative.log",
+      "sha256": "70f725cbd1650f8e61051dd5846a1e1dd444a2e907cb3bb43734ba3e36fdcd54",
+      "bytes": 1097,
+      "scope": "Earlier matching Workspace source with retained-discovery removal; expected pending instead of ready assertion failure."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-native-negative-evidence.json.txt",
+      "original": "/private/tmp/b10-workspace-native-negative-evidence.json",
+      "sha256": "15c2200ee80f159df330bfc25dbf30c32c06a6d130b6fc7ff231ee6c2c4a7de3",
+      "bytes": 6481,
+      "scope": "Earlier matching Workspace source with retained-discovery removal; expected pending instead of ready assertion failure."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b10-native-negative-workerd.log.txt",
+      "original": "/private/tmp/b10-workspace-native-negative-workerd.log",
+      "sha256": "7d7adcdb6b08845f1fb80ead8cd8945a662cb26b545e57164614e6d51d65e89d",
+      "bytes": 264,
+      "scope": "Earlier matching Workspace source with retained-discovery removal; expected pending instead of ready assertion failure."
+    }
+  ],
+  "limits": [
+    "Historical browser and WhatsApp checkpoints precede stack composition. Final combined static/unit/build and Workspace native suite passed. Hosted exact-commit full CI remains required.",
+    "Native fixtures use synthetic processors and a durable SQLite bucket through production R2 adapter. No live-provider exactly-once claim."
+  ]
+}

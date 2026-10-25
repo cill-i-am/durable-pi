@@ -1,0 +1,235 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | tests/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: false)
+[21:03:07.456] ERROR (#148): Error [AssertionError]: expected [ Interrupt(undefined), …(4) ] to include Interrupt(90104)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2093:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:257:42 {
+  actual: [
+    Interrupt(undefined),
+    Die(Fail("checked")),
+    Interrupt(90104),
+    Interrupt(undefined),
+    Interrupt(168)
+  ],
+  expected: undefined,
+  showDiff: false,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: true)
+[21:03:07.459] ERROR (#171): Error [AssertionError]: expected [ Interrupt(undefined), …(5) ] to include Interrupt(90104)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2093:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:257:42 {
+  actual: [
+    Interrupt(undefined),
+    Die(Fail("checked")),
+    Interrupt(90104),
+    Die(Error: native teardown failed),
+    Interrupt(undefined),
+    Interrupt(191)
+  ],
+  expected: undefined,
+  showDiff: false,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: false)
+[21:03:07.462] ERROR (#194): Error [AssertionError]: expected [ Interrupt(undefined), …(4) ] to include Interrupt(90105)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2093:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:257:42 {
+  actual: [
+    Interrupt(undefined),
+    Die(Fail("checked")),
+    Interrupt(90105),
+    Interrupt(undefined),
+    Interrupt(208)
+  ],
+  expected: undefined,
+  showDiff: false,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: true)
+[21:03:07.463] ERROR (#211): Error [AssertionError]: expected [ Interrupt(undefined), …(5) ] to include Interrupt(90105)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2093:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:257:42 {
+  actual: [
+    Interrupt(undefined),
+    Die(Fail("checked")),
+    Interrupt(90105),
+    Die(Error: native teardown failed),
+    Interrupt(undefined),
+    Interrupt(225)
+  ],
+  expected: undefined,
+  showDiff: false,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: false)
+[21:03:07.465] ERROR (#228): Error [AssertionError]: expected [ Interrupt(undefined), …(4) ] to include Interrupt(90105)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2093:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:257:42 {
+  actual: [
+    Interrupt(undefined),
+    Die(Fail("checked")),
+    Interrupt(90105),
+    Interrupt(undefined),
+    Interrupt(242)
+  ],
+  expected: undefined,
+  showDiff: false,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: true)
+[21:03:07.467] ERROR (#245): Error [AssertionError]: expected [ Interrupt(undefined), …(5) ] to include Interrupt(90105)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2093:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:257:42 {
+  actual: [
+    Interrupt(undefined),
+    Die(Fail("checked")),
+    Interrupt(90105),
+    Die(Error: native teardown failed),
+    Interrupt(undefined),
+    Interrupt(259)
+  ],
+  expected: undefined,
+  showDiff: false,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/conversation-submission-machine.test.ts (15 tests | 6 failed) 61ms
+   × submission retains annotated late native failure and interruption (defect: false) 7ms
+   × submission retains annotated late native failure and interruption (defect: true) 3ms
+   × retry retains annotated late native failure and interruption (defect: false) 2ms
+   × retry retains annotated late native failure and interruption (defect: true) 2ms
+   × cancel retains annotated late native failure and interruption (defect: false) 2ms
+   × cancel retains annotated late native failure and interruption (defect: true) 2ms
+stderr | tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: false)
+Event "xstate.effect.resolve" to actor "0.conversation-connection.closed" was not delivered (stopped).
+
+stderr | tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: true)
+Event "xstate.effect.resolve" to actor "0.conversation-connection.closed" was not delivered (stopped).
+
+ ❯ tests/conversation-connection-machine.test.ts (11 tests | 2 failed) 69ms
+   × retains annotated native interruption when abort wins (defect: false) 5ms
+   × retains annotated native interruption when abort wins (defect: true) 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: false)
+AssertionError: expected [ …(2) ] to include Interrupt(90101)
+ ❯ tests/conversation-connection-machine.test.ts:195:28
+    193|     expect(Cause.isCause(result)).toBe(true)
+    194|     if (!Cause.isCause(result)) throw new Error("Expected native clean…
+    195|     expect(result.reasons).toContain(interrupted)
+       |                            ^
+    196|     expect(interrupted.annotations.get("conversation/native-cleanup"))…
+    197|       "reader-after-abort"
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: true)
+AssertionError: expected [ …(3) ] to include Interrupt(90101)
+ ❯ tests/conversation-connection-machine.test.ts:195:28
+    193|     expect(Cause.isCause(result)).toBe(true)
+    194|     if (!Cause.isCause(result)) throw new Error("Expected native clean…
+    195|     expect(result.reasons).toContain(interrupted)
+       |                            ^
+    196|     expect(interrupted.annotations.get("conversation/native-cleanup"))…
+    197|       "reader-after-abort"
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: false)
+AssertionError: expected [ Interrupt(undefined), …(4) ] to include Interrupt(90104)
+ ❯ tests/conversation-submission-machine.test.ts:257:42
+    255|           expect(Exit.isFailure(result)).toBe(true)
+    256|           if (Exit.isFailure(result)) {
+    257|             expect(result.cause.reasons).toContain(interrupted)
+       |                                          ^
+    258|             expect(
+    259|               result.cause.reasons.some(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: true)
+AssertionError: expected [ Interrupt(undefined), …(5) ] to include Interrupt(90104)
+ ❯ tests/conversation-submission-machine.test.ts:257:42
+    255|           expect(Exit.isFailure(result)).toBe(true)
+    256|           if (Exit.isFailure(result)) {
+    257|             expect(result.cause.reasons).toContain(interrupted)
+       |                                          ^
+    258|             expect(
+    259|               result.cause.reasons.some(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: false)
+ FAIL  tests/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: false)
+AssertionError: expected [ Interrupt(undefined), …(4) ] to include Interrupt(90105)
+ ❯ tests/conversation-submission-machine.test.ts:257:42
+    255|           expect(Exit.isFailure(result)).toBe(true)
+    256|           if (Exit.isFailure(result)) {
+    257|             expect(result.cause.reasons).toContain(interrupted)
+       |                                          ^
+    258|             expect(
+    259|               result.cause.reasons.some(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: true)
+ FAIL  tests/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: true)
+AssertionError: expected [ Interrupt(undefined), …(5) ] to include Interrupt(90105)
+ ❯ tests/conversation-submission-machine.test.ts:257:42
+    255|           expect(Exit.isFailure(result)).toBe(true)
+    256|           if (Exit.isFailure(result)) {
+    257|             expect(result.cause.reasons).toContain(interrupted)
+       |                                          ^
+    258|             expect(
+    259|               result.cause.reasons.some(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  8 failed | 27 passed (35)
+   Start at  21:03:07
+   Duration  2.19s (tests 68%, import 27%, transform 3%, setup 1%)
+

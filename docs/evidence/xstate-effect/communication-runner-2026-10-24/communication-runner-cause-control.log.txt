@@ -1,0 +1,57 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/communication-runner.test.ts (66 tests | 4 failed | 58 skipped) 53ms
+   × joins held restore and preserves annotated native Causes (defect false) 9ms
+   × joins held restore and preserves annotated native Causes (defect true) 3ms
+   × joins held storage and preserves annotated native Causes (defect false) 4ms
+   × joins held storage and preserves annotated native Causes (defect true) 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/communication-runner.test.ts > joins held restore and preserves annotated native Causes (defect false)
+ FAIL  tests/communication-runner.test.ts > joins held restore and preserves annotated native Causes (defect true)
+AssertionError: expected undefined to be 'original' // Object.is equality
+
+- Expected:
+"original"
+
++ Received:
+undefined
+
+ ❯ tests/communication-runner.test.ts:1221:52
+    1219|           expect(observed?._tag).toBe(reason._tag)
+    1220|           for (const [key, value] of reason.annotations)
+    1221|             expect(observed?.annotations.get(key)).toBe(value)
+       |                                                    ^
+    1222|           if (reason._tag === "Fail" && observed?._tag === "Fail")
+    1223|             expect(observed.error).toBe(reason.error)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/communication-runner.test.ts > joins held storage and preserves annotated native Causes (defect false)
+ FAIL  tests/communication-runner.test.ts > joins held storage and preserves annotated native Causes (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/communication-runner.test.ts:1213:39
+    1211|       held.reject(failure)
+    1212|       for (const result of await Promise.all([observed, disposal])) {
+    1213|         expect(Cause.isCause(result)).toBe(true)
+       |                                       ^
+    1214|         if (!Cause.isCause(result)) throw new Error("Expected a native…
+    1215|         for (const reason of failure.reasons) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 4 passed | 58 skipped (66)
+   Start at  21:40:03
+   Duration  431ms (import 69%, tests 16%, transform 12%, setup 2%, worker 1%)
+

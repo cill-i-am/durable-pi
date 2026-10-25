@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 
-import { AVATAR_PATH, AVATAR_TYPES } from "@/auth/avatar"
-import { authClient, authFetch } from "@/auth/client"
+import { AVATAR_TYPES } from "@/auth/avatar"
+import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { UserAvatar } from "@/components/user-avatar"
-import { errorMessage } from "@/http/client"
 
-import { prepareAvatar } from "./prepare-avatar"
+import { useAuthBusy } from "./auth-owner"
+import { usePhoto } from "./photo-owner"
 
 export function ProfilePhoto({
   onPendingChange,
@@ -22,52 +22,17 @@ export function ProfilePhoto({
   onPendingChange: (pending: boolean) => void
 }) {
   const { data: session, refetch } = authClient.useSession()
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState("")
-  const [notice, setNotice] = useState("")
+  const photo = usePhoto(session?.session.id ?? "signed-out", refetch)
+  const pending = !!photo.snapshot && !photo.snapshot.matches("ready")
+  const error = photo.snapshot?.context.error ?? ""
+  const notice = photo.snapshot?.context.notice ?? ""
   const input = useRef<HTMLInputElement>(null)
-  const busy = useRef(false)
+  useAuthBusy(pending, onPendingChange)
   useEffect(() => {
-    onPendingChange(pending)
-    return () => onPendingChange(false)
-  }, [pending, onPendingChange])
-
-  async function save(file?: File) {
-    if (busy.current) return
-    busy.current = true
-    setPending(true)
-    setError("")
-    setNotice("")
-    try {
-      const photo = file ? await prepareAvatar(file) : undefined
-      const response = await authFetch(AVATAR_PATH, {
-        method: photo ? "POST" : "DELETE",
-        headers: photo ? { "content-type": photo.type } : undefined,
-        body: photo,
-        signal: AbortSignal.timeout(30_000),
-      })
-      if (!response.ok) {
-        if (response.status === 401)
-          throw new Error("Your session has expired. Sign in again.")
-        throw new Error(errorMessage(await response.json()))
-      }
-      await refetch()
-      if ((await authClient.getSession()).error)
-        throw new Error(
-          "Your photo was saved. Reload to see the updated profile."
-        )
-      setNotice(photo ? "Profile photo updated." : "Profile photo removed.")
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not confirm the photo update. Reload and try again."
-      )
-    } finally {
-      if (input.current) input.current.value = ""
-      busy.current = false
-      setPending(false)
-    }
+    if (!pending && input.current) input.current.value = ""
+  }, [pending])
+  function save(file?: File) {
+    photo.send({ type: "SAVE", file: file ?? null })
   }
   if (!session) return null
   return (
@@ -92,14 +57,14 @@ export function ProfilePhoto({
         </div>
       </div>
       <FieldGroup>
-        <Field data-invalid={!!error} data-disabled={pending}>
+        <Field data-invalid={!!error} data-disabled={pending || !photo.actor}>
           <FieldLabel htmlFor="profile-photo">Choose a photo</FieldLabel>
           <Input
             id="profile-photo"
             ref={input}
             type="file"
             accept={AVATAR_TYPES.join(",")}
-            disabled={pending}
+            disabled={pending || !photo.actor}
             aria-invalid={!!error}
             aria-describedby="profile-photo-help"
             onChange={(event) => {
@@ -117,7 +82,7 @@ export function ProfilePhoto({
         <Button
           variant="outline"
           size="sm"
-          disabled={pending || !session.user.image}
+          disabled={pending || !photo.actor || !session.user.image}
           onClick={() => void save()}
         >
           Remove photo

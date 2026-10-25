@@ -1,0 +1,30 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+stdout | tests/memory-summary-runner.test.ts > Summary scheduler invariants > blocks a fourth callback while the spent same-token queue row still exists
+[16:05:04.338] ERROR (#21): Memory compaction scheduler exhausted exhausted
+
+ ❯ tests/memory-summary-runner.test.ts (17 tests | 1 failed | 16 skipped) 17ms
+   ❯ Summary scheduler invariants (14)
+     × blocks a fourth callback while the spent same-token queue row still exists 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-summary-runner.test.ts > Summary scheduler invariants > blocks a fourth callback while the spent same-token queue row still exists
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ tests/memory-summary-runner.test.ts:258:20
+    256|     await f.runner.onJob(f.context(job, 4))
+    257|     await f.runner.wake()
+    258|     expect(f.step).toHaveBeenCalledTimes(1)
+       |                    ^
+    259|     expect(f.settle).toHaveBeenCalledTimes(2)
+    260|     expect(f.push).toHaveBeenCalledTimes(1)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 skipped (17)
+   Start at  16:05:04
+   Duration  304ms (import 75%, transform 13%, tests 8%, setup 3%, worker 1%)
+

@@ -128,7 +128,7 @@ it("emits causal IDs once, bounds observer count and removes failed observers", 
 })
 
 it("expires the observer scope at 60 seconds while a connected consumer reads", async () => {
-  vi.useFakeTimers()
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
   // Ownership/deadline proof only. The workerd fixture separately verifies
   // actual IdentityTransformStream cancellation and stalled native writes.
   vi.stubGlobal("IdentityTransformStream", TransformStream)
@@ -190,3 +190,77 @@ it("joins cleanup if registering the native task owner fails", async () => {
   one?.()
   two?.()
 })
+
+it.each([false, true])(
+  "retains compound native pipe cleanup when response ownership is rejected (defect %s)",
+  async (withDefect) => {
+    const { Cause, Context, Exit } = await import("effect")
+    const annotations = Context.makeUnsafe(
+      new Map([["handoff-cleanup", "kept"]])
+    )
+    const checked = new Error("private cleanup failure")
+    const defect = new Error("private native defect")
+    const cause = Cause.fromReasons([
+      Cause.makeFailReason(checked).annotate(annotations),
+      ...(withDefect
+        ? [Cause.makeDieReason(defect).annotate(annotations)]
+        : []),
+      Cause.makeInterruptReason(9401).annotate(annotations),
+    ])
+    const abort = vi.fn(() => Promise.reject(cause))
+    vi.stubGlobal(
+      "IdentityTransformStream",
+      class {
+        readable = new ReadableStream<Uint8Array>()
+        writable = {
+          getWriter: () => ({
+            write: () => Promise.resolve(),
+            closed: new Promise(() => {}),
+            abort,
+          }),
+        }
+      }
+    )
+    const exit = await Effect.runPromiseExit(
+      clocklessHandoff(
+        new ConversationLatency(),
+        Effect.void,
+        new AbortController().signal,
+        Effect.runPromiseExit,
+        () => {
+          throw new Error("owner refused")
+        }
+      )
+    )
+    expect(abort).toHaveBeenCalledOnce()
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      if (withDefect)
+        expect(
+          exit.cause.reasons.some(
+            (r) =>
+              r._tag === "Die" &&
+              r.defect === defect &&
+              r.annotations.get("handoff-cleanup") === "kept"
+          )
+        ).toBe(true)
+      expect(
+        exit.cause.reasons.some(
+          (r) =>
+            r._tag === "Interrupt" &&
+            r.fiberId === 9401 &&
+            r.annotations.get("handoff-cleanup") === "kept"
+        )
+      ).toBe(true)
+      expect(
+        exit.cause.reasons.some(
+          (r) =>
+            r._tag === "Die" &&
+            Cause.isReason(r.defect) &&
+            Cause.isFailReason(r.defect) &&
+            r.defect.error === checked
+        )
+      ).toBe(true)
+    }
+  }
+)

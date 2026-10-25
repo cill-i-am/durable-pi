@@ -1,0 +1,1 @@
+{"command": "PATH=/opt/homebrew/opt/node@24/bin:$PATH pnpm exec tsc --noEmit --project /private/tmp/f10-types.config.json", "exitCode": 0}

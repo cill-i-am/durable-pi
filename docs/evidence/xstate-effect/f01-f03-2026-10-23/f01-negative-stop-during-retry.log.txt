@@ -1,0 +1,53 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | tests/conversation-submission-machine.test.ts > Stop for distinct active turns proceeds during held retry and cancellation acknowledgements
+[17:36:42.155] ERROR (#1): Error [AssertionError]: expected [ 'retry:failed-original' ] to deeply equal [ 'retry:failed-original', …(2) ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts:358:72 {
+  actual: [ 'retry:failed-original' ],
+  expected: [ 'retry:failed-original', 'cancel:running-a', 'cancel:running-b' ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/conversation-submission-machine.test.ts (10 tests | 1 failed | 9 skipped) 48ms
+   × Stop for distinct active turns proceeds during held retry and cancellation acknowledgements 47ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-submission-machine.test.ts > Stop for distinct active turns proceeds during held retry and cancellation acknowledgements
+AssertionError: expected [ 'retry:failed-original' ] to deeply equal [ 'retry:failed-original', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "retry:failed-original",
+-   "cancel:running-a",
+-   "cancel:running-b",
+  ]
+
+ ❯ tests/conversation-submission-machine.test.ts:358:72
+    356|           await new Promise((resolve) => setTimeout(resolve, 1))
+    357|       })
+    358|       expect(calls.map(({ action, turnId }) => `${action}:${turnId}`))…
+       |                                                                        ^
+    359|         "retry:failed-original",
+    360|         "cancel:running-a",
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1093:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  17:36:41
+   Duration  442ms (import 61%, transform 16%, tests 14%, setup 8%, worker 1%)
+

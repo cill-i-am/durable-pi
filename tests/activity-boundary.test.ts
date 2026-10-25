@@ -85,10 +85,16 @@ it.effect(
     Effect.gen(function* () {
       const f = fixture(),
         turn = Effect.runSync(
-          f.conversations.admit({
-            operationId: crypto.randomUUID(),
-            text: "Request",
-          })
+          f.conversations.admit(
+            {
+              operationId: crypto.randomUUID(),
+              text: "Request",
+            },
+            undefined,
+            [],
+            undefined,
+            { discoveryDeadline: Date.now() + 60_000 }
+          )
         ).turn
       f.db.run(
         "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision,result,revision) VALUES ('tool',?,'write','PRIVATE INPUT',0,1000,'pending',0,'PRIVATE OUTPUT',0)",
@@ -123,18 +129,30 @@ it.effect(
     Effect.gen(function* () {
       const f = fixture(),
         root = Effect.runSync(
-          f.conversations.admit({
-            operationId: crypto.randomUUID(),
-            text: "Root",
-          })
+          f.conversations.admit(
+            {
+              operationId: crypto.randomUUID(),
+              text: "Root",
+            },
+            undefined,
+            [],
+            undefined,
+            { discoveryDeadline: Date.now() + 60_000 }
+          )
         ).turn
       Effect.runSync(f.conversations.submitted(root.id, "session"))
       const steer = Effect.runSync(
-        f.conversations.admit({
-          operationId: crypto.randomUUID(),
-          text: "Later constraint",
-          mode: "steer",
-        })
+        f.conversations.admit(
+          {
+            operationId: crypto.randomUUID(),
+            text: "Later constraint",
+            mode: "steer",
+          },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       ).turn
       f.db.run(
         "UPDATE chat_turns SET prompt='PRIVATE PROMPT' WHERE id=?",
@@ -205,10 +223,16 @@ it.effect(
     Effect.gen(function* () {
       const f = fixture(),
         turn = Effect.runSync(
-          f.conversations.admit({
-            operationId: crypto.randomUUID(),
-            text: "Request",
-          })
+          f.conversations.admit(
+            {
+              operationId: crypto.randomUUID(),
+              text: "Request",
+            },
+            undefined,
+            [],
+            undefined,
+            { discoveryDeadline: Date.now() + 60_000 }
+          )
         ).turn
       const unavailableDatabase = database()
       unavailableDatabase.run("DROP TABLE chat_turns")

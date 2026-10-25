@@ -1,0 +1,52 @@
+{
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi",
+  "source": {
+    "src/coordination/adapters/lifecycle.ts": "836f8858d6205db20350fc784915182243ac876fc3cf6e76e1135d2200c51851",
+    "src/coordination/runner.machine.ts": "3c3fc44a8b3ad7796816d34bde828c6023d7936537f17c482fa6482e64bed134",
+    "tests/coordination-runner-lifecycle.test.ts": "288463b0a8e756dacac8e1d9052ceca32e7d1ee3273ea697e9b0ed8ac6149b6b",
+    "docs/xstate-effect-coordination.md": "0344ba82a55ff3ce89af6f120558e7b3085a22286987952c8bcb8014a86b1654"
+  },
+  "unchanged_acceptance": {
+    "tests/coordination-recovery-machine.test.ts": "6d1a3f4445ee7649b7856800fd522eba5adc3399cad188c34f4044df95be969a",
+    "tests/coordination-discovery.test.ts": "ff7708f5ab4457903715d6aa5cb1ac4792fb75dcdabe0050c22cf130d2511b52",
+    "tests/coordination-held-dispatch.test.ts": "2c477c14c1c76af4ef0d49c71efba4a45c0cd1367999870fd0d3b0f63e6e46c8"
+  },
+  "evidence": {
+    "/private/tmp/coordination-runner-local/baseline.log": "31f6a3dd4eb1fe10f20af2b89cbdc60cb838ff22a42f0deca2e7cda283f7586b",
+    "/private/tmp/coordination-runner-local/second-acceptance.log": "48d603c07b798dc3d957c20a99bd2d1a4f068419136f29ec6e4af656050c8d2b",
+    "/private/tmp/coordination-runner-local/final-focused.log": "c35b342137bcb41f85f4cfb3a5bd9c964ee8a0c6591ee0f56a98016455bd7546",
+    "/private/tmp/coordination-runner-local/final-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/coordination-runner-local/final-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/coordination-runner-local/final-format.log": "437f46aacaa8125478b8655a0056754c2c6ea2c5ef931879f8d8459a16c70ecb",
+    "/private/tmp/coordination-runner-local/negative-ownership.log": "a52f8b7274148dacb33b5e48d7e834e69cc0a0b6a692147a20aae770f84baa89",
+    "/private/tmp/coordination-runner-local/lifecycle.before.ts": "3699caf04ad5fd3ec859981cf61adc572412d2e4518f755f5c532b40cba46b80",
+    "/private/tmp/coordination-runner-local/runner.negative.machine.ts": "640dbbe9940a109626e303a198e0932ec07580d72b4f9c26aada5d1507dabaec",
+    "/private/tmp/coordination-runner-local/lifecycle.negative.ts": "ed1450c8ad366687e1a7a40589a56af4af77d42a6ed1a4abb8f953a0ca0c69bd",
+    "/private/tmp/coordination-runner-local/ownership.negative.test.ts": "ed128d724ded75c58ebc2e8bed858555f4e40969c0637222a2cea0bc77e19055",
+    "/private/tmp/coordination-runner-local/vitest.negative.config.mjs": "bacb1ae4f715aa3558bd04d3a39b58c9c18a58414073725e6f6ca7607ba561bc",
+    "/private/tmp/coordination-runner-local/review-cause-independent-after.log": "c4441bb91d8aef78ba874a3f02d3fba6e8c8077538e915e161e8dc59740f28d2",
+    "/private/tmp/coordination-runner-local/review-final-focused.log": "e8c5c24e814af941203d83e83b315015b356ae0790f87eeaafe604713a3869db",
+    "/private/tmp/coordination-runner-local/review-final-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/coordination-runner-local/review-final-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/coordination-runner-local/review-final-format.log": "69cb070625cbfe95767586ff3365a2d8fbfc514387071fdaf2a88cbbe46ded79",
+    "/private/tmp/coordination-independent-restore.test.ts": "bfdc7f309baf2679fa815386a8f977454b4734ad675ea0e9540654d042a6665c",
+    "/private/tmp/coordination-independent-before-3.log": "a7681c44f11b07d4b5f65b2f187a596a75f552efb35ea3a4ac9d7e0909f8decf",
+    "/private/tmp/coordination-independent.config.mjs": "929bedd1975db3b7aa96f8b2c5132c1948b9e2adee254e3ff1b0b7b42d5cf4a0"
+  },
+  "checks": {
+    "baseline": "8 passed",
+    "final": "23 passed in4 files",
+    "types": "owned Coordination runner/machine/test scope clean",
+    "lint": "owned runner/machine/test clean",
+    "format": "4 owned files clean",
+    "negative": "failed at replacement step count2 instead of1 when only failed-owner reference guards removed",
+    "independent": "unchanged parent8-test probe passes after restoration Cause fix"
+  },
+  "limits": [
+    "Real official Effect actors and native JavaScript Promise barriers; fake Lifecycle queue in added tests.",
+    "No new workerd/SQLite/Pi or real-provider proof; existing native proof remains historical.",
+    "No host/worker API, domain journal/schema, retry budget, scheduler identity, Git or shared config changes."
+  ],
+  "supersedes": "manifest-before-review.json",
+  "review_fix": "Materialize restoration Exit before host.run and explicitly retain Deferred reply Cause instead of runPromise squash."
+}

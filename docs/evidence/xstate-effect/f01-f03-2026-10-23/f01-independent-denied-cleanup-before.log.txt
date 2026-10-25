@@ -1,0 +1,24 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stderr | ../../../../../../private/tmp/f01-f02-independent.test.ts > permission denial with failed unread-body cleanup remains terminal with full Cause
+Event "xstate.effect.resolve" to actor "0.conversation-connection.failed" was not delivered (stopped).
+
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts (5 tests | 1 failed | 4 skipped) 637ms
+   × permission denial with failed unread-body cleanup remains terminal with full Cause 556ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f01-f02-independent.test.ts > permission denial with failed unread-body cleanup remains terminal with full Cause
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts:34:157
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 skipped (5)
+   Start at  17:45:25
+   Duration  1.69s (tests 42%, import 34%, transform 22%, setup 1%)
+

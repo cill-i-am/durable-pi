@@ -23,7 +23,14 @@ import { FileTransfers, ExportedFile } from "./file-transfers"
 import { InteractiveTerminal } from "./interactive-terminal"
 import { useTerminal } from "./use-terminal"
 
-export function TerminalWorkbench({
+/** Agent identity also owns local drafts, selection observers and export hosts. */
+export function TerminalWorkbench(
+  props: Parameters<typeof TerminalWorkbenchView>[0]
+) {
+  return <TerminalWorkbenchView key={props.agentId} {...props} />
+}
+
+function TerminalWorkbenchView({
   onPendingChange,
   agentId,
   selected,

@@ -1,18 +1,18 @@
 import { Context, Effect, Layer, Schema } from "effect"
 
+import { stopConversation } from "../conversations/commands"
 import type { ConversationFailure } from "../conversations/turns"
-import { preserveFatal } from "../shared/effect"
+import { observeCleanup, preserveFatal } from "../shared/effect"
 import { backgroundBrief } from "./background"
+import { admitBackground } from "./background-admission"
+import { runBackgroundAttempt } from "./background-attempt"
 import {
   backgroundRejected,
   projectBackground,
   requireReportOwner,
   type BackgroundAuthority,
 } from "./background-domain"
-import type {
-  BackgroundStorageError,
-  BackgroundLedger,
-} from "./background-ledger"
+import type { BackgroundLedger } from "./background-ledger"
 import {
   BackgroundMailbox,
   makeBackgroundMailbox,
@@ -44,7 +44,11 @@ export interface BackgroundRemote {
 export interface BackgroundHost {
   readonly active: () => Effect.Effect<boolean, BackgroundError>
   readonly backgroundActive: () => Effect.Effect<boolean, BackgroundError>
+  readonly prearm: () => Effect.Effect<number, DelegationFailure>
   readonly wakeConversation: () => Effect.Effect<void, DelegationFailure>
+  readonly armBackground: (
+    deadline: number
+  ) => Effect.Effect<void, DelegationFailure>
   readonly wakeBackground: () => Effect.Effect<void, DelegationFailure>
   readonly notify: () => Effect.Effect<void>
   readonly admission: BackgroundAdmission
@@ -53,16 +57,6 @@ export class BackgroundDelegation extends Context.Service<
   BackgroundDelegation,
   ReturnType<typeof makeBackgroundDelegation>
 >()("durable-pi/delegation/Background") {}
-
-const ignoreUnavailable = <T, TRequirements>(
-  work: Effect.Effect<T, DelegationFailure, TRequirements>
-) =>
-  work.pipe(
-    preserveFatal,
-    Effect.catchTag("DelegationFailure", (error) =>
-      error.code === "unavailable" ? Effect.void : Effect.fail(error)
-    )
-  )
 
 export function makeBackgroundDelegation(
   mailbox: BackgroundMailboxService,
@@ -111,7 +105,65 @@ export function makeBackgroundDelegation(
     // Re-read after the RPC so a concurrent Stop is visible in the projection.
     return projectBackground(yield* required(id), group)
   })
-  const requestStop = (id: number) => mailbox.cancel(id, host.admission)
+  const accept = <A>(
+    write: (deadline: number) => Effect.Effect<A, BackgroundError>
+  ) =>
+    admitBackground({
+      arm: host.armBackground,
+      accept: write,
+      wake: host.wakeBackground(),
+    })
+  const requestStop = Effect.fn("Background.requestStop")(function* (
+    id: number
+  ) {
+    const row = yield* required(id)
+    // Conversations and Background retain separate discovery and retry budgets.
+    // The command machine preserves a failed conversation arm while the existing
+    // background admission machine commits both revocations in their shared tx.
+    return yield* stopConversation(
+      {
+        requestStop: (_reportId, options) =>
+          accept((deadline) =>
+            mailbox.cancel(id, host.admission, deadline, options)
+          ),
+      },
+      {
+        prearm: host.prearm,
+        wake: host.wakeConversation,
+        wakeBackground: () => Effect.void,
+        notify: host.notify,
+      }
+    )(row.handoff.reportId)
+  })
+  const attemptStop = (id: number) =>
+    runBackgroundAttempt({
+      kind: "stop",
+      claim: mailbox.claimStop(id),
+      dispatch: (row) =>
+        observeCleanup(remote.stop(row.id), (work) =>
+          work.pipe(
+            Effect.timeoutOrElse({
+              duration: "15 seconds",
+              orElse: () =>
+                Effect.fail(
+                  backgroundRejected(
+                    "unavailable",
+                    "Remote Stop acknowledgement timed out."
+                  )
+                ),
+            }),
+            preserveFatal,
+            Effect.as(true),
+            Effect.catchTag("DelegationFailure", (error) =>
+              error.code === "unavailable"
+                ? Effect.succeed(false)
+                : Effect.fail(error)
+            )
+          )
+        ),
+      record: (row, acknowledged) =>
+        mailbox.stopped(row.id, row.stop_attempt!, acknowledged === true),
+    })
   return {
     read,
     list: Effect.fn("Background.list")(function* (offset: number = 0) {
@@ -124,6 +176,8 @@ export function makeBackgroundDelegation(
       return (yield* required(id)).handoff
     }),
     authorized: mailbox.authorized,
+    exhaustRecovery: mailbox.exhaustRecovery,
+    nextWake: mailbox.nextWake,
     create: Effect.fn("Background.create")(function* (
       input: unknown,
       source: DelegationSource
@@ -135,16 +189,16 @@ export function makeBackgroundDelegation(
         catch: () =>
           backgroundRejected("invalid", "Invalid background task brief."),
       })
-      const row = yield* mailbox.create(brief, source)
-      yield* host.wakeBackground()
+      const row = yield* accept((deadline) =>
+        mailbox.create(brief, source, deadline)
+      )
       return `Background group ${row.id} accepted. Its text-only drafting children have no tools. You can finish this reply; the findings will arrive later in this bot's chat. Do not claim the work is complete. Activity has progress and Stop controls.`
     }),
     requestStop,
     stop: Effect.fn("Background.stop")(function* (id: number) {
       yield* Effect.yieldNow
       yield* requestStop(id)
-      yield* ignoreUnavailable(remote.stop(id))
-      yield* host.wakeConversation()
+      yield* attemptStop(id)
       return { accepted: true }
     }),
     retry: Effect.fn("Background.retry")(function* (
@@ -152,8 +206,9 @@ export function makeBackgroundDelegation(
       operationId: string
     ) {
       yield* Effect.yieldNow
-      const accepted = yield* mailbox.retry(id, operationId)
-      yield* host.wakeBackground()
+      const accepted = yield* accept((deadline) =>
+        mailbox.retry(id, operationId, deadline)
+      )
       return { accepted }
     }),
     control: Effect.fn("Background.control")(function* (input: Control) {
@@ -171,33 +226,48 @@ export function makeBackgroundDelegation(
       yield* required(group)
       return yield* remote.transcript(group, child, cursor)
     }),
-    step: Effect.fn("Background.reconcile")(function* () {
+    step: Effect.fn("Background.reconcile")(function* (authorized = true) {
       yield* Effect.yieldNow
-      for (const row of yield* mailbox.reconcileCancellation())
-        yield* ignoreUnavailable(remote.stop(row.id))
+      for (const row of yield* mailbox.reconcileCancellation(!authorized))
+        yield* attemptStop(row.id)
+      if (!authorized) return yield* mailbox.nextWake()
       for (const row of yield* mailbox.due()) {
-        // Only a remote outage consumes the transport retry budget. Storage,
-        // ownership, defects and cancellation must not become retries.
-        const group = yield* remote.start(row.id).pipe(
-          preserveFatal,
-          Effect.catchTag(
-            "DelegationFailure",
-            (
-              error
-            ): Effect.Effect<
-              Group | undefined,
-              DelegationFailure | BackgroundStorageError | ConversationFailure
-            > =>
-              error.code === "unavailable"
-                ? mailbox.failed(row.id).pipe(Effect.as(undefined))
-                : Effect.fail(error)
-          )
-        )
-        if (group) yield* mailbox.observed(row.id, group)
+        yield* runBackgroundAttempt({
+          kind: "handoff",
+          claim: Effect.succeed(row),
+          dispatch: (current) =>
+            observeCleanup(remote.start(current.id), (work) =>
+              work.pipe(
+                Effect.timeoutOrElse({
+                  duration: "15 seconds",
+                  orElse: () =>
+                    Effect.fail(
+                      backgroundRejected(
+                        "unavailable",
+                        "Background handoff acknowledgement timed out."
+                      )
+                    ),
+                }),
+                preserveFatal,
+                Effect.catchTag("DelegationFailure", (error) =>
+                  error.code === "unavailable"
+                    ? Effect.succeed(false)
+                    : Effect.fail(error)
+                )
+              )
+            ),
+          record: (current, group) =>
+            typeof group === "boolean"
+              ? mailbox.failed(current.id, current.revision)
+              : mailbox.observed(current.id, group, current.revision),
+        })
       }
-      if (!(yield* host.active()) && (yield* mailbox.deliver(host.admission))) {
-        yield* host.wakeConversation()
-        yield* host.notify()
+      if (!(yield* host.active())) {
+        const discoveryDeadline = yield* host.prearm()
+        if (yield* mailbox.deliver(host.admission, discoveryDeadline)) {
+          yield* host.wakeConversation()
+          yield* host.notify()
+        }
       }
       if (yield* host.backgroundActive()) yield* host.wakeConversation()
       return yield* mailbox.nextWake()

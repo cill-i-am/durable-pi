@@ -1,0 +1,262 @@
+{
+  "base": "1f800d419d1823de1bda960721d89964ae06a492",
+  "original_base": "696aca98000a6e82a9cb202acc18f92f2c8e987e",
+  "rows": [
+    {
+      "pr": 200,
+      "branch": "codex/xstate-effect-standard",
+      "before": "b1fee0109108e86c82af11815f6af105125f6e4b",
+      "tree": "3af74f78070535d221bd92125b7b9a8968f14e89",
+      "after": "ebf8e94ad6eaf637d9d71ed33e4a2c2a5f867337",
+      "rebased_tree": "66233a230046d90b347853d36930716fb0d8acd6"
+    },
+    {
+      "pr": 201,
+      "branch": "codex/xstate-access",
+      "before": "0a309bd27a64b6cc97ed75609f1b09579f99012f",
+      "tree": "51be1ddba1adbd609fd17d749267ebd741788709",
+      "after": "8026f2932b8d950174eac39cdee9f887b6ed9eaf",
+      "rebased_tree": "047205c5121863073fe85b793f6afd49f891080d"
+    },
+    {
+      "pr": 204,
+      "branch": "codex/xstate-terminal",
+      "before": "c92d5c3137db304b587ea9bf0962a9b0e3fe2fd8",
+      "tree": "1fe41a445840263b981e222ae7f9877120e15145",
+      "after": "27c5c35ad1fbf7a0f9e6f3645bb171e17fbc5b0e",
+      "rebased_tree": "669e1501f41190bd3447de7b04ed9fbbc95fd83a"
+    },
+    {
+      "pr": 205,
+      "branch": "codex/xstate-agents",
+      "before": "a76306ab9b0da4b55f186456e62c17f1d29fa76d",
+      "tree": "1db15edf89c43004d2fe776164a1bb41875bd296",
+      "after": "ae26226ad4c27306d4a95dd0bcce8c76b2385488",
+      "rebased_tree": "8b57b0d67318d8edad1c5f07c8bd1ec31d150b95"
+    },
+    {
+      "pr": 206,
+      "branch": "codex/xstate-replies-background",
+      "before": "60af6f10941241e22d12db87d9d2ea648916a995",
+      "tree": "67274cf5ca42aeb8c80c8b0c9d06d899187719e3",
+      "after": "7e1f3fdc51b7d35c71697505872b1e498a42ef36",
+      "rebased_tree": "3b0f44ec7182cad124911e4bba95be971626cec4"
+    },
+    {
+      "pr": 207,
+      "branch": "codex/xstate-conversations",
+      "before": "2c13994f478c38f9549000eaa13106df4c94203b",
+      "tree": "0781a512f3df6ff7e881fd963372df7f50e826c7",
+      "after": "2103eb9f63545670b25ad16d3f4ff859aed74f3f",
+      "rebased_tree": "ee65ef99138c88431b053fee38f0b03905a2c39c"
+    },
+    {
+      "pr": 208,
+      "branch": "codex/xstate-frontend-resources",
+      "before": "0cf6861ab5a89686d3956e0f85f480446c1f9bf8",
+      "tree": "4264cd3dec72ca8325df7e8c5fd5bd09a1b03b73",
+      "after": "6e429ff8e06e6d20bfd6b5de9a5760bbd052cd49",
+      "before_browser_repair": "58f0b4f4af4ad866a0af96904ddd97866346e89e",
+      "rebased_tree": "3c419636438f24adc6d66986ee716a6236ff1209"
+    },
+    {
+      "pr": 209,
+      "branch": "codex/xstate-browser-execution",
+      "before": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+      "tree": "63274ab91260c5e16133b6cce0bde542e8fbab49",
+      "after": "3cf0a3bd60a1e43c76c9b75b508e8fe7e7873f1a",
+      "before_browser_repair": "ee02458868a7ab0dbae3c571d590ac0b741f4bbb",
+      "rebased_tree": "8414103ca367d5c6bc997f1951e03fd2070dcc1f"
+    },
+    {
+      "pr": 210,
+      "branch": "codex/xstate-mailboxes",
+      "before": "c5e3a02eb1025c06f3cd41efb17815fb4577b76a",
+      "tree": "b4db6dabbf6cec634e1f808b605cb6b1b23bb008",
+      "after": "22e32ea3add81df48b2e970b8a109a0b2dc27a43",
+      "before_browser_repair": "30c82db6d3d9bc92a9c86cee432d613e4961a4de",
+      "rebased_tree": "619af6c1b6fbe2b000df47c306a64673c9de08cc"
+    },
+    {
+      "pr": 211,
+      "branch": "codex/xstate-workspace",
+      "before": "0de9d852a6246d8b14d5f454dbb605b4c510a337",
+      "tree": "3973b8ac1d09255197c2dbed2e9cded08ee3ec98",
+      "after": "15d5a37cf1808175681150fd0d11100c068d8ac5",
+      "before_browser_repair": "9b97b3ce69e10e2deea0b32266400a57f03ce8dc",
+      "rebased_tree": "cd42c523f2f183876197c4c6593a59b21352f148"
+    },
+    {
+      "pr": 212,
+      "branch": "codex/xstate-routines-apps",
+      "before": "9f99504e657b50a4f0dab30f4d920a8678685255",
+      "tree": "19cf9293a9790fd1ad796dbd2777a58e7105df38",
+      "after": "5415529d019d79697e1ba2c57525d77e7d858103",
+      "before_browser_repair": "0dc43673942004cefab4c669203ced657881738c",
+      "rebased_tree": "ec7e7a5cb5739bfa28e370edb5a11731f0c27fda"
+    },
+    {
+      "pr": 213,
+      "branch": "codex/xstate-planning-objects",
+      "before": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "tree": "d89f4e9d2a103717b7fac0424106a52cd0b3af3b",
+      "after": "e2691dbc0323a9d634b74e7e6bd50b3e6e106564",
+      "before_browser_repair": "82f9bb6d8f7e80eaa6e9a5dd5770a6bfb475cbd9",
+      "rebased_tree": "7e1608b1ad42527c0817fbca35bb9afc071c2dbf"
+    },
+    {
+      "pr": 214,
+      "branch": "codex/xstate-memory",
+      "before": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "tree": "94e092c5b471818a9ae199c24609aa48456a5383",
+      "after": "6862af4b56b725cc7d5b4354495a759b625917cd",
+      "before_browser_repair": "ed2dda55ab61cbe55a18871de0cc542d56f61a39",
+      "rebased_tree": "1a910e5737da4d90b455539dfc593b805d3b1e3a"
+    },
+    {
+      "pr": 215,
+      "branch": "codex/xstate-model-credentials",
+      "before": "d82998d160beb3cd8f721afe7037ef938a3f5787",
+      "tree": "2b159f6c90c9d48e40d96162a89ebcf322a1bbf4",
+      "after": "ad939e7ef00a8e77168e4f54d5308681b90e685c",
+      "before_browser_repair": "3305bc4321f1d10febdb2dc9c0ad8a49fbdb431e",
+      "rebased_tree": "7b0b55373e5106219ff4e0434809005a263e0759"
+    },
+    {
+      "pr": 216,
+      "branch": "codex/xstate-transport-hosts",
+      "before": "55001de10b7b7a88126888854f42569f4cdd036f",
+      "tree": "5f7fa1aaeb394e0f202c28e53ccdcae8af7619eb",
+      "after": "1daa2a012c5dafc5545993890e6bca3df9886f21",
+      "before_browser_repair": "2b49e48bcd3df2300c9c5965c90888cea812d39b",
+      "rebased_tree": "0d28cd369ab06b63b1e4d728d32df0b6de05ab53"
+    },
+    {
+      "pr": 217,
+      "branch": "codex/xstate-mcp-connections",
+      "before": "31d762a8adf993c858c3ea36e54e3ad53fe146a5",
+      "tree": "e11efd93cdbc00381df098c46eacf8972ab6b6ac",
+      "after": "8302cc9e4a0bf9803dbd66484cb01710ea964a57",
+      "before_browser_repair": "1b58b5ef7948939db4e14d3ed81a0c9e09cf993b",
+      "rebased_tree": "226f5833aaf024f7b2bf28fcae8b3ab0a437058c"
+    },
+    {
+      "pr": 219,
+      "branch": "codex/xstate-conversation-files-ui",
+      "before": "b05da10e574393f35cc6840e5cd2343b7e4ae4a7",
+      "tree": "a0cb5ddd5b80a8ea23ec63471774904795ab8329",
+      "after": "ade932de60a58b39b4cf42f7d1c4007194b443f9",
+      "before_browser_repair": "ed30bec8cc035586b8595361feed453c0c20fa0a",
+      "rebased_tree": "c9a3dabf1b5dee97d2a02c7ac2f06ae46d826b2c"
+    },
+    {
+      "pr": 220,
+      "branch": "codex/xstate-tool-auth-ui",
+      "before": "db186179e0eb020e9e09acc886f4f3d269564258",
+      "tree": "3c5422b007eaac00296a2c527205653df87b6367",
+      "after": "e7bd7458c813549a9be56849692c61fb29ce7e0d",
+      "before_browser_repair": "fe297db58cbbdd65f6133ca56b2ad27dc4885b7e",
+      "rebased_tree": "e257a26c4ec06da6c6ab7545dbad7cce02a30fa9",
+      "before_assignment_repair": "efc4c30d6a3c3b76dbf2601fc15d010d87650bd0"
+    },
+    {
+      "pr": 221,
+      "branch": "codex/xstate-workspace-settings-ui",
+      "before": "986e4166a8c22809cd48149e4cdd533e32af2a5b",
+      "tree": "8d1165bfb0678246e47359f89ba63e773567f5e5",
+      "after": "7afbef3591ab8561d4dc654108ba865cacfe3685",
+      "before_browser_repair": "32b8f04255e33fe1bdae5cf0aaf02d8b9a6a00d1",
+      "rebased_tree": "0fd2dec5fd8a999640a5ba29e996b8af6e38be79",
+      "before_assignment_repair": "f477442a656c6e3a0521e1068378b5c4153bfab5",
+      "before_browser_budget": "aee7523b7e4d85ff0a7b43b8c7481fc5a7e573f1"
+    },
+    {
+      "pr": 223,
+      "branch": "codex/xstate-host-admission-completion",
+      "before": "627293d6fac7d0c618173ac80619af894c12b74d",
+      "tree": "3b0dfd34de666078ef18c9a54d9adad1b3963c95",
+      "after": "e6f9a5239f2289a2fdf889d401c3a09e614699a8",
+      "before_browser_repair": "5c8cba0a72e091ee648ab83d5e92f6ca39be3580",
+      "rebased_tree": "c53492cf924eba2d8112de446cb29380b8ed3b05",
+      "before_assignment_repair": "0904abcb675f7b57750ef1722fa80f1c592c927c",
+      "before_browser_budget": "8c695acd59b5cd77871d388e717769f6c0e8fd88"
+    },
+    {
+      "pr": 224,
+      "branch": "codex/xstate-app-runner-lifetime",
+      "before": "b2cfb8445254585631347f4a54c8f79653483efe",
+      "tree": "71fc02587d95ab29120ef11c838b19bd0df2e79d",
+      "after": "212c5d7877ab09745c8f404ce3487e9e910884a3",
+      "before_browser_repair": "6f6e02abd958c5f43e60c03cfd10355d0c0f783d",
+      "rebased_tree": "ed314e187e64891a6e180046d67cd73c20cebb85",
+      "before_assignment_repair": "bdcc23f1092e74c2f81547b0f6a8cf5ccac64d29",
+      "before_browser_budget": "455c98a4a018ec8c118cbf43c48e42286a48c775"
+    },
+    {
+      "pr": 225,
+      "branch": "codex/xstate-memory-runner-lifetime",
+      "before": "87001c77ec79a0290bc00da365d79a0e6c77d7ee",
+      "tree": "b7d5b8105455a3760ba90f99e99f7d908dec9bab",
+      "after": "1d16e31269155bf2759975966feed0857b35e93c",
+      "before_browser_repair": "c960d423afa2bf533da482a41ce8aa53a3e6d79a",
+      "rebased_tree": "ce7d375a1fe1400c1fbfa1eefeba800cf1fcd824",
+      "before_assignment_repair": "21ffe80ed20d99dae5c589c917740c4fcfecacc9",
+      "before_browser_budget": "65e8333d7626de992d6105b1095537c901549ba9"
+    },
+    {
+      "pr": 226,
+      "branch": "codex/xstate-conversation-runner-lifetime",
+      "before": "87988ce25c581f3c93ae0891c218cf2a805c69bd",
+      "tree": "22962c3e72a390aae2a0d8bbedcea3b892f3a731",
+      "after": "c4a9621db6d07aaebe902f49a66dd2a015389369",
+      "before_browser_repair": "da1d4c5fc0d19dc5ac701fa39410a80c5cbdef7d",
+      "rebased_tree": "6fc6c1bb2857c09214b0038188db8fb0a97c5d17",
+      "before_assignment_repair": "9a52f823c5e9296a0c89c87575f3fa0cad29f83e",
+      "before_browser_budget": "8223f49cfaa5d444641b3ddb80724b2a4ea44f7f"
+    },
+    {
+      "pr": 227,
+      "branch": "codex/xstate-routine-runner-lifetime",
+      "before": "4ed5efcefba79e9bb4b49deaedff5a44ac71f1e6",
+      "tree": "6a90988bc928d507532da5fb516d05ab507cff04",
+      "after": "3baf09de33eb1bd91ba26f18b865e9b996ae8213",
+      "before_browser_repair": "c6bd5e85b6a88ce9a45ec3213cedebb8d893a09b",
+      "rebased_tree": "985ea64376a608d34372769abc321563afa204c6",
+      "before_assignment_repair": "d9bbf5fcca32cf11a81a1a4a832b1a947ce02ef9",
+      "before_browser_budget": "3b1b4d511d1c7bce79d8746fafd572f8f5b41cd6"
+    },
+    {
+      "pr": 228,
+      "branch": "codex/xstate-communication-runner-lifetime",
+      "before": "e04434aee21f23657c2ccb19f262643db51735a2",
+      "tree": "4097d8c59cdc5bfd6bc5efd40db097d1e26bd157",
+      "after": "2ed96b60e9de862e6dee37dab8ecca8eaf22ce3a",
+      "before_browser_repair": "f20f0c207b4081f66238bbe1eb4e4e7d979fb6cd",
+      "rebased_tree": "d89ac4b74969116adec59af95268c86a6ac04314",
+      "before_assignment_repair": "d69908dff4185ee44e7bb488f029e3ecff144f06",
+      "before_browser_budget": "078d1509069689b1a8eb91990c755094e8cbb2a0"
+    },
+    {
+      "pr": 229,
+      "branch": "codex/xstate-workspace-runner-lifetime",
+      "before": "55b2d68f6412bd9335f5e243cbad3eee08139032",
+      "tree": "9ab1a2a75e76b6a99603530532dcc4422659bb08",
+      "after": "ea691c7208c9613c678f10a2a8bb0c7150e21295",
+      "before_browser_repair": "cc1569383887ddce7b2b5bb02cbb427817b2dffd",
+      "rebased_tree": "7d2ca9e84d9f096c0c0de6a21083281035f6b2ce",
+      "before_assignment_repair": "6a9129befe00e39732d6760bf5a0cfc0e3603eb6",
+      "before_browser_budget": "7c878ca822b06dd31e679a76c74e7865e5366e1c"
+    },
+    {
+      "pr": 230,
+      "branch": "codex/xstate-runner-boundary-audit",
+      "before": "efc3588c76125039b71d40ff8f659ed1d11a3ecf",
+      "tree": "4aa2356716469f00d8ba8a646837092e93da7096",
+      "after": "94d16962d17298b851cb86f7a42a72ac18407546",
+      "before_browser_repair": "8537b9fb7349728254ac58da01e4b0e01a897fa6",
+      "rebased_tree": "52bc66d891b02ea0c68433401a59628038f8b6ef",
+      "before_assignment_repair": "807cecdf3f60207eda3362ada634a6e9b7a45ad5",
+      "before_browser_budget": "238729c3de0b82d3aafaf7b554a3a771f125b452"
+    }
+  ]
+}

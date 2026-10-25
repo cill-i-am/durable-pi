@@ -1,0 +1,62 @@
+# F10 agent and workspace lifetimes
+
+Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi`.
+Node 24. No Git, package, worker, provider, shared tracking, merge or deployment changes.
+Exact final hashes: `/private/tmp/f10-freeze-manifest.json` (27 owned files and deletion of obsolete `src/features/agents/catalog-state.ts`). File list: `/private/tmp/f10-owned-files.txt`. The first freeze is preserved in `/private/tmp/f10-first-freeze-manifest.json`; later review changes are recorded below and the pre-review freeze is preserved in `/private/tmp/f10-pre-review-repair-manifest.json`.
+
+## Invariants and boundaries
+
+1. The editor machine owns save admission, immutable fields/revision, acknowledgement, read reconciliation and close. A successful earlier save cannot close or overwrite later edits. A received create profile changes subsequent explicit saves to update. Known client rejection allows corrected fields; uncertain transport outcomes retain the exact original fields and entity identity for an explicit retry. No automatic write retry occurs.
+2. Received save/archive acknowledgement is separate from catalog refresh. Failed reconciliation only retries the read. Archive requires confirmation, restore remains explicit, and in-flight commands cannot be replaced/dismissed. Capacity errors and saved agent work remain visible.
+3. The catalog actor serializes reads and coalesces queued refreshes, suppressing the superseded result. Its existing initial-loading-only projection is preserved. Failed refresh retains prior data and rejects waiting callers. The old reducer is deleted rather than retained as a second owner.
+4. Status observations are periodic read-only work every 30 seconds while visible and membership is nonempty. Native reads never overlap; membership changes during a read require a fresh joined observation before publishing. Effect owns the timer and visibility listener. Live data is fenced by owner and selected agent.
+5. The workspace guard owns initial-ready retention and navigation-block notice/admission from current safety facts. Router remains route/search authority. Explicit editor dismissal and acknowledged archive routing retain their existing authorized Router calls. Native blocked navigation observes an awaited machine reply, never an assumed synchronous mailbox update.
+6. Workbench presence retains panel/search until the corresponding exit acknowledgement. Revision fencing rejects a stale close after reopening, while Base UI owns actual animations. The location helper is pure URL projection/canonicalization and native Router calls; WorkbenchPanel is a native Base UI adapter. Neither needs a competing application navigation/animation engine.
+7. Every actor has an owned Effect scope. Native request promises remain joined after abort. Owner retirement revokes future callbacks immediately; late successful saves cannot reconcile/close a replacement view. Structured checked failures and original defects survive late cleanup through the canonical fatal-reason promotion, without nesting an entire Cause inside Die.
+8. Selection values, child-owner pending projections, view caches, native SDK state and URL data retain their native/pure owners. Existing local/session storage keys and formats are unchanged; no reset, migration or new browser persistence was introduced. The existing session/agent React keys preserve draft ownership. The parent retains its reserved MemoryWorkbench prop bridge and shared final documentation.
+
+## Characterization and negative control
+
+The highest-risk concrete defect was characterized in real Chromium before implementation: submitting Create, typing a newer name/purpose while its acknowledgement is held, then releasing it closed the editor and discarded those newer edits. `/private/tmp/f10-editor-characterization.log` fails at the expected enabled Save changes control; the raw failure log is preserved. Its original screenshot/trace paths are recorded in that log, but those image artifacts were overwritten when the first browser output directory was reused. Final browser output uses a separate directory.
+
+The same real journey now passes on desktop and mobile, including a blocked browser Back while the save is held and a subsequent update with the original created entity ID.
+
+The private copied-module mutation in `/private/tmp/f10-controls/` replaces the revision equality close guard with true. `/private/tmp/f10-negative-editor-revision.log` fails the meaningful `expect(closed).toBe(0)` assertion with actual 1. Production files were not mutated, so concurrent browser builds were safe.
+
+## Final focused evidence
+
+- `/private/tmp/f10-frozen-focused.log`: seven test files, **92/92 pass** against frozen production source.
+- `/private/tmp/f10-compound-final.log`: **7/7 editor tests pass**, including the subsequently strengthened original checked-cleanup-reason assertion.
+- `/private/tmp/f10-browser-final.log`: **8/8 desktop/mobile Chromium journeys pass**. Includes held save/newer edits/create-to-update, read-only reconciliation after known acknowledgement, restore/navigation/capacity errors, and existing canonical agent slugs/search/workbench navigation/reload.
+- `/private/tmp/f10-browser-final-results/`: final browser artifact directory. Isolated port 4464 and `dist/browser-f10`; Playwright server closes when the run finishes.
+- `/private/tmp/f10-feature-types-final.log` and `/private/tmp/f10-feature-types-result.json`: scoped types and explicit exit status. Configuration `/private/tmp/f10-types.config.json` includes owned agent sources, new app machines/hosts and focused tests, avoiding unrelated concurrent files.
+- `/private/tmp/f10-lint-final.log`: scoped architecture/React lint, clean.
+- `/private/tmp/f10-format-final.log`: all 26 owned files formatted, clean.
+
+The first eight-case browser run passed six and failed only the capacity-message locator: the captured page showed the correct capacity error, but exact text included the adjacent Retry button. The corrected role/hasText assertion passes. Earlier raw logs remain available; the first eight-case failure artifacts remain in `/private/tmp/f10-browser-results/`.
+
+Commands (prefix each with `PATH=/opt/homebrew/opt/node@24/bin:$PATH`):
+
+```
+pnpm exec vitest run src/features/agents/catalog-state.test.ts tests/agent-editor-machine.test.ts tests/agent-observation-lifetime.test.ts tests/agent-archive-machine.test.ts tests/workspace-lifetime-machine.test.ts tests/workspace-navigation.test.tsx tests/workspace-url.test.ts --maxWorkers=2
+pnpm exec vitest run tests/agent-editor-machine.test.ts --maxWorkers=1
+pnpm exec tsc --noEmit --project /private/tmp/f10-types.config.json
+pnpm exec oxlint --config oxlint.config.ts --deny-warnings $(cat /private/tmp/f10-owned-files.txt)
+pnpm exec oxfmt --check $(cat /private/tmp/f10-owned-files.txt)
+pnpm exec playwright test --config /private/tmp/f10-playwright.config.ts
+pnpm exec vitest run --config /private/tmp/f10-controls/vitest.config.mjs -t 'a save captures' --maxWorkers=1
+```
+
+## Limits and integration
+
+These are focused synthetic/native-browser proofs; no live providers or deployment were used. Full repository gates, final inventory/evidence composition and publication belong to the parent. My redundant full-tree tsc was cancelled rather than counted; `/private/tmp/f10-cancelled-full-types.json` records that PID 32164 was no longer present on the final exact-command/stdout check. No broad gate result is claimed. Independent F10 review closed clear after the cleanup repair. The unchanged native cleanup and behavior probes pass; reviewer evidence is in `/private/tmp/f10-independent/`.
+
+## Earlier F01 closure
+
+The final F01 repair changed only connection.ts and its real-SDK composition test. An authorization denial with failing unread-body cleanup is retained outside the SDK wrapper, so 401/403/404 cannot reopen the stream and original ApiError/checked cleanup/defect reasons all survive. Three new before cases fail with two fetches; focused40/40 and unchanged reviewer5/5 pass after. `/private/tmp/f01-auth-cleanup-freeze-manifest.json` is the final 22-file F01 manifest. Independent F01/F02 review is closed in `/private/tmp/f01-f02-independent-review.md`; reviewer reported 53/53 across final F01/F02 tests and matching hashes. Previous accepted Stop and reader-cleanup fixes remain unchanged.
+
+## Independent cleanup repair
+
+The independent four-owner native probe found a late annotated checked Fail plus Interrupt (without Die) was joined but lost during actor shutdown. The shared nativeOperation fix alone still left all four F10 scopes reporting Success (`/private/tmp/f10-cleanup-shared-only.log`). The existing agent-requests observer now also retains that mixed interrupted Cause; no Promise wrapper or progression owner was added. Pure interruption and ordinary abort remain unaffected.
+
+`tests/agent-request-cleanup.test.ts` checks held settlement, callback/listener release, original checked and interruption reason identity, and absence of Die(Cause) for editor, catalog, archive and status owners. `/private/tmp/f10-cleanup-before.log` fails all four meaningful scope-failure assertions. `/private/tmp/f10-cleanup-after.log` passes 19/19 across five affected suites. Scoped typecheck, two-file lint and formatting pass (`f10-cleanup-types-final.log`, `f10-cleanup-lint.log`, `f10-cleanup-format.log`). Exact repair and shared composition hashes: `/private/tmp/f10-cleanup-freeze.json`. The final 27-file manifest includes this repair; prior browser proof remains the existing 8/8 run and was not redundantly rebuilt for this Cause-only change. Reviewer independently reran both unchanged native cleanup and behavior probes and closed clear; `/private/tmp/f10-independent/cleanup-after.log` records the four-owner pass.

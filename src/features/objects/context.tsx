@@ -9,7 +9,6 @@ import {
 } from "react"
 
 import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
 
 import { ObjectStore } from "./store"
 
@@ -20,62 +19,77 @@ const Context = createContext<{
   archived: boolean
   observe: () => () => void
 } | null>(null)
-export function ObjectsProvider({
-  agentId,
-  archived,
-  onOpen,
-  onPendingChange,
-  children,
-}: {
+type Props = {
   agentId: string
   archived: boolean
   onOpen: (id: string) => void
   onPendingChange: (busy: boolean) => void
   children: ReactNode
-}) {
+}
+export function ObjectsProvider(props: Props) {
+  const [owned, setOwned] = useState<{
+    agentId: string
+    store: ObjectStore
+  } | null>(null)
+  useEffect(() => {
+    const store = new ObjectStore(
+      agentApi(props.agentId),
+      `pi:object-changes:${props.agentId}`
+    )
+    try {
+      store.connect(sessionStorage)
+    } catch {}
+    setOwned({ agentId: props.agentId, store })
+    return () => {
+      void store
+        .dispose()
+        .catch((cause) =>
+          console.error("Checklist resource cleanup failed", cause)
+        )
+    }
+  }, [props.agentId])
+  return owned?.agentId === props.agentId ? (
+    <ObjectScope key={props.agentId} {...props} store={owned.store} />
+  ) : (
+    props.children
+  )
+}
+function ObjectScope({
+  agentId,
+  archived,
+  onOpen,
+  onPendingChange,
+  children,
+  store,
+}: Props & { store: ObjectStore }) {
   const [consumers, setConsumers] = useState(0)
   const observe = useCallback(() => {
     setConsumers((count) => count + 1)
     return () => setConsumers((count) => count - 1)
   }, [])
-  const [store] = useState(
-    () => new ObjectStore(agentApi(agentId), `pi:object-changes:${agentId}`)
-  )
   const state = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,
     store.getSnapshot
   )
+  const pending = Object.keys(state.pending).length > 0
   useEffect(() => {
-    try {
-      store.connect(sessionStorage)
-    } catch {}
-  }, [store])
-  useEffect(() => {
-    onPendingChange(Object.keys(state.pending).length > 0)
+    onPendingChange(pending)
     return () => onPendingChange(false)
-  }, [state.pending, onPendingChange])
-  const refreshing = consumers > 0 || Object.keys(state.pending).length > 0
+  }, [pending, onPendingChange])
+  const active = consumers > 0 || pending
   useEffect(() => {
-    if (!refreshing) return
-    const refresh = async () => {
-      if (document.visibilityState === "visible") {
-        await store.refresh()
-        await Promise.all(
-          Object.keys(store.getSnapshot().details).map((id) => store.load(id))
-        )
-      }
-    }
-    const stop = poll(refresh, 4000, true)
-    const reconnect = () => void refresh()
-    window.addEventListener("online", reconnect)
-    document.addEventListener("visibilitychange", reconnect)
+    const visibility = () =>
+      void store.observe(active, document.visibilityState === "visible")
+    const online = () => void store.reconnect()
+    visibility()
+    document.addEventListener("visibilitychange", visibility)
+    window.addEventListener("online", online)
     return () => {
-      stop()
-      window.removeEventListener("online", reconnect)
-      document.removeEventListener("visibilitychange", reconnect)
+      document.removeEventListener("visibilitychange", visibility)
+      window.removeEventListener("online", online)
     }
-  }, [store, refreshing])
+  }, [active, store])
   return (
     <Context value={{ store, open: onOpen, agentId, archived, observe }}>
       {children}
@@ -86,8 +100,8 @@ export function useObjects() {
   return useContext(Context)
 }
 export function useObjectState(store: ObjectStore) {
-  const context = useObjects()
-  const observe = context?.store === store ? context.observe : undefined
+  const context = useObjects(),
+    observe = context?.store === store ? context.observe : undefined
   useEffect(() => observe?.(), [observe])
   return useSyncExternalStore(
     store.subscribe,

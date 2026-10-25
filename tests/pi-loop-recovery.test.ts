@@ -58,10 +58,16 @@ it.each([
     })
     const turnId = crypto.randomUUID()
     Effect.runSync(
-      turns.admit({
-        operationId: turnId,
-        text: "Check the synthetic operation",
-      })
+      turns.admit(
+        {
+          operationId: turnId,
+          text: "Check the synthetic operation",
+        },
+        undefined,
+        [],
+        undefined,
+        { discoveryDeadline: Date.now() + 60000 }
+      )
     )
     let store = new RunRecoveryStore(db)
     let access = new AccessStore(db, () =>

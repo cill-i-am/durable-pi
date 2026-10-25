@@ -1,0 +1,51 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/auth-ui-lifecycle.test.ts > Auth admission, challenges, and owned resources > aborts and joins an unfinished native challenge, retains every late Cause reason, and never completes it
+[20:47:14.579] ERROR (#1): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/auth-ui-lifecycle.test.ts:235:13 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/auth-ui-lifecycle.test.ts (11 tests | 1 failed | 10 skipped) 418ms
+   ❯ Auth admission, challenges, and owned resources (11)
+     × aborts and joins an unfinished native challenge, retains every late Cause reason, and never completes it 390ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/auth-ui-lifecycle.test.ts > Auth admission, challenges, and owned resources > aborts and joins an unfinished native challenge, retains every late Cause reason, and never completes it
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/auth-ui-lifecycle.test.ts:235:13
+    233|               (reason) => reason._tag === "Interrupt" && reason.fiberI…
+    234|             )
+    235|           ).toBe(true)
+       |             ^
+    236|         }
+    237|         expect(completions).toBe(0)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  20:46:54
+   Duration  20.75s (import 68%, transform 26%, setup 3%, tests 2%, worker 1%)
+

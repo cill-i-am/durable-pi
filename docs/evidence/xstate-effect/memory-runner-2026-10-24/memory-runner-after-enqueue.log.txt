@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/memory-runner-host.test.ts (6 tests | 1 failed) 27ms
+   × coalesces cold restoration, shares its failure, and retries only on the next call 19ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-runner-host.test.ts > coalesces cold restoration, shares its failure, and retries only on the next call
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/memory-runner-host.test.ts:35:34
+     33|   held.reject(failure)
+     34|   for (const value of await Promise.all([first, second])) {
+     35|     expect(Cause.isCause(value)).toBe(true)
+       |                                  ^
+     36|     if (!Cause.isCause(value)) throw new Error("Expected native Cause")
+     37|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 51 passed (52)
+   Start at  20:19:27
+   Duration  434ms (import 65%, tests 16%, transform 16%, setup 2%, worker 1%)
+

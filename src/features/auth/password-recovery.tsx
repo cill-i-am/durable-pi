@@ -1,7 +1,7 @@
 import { Link, useSearch } from "@tanstack/react-router"
+import { Redacted } from "effect"
 import { useEffect, useRef, useState } from "react"
 
-import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { workspaceReturnLink } from "@/navigation/workspace"
 
+import { useAuthEntry } from "./auth-entry"
 import { AuthFrame } from "./auth-frame"
 import { PasswordInput } from "./password-input"
 
@@ -30,29 +31,18 @@ function BackToSignIn() {
 }
 
 export function ForgotPassword() {
-  const [pending, setPending] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState("")
-  async function submit(event: React.SubmitEvent<HTMLFormElement>) {
+  const auth = useAuthEntry("forgot", "forgot-password")
+  const pending = !auth.snapshot || auth.snapshot.matches("requesting")
+  const sent = auth.snapshot?.matches("completed") ?? false
+  const error = auth.snapshot?.context.error ?? ""
+  function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending) return
-    setError("")
-    setPending(true)
-    const email = String(new FormData(event.currentTarget).get("email")).trim()
-    try {
-      const result = await authClient.requestPasswordReset({ email })
-      if (result.error) {
-        setError(
-          result.error.status === 429
-            ? "Too many requests. Please wait 10 minutes before trying again."
-            : "Could not request a reset. Please try again."
-        )
-      } else setSent(true)
-    } catch {
-      setError("Could not connect. Check your connection and try again.")
-    } finally {
-      setPending(false)
-    }
+    auth.send({
+      type: "SUBMIT",
+      secret: Redacted.make({
+        email: String(new FormData(event.currentTarget).get("email")),
+      }),
+    })
   }
   return (
     <AuthFrame
@@ -70,7 +60,10 @@ export function ForgotPassword() {
             Check your spam folder too. If nothing arrives, wait a few minutes
             before trying again.
           </p>
-          <Button variant="outline" onClick={() => setSent(false)}>
+          <Button
+            variant="outline"
+            onClick={() => auth.send({ type: "RESET" })}
+          >
             Try another email
           </Button>
         </div>
@@ -106,76 +99,53 @@ export function ForgotPassword() {
 }
 
 export function ResetPassword() {
-  const [token, setToken] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
-  const [done, setDone] = useState(false)
-  const [invalid, setInvalid] = useState(false)
-  const [error, setError] = useState("")
-  const linkVersion = useRef(0)
+  const [link, setLink] = useState<{ token: string | null; revision: number }>({
+    token: null,
+    revision: 0,
+  })
   useEffect(() => {
-    const loadLink = () => {
-      linkVersion.current++
+    const load = () => {
       const value =
         new URLSearchParams(window.location.hash.slice(1)).get("token") ?? ""
-      setToken(/^[A-Za-z0-9_-]{20,128}$/.test(value) ? value : "")
-      setPending(false)
-      setDone(false)
-      setInvalid(false)
-      setError("")
+      setLink((previous) => ({
+        token: /^[A-Za-z0-9_-]{20,128}$/.test(value) ? value : "",
+        revision: previous.revision + 1,
+      }))
     }
-    loadLink()
-    window.addEventListener("hashchange", loadLink)
-    return () => {
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      linkVersion.current++
-      window.removeEventListener("hashchange", loadLink)
-    }
+    load()
+    window.addEventListener("hashchange", load)
+    return () => window.removeEventListener("hashchange", load)
   }, [])
-  async function submit(event: React.SubmitEvent<HTMLFormElement>) {
+  return <ResetLink key={link.revision} token={link.token} />
+}
+
+function ResetLink({ token }: { token: string | null }) {
+  const form = useRef<HTMLFormElement>(null)
+  const auth = useAuthEntry("reset", "reset-link", () => {
+    form.current?.reset()
+    window.history.replaceState(
+      window.history.state,
+      "",
+      window.location.pathname
+    )
+  })
+  const pending = !auth.snapshot || auth.snapshot.matches("requesting")
+  const done = auth.snapshot?.matches("completed") ?? false
+  const error = auth.snapshot?.context.error ?? ""
+  const unavailable = auth.snapshot?.matches("invalid") || token === ""
+  function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending || !token) return
-    const form = event.currentTarget
-    const data = new FormData(form)
-    const password = String(data.get("password"))
-    if (password !== data.get("confirm")) {
-      setError("Your passwords don't match.")
-      return
-    }
-    setError("")
-    setPending(true)
-    const version = linkVersion.current
-    try {
-      const result = await authClient.resetPassword({
-        newPassword: password,
+    if (!token) return
+    const values = new FormData(event.currentTarget)
+    auth.send({
+      type: "SUBMIT",
+      secret: Redacted.make({
         token,
-      })
-      if (version !== linkVersion.current) return
-      if (result.error) {
-        if (result.error.code === "INVALID_TOKEN") setInvalid(true)
-        else
-          setError(
-            result.error.status === 429
-              ? "Too many attempts. Please wait 10 minutes before trying again."
-              : "Could not reset your password. Please try again."
-          )
-      } else {
-        form.reset()
-        window.history.replaceState(
-          window.history.state,
-          "",
-          window.location.pathname
-        )
-        setToken("")
-        setDone(true)
-      }
-    } catch {
-      if (version === linkVersion.current)
-        setError("Could not connect. Check your connection and try again.")
-    } finally {
-      if (version === linkVersion.current) setPending(false)
-    }
+        password: String(values.get("password")),
+        confirm: String(values.get("confirm")),
+      }),
+    })
   }
-  const unavailable = invalid || token === ""
   return (
     <AuthFrame
       title={
@@ -207,7 +177,7 @@ export function ResetPassword() {
           Request a new link
         </Link>
       ) : (
-        <form onSubmit={submit}>
+        <form ref={form} onSubmit={submit}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="new-password">New password</FieldLabel>

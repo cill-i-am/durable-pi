@@ -182,6 +182,157 @@ export const agentMigrationManifest = {
         "CREATE INDEX `agent_messages_sender` ON `agent_messages` (`sender_session`,`sender_agent`);",
       ],
     },
+    {
+      id: "20261023071529_tiny_korvac",
+      checksum:
+        "bce02e40420c68f93f0a47ce1956fb5d15076f5a39b2fdfd89b72562144d017a",
+      statements: [
+        "ALTER TABLE `tool_operations` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `tool_operations` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+      ],
+    },
+    {
+      id: "20261023074535_amusing_union_jack",
+      checksum:
+        "124dc1f299ce307e47638f1b89359656c994d9ef21f476e131a8c6693e32fafd",
+      statements: [
+        "ALTER TABLE `agent_catalog` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `agent_catalog` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `bot_admission` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `bot_admission` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+      ],
+    },
+    {
+      id: "20261023082234_blushing_havok",
+      checksum:
+        "a8098d491daa819904493711425bfc0b3a223a0fe9f220e96d413a914a8cf2c8",
+      statements: [
+        "ALTER TABLE `email_messages` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `attempt_id` text;",
+        "ALTER TABLE `email_messages` ADD `send_index` integer;",
+        "ALTER TABLE `email_messages` ADD `send_deadline` integer;",
+        "ALTER TABLE `whatsapp_messages` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_messages` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_messages` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `whatsapp_messages` ADD `attempt_id` text;",
+        "ALTER TABLE `whatsapp_messages` ADD `send_index` integer;",
+        "ALTER TABLE `whatsapp_messages` ADD `send_deadline` integer;",
+      ],
+    },
+    {
+      id: "20261023100524_outstanding_pixie",
+      checksum:
+        "842d845983a3f9eb50fc30be9e8b0bc76130f3cfce1bf18d6df9cec8e78b3938",
+      statements: [
+        "ALTER TABLE `background_handoffs` ADD `schema_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `workflow_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `stop_state` text DEFAULT 'none' NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `stop_attempt` text;",
+        "ALTER TABLE `background_handoffs` ADD `stop_attempts` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `stop_next_at` integer;",
+        "ALTER TABLE `background_handoffs` ADD `stop_deadline` integer;",
+        "ALTER TABLE `background_handoffs` ADD `stop_error` text;",
+        "ALTER TABLE `email_settings` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `email_settings` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_settings` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_settings` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "UPDATE `background_handoffs` SET `stop_state` = 'pending', `stop_next_at` = 0 WHERE `status` = 'cancelled';",
+      ],
+    },
+    {
+      id: "20261023101342_ambitious_hardball",
+      checksum:
+        "36f179c45c2031edf5f1d692d535c81634158f80c6c526500137f5707a88fbef",
+      statements: [
+        "ALTER TABLE `email_messages` ADD `work_deadline` integer;",
+        "ALTER TABLE `whatsapp_messages` ADD `work_deadline` integer;",
+        "UPDATE `email_messages` SET `work_deadline` = CAST(unixepoch('subsec') * 1000 AS integer) + 60000 WHERE `state` IN ('queued', 'waiting');",
+        "UPDATE `whatsapp_messages` SET `work_deadline` = CAST(unixepoch('subsec') * 1000 AS integer) + 60000 WHERE `state` IN ('queued', 'waiting');",
+      ],
+    },
+    {
+      id: "20261023112327_stiff_warpath",
+      checksum:
+        "2afc2e834d8a3be4fdef5616b53c6289956245e97fc0ea4d39f78b288f8fe96a",
+      statements: [
+        "-- Add constrained columns in place: rebuilding chat_turns inside the shared\n-- migration transaction cannot disable its existing self-referential foreign key.\nALTER TABLE `chat_turns` ADD `schema_version` integer DEFAULT 1 NOT NULL CONSTRAINT `chat_turns_schema_version_check` CHECK (`schema_version` >= 1);",
+        "ALTER TABLE `chat_turns` ADD `workflow_version` integer DEFAULT 1 NOT NULL CONSTRAINT `chat_turns_workflow_version_check` CHECK (`workflow_version` >= 1);",
+        'ALTER TABLE `chat_turns` ADD `control` text DEFAULT \'{"owner":null,"deadline":null,"unconfirmed":null}\' NOT NULL CONSTRAINT `chat_turns_control_json` CHECK (json_valid(`control`));',
+      ],
+    },
+    {
+      id: "20261023130802_coordination_lifecycle",
+      checksum:
+        "5f0c1da4f388055d7cc986b0ae1b30176dec8131187add6719224e1ada68c9fa",
+      statements: [
+        "ALTER TABLE `agent_messages` ADD `schema_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `workflow_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `phase` text DEFAULT 'pending' NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `attempt_id` text;",
+        "UPDATE `agent_messages` SET `phase` = CASE `state` WHEN 'accepted' THEN 'pending' WHEN 'delivered' THEN 'delivered' WHEN 'failed' THEN 'failed' END;",
+      ],
+    },
+    {
+      id: "20261023134558_workspace_lifecycle",
+      checksum:
+        "9c9afeb13f15b4ebe51215e1d1df32d91e3d92165226f31df4e3b0a9c7fa6781",
+      statements: [
+        "ALTER TABLE `workspace_extractions` ADD `lifecycle_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_extractions` ADD `attempt_id` text;",
+        "ALTER TABLE `workspace_extractions` ADD `artifact_hash` text;",
+        "ALTER TABLE `workspace_extractions` ADD `recovery_deadline` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_files` ADD `lifecycle_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_files` ADD `attempt_id` text;",
+        "ALTER TABLE `workspace_video_preparations` ADD `lifecycle_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_video_preparations` ADD `attempt_id` text;",
+        "ALTER TABLE `workspace_video_preparations` ADD `artifact_hash` text;",
+        "ALTER TABLE `workspace_video_preparations` ADD `recovery_deadline` integer DEFAULT 0 NOT NULL;",
+      ],
+    },
+    {
+      id: "20261023140049_routines_webhooks_lifecycle",
+      checksum:
+        "6c7aba9f49a08baa1313a6304a576e39ab43f1c603cac60ff46f3ca50400cd34",
+      statements: [
+        "ALTER TABLE `webhooks` ADD `schema_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `webhooks` ADD `workflow_version` integer DEFAULT 1 NOT NULL;",
+        "PRAGMA foreign_keys=OFF;",
+        "CREATE TABLE `__new_routine_runs` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`routine_id` text NOT NULL,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`status` text NOT NULL,\n\t`record` text NOT NULL,\n\tCONSTRAINT `fk_routine_runs_routine_id_routines_id_fk` FOREIGN KEY (`routine_id`) REFERENCES `routines`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT \"routine_runs_status_check\" CHECK(\"status\" in ('pending', 'queued', 'stopping', 'unconfirmed', 'done', 'failed', 'cancelled')),\n\tCONSTRAINT \"routine_runs_record_json\" CHECK(json_valid(\"record\"))\n);",
+        "INSERT INTO `__new_routine_runs`(`sequence`, `id`, `routine_id`, `turn_id`, `status`, `record`) SELECT `sequence`, `id`, `routine_id`, `turn_id`, `status`, `record` FROM `routine_runs`;",
+        "DROP TABLE `routine_runs`;",
+        "ALTER TABLE `__new_routine_runs` RENAME TO `routine_runs`;",
+        "PRAGMA foreign_keys=ON;",
+        "CREATE INDEX `routine_runs_routine_sequence` ON `routine_runs` (`routine_id`,`sequence`);",
+        "CREATE INDEX `routine_runs_status_sequence` ON `routine_runs` (`status`,`sequence`);",
+        "UPDATE `routines`\nSET `record` = json_set(`record`, '$.schemaVersion', 1, '$.workflowVersion', 1)\nWHERE json_type(`record`, '$.schemaVersion') IS NULL\n  AND json_type(`record`, '$.workflowVersion') IS NULL;",
+        "UPDATE `routine_runs`\nSET `record` = json_set(`record`, '$.schemaVersion', 1, '$.workflowVersion', 1,\n  '$.controlRevision', 0, '$.admissionDeadline', json_extract(`record`, '$.createdAt') + 86400000)\nWHERE json_type(`record`, '$.schemaVersion') IS NULL\n  AND json_type(`record`, '$.workflowVersion') IS NULL;",
+      ],
+    },
+    {
+      id: "20261023142600_memory_lifecycle",
+      checksum:
+        "eefc3a3828fed72025dca2182f3a9b0078cd26be9a9cfcc0c9ff8578acc47d8e",
+      statements: [
+        "ALTER TABLE `memory_backup_status` ADD `schema_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `workflow_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `phase` text DEFAULT 'idle' NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `target` text DEFAULT '' NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `attempts` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `attempt_id` text;",
+        "ALTER TABLE `memory_backup_status` ADD `retry_at` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_ready` ADD `control` text;",
+        "PRAGMA foreign_keys=OFF;",
+        'CREATE TABLE `__new_memory_ready` (\n\t`start` integer NOT NULL,\n\t`count` integer NOT NULL,\n\t`control` text,\n\tCONSTRAINT `memory_ready_pk` PRIMARY KEY(`count`, `start`),\n\tCONSTRAINT "memory_ready_start_check" CHECK("start" >= 0),\n\tCONSTRAINT "memory_ready_count_check" CHECK("count" > 0),\n\tCONSTRAINT "memory_ready_control_json" CHECK("control" is null or json_valid("control"))\n);',
+        "INSERT INTO `__new_memory_ready`(`start`, `count`) SELECT `start`, `count` FROM `memory_ready`;",
+        "DROP TABLE `memory_ready`;",
+        "ALTER TABLE `__new_memory_ready` RENAME TO `memory_ready`;",
+        "PRAGMA foreign_keys=ON;",
+      ],
+    },
   ],
   schema: [
     {
@@ -197,7 +348,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "agent_catalog",
-      sql: 'CREATE TABLE `agent_catalog` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`instructions` text NOT NULL,\n\t`status` text NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`updatedAt` text NOT NULL,\n\t`creation` text NOT NULL,\n\t`revision` integer DEFAULT 0 NOT NULL, `slug` text,\n\tCONSTRAINT "agent_catalog_status" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "agent_catalog_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `agent_catalog` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`instructions` text NOT NULL,\n\t`status` text NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`updatedAt` text NOT NULL,\n\t`creation` text NOT NULL,\n\t`revision` integer DEFAULT 0 NOT NULL, `slug` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "agent_catalog_status" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "agent_catalog_revision_check" CHECK("revision" >= 0)\n)',
     },
     {
       type: "index",
@@ -207,7 +358,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "agent_messages",
-      sql: 'CREATE TABLE `agent_messages` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`operation_id` text NOT NULL UNIQUE,\n\t`sender_session` text NOT NULL,\n\t`sender_agent` text NOT NULL,\n\t`recipient_session` text NOT NULL,\n\t`recipient_agent` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`state` text NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`retry_at` integer NOT NULL,\n\t`error` text,\n\tCONSTRAINT "agent_messages_payload_json" CHECK(json_valid("payload")),\n\tCONSTRAINT "agent_messages_state_check" CHECK("state" in (\'accepted\',\'delivered\',\'failed\')),\n\tCONSTRAINT "agent_messages_attempts_check" CHECK("attempts" >= 0)\n)',
+      sql: 'CREATE TABLE `agent_messages` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`operation_id` text NOT NULL UNIQUE,\n\t`sender_session` text NOT NULL,\n\t`sender_agent` text NOT NULL,\n\t`recipient_session` text NOT NULL,\n\t`recipient_agent` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`state` text NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`retry_at` integer NOT NULL,\n\t`error` text, `schema_version` integer DEFAULT 1 NOT NULL, `workflow_version` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `phase` text DEFAULT \'pending\' NOT NULL, `attempt_id` text,\n\tCONSTRAINT "agent_messages_payload_json" CHECK(json_valid("payload")),\n\tCONSTRAINT "agent_messages_state_check" CHECK("state" in (\'accepted\',\'delivered\',\'failed\')),\n\tCONSTRAINT "agent_messages_attempts_check" CHECK("attempts" >= 0)\n)',
     },
     {
       type: "index",
@@ -232,7 +383,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "background_handoffs",
-      sql: "CREATE TABLE `background_handoffs` (\n\t`id` integer PRIMARY KEY,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`handoff` text NOT NULL,\n\t`status` text NOT NULL,\n\t`report` text,\n\t`error` text,\n\t`failures` integer DEFAULT 0 NOT NULL,\n\t`next_at` integer,\n\tCONSTRAINT \"background_handoffs_status_check\" CHECK(\"status\" in ('pending', 'running', 'ready', 'delivered', 'cancelled', 'paused')),\n\tCONSTRAINT \"background_handoffs_handoff_json\" CHECK(json_valid(\"handoff\")),\n\tCONSTRAINT \"background_handoffs_failures_check\" CHECK(\"failures\" >= 0)\n)",
+      sql: "CREATE TABLE `background_handoffs` (\n\t`id` integer PRIMARY KEY,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`handoff` text NOT NULL,\n\t`status` text NOT NULL,\n\t`report` text,\n\t`error` text,\n\t`failures` integer DEFAULT 0 NOT NULL,\n\t`next_at` integer, `schema_version` integer DEFAULT 1 NOT NULL, `workflow_version` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `stop_state` text DEFAULT 'none' NOT NULL, `stop_attempt` text, `stop_attempts` integer DEFAULT 0 NOT NULL, `stop_next_at` integer, `stop_deadline` integer, `stop_error` text,\n\tCONSTRAINT \"background_handoffs_status_check\" CHECK(\"status\" in ('pending', 'running', 'ready', 'delivered', 'cancelled', 'paused')),\n\tCONSTRAINT \"background_handoffs_handoff_json\" CHECK(json_valid(\"handoff\")),\n\tCONSTRAINT \"background_handoffs_failures_check\" CHECK(\"failures\" >= 0)\n)",
     },
     {
       type: "table",
@@ -247,7 +398,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "bot_admission",
-      sql: 'CREATE TABLE `bot_admission` (\n\t`id` integer PRIMARY KEY,\n\t`revision` integer NOT NULL,\n\t`status` text NOT NULL,\n\tCONSTRAINT "bot_admission_status_check" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "bot_admission_revision_check" CHECK("revision" >= 0),\n\tCONSTRAINT "bot_admission_id_singleton" CHECK("id" = 1)\n)',
+      sql: 'CREATE TABLE `bot_admission` (\n\t`id` integer PRIMARY KEY,\n\t`revision` integer NOT NULL,\n\t`status` text NOT NULL, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "bot_admission_status_check" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "bot_admission_revision_check" CHECK("revision" >= 0),\n\tCONSTRAINT "bot_admission_id_singleton" CHECK("id" = 1)\n)',
     },
     {
       type: "table",
@@ -292,7 +443,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "chat_turns",
-      sql: 'CREATE TABLE `chat_turns` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`text` text NOT NULL,\n\t`status` text NOT NULL,\n\t`answer` text DEFAULT \'\' NOT NULL,\n\t`error` text,\n\t`created_at` text NOT NULL,\n\t`session_id` text,\n\t`prompt` text,\n\t`parent_id` text,\n\t`started_at` text,\n\t`finished_at` text,\n\t`stopped_at` text,\n\t`recovery` text,\n\t`mode` text DEFAULT \'followUp\' NOT NULL,\n\t`delivery` text DEFAULT \'queued\' NOT NULL,\n\t`model` text,\n\t`routing` text,\n\t`origin` text,\n\t`thinking` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`creation` text,\n\t`attachments` text DEFAULT \'[]\' NOT NULL,\n\t`input` text DEFAULT \'[]\' NOT NULL,\n\t`skills` text DEFAULT \'[]\' NOT NULL,\n\t`skill_context` text DEFAULT \'\' NOT NULL, `files_pending` integer DEFAULT false NOT NULL, `provenance` text,\n\tCONSTRAINT `fk_chat_turns_parent_id_chat_turns_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `chat_turns`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT "chat_turns_status_check" CHECK("status" in (\'queued\', \'preparing\', \'running\', \'stopping\', \'done\', \'failed\', \'cancelled\')),\n\tCONSTRAINT "chat_turns_mode_check" CHECK("mode" in (\'followUp\', \'steer\')),\n\tCONSTRAINT "chat_turns_delivery_check" CHECK("delivery" in (\'queued\', \'accepted\', \'consumed\', \'answered\', \'unanswered\')),\n\tCONSTRAINT "chat_turns_attachments_json" CHECK(json_valid("attachments")),\n\tCONSTRAINT "chat_turns_skills_json" CHECK(json_valid("skills")),\n\tCONSTRAINT "chat_turns_input_json" CHECK(json_valid("input")),\n\tCONSTRAINT "chat_turns_routing_json" CHECK("routing" is null or json_valid("routing")),\n\tCONSTRAINT "chat_turns_origin_json" CHECK("origin" is null or json_valid("origin")),\n\tCONSTRAINT "chat_turns_recovery_json" CHECK("recovery" is null or json_valid("recovery")),\n\tCONSTRAINT "chat_turns_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `chat_turns` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`text` text NOT NULL,\n\t`status` text NOT NULL,\n\t`answer` text DEFAULT \'\' NOT NULL,\n\t`error` text,\n\t`created_at` text NOT NULL,\n\t`session_id` text,\n\t`prompt` text,\n\t`parent_id` text,\n\t`started_at` text,\n\t`finished_at` text,\n\t`stopped_at` text,\n\t`recovery` text,\n\t`mode` text DEFAULT \'followUp\' NOT NULL,\n\t`delivery` text DEFAULT \'queued\' NOT NULL,\n\t`model` text,\n\t`routing` text,\n\t`origin` text,\n\t`thinking` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`creation` text,\n\t`attachments` text DEFAULT \'[]\' NOT NULL,\n\t`input` text DEFAULT \'[]\' NOT NULL,\n\t`skills` text DEFAULT \'[]\' NOT NULL,\n\t`skill_context` text DEFAULT \'\' NOT NULL, `files_pending` integer DEFAULT false NOT NULL, `provenance` text, `schema_version` integer DEFAULT 1 NOT NULL CONSTRAINT `chat_turns_schema_version_check` CHECK (`schema_version` >= 1), `workflow_version` integer DEFAULT 1 NOT NULL CONSTRAINT `chat_turns_workflow_version_check` CHECK (`workflow_version` >= 1), `control` text DEFAULT \'{"owner":null,"deadline":null,"unconfirmed":null}\' NOT NULL CONSTRAINT `chat_turns_control_json` CHECK (json_valid(`control`)),\n\tCONSTRAINT `fk_chat_turns_parent_id_chat_turns_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `chat_turns`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT "chat_turns_status_check" CHECK("status" in (\'queued\', \'preparing\', \'running\', \'stopping\', \'done\', \'failed\', \'cancelled\')),\n\tCONSTRAINT "chat_turns_mode_check" CHECK("mode" in (\'followUp\', \'steer\')),\n\tCONSTRAINT "chat_turns_delivery_check" CHECK("delivery" in (\'queued\', \'accepted\', \'consumed\', \'answered\', \'unanswered\')),\n\tCONSTRAINT "chat_turns_attachments_json" CHECK(json_valid("attachments")),\n\tCONSTRAINT "chat_turns_skills_json" CHECK(json_valid("skills")),\n\tCONSTRAINT "chat_turns_input_json" CHECK(json_valid("input")),\n\tCONSTRAINT "chat_turns_routing_json" CHECK("routing" is null or json_valid("routing")),\n\tCONSTRAINT "chat_turns_origin_json" CHECK("origin" is null or json_valid("origin")),\n\tCONSTRAINT "chat_turns_recovery_json" CHECK("recovery" is null or json_valid("recovery")),\n\tCONSTRAINT "chat_turns_revision_check" CHECK("revision" >= 0)\n)',
     },
     {
       type: "index",
@@ -347,7 +498,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "email_messages",
-      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `files` text DEFAULT '[]' NOT NULL, `purpose` text DEFAULT 'request' NOT NULL, `notice_key` text, `delivery` text,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
+      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `files` text DEFAULT '[]' NOT NULL, `purpose` text DEFAULT 'request' NOT NULL, `notice_key` text, `delivery` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `attempt_id` text, `send_index` integer, `send_deadline` integer, `work_deadline` integer,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
     },
     {
       type: "index",
@@ -372,7 +523,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "email_settings",
-      sql: 'CREATE TABLE `email_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\tCONSTRAINT "email_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "email_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "email_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "email_settings_generation" CHECK("generation" >= 0)\n)',
+      sql: 'CREATE TABLE `email_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "email_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "email_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "email_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "email_settings_generation" CHECK("generation" >= 0)\n)',
     },
     {
       type: "table",
@@ -422,7 +573,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "memory_backup_status",
-      sql: 'CREATE TABLE `memory_backup_status` (\n\t`id` integer PRIMARY KEY,\n\t`date` text,\n\t`watermark` text NOT NULL,\n\t`error` text,\n\tCONSTRAINT "memory_backup_status_id_singleton" CHECK("id" = 1)\n)',
+      sql: "CREATE TABLE `memory_backup_status` (\n\t`id` integer PRIMARY KEY,\n\t`date` text,\n\t`watermark` text NOT NULL,\n\t`error` text, `schema_version` integer DEFAULT 0 NOT NULL, `workflow_version` integer DEFAULT 0 NOT NULL, `phase` text DEFAULT 'idle' NOT NULL, `target` text DEFAULT '' NOT NULL, `attempts` integer DEFAULT 0 NOT NULL, `attempt_id` text, `retry_at` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT \"memory_backup_status_id_singleton\" CHECK(\"id\" = 1)\n)",
     },
     {
       type: "table",
@@ -472,7 +623,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "memory_ready",
-      sql: 'CREATE TABLE `memory_ready` (\n\t`start` integer NOT NULL,\n\t`count` integer NOT NULL,\n\tCONSTRAINT `memory_ready_pk` PRIMARY KEY(`count`, `start`),\n\tCONSTRAINT "memory_ready_start_check" CHECK("start" >= 0),\n\tCONSTRAINT "memory_ready_count_check" CHECK("count" > 0)\n)',
+      sql: 'CREATE TABLE "memory_ready" (\n\t`start` integer NOT NULL,\n\t`count` integer NOT NULL,\n\t`control` text,\n\tCONSTRAINT `memory_ready_pk` PRIMARY KEY(`count`, `start`),\n\tCONSTRAINT "memory_ready_start_check" CHECK("start" >= 0),\n\tCONSTRAINT "memory_ready_count_check" CHECK("count" > 0),\n\tCONSTRAINT "memory_ready_control_json" CHECK("control" is null or json_valid("control"))\n)',
     },
     {
       type: "table",
@@ -512,7 +663,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "routine_runs",
-      sql: "CREATE TABLE `routine_runs` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`routine_id` text NOT NULL,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`status` text NOT NULL,\n\t`record` text NOT NULL,\n\tCONSTRAINT `fk_routine_runs_routine_id_routines_id_fk` FOREIGN KEY (`routine_id`) REFERENCES `routines`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT \"routine_runs_status_check\" CHECK(\"status\" in ('pending', 'queued', 'done', 'failed', 'cancelled')),\n\tCONSTRAINT \"routine_runs_record_json\" CHECK(json_valid(\"record\"))\n)",
+      sql: "CREATE TABLE \"routine_runs\" (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`routine_id` text NOT NULL,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`status` text NOT NULL,\n\t`record` text NOT NULL,\n\tCONSTRAINT `fk_routine_runs_routine_id_routines_id_fk` FOREIGN KEY (`routine_id`) REFERENCES `routines`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT \"routine_runs_status_check\" CHECK(\"status\" in ('pending', 'queued', 'stopping', 'unconfirmed', 'done', 'failed', 'cancelled')),\n\tCONSTRAINT \"routine_runs_record_json\" CHECK(json_valid(\"record\"))\n)",
     },
     {
       type: "index",
@@ -582,7 +733,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "tool_operations",
-      sql: "CREATE TABLE `tool_operations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`turnId` text NOT NULL,\n\t`tool` text NOT NULL,\n\t`input` text NOT NULL,\n\t`createdAt` integer NOT NULL,\n\t`expiresAt` integer NOT NULL,\n\t`status` text NOT NULL,\n\t`grantRevision` integer NOT NULL,\n\t`result` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`decision` text,\n\tCONSTRAINT \"tool_operations_status_check\" CHECK(\"status\" in ('pending', 'approved', 'running', 'done', 'denied', 'cancelled', 'expired', 'interrupted')),\n\tCONSTRAINT \"tool_operations_revision_check\" CHECK(\"revision\" >= 0),\n\tCONSTRAINT \"tool_operations_grantRevision_check\" CHECK(\"grantRevision\" >= 0)\n)",
+      sql: "CREATE TABLE `tool_operations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`turnId` text NOT NULL,\n\t`tool` text NOT NULL,\n\t`input` text NOT NULL,\n\t`createdAt` integer NOT NULL,\n\t`expiresAt` integer NOT NULL,\n\t`status` text NOT NULL,\n\t`grantRevision` integer NOT NULL,\n\t`result` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`decision` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT \"tool_operations_status_check\" CHECK(\"status\" in ('pending', 'approved', 'running', 'done', 'denied', 'cancelled', 'expired', 'interrupted')),\n\tCONSTRAINT \"tool_operations_revision_check\" CHECK(\"revision\" >= 0),\n\tCONSTRAINT \"tool_operations_grantRevision_check\" CHECK(\"grantRevision\" >= 0)\n)",
     },
     {
       type: "index",
@@ -602,12 +753,12 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "webhooks",
-      sql: 'CREATE TABLE `webhooks` (\n\t`routine_id` text PRIMARY KEY NOT NULL,\n\t`revision` integer NOT NULL,\n\t`hash` text,\n\tCONSTRAINT "webhooks_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `webhooks` (\n\t`routine_id` text PRIMARY KEY NOT NULL,\n\t`revision` integer NOT NULL,\n\t`hash` text, `schema_version` integer DEFAULT 1 NOT NULL, `workflow_version` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "webhooks_revision_check" CHECK("revision" >= 0)\n)',
     },
     {
       type: "table",
       name: "whatsapp_messages",
-      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `image` text, `image_file_id` text, `outbound_image_id` text, `image_attempts` integer DEFAULT 0 NOT NULL, `delivery` text,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
+      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `image` text, `image_file_id` text, `outbound_image_id` text, `image_attempts` integer DEFAULT 0 NOT NULL, `delivery` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `attempt_id` text, `send_index` integer, `send_deadline` integer, `work_deadline` integer,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
     },
     {
       type: "index",
@@ -627,17 +778,17 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "whatsapp_settings",
-      sql: 'CREATE TABLE `whatsapp_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\t`last_inbound_at` integer NOT NULL,\n\tCONSTRAINT "whatsapp_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "whatsapp_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "whatsapp_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "whatsapp_settings_generation" CHECK("generation" >= 0)\n)',
+      sql: 'CREATE TABLE `whatsapp_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\t`last_inbound_at` integer NOT NULL, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "whatsapp_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "whatsapp_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "whatsapp_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "whatsapp_settings_generation" CHECK("generation" >= 0)\n)',
     },
     {
       type: "table",
       name: "workspace_extractions",
-      sql: 'CREATE TABLE `workspace_extractions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`pages` integer DEFAULT 0 NOT NULL,\n\t`readPages` integer DEFAULT 0 NOT NULL,\n\t`characters` integer DEFAULT 0 NOT NULL,\n\t`truncated` integer DEFAULT 0 NOT NULL,\n\t`error` text,\n\tCONSTRAINT `fk_workspace_extractions_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_extractions_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'empty\', \'failed\')),\n\tCONSTRAINT "workspace_extractions_truncated_check" CHECK("truncated" in (0, 1)),\n\tCONSTRAINT "workspace_extractions_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_extractions_pages_check" CHECK("pages" >= 0),\n\tCONSTRAINT "workspace_extractions_readPages_check" CHECK("readPages" >= 0),\n\tCONSTRAINT "workspace_extractions_characters_check" CHECK("characters" >= 0)\n)',
+      sql: 'CREATE TABLE `workspace_extractions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`pages` integer DEFAULT 0 NOT NULL,\n\t`readPages` integer DEFAULT 0 NOT NULL,\n\t`characters` integer DEFAULT 0 NOT NULL,\n\t`truncated` integer DEFAULT 0 NOT NULL,\n\t`error` text, `lifecycle_version` integer DEFAULT 0 NOT NULL, `attempt_id` text, `artifact_hash` text, `recovery_deadline` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT `fk_workspace_extractions_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_extractions_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'empty\', \'failed\')),\n\tCONSTRAINT "workspace_extractions_truncated_check" CHECK("truncated" in (0, 1)),\n\tCONSTRAINT "workspace_extractions_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_extractions_pages_check" CHECK("pages" >= 0),\n\tCONSTRAINT "workspace_extractions_readPages_check" CHECK("readPages" >= 0),\n\tCONSTRAINT "workspace_extractions_characters_check" CHECK("characters" >= 0)\n)',
     },
     {
       type: "table",
       name: "workspace_files",
-      sql: 'CREATE TABLE `workspace_files` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`mime` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`size` integer NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`status` text NOT NULL,\n\t`trashed` integer DEFAULT 0 NOT NULL,\n\t`hash` text NOT NULL,\n\t`visionHash` text, `audio` text,\n\tCONSTRAINT "workspace_files_kind_check" CHECK("kind" in (\'image\', \'text\', \'video\', \'document\')),\n\tCONSTRAINT "workspace_files_status_check" CHECK("status" in (\'uploading\', \'ready\')),\n\tCONSTRAINT "workspace_files_trashed_check" CHECK("trashed" in (0, 1)),\n\tCONSTRAINT "workspace_files_size_check" CHECK("size" >= 0)\n)',
+      sql: 'CREATE TABLE `workspace_files` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`mime` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`size` integer NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`status` text NOT NULL,\n\t`trashed` integer DEFAULT 0 NOT NULL,\n\t`hash` text NOT NULL,\n\t`visionHash` text, `audio` text, `lifecycle_version` integer DEFAULT 0 NOT NULL, `attempt_id` text,\n\tCONSTRAINT "workspace_files_kind_check" CHECK("kind" in (\'image\', \'text\', \'video\', \'document\')),\n\tCONSTRAINT "workspace_files_status_check" CHECK("status" in (\'uploading\', \'ready\')),\n\tCONSTRAINT "workspace_files_trashed_check" CHECK("trashed" in (0, 1)),\n\tCONSTRAINT "workspace_files_size_check" CHECK("size" >= 0)\n)',
     },
     {
       type: "index",
@@ -672,7 +823,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "workspace_video_preparations",
-      sql: 'CREATE TABLE `workspace_video_preparations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`duration` real DEFAULT 0 NOT NULL,\n\t`frames` integer DEFAULT 0 NOT NULL,\n\t`captions` integer DEFAULT 0 NOT NULL,\n\t`error` text,\n\t`retry_at` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT `fk_workspace_video_preparations_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_video_preparations_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'failed\')),\n\tCONSTRAINT "workspace_video_preparations_captions_check" CHECK("captions" in (0, 1)),\n\tCONSTRAINT "workspace_video_preparations_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_video_preparations_duration_check" CHECK("duration" >= 0),\n\tCONSTRAINT "workspace_video_preparations_frames_check" CHECK("frames" >= 0),\n\tCONSTRAINT "workspace_video_preparations_retry_at_check" CHECK("retry_at" >= 0)\n)',
+      sql: 'CREATE TABLE `workspace_video_preparations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`duration` real DEFAULT 0 NOT NULL,\n\t`frames` integer DEFAULT 0 NOT NULL,\n\t`captions` integer DEFAULT 0 NOT NULL,\n\t`error` text,\n\t`retry_at` integer DEFAULT 0 NOT NULL, `lifecycle_version` integer DEFAULT 0 NOT NULL, `attempt_id` text, `artifact_hash` text, `recovery_deadline` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT `fk_workspace_video_preparations_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_video_preparations_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'failed\')),\n\tCONSTRAINT "workspace_video_preparations_captions_check" CHECK("captions" in (0, 1)),\n\tCONSTRAINT "workspace_video_preparations_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_video_preparations_duration_check" CHECK("duration" >= 0),\n\tCONSTRAINT "workspace_video_preparations_frames_check" CHECK("frames" >= 0),\n\tCONSTRAINT "workspace_video_preparations_retry_at_check" CHECK("retry_at" >= 0)\n)',
     },
   ],
 } as const

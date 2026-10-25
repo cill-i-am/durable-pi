@@ -1,0 +1,143 @@
+[WebServer] (node:31871) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 30 tests using 1 worker
+
+(node:33648) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/family-ownership.spec.ts:104:1 › invitation identity survives the actual auth SDK challenge redirect (9.7s)
+  ✓   2 [desktop] › tests/browser/family-ownership.spec.ts:148:1 › a late invitation acceptance cannot clear a newer invitation URL (8.6s)
+  ✘   3 [desktop] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation (45.4s)
+(node:35466) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   4 [desktop] › tests/browser/family.spec.ts:52:1 › admin can invite and remove with safe focus and retained private data copy (41.4s)
+(node:36007) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   5 [desktop] › tests/browser/family.spec.ts:111:1 › member family screen is read only, and a shared model outage preserves an editable draft (28.2s)
+
+
+  1) [desktop] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByLabel('Return address', { exact: true })
+
+
+      244 |     await page
+      245 |       .getByLabel("Return address", { exact: true })
+    > 246 |       .fill("http://127.0.0.1:5000/auth/callback?code=synthetic")
+          |        ^
+      247 |     await page
+      248 |       .getByRole("button", { name: "Finish connection", exact: true })
+      249 |       .click()
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/family-ownership.spec.ts:246:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-final-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f09-browser-final-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-final-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../private/tmp/f09-browser-final-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › tests/browser/family.spec.ts:52:1 › admin can invite and remove with safe focus and retained private data copy 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'Your agents' })
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'Your agents' }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'Your agents' })
+      - Test timeout of 30000ms exceeded.
+
+
+      40 |     .fill("Disposable browser fixture password 2026!")
+      41 |   await page.getByRole("button", { name: "Sign in", exact: true }).click()
+    > 42 |   await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+         |                                                                   ^
+      43 | }
+      44 | async function assertFits(page: Page) {
+      45 |   expect(
+        at signIn (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/family.spec.ts:42:67)
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/family.spec.ts:77:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-final-results/family-admin-can-invite-an-25335--retained-private-data-copy-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f09-browser-final-results/family-admin-can-invite-an-25335--retained-private-data-copy-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-final-results/family-admin-can-invite-an-25335--retained-private-data-copy-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../private/tmp/f09-browser-final-results/family-admin-can-invite-an-25335--retained-private-data-copy-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [desktop] › tests/browser/family.spec.ts:111:1 › member family screen is read only, and a shared model outage preserves an editable draft 
+
+    Test was interrupted.
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Family', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Family', exact: true }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Family', exact: true })
+
+
+      119 |   await expect(
+      120 |     page.getByRole("heading", { name: "Family", exact: true })
+    > 121 |   ).toBeVisible()
+          |     ^
+      122 |   await expect(
+      123 |     page.getByRole("button", { name: "Invite someone" })
+      124 |   ).toHaveCount(0)
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/family.spec.ts:121:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-final-results/family-member-family-scree-08ba5-preserves-an-editable-draft-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f09-browser-final-results/family-member-family-scree-08ba5-preserves-an-editable-draft-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-final-results/family-member-family-scree-08ba5-preserves-an-editable-draft-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../private/tmp/f09-browser-final-results/family-member-family-scree-08ba5-preserves-an-editable-draft-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [desktop] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation 
+    [desktop] › tests/browser/family.spec.ts:52:1 › admin can invite and remove with safe focus and retained private data copy 
+  1 interrupted
+    [desktop] › tests/browser/family.spec.ts:111:1 › member family screen is read only, and a shared model outage preserves an editable draft 
+  25 did not run
+  2 passed (5.3m)

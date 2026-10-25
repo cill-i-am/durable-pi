@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T20:07:18.895900+00:00",
+  "policy": "Imported *.txt aliases are byte-identical; raw reports retain their historical claims. No source/Git edits or tests performed while curating. Composed gates are not claimed.",
+  "artifacts": [
+    {
+      "path": "source/frozen-four-file-manifest.json.txt",
+      "original": "/private/tmp/shared-http-native-freeze.json",
+      "sha256": "19f7d1b03ce6cf7b6cf979c2e53fa7f076d7c662e1cda86748feffe744d0c338",
+      "bytes": 411,
+      "scope": "Final exact4-file repair freeze"
+    },
+    {
+      "path": "source/src--http--client.ts.txt",
+      "original": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/http/client.ts",
+      "sha256": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+      "bytes": 2592,
+      "scope": "Final exact source/test bytes"
+    },
+    {
+      "path": "source/src--shared--interop.ts.txt",
+      "original": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/interop.ts",
+      "sha256": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+      "bytes": 3269,
+      "scope": "Final exact source/test bytes"
+    },
+    {
+      "path": "source/tests--http-client-lifetime.test.ts.txt",
+      "original": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/http-client-lifetime.test.ts",
+      "sha256": "8c1e25b0c323880035d5132c0a8a0e4d2f6deb4828c9de45293131de845a82be",
+      "bytes": 3554,
+      "scope": "Final exact source/test bytes"
+    },
+    {
+      "path": "source/tests--native-operation-lifetime.test.ts.txt",
+      "original": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/native-operation-lifetime.test.ts",
+      "sha256": "cb82bf319c9ba446039d794157afe7e0b7a5cda203267956f34aa2b6e60efca4",
+      "bytes": 3444,
+      "scope": "Final exact source/test bytes"
+    },
+    {
+      "path": "checks/f11-review-final-tests.log.txt",
+      "original": "/private/tmp/f11-review-final-tests.log",
+      "sha256": "16dca0bb30f13d15167f50bee21091d5ac33853007ccd5dff11b731ec28dafff",
+      "bytes": 432,
+      "scope": "Final focused/scoped check; includes Apps dependencies, not composed repository gates"
+    },
+    {
+      "path": "checks/f11-review-types-final.log.txt",
+      "original": "/private/tmp/f11-review-types-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "scope": "Final focused/scoped check; includes Apps dependencies, not composed repository gates"
+    },
+    {
+      "path": "checks/f11-review-lint-final.log.txt",
+      "original": "/private/tmp/f11-review-lint-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "scope": "Final focused/scoped check; includes Apps dependencies, not composed repository gates"
+    },
+    {
+      "path": "checks/f11-format-review-final.log.txt",
+      "original": "/private/tmp/f11-format-review-final.log",
+      "sha256": "2d40a12acfc610572a457e665b82c1d59c77462eeaf6c5ec4571ad6cf1a19f31",
+      "bytes": 114,
+      "scope": "Final focused/scoped check; includes Apps dependencies, not composed repository gates"
+    },
+    {
+      "path": "checks/f11-review-tsconfig.json.txt",
+      "original": "/private/tmp/f11-review-tsconfig.json",
+      "sha256": "d2e7b9b86328fe1b60cb4297a7c5d092e18e7f7da684d4e3414ec0b27c5df3f1",
+      "bytes": 1001,
+      "scope": "Final focused/scoped check; includes Apps dependencies, not composed repository gates"
+    },
+    {
+      "path": "checks/native-operation-negative.log.txt",
+      "original": "/private/tmp/native-operation-negative.log",
+      "sha256": "98bc392bbb934302e3674ec9122482c5654e544fa202f791f62a936324a5308d",
+      "bytes": 2320,
+      "scope": "Final focused/scoped check; includes Apps dependencies, not composed repository gates"
+    },
+    {
+      "path": "checks/native-operation-negative.config.mjs.txt",
+      "original": "/private/tmp/native-operation-negative.config.mjs",
+      "sha256": "63a5821b3d7ab152f488678be784d59939d60b1f7637af44d2c786f78494c369",
+      "bytes": 631,
+      "scope": "Final focused/scoped check; includes Apps dependencies, not composed repository gates"
+    },
+    {
+      "path": "independent/f11-independent.test.ts.txt",
+      "original": "/private/tmp/f11-independent.test.ts",
+      "sha256": "f641ae4b848d1d7bc77135089153cf510319b8f83c6a9057ade8edb96ca42837",
+      "bytes": 4663,
+      "scope": "Unchanged actual Apps request-owner probe: first2 cases exercise shared repair; third is frame control"
+    },
+    {
+      "path": "independent/f11-independent.config.mjs.txt",
+      "original": "/private/tmp/f11-independent.config.mjs",
+      "sha256": "aae96a508b50435f51c627c70a5ec7d547472792e2a71a4d258ea1dc1b607038",
+      "bytes": 525,
+      "scope": "Unchanged actual Apps request-owner probe: first2 cases exercise shared repair; third is frame control"
+    },
+    {
+      "path": "independent/f11-independent-before-final.log.txt",
+      "original": "/private/tmp/f11-independent-before-final.log",
+      "sha256": "f495e4653a548ab476f7928a362f17f97d7226fb46136d39e6fb6508ed6f399c",
+      "bytes": 1943,
+      "scope": "Unchanged actual Apps request-owner probe: first2 cases exercise shared repair; third is frame control"
+    },
+    {
+      "path": "independent/f11-independent-after-final.log.txt",
+      "original": "/private/tmp/f11-independent-after-final.log",
+      "sha256": "76b09c8b42d8e7d32dcab2fd42a831ccda90046a20877d182a57dc169eb9fd00",
+      "bytes": 243,
+      "scope": "Unchanged actual Apps request-owner probe: first2 cases exercise shared repair; third is frame control"
+    },
+    {
+      "path": "independent/f11-review.md.txt",
+      "original": "/private/tmp/f11-independent-review/review.md",
+      "sha256": "d09f94d7e32db19eae0e0b34f8b505bbf1cc59f0d1cd5c513f1bd15cb26e8567",
+      "bytes": 3469,
+      "scope": "Historical findings plus final correction closure, full original review"
+    },
+    {
+      "path": "independent/f11-source-freeze.json.txt",
+      "original": "/private/tmp/f11-source-freeze.json",
+      "sha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "bytes": 2757,
+      "scope": "Final exact Apps composition dependency freeze"
+    },
+    {
+      "path": "final-no-die-supplement/review.md.txt",
+      "original": "/private/tmp/f01-f08-no-die-scan/review.md",
+      "sha256": "055b71d5854d8dd65733abd82dcb23c9070654eb0b6c43df79ac8b79a393e185",
+      "bytes": 2583,
+      "scope": "Final bounded shared-helper consumer scan: F04\u2013F08 probe/log only; full combined review/closure manifests retained verbatim as context, not imported F01\u2013F03 probe proof"
+    },
+    {
+      "path": "final-no-die-supplement/review-manifest.json.txt",
+      "original": "/private/tmp/f01-f08-no-die-scan/review-manifest.json",
+      "sha256": "8113810e4f7f0dab7d6032a06e867104bf7a6fafe41b388c264db16f4537995a",
+      "bytes": 46465,
+      "scope": "Final bounded shared-helper consumer scan: F04\u2013F08 probe/log only; full combined review/closure manifests retained verbatim as context, not imported F01\u2013F03 probe proof"
+    },
+    {
+      "path": "final-no-die-supplement/final-closure.md.txt",
+      "original": "/private/tmp/f01-f08-no-die-scan/final-closure.md",
+      "sha256": "d7f59a06ffbfaf325237393fdfb10db967c3742cc054b4a078426997ea31f750",
+      "bytes": 1499,
+      "scope": "Final bounded shared-helper consumer scan: F04\u2013F08 probe/log only; full combined review/closure manifests retained verbatim as context, not imported F01\u2013F03 probe proof"
+    },
+    {
+      "path": "final-no-die-supplement/final-closure-manifest.json.txt",
+      "original": "/private/tmp/f01-f08-no-die-scan/final-closure-manifest.json",
+      "sha256": "6b3676760657bbfe3bca6886c3b7d19a6c6076540fc9d4e64c849d2840b0aedb",
+      "bytes": 4302,
+      "scope": "Final bounded shared-helper consumer scan: F04\u2013F08 probe/log only; full combined review/closure manifests retained verbatim as context, not imported F01\u2013F03 probe proof"
+    },
+    {
+      "path": "final-no-die-supplement/f04-f08-probe.mts.txt",
+      "original": "/private/tmp/f04-f08-no-die/probe.mts",
+      "sha256": "771bf5356f3c478de38d1e365133935fae29130c467f757e107e3d13f4c26430",
+      "bytes": 4632,
+      "scope": "Final bounded shared-helper consumer scan: F04\u2013F08 probe/log only; full combined review/closure manifests retained verbatim as context, not imported F01\u2013F03 probe proof"
+    },
+    {
+      "path": "final-no-die-supplement/f04-f08-after-shared.log.txt",
+      "original": "/private/tmp/f04-f08-no-die/after-shared.log",
+      "sha256": "85622fe0afed3b3a1c874bc2a86455ea96e10acdd9a933c9995eb790041b7fe2",
+      "bytes": 1213,
+      "scope": "Final bounded shared-helper consumer scan: F04\u2013F08 probe/log only; full combined review/closure manifests retained verbatim as context, not imported F01\u2013F03 probe proof"
+    }
+  ],
+  "readmeSha256": "426496c2399983940413a5fdcd2700cecbb2d219540506bff078da93453b0054",
+  "frozenSourceHashes": {
+    "src/http/client.ts": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+    "src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+    "tests/http-client-lifetime.test.ts": "8c1e25b0c323880035d5132c0a8a0e4d2f6deb4828c9de45293131de845a82be",
+    "tests/native-operation-lifetime.test.ts": "cb82bf319c9ba446039d794157afe7e0b7a5cda203267956f34aa2b6e60efca4"
+  },
+  "finalNoDieScope": "Seven F04\u2013F08 production owner paths checked only after shared repair; combined reports retained as context; no per-owner red claim."
+}

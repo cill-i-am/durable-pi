@@ -1,0 +1,39 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/memory-runner-host.test.ts > coalesces cold restoration, shares its failure, and retries only on the next call
+{
+  values: [ { _id: 'Cause', failures: [Array] }, undefined ],
+  calls: 2
+}
+
+ ❯ tests/memory-runner-host.test.ts (6 tests | 1 failed | 5 skipped) 19ms
+   × coalesces cold restoration, shares its failure, and retries only on the next call 18ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-runner-host.test.ts > coalesces cold restoration, shares its failure, and retries only on the next call
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/memory-runner-host.test.ts:37:34
+     35|   console.log({ values, calls })
+     36|   for (const value of values) {
+     37|     expect(Cause.isCause(value)).toBe(true)
+       |                                  ^
+     38|     if (!Cause.isCause(value)) throw new Error("Expected native Cause")
+     39|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 skipped (6)
+   Start at  20:20:57
+   Duration  261ms (import 74%, transform 12%, tests 10%, setup 3%, worker 1%)
+

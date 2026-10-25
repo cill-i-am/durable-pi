@@ -1,0 +1,189 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: false)
+[21:03:55.066] ERROR (#1): Error [AssertionError]: expected undefined to be 'submission' // Object.is equality
+    at /private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15 {
+  actual: undefined,
+  expected: 'submission',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: true)
+[21:03:55.078] ERROR (#24): Error [AssertionError]: expected undefined to be 'submission' // Object.is equality
+    at /private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15 {
+  actual: undefined,
+  expected: 'submission',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: false)
+[21:03:55.081] ERROR (#47): Error [AssertionError]: expected undefined to be 'retry' // Object.is equality
+    at /private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15 {
+  actual: undefined,
+  expected: 'retry',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: true)
+[21:03:55.086] ERROR (#64): Error [AssertionError]: expected undefined to be 'retry' // Object.is equality
+    at /private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15 {
+  actual: undefined,
+  expected: 'retry',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: false)
+[21:03:55.091] ERROR (#81): Error [AssertionError]: expected undefined to be 'cancel' // Object.is equality
+    at /private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15 {
+  actual: undefined,
+  expected: 'cancel',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: true)
+[21:03:55.094] ERROR (#98): Error [AssertionError]: expected undefined to be 'cancel' // Object.is equality
+    at /private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15 {
+  actual: undefined,
+  expected: 'cancel',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts (15 tests | 6 failed | 9 skipped) 65ms
+   × submission retains annotated late native failure and interruption (defect: false) 43ms
+   × submission retains annotated late native failure and interruption (defect: true) 5ms
+   × retry retains annotated late native failure and interruption (defect: false) 5ms
+   × retry retains annotated late native failure and interruption (defect: true) 3ms
+   × cancel retains annotated late native failure and interruption (defect: false) 6ms
+   × cancel retains annotated late native failure and interruption (defect: true) 2ms
+stderr | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: false)
+Event "xstate.effect.resolve" to actor "0.conversation-connection.closed" was not delivered (stopped).
+
+stderr | ../../../../../../private/tmp/f01-native-interrupt-control/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: true)
+Event "xstate.effect.resolve" to actor "0.conversation-connection.closed" was not delivered (stopped).
+
+ ❯ ../../../../../../private/tmp/f01-native-interrupt-control/conversation-connection-machine.test.ts (11 tests | 2 failed | 9 skipped) 24ms
+   × retains annotated native interruption when abort wins (defect: false) 20ms
+   × retains annotated native interruption when abort wins (defect: true) 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: false)
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: true)
+AssertionError: expected undefined to be 'reader-after-abort' // Object.is equality
+
+- Expected:
+"reader-after-abort"
+
++ Received:
+undefined
+
+ ❯ ../../../../../../private/tmp/f01-native-interrupt-control/conversation-connection-machine.test.ts:200:7
+    198|     expect(
+    199|       retainedInterrupt?.annotations.get("conversation/native-cleanup")
+    200|     ).toBe("reader-after-abort")
+       |       ^
+    201|     expect(
+    202|       result.reasons.some(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: false)
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > submission retains annotated late native failure and interruption (defect: true)
+AssertionError: expected undefined to be 'submission' // Object.is equality
+
+- Expected:
+"submission"
+
++ Received:
+undefined
+
+ ❯ ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15
+    262|             expect(
+    263|               retainedInterrupt?.annotations.get("conversation/command…
+    264|             ).toBe(kind)
+       |               ^
+    265|             expect(
+    266|               result.cause.reasons.some(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: false)
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > retry retains annotated late native failure and interruption (defect: true)
+AssertionError: expected undefined to be 'retry' // Object.is equality
+
+- Expected:
+"retry"
+
++ Received:
+undefined
+
+ ❯ ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15
+    262|             expect(
+    263|               retainedInterrupt?.annotations.get("conversation/command…
+    264|             ).toBe(kind)
+       |               ^
+    265|             expect(
+    266|               result.cause.reasons.some(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: false)
+ FAIL  ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts > cancel retains annotated late native failure and interruption (defect: true)
+AssertionError: expected undefined to be 'cancel' // Object.is equality
+
+- Expected:
+"cancel"
+
++ Received:
+undefined
+
+ ❯ ../../../../../../private/tmp/f01-native-interrupt-control/conversation-submission-machine.test.ts:264:15
+    262|             expect(
+    263|               retainedInterrupt?.annotations.get("conversation/command…
+    264|             ).toBe(kind)
+       |               ^
+    265|             expect(
+    266|               result.cause.reasons.some(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  8 failed | 18 skipped (26)
+   Start at  21:03:54
+   Duration  1.13s (import 54%, transform 31%, tests 11%, setup 3%, worker 1%)
+

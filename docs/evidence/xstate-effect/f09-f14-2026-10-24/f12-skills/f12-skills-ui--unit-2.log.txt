@@ -1,0 +1,123 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | tests/skills-ui-lifecycle.test.ts > oversize local files are rejected before reading any bytes
+[20:43:20.601] ERROR (#140): Error [AssertionError]: expected '' to contain '64 KB'
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/skills-ui-lifecycle.test.ts:342:47 {
+  actual: '',
+  expected: '64 KB',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/skills-ui-lifecycle.test.ts > late history completion cannot reopen a closed or replaced view
+[20:43:20.891] ERROR (#178): Error [AssertionError]: expected [ { …(7) } ] to deeply equal []
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/skills-ui-lifecycle.test.ts:441:52 {
+  actual: [
+    {
+      id: '00000000-0000-0000-0000-000000000001',
+      name: 'Original',
+      body: 'Original body',
+      revision: 1,
+      stateRevision: 1,
+      createdAt: '2026-10-23T00:00:00.000Z',
+      archived: false
+    }
+  ],
+  expected: [],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+stderr | tests/skills-ui-lifecycle.test.ts > invalid command payload is rejected before native work
+Event "COMMAND" to actor "skills-ui" was not delivered (invalidEvent).
+
+ ❯ tests/skills-ui-lifecycle.test.ts (14 tests | 3 failed) 8228ms
+   × oversize local files are rejected before reading any bytes 359ms
+   × late history completion cannot reopen a closed or replaced view 232ms
+   × invalid command payload is rejected before native work 5272ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > oversize local files are rejected before reading any bytes
+AssertionError: expected '' to contain '64 KB'
+
+- Expected
++ Received
+
+- 64 KB
+
+ ❯ tests/skills-ui-lifecycle.test.ts:342:47
+    340|     })
+    341|     expect(reads).toBe(0)
+    342|     expect(actor.getSnapshot().context.error).toContain("64 KB")
+       |                                               ^
+    343|   }).pipe(Effect.scoped)
+    344| )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:971:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5689:9
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5767:19
+ ❯ Module.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5786:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > late history completion cannot reopen a closed or replaced view
+AssertionError: expected [ { …(7) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "archived": false,
++     "body": "Original body",
++     "createdAt": "2026-10-23T00:00:00.000Z",
++     "id": "00000000-0000-0000-0000-000000000001",
++     "name": "Original",
++     "revision": 1,
++     "stateRevision": 1,
++   },
++ ]
+
+ ❯ tests/skills-ui-lifecycle.test.ts:441:52
+    439|       yield* Effect.yieldNow
+    440|       expect(actor.getSnapshot().matches("editing")).toBe(true)
+    441|       expect(actor.getSnapshot().context.versions).toEqual([])
+       |                                                    ^
+    442|     }).pipe(Effect.scoped)
+    443| )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1025:13
+ ❯ MixedSchedulerDispatcher.runTasks node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/Scheduler.ts:254:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > invalid command payload is rejected before native work
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/skills-ui-lifecycle.test.ts:567:4
+    565| )
+    566|
+    567| it.effect("invalid command payload is rejected before native work", ()…
+       |    ^
+    568|   Effect.gen(function* () {
+    569|     let calls = 0
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 11 passed (14)
+   Start at  20:43:02
+   Duration  24.56s (tests 39%, import 35%, transform 22%, setup 2%, worker 2%)
+

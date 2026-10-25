@@ -1,0 +1,101 @@
+{
+  "base": "154cb7430217887ba63ddeffcbb68fca7d05226d",
+  "artifacts": [
+    {
+      "file": "workspace-runner-before.log.txt",
+      "sha256": "0d092fa8c4d94942aae7ab18074d677a9ab49e85694897082702ee8bb21c22e0",
+      "source": "/private/tmp/workspace-runner-before.log"
+    },
+    {
+      "file": "workspace-runner-initial.log.txt",
+      "sha256": "9b13125b0d3e9a1836b3514a38229ccab43bc5bae9224666ff09ecb9e4bef6c6",
+      "source": "/private/tmp/workspace-runner-initial.log"
+    },
+    {
+      "file": "workspace-runner-focused-final.log.txt",
+      "sha256": "08479561e530abfbbdaf5cfa2ca35180fe52f04160ca358de4242e96942ea7c9",
+      "source": "/private/tmp/workspace-runner-focused-final.log"
+    },
+    {
+      "file": "workspace-runner-focused-complete.log.txt",
+      "sha256": "f3022eaa63fd4b05c1f6c080c2ee93eb21836ba5a18b4b77dd495d9b176d57cd",
+      "source": "/private/tmp/workspace-runner-focused-complete.log"
+    },
+    {
+      "file": "workspace-runner-cause-control.log.txt",
+      "sha256": "8297a35c3872c633a03b6a95671d4a42b606e3f2a9ac6dfd0592711ca87c336c",
+      "source": "/private/tmp/workspace-runner-cause-control.log"
+    },
+    {
+      "file": "workspace-runner-native-binding-before.log.txt",
+      "sha256": "66d17d0f41d29856503b80ff9671641d21f20cd459dffae08fca8c296e659694",
+      "source": "/private/tmp/workspace-runner-native-binding-before.log"
+    },
+    {
+      "file": "workspace-runner-native-join-before.log.txt",
+      "sha256": "3ccc21c006a4cbe24d7612b4b76e12b9408555f75d3312ce22c19cde9a7c30ab",
+      "source": "/private/tmp/workspace-runner-native-join-before.log"
+    },
+    {
+      "file": "workspace-runner-static-complete.log.txt",
+      "sha256": "c1f9a164eef77f1069da74c88855c6cd69c5a715bf3953666f653b003a33eaa6",
+      "source": "/private/tmp/workspace-runner-static-complete.log"
+    },
+    {
+      "file": "workspace-runner-unit.log.txt",
+      "sha256": "021f0272045a9b5e59fcf11365f1b82713e8c820f2b5b76b7e9cb4595e2b5662",
+      "source": "/private/tmp/workspace-runner-unit.log"
+    },
+    {
+      "file": "workspace-runner-web-apps-recheck.log.txt",
+      "sha256": "54087e4399202192df062506443ac3ad1d941e9b19ca677bea2511ca20fc291e",
+      "source": "/private/tmp/workspace-runner-web-apps-recheck.log"
+    },
+    {
+      "file": "workspace-runner-unit-complete.log.txt",
+      "sha256": "be8a900923269218fbc03b70b9462be1728490103b3d210f73cd4aaa7f58e312",
+      "source": "/private/tmp/workspace-runner-unit-complete.log"
+    },
+    {
+      "file": "workspace-runner-build.log.txt",
+      "sha256": "9964239ec95bfafe44ed45bfb7b2201568e34a6caf55dfc3749fc7cc4045cce7",
+      "source": "/private/tmp/workspace-runner-build.log"
+    },
+    {
+      "file": "workspace-runner-routes.log.txt",
+      "sha256": "f282d7dba702934a4718e64c20cb9e74ff7048a4edab5d58fc5b60b31ffb9dfa",
+      "source": "/private/tmp/workspace-runner-routes.log"
+    },
+    {
+      "file": "workspace-runner-workers.log.txt",
+      "sha256": "e5dbbd8fa6061ed74618ba4cbc998ecf8cfdd9b07fb9d9ffe3cbbbe03f56bf79",
+      "source": "/private/tmp/workspace-runner-workers.log"
+    },
+    {
+      "file": "workspace-runner-native-personal.log.txt",
+      "sha256": "65be3a3044257f877dabf84afb66b27023a61b73d4437e326d97b427e5dffbbf",
+      "source": "/private/tmp/workspace-runner-native-personal.log"
+    },
+    {
+      "file": "workspace-runner-native-workspace.log.txt",
+      "sha256": "26045c9e75bf788bbf2d9452dac7152af0162c8547f363efd9df36291273ad24",
+      "source": "/private/tmp/workspace-runner-native-workspace.log"
+    },
+    {
+      "file": "workspace-runner-secrets.log.txt",
+      "sha256": "ba2ae9bb0c167a7aa89c3f57b74ceeb577cbb9ca4ab4ce610b54d9213d1a3f9d",
+      "source": "/private/tmp/workspace-runner-secrets.log"
+    }
+  ],
+  "sources": {
+    "scripts/test-communication-runtime.mjs": "aae47b036c7d0019919665c186cde49a9c262dcad7b8f8b720bf743ac1ea13de",
+    "src/agent/worker.ts": "12e8367531a141b27d9d4ccaa12a56d92d4c9922b896c997ca6889c86671d4c7",
+    "src/workspace/adapters/lifecycle.ts": "af1d540efb3654cc4ca85b6d32599a5a07316694320f6533a3bcd09cc687ddf8",
+    "src/workspace/discovery.machine.ts": "ad37aadd4c798009b2da0891731b8b7793d49397ec9ed58b502dfee1b7816e88",
+    "src/workspace/runner.machine.ts": "5233c1d718c21df7d2bf894fa5a0f0ad73d09d7f3d72e5fcdd2246c2dccda20e",
+    "tests/runtime/communication-worker.ts": "01c25407d525dfa9504a128af51259d6e399c7a8f354fb421c43ceca24bbd71c",
+    "tests/runtime/personal-agent-worker.ts": "f2d06ff2236ff1246d7da32b1d5bc17e40b189d3c018d635c1e2bc48fa4365e0",
+    "tests/web-apps.test.ts": "307ada83bb27d1d1b3af0bc098d32aa8b00f0681bd68efc5a27bf0a8afa31ea3",
+    "tests/workspace-runner.test.ts": "4ecec4df2bfd79c28b01b13f91e3a1744b6b284c051f4889a7fea43d1dd25e77"
+  }
+}

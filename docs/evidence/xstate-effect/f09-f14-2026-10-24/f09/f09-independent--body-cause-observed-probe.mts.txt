@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeModelSignIn} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/model-sign-in-owner.ts'
+import {agentApi} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/http/client.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json'),{Cause,Context,Effect,Exit,Scope}=await import(require.resolve('effect')),{waitFor}=await import(require.resolve('@xstate/effect'))
+class NativeBody extends Context.Service()('F09.NativeBody'){}
+const annotation=Context.make(NativeBody,'body'),defect=new Error('response body native defect')
+const failure=Cause.fromReasons([Cause.makeFailReason('body checked').annotate(annotation),Cause.makeDieReason(defect).annotate(annotation),Cause.makeInterruptReason(89235).annotate(annotation)])
+const fetch=globalThis.fetch;let reads=0
+try{
+ globalThis.fetch=async()=>{reads++;const response=new Response(null,{status:503});response.json=async()=>{throw failure};return response}
+ const scope=await Effect.runPromise(Scope.make()),api=agentApi('home')
+ const owner=await Effect.runPromise(makeModelSignIn({account:(body,signal)=>api('model-account',body,signal),authorized:()=>true,connected:async()=>{},popup:()=>null}).pipe(Scope.provide(scope)))
+ await Effect.runPromiseExit(waitFor(owner.actor,s=>s.matches('idle')||s.status!=='active'))
+ const before=owner.actor.getSnapshot();owner.revoke();const exit=await Effect.runPromiseExit(Scope.close(scope,Exit.void))
+ console.log(JSON.stringify({reads,actorStatus:before.status,value:before.value,error:before.context.error,scopeFailure:Exit.isFailure(exit),reasons:Exit.isFailure(exit)?exit.cause.reasons.map(r=>r._tag):[]}))
+ assert.ok(Exit.isFailure(exit),'native response-body compound failure must remain fatal, not become ordinary503')
+ assert.ok(exit.cause.reasons.some(r=>r._tag==='Interrupt'&&r.fiberId===89235))
+}finally{globalThis.fetch=fetch}

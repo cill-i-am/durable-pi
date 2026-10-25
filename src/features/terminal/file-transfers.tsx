@@ -1,5 +1,7 @@
+import { send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -14,8 +16,12 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useFiles, uploadFile } from "@/features/files"
 import { agentUrl, errorMessage } from "@/http/client"
+import { nativeOperation } from "@/shared/interop"
 import type { CommandRun } from "@/terminal/contracts"
 import { exportPlan, MAX_TRANSFER_BYTES } from "@/terminal/transfers"
+
+import { makeExportSaveOwner } from "./export-save"
+import { exportSaveMachine } from "./export-save.machine"
 
 export function FileTransfers({
   agentId,
@@ -162,49 +168,99 @@ export function ExportedFile({
   agentId: string
   run: CommandRun
 }) {
-  const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("")
-  const lock = useRef(false)
-  const filename = run.transfer?.name
-  if (
-    run.transfer?.kind !== "export" ||
-    run.status !== "succeeded" ||
-    !filename
-  )
-    return null
-  const save = async () => {
-    if (lock.current) return
-    lock.current = true
-    setBusy(true)
-    setMessage("")
-    try {
-      const response = await fetch(
-        agentUrl(agentId, `terminal/${encodeURIComponent(run.id)}/file`)
+  const filename =
+    run.transfer?.kind === "export" && run.status === "succeeded"
+      ? run.transfer.name
+      : undefined
+  const [actor, setActor] = useState<EffectActor<
+    ReturnType<typeof exportSaveMachine>
+  > | null>(null)
+  const [state, setState] = useState({
+    identity: "",
+    busy: false,
+    saved: false,
+    message: "",
+  })
+  const identity = JSON.stringify([agentId, run.id, filename])
+  useEffect(() => {
+    if (!filename) return
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owner = yield* makeExportSaveOwner({
+          download: nativeOperation(
+            async (signal) => {
+              const response = await fetch(
+                agentUrl(
+                  agentId,
+                  `terminal/${encodeURIComponent(run.id)}/file`
+                ),
+                { signal }
+              )
+              if (!response.ok)
+                throw new Error(errorMessage(await response.json()))
+              const blob = await response.blob()
+              if (!blob.size || blob.size > MAX_TRANSFER_BYTES)
+                throw new Error("The exported file is too large or empty.")
+              return new File([blob], filename, { type: blob.type })
+            },
+            (cause) => cause
+          ),
+          upload: (file) =>
+            nativeOperation(
+              () =>
+                uploadFile(agentId, {
+                  id: run.id,
+                  file,
+                  status: "uploading",
+                  attach: false,
+                }),
+              (cause) => cause
+            ),
+        })
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owner.subscribe((snapshot) => {
+              if (mounted)
+                setState({
+                  identity,
+                  busy:
+                    snapshot.matches("downloading") ||
+                    snapshot.matches("uploading"),
+                  saved: snapshot.matches("saved"),
+                  message: snapshot.context.message,
+                })
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        if (mounted) {
+          setActor(owner)
+          setState({ identity, busy: false, saved: false, message: "" })
+        }
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
+        )
       )
-      if (!response.ok) throw new Error(errorMessage(await response.json()))
-      const blob = await response.blob()
-      if (!blob.size || blob.size > MAX_TRANSFER_BYTES)
-        throw new Error("The exported file is too large or empty.")
-      const file = new File([blob], filename, { type: blob.type })
-      await uploadFile(agentId, {
-        id: run.id,
-        file,
-        status: "uploading",
-        attach: false,
-      })
-      setMessage(
-        "Saved to this bot’s Files. You can preview, download or attach it there."
-      )
-    } catch (cause) {
-      setMessage(
-        cause instanceof Error
-          ? cause.message
-          : "Could not save to Files. Retry the same export."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
     }
+  }, [agentId, run.id, filename, identity])
+  if (!filename) return null
+  const current = state.identity === identity
+  const busy = !current || state.busy,
+    message = current ? state.message : ""
+  const save = () => {
+    if (current && actor) Effect.runFork(send(actor, { type: "SAVE" }))
   }
   return (
     <div className="flex flex-col gap-2">
@@ -219,8 +275,8 @@ export function ExportedFile({
       <Button
         size="sm"
         variant="outline"
-        disabled={busy}
-        onClick={() => void save()}
+        disabled={busy || (current && state.saved)}
+        onClick={save}
       >
         {busy ? "Preparing and saving…" : "Add exported file to Files"}
       </Button>

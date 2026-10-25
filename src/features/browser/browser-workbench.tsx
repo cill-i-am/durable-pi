@@ -14,9 +14,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { agentUrl } from "@/http/client"
 
 import { BrowserControls } from "./browser-controls"
+import { BrowserScreenshot } from "./browser-preview"
 import { useBrowser } from "./use-browser"
 
 export function BrowserWorkbench({
@@ -29,7 +29,6 @@ export function BrowserWorkbench({
   onPendingChange: (pending: boolean) => void
 }) {
   const browser = useBrowser(agentId)
-  const [failedScreenshot, setFailedScreenshot] = useState<number | null>(null)
   const [url, setUrl] = useState("")
   const [settings, setSettings] = useState<BrowserSettings | null>(null)
   const settingsTrigger = useRef<HTMLButtonElement>(null)
@@ -89,8 +88,6 @@ export function BrowserWorkbench({
                 state={state}
                 page={state.page}
                 agentId={agentId}
-                failedScreenshot={failedScreenshot}
-                setFailedScreenshot={setFailedScreenshot}
                 setUrl={setUrl}
               />
             )}
@@ -405,16 +402,12 @@ function BrowserPreview({
   state,
   page,
   agentId,
-  failedScreenshot,
-  setFailedScreenshot,
   setUrl,
 }: {
   browser: BrowserModel
   state: NonNullable<BrowserModel["state"]>
   page: NonNullable<NonNullable<BrowserModel["state"]>["page"]>
   agentId: string
-  failedScreenshot: number | null
-  setFailedScreenshot: (version: number) => void
   setUrl: (url: string) => void
 }) {
   return (
@@ -455,18 +448,12 @@ function BrowserPreview({
           }
         />
       ) : (
-        state.hasScreenshot &&
-        failedScreenshot !== state.version && (
-          <img
-            src={`${agentUrl(agentId, "browser/screenshot")}&version=${state.version}`}
-            onError={() => {
-              setFailedScreenshot(state.version)
-              void browser.refresh()
-            }}
-            alt={`Last captured view of ${page.title || page.url}`}
-            className="w-full rounded-md border bg-white"
-          />
-        )
+        <BrowserScreenshot
+          agentId={agentId}
+          state={state}
+          refresh={() => void browser.refresh()}
+          alt={`Last captured view of ${page.title || page.url}`}
+        />
       )}
       <p className="text-xs text-muted-foreground">
         Captured{" "}

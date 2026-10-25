@@ -1,0 +1,76 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/settings-drawer-lifecycle.test.ts > route replacement retains outgoing bodies until closure and rejects a stale acknowledgement after reopening
+[22:43:22.217] ERROR (#1): Error [AssertionError]: expected [ { id: '/settings', …(2) }, …(1) ] to deeply equal [ { id: '/settings', …(2) }, …(1) ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/settings-drawer-lifecycle.test.ts:77:58 {
+  actual: [
+    { id: '/settings', href: '/settings', category: 'settings' },
+    {
+      id: '/settings/security',
+      href: '/settings/security',
+      category: 'security'
+    }
+  ],
+  expected: [
+    { id: '/settings', href: '/settings', category: 'settings' },
+    {
+      id: '/settings/account',
+      href: '/settings/account',
+      category: 'account'
+    }
+  ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/settings-drawer-lifecycle.test.ts (7 tests | 1 failed) 34ms
+   × route replacement retains outgoing bodies until closure and rejects a stale acknowledgement after reopening 20ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/settings-drawer-lifecycle.test.ts > route replacement retains outgoing bodies until closure and rejects a stale acknowledgement after reopening
+AssertionError: expected [ { id: '/settings', …(2) }, …(1) ] to deeply equal [ { id: '/settings', …(2) }, …(1) ]
+
+- Expected
++ Received
+
+@@ -3,10 +3,10 @@
+      "category": "settings",
+      "href": "/settings",
+      "id": "/settings",
+    },
+    {
+-     "category": "account",
+-     "href": "/settings/account",
+-     "id": "/settings/account",
++     "category": "security",
++     "href": "/settings/security",
++     "id": "/settings/security",
+    },
+  ]
+
+ ❯ tests/settings-drawer-lifecycle.test.ts:77:58
+     75|       })
+     76|       yield* Effect.yieldNow
+     77|       expect(owner.actor.getSnapshot().context.rendered).toEqual([
+       |                                                          ^
+     78|         root,
+     79|         account,
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1025:13
+ ❯ MixedSchedulerDispatcher.runTasks node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/Scheduler.ts:254:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  22:43:21
+   Duration  336ms (import 65%, transform 16%, tests 15%, setup 3%, worker 1%)
+

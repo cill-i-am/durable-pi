@@ -1,0 +1,9 @@
+{
+  "base": "31d762a8adf993c858c3ea36e54e3ad53fe146a5",
+  "repairedSources": {
+    "src/features/files/file-refresh.machine.ts": "41791cd93755c185b13db60a88b47c66339a129565dc92a375b6a5fdde7c5fbf",
+    "tests/files-lifecycle.test.ts": "1801ce6290e8f6d1d7d070c8dd048a35dc32d076034136a18069a8728d9d828f",
+    "docs/xstate-effect-files-ui.md": "7cfaa671d6a308574a3349eff616b1ddad02c5d95885cc21e87c806c19fdffb6"
+  },
+  "browserCheckpoint": "141/144 initially; all3 unchanged desktop timeout reruns pass. This checkpoint precedes narrow pending-file poll compatibility correction and shared HTTP repair."
+}

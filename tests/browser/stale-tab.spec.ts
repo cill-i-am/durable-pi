@@ -89,7 +89,7 @@ test("an explicit update reload preserves unsent text and original file referenc
     })
   ).toBeVisible()
   expect(sends).toBe(0)
-  expect(navigations).toBe(1)
+  await expect.poll(() => navigations).toBe(1)
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth

@@ -1,17 +1,12 @@
-import { Schema } from "effect"
 import { Check, RefreshCw } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect } from "react"
 
-import {
-  AccessState,
-  type AccessMode,
-  type ToolPolicy,
-} from "@/access/contracts"
 import { SettingsSection } from "@/components/settings-section"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { agentApi } from "@/http/client"
+
+import { useAccess } from "./use-access"
 
 export function AccessPanel({
   embedded = false,
@@ -30,60 +25,15 @@ export function AccessPanel({
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) {
-  const [policies, setPolicies] = useState<readonly ToolPolicy[]>()
-  const [refresh, setRefresh] = useState(0)
-  const [busy, setBusy] = useState("")
-  const [error, setError] = useState("")
-  const lock = useRef(false)
-  useEffect(() => {
-    if (!open) return
-    let current = true
-    setPolicies(undefined)
-    setError("")
-    void agentApi(agentId)("access")
-      .then((value) => Schema.decodeUnknownSync(AccessState)(value))
-      .then(
-        (value) => {
-          if (current) setPolicies(value.tools)
-        },
-        (cause) => {
-          if (current)
-            setError(
-              cause instanceof Error ? cause.message : "Could not load access."
-            )
-        }
-      )
-    return () => {
-      current = false
-    }
-  }, [agentId, open, refresh])
-  async function update(tool: ToolPolicy, mode: AccessMode) {
-    if (lock.current || tool.mode === mode) return
-    lock.current = true
-    setBusy(tool.name)
-    setError("")
-    try {
-      const state = Schema.decodeUnknownSync(AccessState)(
-        await agentApi(agentId)("access/policy", {
-          name: tool.name,
-          expectedRevision: tool.revision,
-          mode,
-        })
-      )
-      setPolicies(state.tools)
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not update access."
-      )
-    } finally {
-      lock.current = false
-      setBusy("")
-      onSaved()
-    }
-  }
+  const { policies, busy, error, loading, update, refresh } = useAccess(
+    agentId,
+    open,
+    onSaved
+  )
   const pending = !!busy
   useEffect(() => {
     onPendingChange?.(pending)
+    return () => onPendingChange?.(false)
   }, [pending, onPendingChange])
   return (
     <SettingsSection
@@ -103,10 +53,8 @@ export function AccessPanel({
               <Button
                 size="xs"
                 variant="link"
-                onClick={() => {
-                  setError("")
-                  setRefresh((value) => value + 1)
-                }}
+                disabled={!!busy || loading}
+                onClick={refresh}
               >
                 <RefreshCw />
                 Reload
@@ -138,7 +86,7 @@ export function AccessPanel({
                 variant="outline"
                 size="sm"
                 value={[tool.mode]}
-                disabled={!!busy}
+                disabled={!!busy || loading}
                 aria-label={`Access for ${tool.title ?? tool.name}`}
                 onValueChange={(values) => {
                   const value = values[0]

@@ -1,0 +1,9 @@
+# F05 Execution UI independent review
+
+Scoped clear: no concrete counterexample found in machine command admission, immutable uncertainty/retry identity, selected-view/agent ABA fencing, native fetch observation lifetime/Cause retention, and hidden polling.
+
+The independently authored mounted React/Chromium probe held real hook POST responses across committed selection A→B→A and agent A→B→A changes. Late returns did not reselect the old run or restore retired actor data. Ten seconds of virtual hidden-tab time produced no reads; visible transition resumed them.
+
+The independent native probe exercised the actual HTTP adapter and Effect owner. Closing while history fetch remained unsettled signaled abort and waited, then never dispatched the following detail read. Closing a held command waited for rejection, retained both checked cleanup failure and the original native defect, and made no backend cancel call. Lost acknowledgement followed by explicit retry posted the same immutable ID/code/input, even when the next START supplied different values, and preserved the backend interrupted terminal state.
+
+The existing focused suite was independently rerun: nine tests in one file pass. Source hashes were identical before and after all executions. `manifest.json` and raw `aba.log`, `native.log`, `focused.log` preserve exact proof scope and hashes. This review made no production/Git edits and ran no provider, workerd, full build or full browser gate.

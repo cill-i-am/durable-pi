@@ -1,0 +1,8 @@
+export default {
+  root: '/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi',
+  resolve: { alias: { "@": '/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src' } },
+  plugins: [{ name: "negative-settings-fence", enforce: "pre", transform(code, id) {
+    if (id === '/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/app/settings-drawers.machine.ts') return code.replaceAll("event.revision !== context.revision", "false");
+  } }],
+  test: { setupFiles: ["tests/agents-platform-stubs.ts"], include: ["tests/settings-drawer-lifecycle.test.ts"], testTimeout: 3000 },
+}

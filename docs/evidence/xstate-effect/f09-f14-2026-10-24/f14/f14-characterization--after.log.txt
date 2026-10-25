@@ -1,0 +1,11 @@
+[WebServer] (node:60898) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:60932) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"posts":[{"path":"/api/agent/background/retry","body":{"groupId":17,"operationId":"5ea3365a-0feb-4f4b-8c73-913439edb86c"}}],"saved":{"background-command:home:17:retry":"{\"groupId\":17,\"operationId\":\"5ea3365a-0feb-4f4b-8c73-913439edb86c\",\"action\":\"retry\"}","pi:composer-owner":"benchmark-owner"}}
+  ✓  1 [desktop] › ../../../../../../private/tmp/f14-characterization/probe.spec.ts:4:5 › background command rapid admission preserves one original operation (2.7s)
+
+  1 passed (4.4s)

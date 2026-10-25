@@ -1,4 +1,12 @@
-import { Cause, Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
+import {
+  Cause,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Schema,
+  Scope,
+} from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
 import {
@@ -6,6 +14,7 @@ import {
   connectionResponse,
 } from "../src/access/adapters/connection-http"
 import { remoteToolResolution } from "../src/access/adapters/resolution"
+import { AccessStore } from "../src/access/adapters/sqlite"
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -19,14 +28,20 @@ import {
   AgentRequestUnavailable,
 } from "../src/agent/adapters/http"
 import { proxyTerminalRequest } from "../src/agent/adapters/terminal"
+import { makeUpstreamObserver } from "../src/agent/adapters/upstream"
 import { PersonalAgent } from "../src/agent/worker"
 import { appsRequest } from "../src/apps/adapters/http"
 import { AppStore } from "../src/apps/adapters/sqlite"
 import { AppConflict } from "../src/apps/contracts"
 import { makeApps } from "../src/apps/service"
+import { stopConversation } from "../src/conversations/commands"
+import { ConversationControlTimeout } from "../src/conversations/execution"
+import { conversationPump } from "../src/conversations/pump"
+import { ConversationStorageError } from "../src/conversations/turns"
 import { ModelUnavailable } from "../src/inference/policy"
 import { routinesRequest } from "../src/routines/adapters/http"
 import { RoutineConflict } from "../src/routines/contracts"
+import { conversationFixture } from "./conversation-fixture"
 import { database } from "./database"
 import { routineFixture } from "./routine-fixture"
 
@@ -61,11 +76,21 @@ function fixture(
 ) {
   const runtime = ManagedRuntime.make(Layer.empty)
   runtimes.push(runtime)
+  const pump = Effect.runSync(conversationFixture())
   const host: PersonalAgent = Object.create(PersonalAgent.prototype)
   const waitUntil = vi.fn<(work: Promise<unknown>) => void>()
   const retrySummary = vi.fn(retry)
   Object.assign(host, {
     actorRuntime: runtime,
+    // The actual route now reconciles this host's joined control releases.
+    // Retain a real scoped test pump instead of bypassing the production seam.
+    conversationPump: conversationPump(
+      pump.conversations,
+      pump.memory,
+      pump.journal,
+      pump.execution,
+      pump.host
+    ),
     familyAdmission: async () => ({
       owner: "fixture",
       modelOwner: "fixture",
@@ -75,7 +100,7 @@ function fixture(
     ctx: { waitUntil, id: { toString: () => "actor-id" } },
     retrySummary,
   })
-  return { host, retrySummary, waitUntil }
+  return { host, retrySummary, waitUntil, pump }
 }
 const retryId = crypto.randomUUID()
 const retryRequest = (signal?: AbortSignal) =>
@@ -87,51 +112,138 @@ const retryRequest = (signal?: AbortSignal) =>
 const reasonTags = (cause: unknown) =>
   Cause.isCause(cause) ? cause.reasons.map((reason) => reason._tag) : []
 
-for (const path of ["routines/save", "apps/interact"]) {
-  it.each(["defect", "interruption"])(
-    `preserves a compound wake %s through the actual ${path} host route`,
-    async (mode) => {
-      const f = fixture()
-      Object.assign(f.host, {
-        routineRunner: { wake: async () => {} },
-        appEvents: { wake: async () => {} },
-      })
-      const defect = new Error("private compound wake defect")
-      const bridge = vi
-        .spyOn(AgentHttp, "agentNative")
-        .mockReturnValueOnce(
-          Effect.failCause(
-            Cause.fromReasons([
-              Cause.makeFailReason(
-                new AgentRequestUnavailable({ operation: "wake" })
-              ),
-              mode === "defect"
-                ? Cause.makeDieReason(defect)
-                : Cause.makeInterruptReason(),
-            ])
-          )
-        )
-      try {
-        await expect(
-          f.host.fetch(
-            new Request(`https://internal/api/agent/${path}`, {
-              method: "POST",
-              body: "{}",
-            })
-          )
-        ).rejects.toSatisfy((cause: unknown) =>
-          mode === "defect"
-            ? Cause.isCause(cause) &&
-              cause.reasons.some(
-                (reason) => reason._tag === "Die" && reason.defect === defect
-              )
-            : reasonTags(cause).includes("Interrupt")
-        )
-      } finally {
-        bridge.mockRestore()
-      }
+function admissionFixture(path: "routines/save" | "apps/interact") {
+  const operationId = crypto.randomUUID()
+  if (path === "routines/save") {
+    const store = routineFixture(database(), () => true).service
+    return {
+      properties: { routines: store },
+      input: {
+        id: crypto.randomUUID(),
+        operationId,
+        expectedRevision: 0,
+        title: "Wake boundary fixture",
+        prompt: "Review the retained fixture.",
+        schedule: { type: "once", at: Date.now() + 3_600_000 },
+        status: "active",
+      },
+      receipt: () => Effect.runSync(store.operationExists(operationId)),
+      writes: () => Effect.runSync(store.list()).length,
     }
+  }
+  const store = makeApps(new AppStore(database(), () => Effect.succeed(true)))
+  const draft = Effect.runSync(
+    store.save({
+      id: crypto.randomUUID(),
+      operationId: crypto.randomUUID(),
+      expectedRevision: 0,
+      definition: {
+        title: "Wake boundary fixture",
+        description: "Retained app values",
+        blocks: [
+          {
+            type: "checklist",
+            id: "tasks",
+            title: "Tasks",
+            items: [{ id: "one", label: "One" }],
+          },
+        ],
+      },
+    })
   )
+  const app = Effect.runSync(
+    store.publish({
+      id: draft.id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: draft.revision,
+      version: 1,
+    })
+  )
+  const input = {
+    id: app.id,
+    operationId,
+    expectedRevision: app.revision,
+    version: 1,
+    action: {
+      type: "check" as const,
+      blockId: "tasks",
+      itemId: "one",
+      checked: true,
+    },
+  }
+  return {
+    properties: { appService: store },
+    input,
+    receipt: () => !!Effect.runSync(store.interactionReceipt(input)),
+    writes: () => Effect.runSync(store.pending()).length,
+  }
+}
+
+for (const path of ["routines/save", "apps/interact"] as const) {
+  for (const stage of ["prearm", "acknowledgement"] as const) {
+    it.each(["defect", "interruption"])(
+      `preserves a compound ${stage} %s through the actual ${path} host route`,
+      async (mode) => {
+        const f = fixture()
+        const admission = admissionFixture(path)
+        const deadline = Date.now() + 60_000
+        Object.assign(f.host, admission.properties, {
+          routineRunner: { armDiscovery: async () => deadline },
+          appEvents: {
+            armDiscovery: async () => deadline,
+            wake: async () => {},
+          },
+        })
+        const defect = new Error("private compound wake defect")
+        const failure = Effect.failCause(
+          Cause.fromReasons([
+            Cause.makeFailReason(
+              new AgentRequestUnavailable({ operation: stage })
+            ),
+            mode === "defect"
+              ? Cause.makeDieReason(defect)
+              : Cause.makeInterruptReason(),
+          ])
+        )
+        const bridge = vi.spyOn(AgentHttp, "agentNative")
+        if (stage === "acknowledgement")
+          bridge.mockReturnValueOnce(Effect.succeed(deadline))
+        bridge.mockReturnValueOnce(failure)
+        try {
+          await expect(
+            f.host.fetch(
+              new Request(`https://internal/api/agent/${path}`, {
+                method: "POST",
+                body: JSON.stringify(admission.input),
+              })
+            )
+          ).rejects.toSatisfy((cause: unknown) =>
+            mode === "defect"
+              ? Cause.isCause(cause) &&
+                cause.reasons.some(
+                  (reason) => reason._tag === "Die" && reason.defect === defect
+                )
+              : reasonTags(cause).includes("Interrupt")
+          )
+          expect(bridge.mock.calls.map(([operation]) => operation)).toEqual(
+            path === "routines/save"
+              ? stage === "prearm"
+                ? ["arm routine discovery"]
+                : ["arm routine discovery", "arm routine discovery"]
+              : stage === "prearm"
+                ? ["arm app delivery discovery"]
+                : ["arm app delivery discovery", "wake app events"]
+          )
+          // Failed prearm cannot accept work. Failed acknowledgement retains the
+          // already committed event/routine and its exact operation receipt.
+          expect(admission.receipt()).toBe(stage === "acknowledgement")
+          expect(admission.writes()).toBe(stage === "acknowledgement" ? 1 : 0)
+        } finally {
+          bridge.mockRestore()
+        }
+      }
+    )
+  }
 }
 
 it("runs the actual host request through one retained runtime and pins its mutation", async () => {
@@ -146,6 +258,89 @@ it("runs the actual host request through one retained runtime and pins its mutat
   })
   expect(f.waitUntil).toHaveBeenCalledOnce()
   await expect(f.waitUntil.mock.calls[0]?.[0]).resolves.toBe(response)
+})
+it("records HTTP Stop and revokes access while joined owner release persistence fails", async () => {
+  const f = fixture()
+  const id = crypto.randomUUID()
+  const access = new AccessStore(f.pump.db, () =>
+    Effect.succeed([
+      { name: "send", description: "Synthetic effect", mode: "ask" },
+    ])
+  )
+  const approvalId = crypto.randomUUID()
+  await Effect.runPromise(
+    f.pump.store.admit({ operationId: id, text: "hello" })
+  )
+  await Effect.runPromise(
+    access.begin({ id: approvalId, turnId: id, tool: "send", input: "{}" })
+  )
+  f.pump.db.run(
+    "CREATE TRIGGER reject_joined_release BEFORE UPDATE ON chat_turns WHEN json_extract(OLD.control,'$.owner') IS NOT NULL AND json_extract(NEW.control,'$.owner') IS NULL BEGIN SELECT RAISE(ABORT,'release write unavailable'); END"
+  )
+  const failed = await Effect.runPromiseExit(f.host.conversationPump.run())
+  expect(Exit.isFailure(failed)).toBe(true)
+  if (Exit.isFailure(failed))
+    expect(failed.cause.reasons).toContainEqual(
+      expect.objectContaining({
+        _tag: "Fail",
+        error: expect.any(ConversationStorageError),
+      })
+    )
+  const before = (await Effect.runPromise(f.pump.store.get(id)))!
+  expect(before.status).toBe("running")
+  expect(before.control?.owner).toBeTruthy()
+  const nativeCalls = [...f.pump.events]
+  Object.assign(f.host, {
+    stopConversation: stopConversation(
+      {
+        requestStop: (turnId, options) =>
+          f.pump.db.transaction(() =>
+            Effect.gen(function* () {
+              const root = yield* f.pump.store.requestStop(turnId, options)
+              if (root) yield* access.cancel(root)
+              return root
+            })
+          ),
+      },
+      {
+        prearm: () => Effect.succeed(Date.now() + 60_000),
+        wake: () => Effect.void,
+        wakeBackground: () => Effect.void,
+        notify: () => Effect.void,
+      }
+    ),
+  })
+  const response = await f.host.fetch(
+    new Request("https://internal/api/agent/cancel", {
+      method: "POST",
+      body: JSON.stringify({ operationId: id }),
+    })
+  )
+  expect(response.status).toBe(202)
+  expect(await response.json()).toEqual({ ok: true })
+  const stopped = (await Effect.runPromise(f.pump.store.get(id)))!
+  expect(stopped).toMatchObject({
+    status: "stopping",
+    control: {
+      owner: before.control!.owner,
+      deadline: before.control!.deadline,
+    },
+  })
+  expect(stopped.revision).toBeGreaterThan(before.revision)
+  expect(await Effect.runPromise(access.get(approvalId))).toMatchObject({
+    status: "cancelled",
+  })
+  expect(f.pump.events).toEqual(nativeCalls)
+  // Revocation must not swallow or clear the retained cleanup obligation.
+  expect(
+    Exit.isFailure(
+      await Effect.runPromiseExit(f.host.conversationPump.reconcile())
+    )
+  ).toBe(true)
+  expect((await Effect.runPromise(f.pump.store.get(id)))!.control!.owner).toBe(
+    before.control!.owner
+  )
+  expect(f.pump.events).toEqual(nativeCalls)
 })
 it("preserves the declared model rejection through the actual host", async () => {
   const f = fixture(() =>
@@ -390,7 +585,7 @@ it("does not turn connection request cleanup failure into an ordinary conflict",
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
 })
 
-it("composes app wake effects without boxing a tagged defect as an HTTP conflict", async () => {
+it("composes app prearm effects without boxing a tagged defect as an HTTP conflict", async () => {
   const store = makeApps(
     new AppStore(database(), () => Effect.sync(() => true))
   )
@@ -398,8 +593,24 @@ it("composes app wake effects without boxing a tagged defect as an HTTP conflict
   const exit = await Effect.runPromiseExit(
     appsRequest(
       store,
-      new Request("https://internal/", { method: "POST", body: "{}" }),
+      new Request("https://internal/", {
+        method: "POST",
+        body: JSON.stringify({
+          id: crypto.randomUUID(),
+          operationId: crypto.randomUUID(),
+          version: 1,
+          expectedRevision: 0,
+          action: {
+            type: "check",
+            blockId: "tasks",
+            itemId: "one",
+            checked: true,
+          },
+        }),
+      }),
       "apps/interact",
+      () => Effect.die("A failed prearm must not reach the post-commit wake"),
+      undefined,
       () => Effect.die(defect)
     )
   )
@@ -411,13 +622,24 @@ it("composes app wake effects without boxing a tagged defect as an HTTP conflict
   expect(Effect.runSync(store.list())).toEqual([])
 })
 
-it("composes routine wake effects without admitting work after a defect", async () => {
+it("composes routine prearm effects without admitting work after a defect", async () => {
   const store = routineFixture(database(), () => true).service
   const defect = new RoutineConflict({ message: "private wake defect" })
   const exit = await Effect.runPromiseExit(
     routinesRequest(
       store,
-      new Request("https://internal/", { method: "POST", body: "{}" }),
+      new Request("https://internal/", {
+        method: "POST",
+        body: JSON.stringify({
+          id: crypto.randomUUID(),
+          operationId: crypto.randomUUID(),
+          expectedRevision: 0,
+          title: "Prearm fixture",
+          prompt: "Do not accept before discovery is armed.",
+          status: "active",
+          schedule: { type: "once", at: Date.now() + 3_600_000 },
+        }),
+      }),
       "routines/save",
       () => Effect.die(defect),
       () => Effect.void
@@ -433,6 +655,12 @@ it("composes routine wake effects without admitting work after a defect", async 
 
 it("bounds the upstream lease, fences unrelated releases and joins unused-channel cleanup", async () => {
   const f = fixture()
+  const scope = Effect.runSync(Scope.make())
+  Object.assign(f.host, {
+    upstreamObservation: Effect.runPromise(
+      makeUpstreamObserver.pipe(Effect.provideService(Scope.Scope, scope))
+    ),
+  })
   let firstAborted = 0
   let refusedAborted = 0
   const first = new WritableStream<Uint8Array>({
@@ -446,16 +674,32 @@ it("bounds the upstream lease, fences unrelated releases and joins unused-channe
     },
   })
   try {
-    expect(await f.host.observeUpstream("first", first)).toBe(true)
-    expect(await f.host.observeUpstream("refused", refused)).toBe(false)
-    expect(refusedAborted).toBe(1)
-    await f.host.releaseUpstream("unrelated")
-    expect(firstAborted).toBe(0)
+    try {
+      expect(await f.host.observeUpstream("first", first)).toBe(true)
+      expect(await f.host.observeUpstream("refused", refused)).toBe(false)
+      expect(refusedAborted).toBe(1)
+      await f.host.releaseUpstream("unrelated")
+      expect(firstAborted).toBe(0)
+    } finally {
+      await f.host.releaseUpstream("first")
+    }
+    expect(firstAborted).toBe(1)
+    const next = new WritableStream<Uint8Array>()
+    expect(await f.host.observeUpstream("next", next)).toBe(true)
+    await f.host.releaseUpstream("next")
   } finally {
-    await f.host.releaseUpstream("first")
+    await Effect.runPromise(Scope.close(scope, Exit.void))
   }
-  expect(firstAborted).toBe(1)
-  const next = new WritableStream<Uint8Array>()
-  expect(await f.host.observeUpstream("next", next)).toBe(true)
-  await f.host.releaseUpstream("next")
+})
+
+it("returns an actionable 503 for an unconfirmed Conversation control timeout", async () => {
+  const response = await Effect.runPromise(
+    agentResponse(
+      Effect.fail(new ConversationControlTimeout({ phase: "observe" }))
+    )
+  )
+  expect(response.status).toBe(503)
+  expect(await response.json()).toEqual({
+    error: "This reply could not be confirmed. Check the reply again.",
+  })
 })

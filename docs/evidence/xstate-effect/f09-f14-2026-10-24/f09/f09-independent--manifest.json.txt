@@ -1,0 +1,112 @@
+{
+  "status": "bounded-clear",
+  "reviewedAt": "2026-10-23T19:52:47.106773+00:00",
+  "sourceManifest": {
+    "root": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+    "files": [
+      {
+        "path": "src/features/family/chatgpt-sign-in.tsx",
+        "sha256": "56227acb8e8ba8b85749b4aca145bad5651f93462dcfe8b82e8d740d788ee414"
+      },
+      {
+        "path": "src/features/family/context.tsx",
+        "sha256": "54780e1fe4270d8c21d470447863ec5fbf107c4ee0ef88dfa326a133de786f65"
+      },
+      {
+        "path": "src/features/family/family-access-owner.ts",
+        "sha256": "1889bd76cae1e24e0130c5b5339a23adde9bd9deda0c0823f76d2ec9279aee65"
+      },
+      {
+        "path": "src/features/family/family-access.machine.ts",
+        "sha256": "5d2309e04b592db076734015a4df62cdbb9cc7f2ce2da922622f680e1ff9618d"
+      },
+      {
+        "path": "src/features/family/family-change-owner.ts",
+        "sha256": "25f6eb18c3884fd5fcb049b66b699c0178c769eaf8d14acbff11e14441b728bd"
+      },
+      {
+        "path": "src/features/family/family-change.machine.ts",
+        "sha256": "ab6ece184567c71d53cc9a5ba3793a2b9decfdc6aea083a015f8b6a2269ca341"
+      },
+      {
+        "path": "src/features/family/family-join-owner.ts",
+        "sha256": "a3055c6cb9c21085740c8959a10236c0e799abe6c732e74966ebd88cd4aaf55d"
+      },
+      {
+        "path": "src/features/family/family-join.machine.ts",
+        "sha256": "46cbf40da0ab8af19421fd8f3b4ab1ffdc02e17f8ca5b4ef6e05582c956bc713"
+      },
+      {
+        "path": "src/features/family/family-requests.ts",
+        "sha256": "2fd265d293420fe4a8aa8c23d88527bb142cecaca8712b0b5b87b143568d65ec"
+      },
+      {
+        "path": "src/features/family/family-settings.tsx",
+        "sha256": "2390c5fb54f1ad4d0df61fab87764739b7b058b08a2a284b2fb9c8ffd16a98d2"
+      },
+      {
+        "path": "src/features/family/invitation-record.ts",
+        "sha256": "a0194f5cecb5e5025b11593d566d03f0ee579e500d20ae8419984b2b040e41da"
+      },
+      {
+        "path": "src/features/family/join.tsx",
+        "sha256": "dda893405c11cc9553a0bd09daef58bed6468f8018f2b6309c12499755022dcf"
+      },
+      {
+        "path": "src/features/family/model-access.machine.ts",
+        "sha256": "3143dd1783e902f37e7653994dcdb6402c88557dcbbdd87fadeb9e8260683935"
+      },
+      {
+        "path": "src/features/family/model-access.tsx",
+        "sha256": "cad22ab6f3c707a9c7f6a304069392d8b5ebb9de62f015d359c1aefa36f678df"
+      },
+      {
+        "path": "src/features/family/model-sign-in-owner.ts",
+        "sha256": "5769103f19702bc8e4ee3e22f4ad37ce7ef1f2139a8187c8e4e0e53c5de366f9"
+      },
+      {
+        "path": "src/features/family/model-sign-in.machine.ts",
+        "sha256": "564753441ea3b56c5eec561bb4e33b92854e7e0f0a38fc8b05407a51fc5fea2f"
+      },
+      {
+        "path": "tests/family-ui-lifecycle.test.ts",
+        "sha256": "00f7cbc7980d7d0ebfd32a25a6b66f18b376fc99b17b0c2d79e4fc083d82bb77"
+      },
+      {
+        "path": "tests/browser/family-ownership.spec.ts",
+        "sha256": "6e6294d45170e23c5cf93b4150d1d8535775993cba4767af99402e95cef04de6"
+      },
+      {
+        "path": "docs/f09-family-ownership.md",
+        "sha256": "d7ba6e9b7485d7df4086ea0b863adabc867155f9c5f42b7b3098d2f4b4ddfb9c"
+      }
+    ]
+  },
+  "sourceManifestSHA256": "b0dce5bc72110e2da5cf7c386beeba39bb26a23d4af8be6433292c1a087073db",
+  "sourceDrift": [],
+  "supportingSourceHashes": {
+    "src/shared/effect.ts": "75587bface6c2ddf87156a108653d78c1b698ad6c3e0c34ecd559880cc6b65ba",
+    "src/shared/interop.ts": "e26c8e53d77156a55eb47b4ca25b0b0c7f93eb5740ba652e862e4950b868662c",
+    "src/auth/client.ts": "6bdb2ab69dcca20dbc534421312ef3a9f86a3a08799ffe99aa918d2b3772bf3f",
+    "src/app/workspace.tsx": "14c5ec789648b6c88a5f358bf688517647374b4b16987830c99ea0e1ae9a5e4a",
+    "src/features/conversation/use-model-catalog.ts": "9e3aa4ff080e3e93b4180c87b5dd152ba72832c68fa30eb55d339f6be16fe303"
+  },
+  "evidenceHashes": {
+    "compound.log": "bb3edb4652271c6ded5d27a15793e6d5de925d250213ed257ddb9efc464f3e56",
+    "compound-probe.mts": "bba1e0c443a99f41e1f4db4bea62de01abb63dc05a7fde0b38e84f36e037bc43",
+    "review.md": "8c754e4a3984fcc34363031c487a38bcbff06d58029b2ab153d363a49c971e41",
+    "hash-ack-probe.mjs": "ef6a684d3ca84a35a0e1c948a90f7bee4606267709ba0160b003eb4fb2ae4813",
+    "hash-ack.log": "bb1850cad731b68f27aed8a56ad7b6463b58ed0078ad35dc007f72ab27d79bf3",
+    "hash-ack-before.log": "bb1850cad731b68f27aed8a56ad7b6463b58ed0078ad35dc007f72ab27d79bf3"
+  },
+  "exitCodes": {
+    "nativeAnnotatedCompound": 0,
+    "mountedHashAndAckOrdering": 0
+  },
+  "limits": [
+    "No production edits or Git actions",
+    "No live auth/provider/native credential requests",
+    "Owner final application browser rerun remains separate and pending at handoff",
+    "No broad duplicate gates"
+  ]
+}

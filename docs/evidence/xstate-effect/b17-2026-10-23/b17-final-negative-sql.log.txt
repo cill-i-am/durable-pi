@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi
+
+ ❯ tests/connection-lifecycle.test.ts (14 tests | 1 failed | 12 skipped) 134ms
+   × checks admission authority after acquiring the real SQLite coordinator for add 82ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/connection-lifecycle.test.ts > checks admission authority after acquiring the real SQLite coordinator for add
+AssertionError: expected [ { …(5) }, { …(5) } ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ tests/connection-lifecycle.test.ts:393:44
+    391|       revision: 1,
+    392|     })
+    393|     expect(Effect.runSync(f.store.list())).toHaveLength(1)
+       |                                            ^
+    394|     expect(f.client.remove).not.toHaveBeenCalled()
+    395|     expect(f.client.register).not.toHaveBeenCalled()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 12 skipped (14)
+   Start at  16:56:00
+   Duration  504ms (import 46%, tests 32%, transform 20%, setup 2%, worker 1%)
+

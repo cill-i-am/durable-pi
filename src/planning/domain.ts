@@ -4,7 +4,7 @@ import {
   type PlanUpdate,
   type Evidence,
 } from "./contracts"
-import type { PlanBinding, PlanOperation } from "./ledger"
+import type { PlanBinding } from "./ledger"
 import type { PlanSource } from "./plans"
 
 export function requirePlanWritable(
@@ -39,27 +39,6 @@ export function requirePlanInputRevision(
       message: "Read the current input revision before updating this plan.",
     })
 }
-export function requirePlanBinding(binding: PlanBinding, id: string) {
-  if (binding.cancelled)
-    throw new PlanFailure({
-      code: "cancelled",
-      message: "This run was cancelled.",
-    })
-  if (binding.planId && binding.planId !== id)
-    throw new PlanFailure({
-      code: "conflict",
-      message: "This run already belongs to a different logical task.",
-    })
-}
-export function planReplay(operation: PlanOperation, digest: string) {
-  if (!operation.receipt) return undefined
-  if (operation.digest !== digest)
-    throw new PlanFailure({
-      code: "conflict",
-      message: "This tool operation belongs to another update.",
-    })
-  return { ...operation.receipt, reopened: [...operation.receipt.reopened] }
-}
 export function requirePlanCapacity(previous: Plan | null, count: number) {
   if (
     (!previous && count >= 200) ||
@@ -86,43 +65,6 @@ export function requirePlanEvidence(evidence: readonly Evidence[]) {
       message:
         "An evidence reference is unavailable, stale or unsuccessful. Inspect the source before revising the plan.",
     })
-}
-export function reconcilePlan(
-  saved: Plan,
-  evidence: readonly (readonly Evidence[])[],
-  cancelled: boolean,
-  now: string
-): Plan | null {
-  const steps = saved.steps.map((step, index) => ({
-    ...step,
-    evidence: evidence[index]!,
-    status:
-      evidence[index]!.some((ref) => ref.state === "invalid") &&
-      step.status === "completed"
-        ? ("pending" as const)
-        : step.status,
-  }))
-  if (!cancelled && JSON.stringify(steps) === JSON.stringify(saved.steps))
-    return null
-  const reopened = steps.some(
-    (step, index) => step.status !== saved.steps[index]!.status
-  )
-  return {
-    ...saved,
-    steps,
-    revision: saved.revision + 1,
-    updatedAt: now,
-    state: cancelled ? "cancelled" : reopened ? "open" : saved.state,
-    complete: cancelled || reopened ? false : saved.complete,
-    nextAction: cancelled
-      ? ""
-      : reopened
-        ? "Reassess the reopened steps; their evidence is no longer current."
-        : saved.nextAction,
-    blocker: cancelled
-      ? "Stopped by the user or run lifecycle."
-      : saved.blocker,
-  }
 }
 export const planHistoryKey = (id: string, revision: number) =>
   `${id}:${revision}`

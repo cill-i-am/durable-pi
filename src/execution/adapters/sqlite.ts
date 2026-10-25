@@ -1,4 +1,4 @@
-import { count, desc, eq } from "drizzle-orm"
+import { count, desc, eq, ne, or } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 
 import { jsonField } from "../../storage/expressions"
@@ -7,12 +7,13 @@ import {
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
-import { CodeRun, ExecutionStorageError, RunSummary } from "../contracts"
+import { ExecutionStorageError, RunSummary } from "../contracts"
 import type { ExecutionLedger } from "../ledger"
+import { ExecutionRecord, restoreExecutionRecord } from "../run.machine"
 import { codeRuns } from "./schema"
 
 const decode = (row: { record: string }) =>
-  Schema.decodeUnknownSync(Schema.fromJsonString(CodeRun))(row.record)
+  restoreExecutionRecord(JSON.parse(row.record))
 export class ExecutionStore implements ExecutionLedger {
   constructor(private readonly db: Sqlite) {}
   private query<TValue, TError, TRequirements>(
@@ -62,7 +63,13 @@ export class ExecutionStore implements ExecutionLedger {
             .select({ n: count() })
             .from(codeRuns)
             .where(
-              eq(jsonField<string>(codeRuns.record, "$.status"), "running")
+              or(
+                eq(jsonField<string>(codeRuns.record, "$.status"), "running"),
+                ne(
+                  jsonField<string>(codeRuns.record, "$.occupancy.state"),
+                  "free"
+                )
+              )
             )
         )
         return { total: totals[0]!.n, running: running[0]!.n }
@@ -74,12 +81,19 @@ export class ExecutionStore implements ExecutionLedger {
       orm
         .select({ record: codeRuns.record })
         .from(codeRuns)
-        .where(eq(jsonField<string>(codeRuns.record, "$.status"), "running"))
+        .where(
+          or(
+            eq(jsonField<string>(codeRuns.record, "$.status"), "running"),
+            ne(jsonField<string>(codeRuns.record, "$.occupancy.state"), "free")
+          )
+        )
     ).pipe(Effect.map((rows) => rows.map(decode)))
   }
-  put(run: CodeRun) {
+  put(run: ExecutionRecord) {
     return Effect.suspend(() => {
-      const record = Schema.encodeSync(Schema.fromJsonString(CodeRun))(run)
+      const record = Schema.encodeSync(Schema.fromJsonString(ExecutionRecord))(
+        run
+      )
       return this.query((orm) =>
         orm
           .insert(codeRuns)

@@ -1,0 +1,3 @@
+import base from "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/playwright.config.ts"
+const root="/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi"
+export default {...base,testDir:`${root}/tests/browser`,testMatch:["access-connections-lifecycle.spec.ts","access.spec.ts"],outputDir:"/private/tmp/f06-playwright-results",use:{...base.use,baseURL:"http://127.0.0.1:4457"},webServer:{command:"node --import tsx scripts/performance/server.mjs 4457",cwd:root,url:"http://127.0.0.1:4457",reuseExistingServer:false,timeout:120000,env:{PERF_CASE:"journey",PERF_DIST:`${root}/dist/f06-browser`}}}

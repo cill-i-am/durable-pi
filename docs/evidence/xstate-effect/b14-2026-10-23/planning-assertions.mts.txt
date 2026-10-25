@@ -1,0 +1,105 @@
+import assert from 'node:assert/strict'
+import { mkdtemp } from 'node:fs/promises'
+import { BACKGROUND_CONTEXT as ctx } from '@earendil-works/chord/context'
+import { createModels } from '@earendil-works/pi-ai'
+import { Harness, createRegistry, defineDoc, defineDocFamily } from '@earendil-works/pi-durable'
+import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node'
+import { Cause, Effect, Exit } from 'effect'
+import { piPlans, planBlockerStatus } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/planning/adapters/pi.ts'
+import { plansRequest } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/planning/adapters/http.ts'
+const root = '/private/tmp/b14-independent-planning'
+const run = Effect.runPromise
+const Catalog = defineDoc({kind:'plans.catalog',scope:'session',version:1,initial:()=>({ids:[] as string[]})})
+const Task = defineDocFamily({kind:'plans.task',scope:'session',family:true,version:1,initial:(_:null)=>({value:''})})
+const Binding = defineDocFamily({kind:'plans.turn',scope:'session',family:true,version:1,initial:(_:null)=>({planId:'',cancelled:false})})
+const History = defineDocFamily({kind:'plans.revision',scope:'session',family:true,version:1,initial:(_:null)=>({value:''})})
+async function fixture() {
+ const directory=await mkdtemp(`${root}/case-`),path=`${directory}/pi.sqlite`, storage=await openNodeSqliteStorage(path)
+ const harness=await Harness.open(storage,{models:createModels(),registry:createRegistry()},ctx)
+ const origin={turnId:crypto.randomUUID(),inputRevision:0,inputIds:[crypto.randomUUID()]}
+ const state={evidenceCalls:0}
+ const authority={current:()=>Effect.succeed(origin),cancelled:()=>Effect.succeed(false),receipts:()=>Effect.succeed([]),evidence:(ref:any)=>Effect.sync(()=>{state.evidenceCalls++;return {...ref,state:'valid',detail:'Saved'}})}
+ const plans=piPlans(async()=>harness,authority)
+ const id=crypto.randomUUID()
+ const input={id,operationId:'tool:1',relation:'new' as const,expectedRevision:0,inputRevision:0,reason:'Review probe',draft:{objective:'Keep draft private',constraints:[],criteria:['Saved'],steps:[{id:'saved',title:'Save draft',status:'completed' as const,evidence:[],note:''}],nextAction:'',blocker:'',complete:true}}
+ const plan={...input.draft,id,schemaVersion:1,revision:1,state:'completed',rootTurns:[origin.turnId],inputIds:origin.inputIds,reviewedTurn:origin.turnId,inputRevision:0,createdAt:'2026-10-23T00:00:00Z',updatedAt:'2026-10-23T00:00:00Z'}
+ const stored=async(kind:string,key?:string)=>{const rec=await storage.findDocument({kind,scope:{kind:'session'},...(key?{key}:{})},'current',ctx);return rec?storage.document(rec.id,'current',ctx):undefined}
+ const seed=async(value=plan)=>harness.commit(async tx=>{(await tx.doc(Catalog)).ids.push(id);(await tx.doc(Task,id,null)).value=JSON.stringify(value);Object.assign(await tx.doc(Binding,origin.turnId,null),{planId:id,cancelled:false});(await tx.doc(History,`${id}:1`,null)).value=JSON.stringify({plan:value,actor:'agent',reason:'Seed',turnId:origin.turnId})},ctx)
+ return {path,storage,harness,origin,state,plans,id,input,plan,stored,seed}
+}
+// A: synchronous invalid semantic projection crosses migration's Promise boundary.
+for (const mode of ['legacy-projection','future-native'] as const) {
+ const f=await fixture()
+ try {
+  await f.seed(mode==='legacy-projection'?{...f.plan,complete:false}:f.plan)
+  if(mode==='future-native') {const doc=await f.stored('plans.task',f.id);await f.storage.commit([{type:'document.change',id:doc!.record.id,content:{kind:'base',version:3,value:{...doc!.value,workflowVersion:1}}}],ctx)}
+  const before=await f.stored('plans.task',f.id)
+  const exit=await Effect.runPromiseExit(f.plans.read(f.id))
+  assert(Exit.isFailure(exit))
+  assert.deepEqual(await f.stored('plans.task',f.id),before)
+  const http=await Effect.runPromiseExit(plansRequest(f.plans,new Request(`https://review.invalid/plans/${f.id}`),`plans/${f.id}`))
+  if(mode==='legacy-projection') {
+   assert.equal(Cause.hasDies(exit.cause),true,'Corrupt legacy plan must retain fatal diagnosis')
+   assert.equal(Cause.hasFails(exit.cause),false)
+   assert(Exit.isFailure(http));assert.equal(Cause.hasDies(http.cause),true)
+   console.log(JSON.stringify({probe:mode,preserved:true,hasDies:true,hasFails:false,httpFatal:true}))
+  } else {
+   assert.equal(Cause.hasDies(exit.cause),false);assert.equal(Cause.hasFails(exit.cause),true)
+   assert(Exit.isSuccess(http));const body=await http.value.json()
+   assert.equal(http.value.status,503);assert.match(body.error,/compatible.*version/i);assert.doesNotMatch(body.error,/Retry the same update/)
+   console.log(JSON.stringify({probe:mode,preserved:true,httpStatus:http.value.status,body}))
+  }
+ } finally {await f.harness.close(ctx)}
+}
+// A2: legacy receipt consistency errors must not become storage availability.
+{
+ const f=await fixture()
+ const Operation=defineDocFamily({kind:'plans.operation',scope:'session',family:true,version:1,initial:(_:null)=>({digest:'',receipt:''})})
+ try {
+  await f.harness.commit(async tx=>{(await tx.doc(Operation,'tool:1',null)).digest='without-receipt'},ctx)
+  const before=await f.stored('plans.operation','tool:1')
+  const exit=await Effect.runPromiseExit(f.plans.update(f.input,f.origin));assert(Exit.isFailure(exit))
+  assert.deepEqual(await f.stored('plans.operation','tool:1'),before)
+  assert.equal(Cause.hasDies(exit.cause),true,'Corrupt legacy receipt must retain fatal diagnosis');assert.equal(Cause.hasFails(exit.cause),false)
+  console.log(JSON.stringify({probe:'legacy-receipt-consistency',preserved:true,hasDies:true,hasFails:false}))
+ } finally {await f.harness.close(ctx)}
+}
+// B: v1 snapshot materialization must not write migrations or system history.
+{
+ const f=await fixture()
+ try {
+  await f.seed({...f.plan,state:'open',complete:false,blocker:'Need input'})
+  const before=await Promise.all([f.stored('plans.task',f.id),f.stored('plans.turn',f.origin.turnId),f.stored('plans.revision',`${f.id}:1`)])
+  await f.harness.close(ctx)
+  const reader=await openNodeSqliteStorage(f.path)
+  let commits=0,closes=0
+  const commit=reader.commit.bind(reader),close=reader.close.bind(reader)
+  reader.commit=async (...args)=>{commits++;return commit(...args)}
+  reader.close=async (...args)=>{closes++;return close(...args)}
+  const blocked=await run(planBlockerStatus(()=>undefined,async()=>reader,f.origin.turnId))
+  const inspect=await openNodeSqliteStorage(f.path)
+  const snapshots=[]
+  for(const [kind,key] of [['plans.task',f.id],['plans.turn',f.origin.turnId],['plans.revision',`${f.id}:1`]]) {const rec=await inspect.findDocument({kind,scope:{kind:'session'},key},'current',ctx);snapshots.push(await inspect.document(rec!.id,'current',ctx))}
+  assert.deepEqual(snapshots,before);assert.equal(blocked,true);assert.equal(commits,0);assert.equal(closes,1);assert.equal(f.state.evidenceCalls,0)
+  console.log(JSON.stringify({probe:'legacy-readonly',blocked,commits,closes,versions:snapshots.map(x=>x.version),evidenceCalls:f.state.evidenceCalls}))
+  await inspect.close(ctx)
+ } catch(e) {try{await f.harness.close(ctx)}catch{}throw e}
+}
+// C: cancellation sentinel survives second-transaction failure and forbids replay.
+{
+ const f=await fixture()
+ try {
+  const receipt=await run(f.plans.update(f.input,f.origin))
+  const original=f.harness.commit.bind(f.harness)
+  let commits=0
+  f.harness.commit=async (...args)=>{commits++;if(commits===2)throw new Error('Synthetic storage outage after sentinel');return original(...args)}
+  const cancelled=await Effect.runPromiseExit(f.plans.cancel(f.origin.turnId));assert(Exit.isFailure(cancelled))
+  f.harness.commit=original
+  const binding=await f.stored('plans.turn',f.origin.turnId),planBefore=await f.stored('plans.task',f.id)
+  assert.equal(binding!.value.cancelled,true);assert.equal(JSON.parse(String(planBefore!.value.value)).state,'completed')
+  const replay=await run(f.plans.update(f.input,f.origin).pipe(Effect.result));assert.equal(replay._tag,'Failure');if(replay._tag==='Failure')assert.equal(replay.failure.code,'cancelled')
+  const repaired=await run(f.plans.read(f.id));assert.equal(repaired.plan.state,'cancelled');assert.equal(repaired.plan.revision,receipt.revision+1)
+  const again=await run(f.plans.read(f.id));assert.deepEqual(again,repaired)
+  console.log(JSON.stringify({probe:'sentinel-before-reconciliation-failure',cancelledPersisted:binding!.value.cancelled,replay,history:repaired.history.length,revision:repaired.plan.revision,repairOnce:true}))
+ } finally {await f.harness.close(ctx)}
+}

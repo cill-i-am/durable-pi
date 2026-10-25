@@ -1,0 +1,12 @@
+import { defineConfig } from "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/vitest/dist/config.js"
+const root = "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi"
+export default defineConfig({
+  root,
+  resolve: { alias: { "@": `${root}/src` } },
+  plugins: [{ name: "remove-compound-native-retention", enforce: "pre", transform(source, id) {
+    if (!id.endsWith("/src/features/activity/query-owner.ts")) return
+    if (!source.includes("if (!retained) return Effect.void")) throw new Error("Mutation target absent")
+    return { code: source.replace("if (!retained) return Effect.void", "if (true) return Effect.void"), map: null }
+  } }],
+  test: { include: ["tests/activity-query-owner.test.ts"], setupFiles: ["tests/agents-platform-stubs.ts"] },
+})

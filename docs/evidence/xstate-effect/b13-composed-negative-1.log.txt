@@ -1,0 +1,24 @@
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: cold uncertainty must pause rather than redispatch
++ actual - expected
+
++ 'claimed'
+- 'paused'
+
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/scripts/test-memory-summary-runtime.mjs:172:10
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'claimed',
+  expected: 'paused',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+ ❯ tests/memory-backup-lifecycle.test.ts (11 tests | 1 failed | 10 skipped) 106ms
+   × a delayed old publisher cannot overwrite a newer latest manifest 105ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-backup-lifecycle.test.ts > a delayed old publisher cannot overwrite a newer latest manifest
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/memory-backup-lifecycle.test.ts:299:37
+    297|   const latest = f.bucket.objects.get("p/latest.json")
+    298|   release.release()
+    299|   expect(Exit.isFailure(await old)).toBe(true)
+       |                                     ^
+    300|   expect(f.bucket.objects.get("p/latest.json")).toBe(latest)
+    301|   expect((await f.run(readBackup("p"))).until.messages).toBe(2)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  15:45:42
+   Duration  514ms (import 61%, tests 25%, transform 12%, setup 1%, worker 1%)
+

@@ -1,11 +1,13 @@
-import { Schema } from "effect"
+import { Effect, Fiber, Schema } from "effect"
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useState,
+  useRef,
 } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import { WorkspaceStartup } from "@/app/workspace-startup"
 import { authClient, authFetch } from "@/auth/client"
@@ -15,9 +17,13 @@ import { FamilySnapshot } from "@/family/contracts"
 import { AuthFrame } from "@/features/auth/auth-frame"
 import { ModelQueryProvider } from "@/features/conversation/model-query"
 
+import { makeFamilyAccess } from "./family-access-owner"
+import type { familyAccessMachine } from "./family-access.machine"
+
 const FamilyContext = createContext<{
   family: FamilySnapshot
   refresh: () => Promise<void>
+  current: () => FamilySnapshot | null
 } | null>(null)
 export function useFamily() {
   const value = useContext(FamilyContext)
@@ -29,39 +35,82 @@ export function useFamily() {
 }
 
 export function FamilyWorkspace({ children }: { children: React.ReactNode }) {
-  const [family, setFamily] = useState<FamilySnapshot | null>(null)
-  const [ended, setEnded] = useState(false)
-  const [error, setError] = useState("")
-  const refresh = useCallback(async () => {
-    try {
-      const response = await authFetch("/api/family")
-      if (response.status === 403) {
-        setEnded(true)
-        setFamily(null)
-        return
-      }
-      if (!response.ok) throw new Error("Unavailable")
-      setFamily(Schema.decodeUnknownSync(FamilySnapshot)(await response.json()))
-      setError("")
-    } catch {
-      setError("Could not check your family access. Please try again.")
+  const owner = useRef<Effect.Success<
+    ReturnType<typeof makeFamilyAccess>
+  > | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+    ReturnType<typeof familyAccessMachine>
+  > | null>(null)
+  useEffect(() => {
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const current = yield* makeFamilyAccess({
+          read: async (signal) => {
+            const response = await authFetch("/api/family", { signal })
+            if (!response.ok) {
+              await response.body?.cancel()
+              if (response.status === 403) return { type: "ended" }
+              throw new Error("Unavailable")
+            }
+            return {
+              type: "ready",
+              family: Schema.decodeUnknownSync(FamilySnapshot)(
+                await response.json()
+              ),
+            }
+          },
+          signOut: async () => {
+            const result = await authClient.signOut()
+            if (result.error)
+              throw new Error(result.error.message || "Could not sign out.")
+          },
+          leave: () => window.location.assign("/"),
+        })
+        owner.current = current
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            current.actor.subscribe((value) => {
+              if (mounted) setSnapshot(value)
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        if (mounted) setSnapshot(current.actor.getSnapshot())
+        yield* Effect.acquireRelease(
+          Effect.sync(() => window.addEventListener("focus", current.inspect)),
+          () =>
+            Effect.sync(() =>
+              window.removeEventListener("focus", current.inspect)
+            )
+        )
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      owner.current?.revoke()
+      owner.current = null
+      Effect.runFork(Fiber.interrupt(fiber))
     }
   }, [])
-  useEffect(() => {
-    void refresh()
-    const focus = () => {
-      void refresh()
-    }
-    const timer = window.setInterval(focus, 30_000)
-    window.addEventListener("focus", focus)
-    return () => {
-      window.clearInterval(timer)
-      window.removeEventListener("focus", focus)
-    }
-  }, [refresh])
+  const refresh = useCallback(
+    () =>
+      owner.current
+        ? Effect.runPromise(owner.current.refresh())
+        : Promise.resolve(),
+    []
+  )
+  const current = useCallback(
+    () => owner.current?.actor.getSnapshot().context.family ?? null,
+    []
+  )
+  const family = snapshot?.context.family ?? null
+  const error = snapshot?.context.error ?? ""
+  const ended = snapshot?.matches("ended") || snapshot?.matches("signingOut")
   if (family)
     return (
-      <FamilyContext value={{ family, refresh }}>
+      <FamilyContext value={{ family, refresh, current }}>
         <ModelQueryProvider>{children}</ModelQueryProvider>
       </FamilyContext>
     )
@@ -89,9 +138,8 @@ export function FamilyWorkspace({ children }: { children: React.ReactNode }) {
           </Button>
           <Button
             variant="outline"
-            onClick={() =>
-              void authClient.signOut().then(() => window.location.assign("/"))
-            }
+            disabled={snapshot?.matches("signingOut")}
+            onClick={() => owner.current?.actor.send({ type: "SIGN_OUT" })}
           >
             Sign out
           </Button>

@@ -1,5 +1,5 @@
 import { Search, ChevronDown } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Markdown } from "@/components/markdown"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -15,23 +15,23 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldDescription,
-} from "@/components/ui/field"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ChatState } from "@/conversations/contracts"
-import { agentApi, agentUrl } from "@/http/client"
+import { agentUrl } from "@/http/client"
 
+import { BackupRecovery } from "./backup-recovery"
+import { MemoryImport } from "./memory-import"
+import type { MemoryQuery } from "./query.machine"
 import { SummaryRecovery } from "./summary-recovery"
+import { useMemoryQuery } from "./use-memory-query"
 
 export function MemoryWorkbench({
   state,
   agentId,
+  refresh,
   tab,
   onTabChange: setTab,
   query,
@@ -42,47 +42,22 @@ export function MemoryWorkbench({
   tab: "notes" | "history" | "tree" | "files"
   onTabChange: (tab: "notes" | "history" | "tree" | "files") => void
   state: ChatState | null
+  refresh: () => void
   agentId: string
 }) {
-  const api = useMemo(() => agentApi(agentId), [agentId])
-  const [results, setResults] = useState<
-      { id: number; text: string; kind: string; date: string }[]
-    >([]),
-    [error, setError] = useState(""),
-    [loading, setLoading] = useState(false),
-    [searchRevision, setSearchRevision] = useState(0)
-  async function search(event: React.SubmitEvent<HTMLFormElement>) {
+  const request = useMemo<MemoryQuery | null>(
+    () =>
+      tab === "history" && query.trim() ? { kind: "search", query } : null,
+    [tab, query]
+  )
+  const searchQuery = useMemoryQuery(agentId, request)
+  const results = searchQuery.data.results
+  const error = searchQuery.error
+  const loading = searchQuery.pending
+  function search(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setTab("history")
   }
-  useEffect(() => {
-    if (tab !== "history" || !query.trim()) {
-      setResults([])
-      setLoading(false)
-      setError("")
-      return
-    }
-    const controller = new AbortController()
-    setResults([])
-    setError("")
-    setLoading(true)
-    void api<{ id: number; text: string; kind: string; date: string }[]>(
-      `search?q=${encodeURIComponent(query)}`,
-      undefined,
-      controller.signal
-    )
-      .then((value) => {
-        if (!controller.signal.aborted) setResults(value)
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError("Could not search memory. Try again.")
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
-    return () => controller.abort()
-  }, [api, tab, query, searchRevision])
   return (
     <section className="workbench-body memory-workbench">
       <header className="workbench-heading">
@@ -92,7 +67,12 @@ export function MemoryWorkbench({
           {state?.memory.notes.length ?? 0} memory notes
         </p>
       </header>
-      <SummaryRecovery agentId={agentId} issues={state?.memory.issues ?? []} />
+      <SummaryRecovery
+        agentId={agentId}
+        issues={state?.memory.issues ?? []}
+        recovery={state?.memory.compactionRecovery}
+        refresh={refresh}
+      />
       <form onSubmit={search} className="memory-search">
         <Field>
           <FieldLabel htmlFor="memory-search" className="sr-only">
@@ -170,11 +150,7 @@ export function MemoryWorkbench({
             <Alert>
               <AlertDescription>
                 {error}
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() => setSearchRevision((value) => value + 1)}
-                >
+                <Button variant="link" size="sm" onClick={searchQuery.retry}>
                   Retry search
                 </Button>
               </AlertDescription>
@@ -209,7 +185,11 @@ export function MemoryWorkbench({
           <MemoryTree agentId={agentId} />
         </TabsContent>
         <TabsContent value="files">
-          <MemoryFiles memory={state?.memory} agentId={agentId} />
+          <MemoryFiles
+            memory={state?.memory}
+            agentId={agentId}
+            refresh={refresh}
+          />
         </TabsContent>
       </Tabs>
     </section>
@@ -248,38 +228,19 @@ function MemoryNote({
 }
 
 function NoteSource({ agentId, source }: { agentId: string; source: number }) {
-  const [original, setOriginal] = useState<TreeBranch["original"]>(null)
-  const [error, setError] = useState("")
-  const [retry, setRetry] = useState(0)
-  useEffect(() => {
-    const controller = new AbortController()
-    setError("")
-    void agentApi(agentId)<TreeBranch>(
-      `tree?id=${source}&n=1`,
-      undefined,
-      controller.signal
-    )
-      .then((value) => {
-        if (controller.signal.aborted) return
-        if (value.original) setOriginal(value.original)
-        else setError("This source message is unavailable.")
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError("Could not load the source message.")
-      })
-    return () => controller.abort()
-  }, [agentId, source, retry])
+  const request = useMemo<MemoryQuery>(
+    () => ({ kind: "source", source }),
+    [source]
+  )
+  const sourceQuery = useMemoryQuery(agentId, request)
+  const original = sourceQuery.data.original
+  const error = sourceQuery.error
   return (
     <div className="memory-source">
       {error ? (
         <>
           <p role="alert">{error}</p>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() => setRetry((value) => value + 1)}
-          >
+          <Button variant="outline" size="xs" onClick={sourceQuery.retry}>
             Retry source
           </Button>
         </>
@@ -298,53 +259,18 @@ function NoteSource({ agentId, source }: { agentId: string; source: number }) {
   )
 }
 
-type TreePart = { start: number; count: number; text: string }
-type TreeBranch = {
-  children: TreePart[]
-  original: { kind: string; text: string; date: string } | null
-}
 function MemoryTree({ agentId }: { agentId: string }) {
-  const api = useMemo(() => agentApi(agentId), [agentId])
-  const [parts, setParts] = useState<TreePart[]>([]),
-    [trail, setTrail] = useState<TreePart[]>([]),
-    [original, setOriginal] = useState<TreeBranch["original"]>(null),
-    [pending, setPending] = useState(false),
-    [error, setError] = useState("")
-  useEffect(() => {
-    const controller = new AbortController()
-    setPending(true)
-    api<TreePart[]>("tree", undefined, controller.signal)
-      .then(setParts)
-      .catch(() => {
-        if (!controller.signal.aborted) setError("Could not load memory.")
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setPending(false)
-      })
-    return () => controller.abort()
-  }, [api])
-  async function open(next: TreePart[]) {
-    setPending(true)
-    setError("")
-    try {
-      const part = next.at(-1)
-      if (part) {
-        const branch = await api<TreeBranch>(
-          `tree?id=${part.start}&n=${part.count}`
-        )
-        setParts(branch.children)
-        setOriginal(branch.original)
-      } else {
-        setParts(await api<TreePart[]>("tree"))
-        setOriginal(null)
-      }
-      setTrail(next)
-    } catch {
-      setError("This part of memory is not ready yet. Try again shortly.")
-    } finally {
-      setPending(false)
-    }
-  }
+  const request = useMemo<MemoryQuery>(
+    () => ({ kind: "tree", trail: [], initial: true }),
+    []
+  )
+  const treeQuery = useMemoryQuery(agentId, request)
+  const parts = treeQuery.data.parts
+  const trail = treeQuery.data.trail
+  const original = treeQuery.data.original
+  const pending = treeQuery.pending
+  const error = treeQuery.error
+  const open = treeQuery.open
   const selected = trail.at(-1)
   return (
     <div className="memory-notes">
@@ -416,36 +342,12 @@ function MemoryTree({ agentId }: { agentId: string }) {
 function MemoryFiles({
   memory,
   agentId,
+  refresh,
 }: {
   memory: ChatState["memory"] | undefined
+  refresh: () => void
   agentId: string
 }) {
-  const api = agentApi(agentId)
-  const [file, setFile] = useState<File | null>(null),
-    [pending, setPending] = useState(false),
-    [status, setStatus] = useState("")
-  async function upload(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!file) return
-    setPending(true)
-    setStatus("")
-    try {
-      if (file.size > 1_000_000)
-        throw new Error("Choose a file smaller than 1 MB.")
-      const result = await api<{ added: number }>("import", {
-        jsonl: await file.text(),
-      })
-      setStatus(
-        `${result.added} messages imported. Their summaries will build in the background.`
-      )
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not import history."
-      )
-    } finally {
-      setPending(false)
-    }
-  }
   return (
     <div className="memory-notes">
       <article>
@@ -481,36 +383,14 @@ function MemoryFiles({
               ? `Last complete backup: ${new Date(memory.backup.date).toLocaleString()}`
               : "Waiting for the first backup.")}
         </p>
+        <BackupRecovery
+          agentId={agentId}
+          recovery={memory?.backup?.recovery ?? null}
+          schedulerRecovery={memory?.backup?.schedulerRecovery ?? null}
+          refresh={refresh}
+        />
       </article>
-      <article>
-        <h3>Import older history</h3>
-        <form onSubmit={upload}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="history-file">Messages file</FieldLabel>
-              <Input
-                id="history-file"
-                type="file"
-                accept=".jsonl,.ndjson"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-              <FieldDescription>
-                One JSON object per line with kind, text, and an ISO date. Up to
-                200 messages and 1 MB per file. Imported text becomes history;
-                it does not start a reply.
-              </FieldDescription>
-            </Field>
-            <Button type="submit" variant="outline" disabled={!file || pending}>
-              {pending ? "Importing…" : "Import history"}
-            </Button>
-          </FieldGroup>
-        </form>
-        {status && (
-          <Alert>
-            <AlertDescription>{status}</AlertDescription>
-          </Alert>
-        )}
-      </article>
+      <MemoryImport key={agentId} agentId={agentId} refresh={refresh} />
       {!!memory?.usage?.requests && (
         <article>
           <h3>Model cache</h3>

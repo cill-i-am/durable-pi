@@ -1,8 +1,11 @@
+import { createEffectActor, waitFor } from "@xstate/effect"
 import { Effect } from "effect"
 
+import { archiveMachine } from "./archive.machine"
 import type { AgentCatalog } from "./catalog"
 import type { BotConfiguration } from "./configuration"
 import type { AgentId, AgentProfile } from "./domain"
+import { synchronizationMachine } from "./synchronization.machine"
 
 export interface TerminalAuthorityProjection {
   revision: number
@@ -28,29 +31,18 @@ export function configureAgent<TError, TRequirements>(
 ) {
   return Effect.fn("Agents.configureAndSynchronize")(
     (owner: string, profile: AgentProfile) =>
-      Effect.uninterruptible(
+      Effect.scoped(
         Effect.gen(function* () {
-          yield* configuration.configure(owner, profile)
-          const current = yield* configuration.read()
-          if (!current) throw new Error("Configured bot has no configuration")
-          if (current.status === "archived") yield* host.invalidateApps()
-          yield* host.syncTerminal({
-            revision: current.revision,
-            active: current.status === "active",
-            revokeThrough:
-              profile.status === "archived" ? profile.revision : undefined,
-          })
-          // Terminal acknowledgment can race a newer profile. Read the current
-          // admission state again before choosing cleanup versus new-work wakes.
-          if ((yield* configuration.read())?.status === "archived")
-            yield* host.wakeBrowser()
-          else {
-            if (yield* host.extractionPending()) yield* host.wakeExtraction()
-            if (yield* host.appsPending()) yield* host.wakeApps()
-            if (yield* host.routinesPending()) yield* host.wakeRoutines()
-          }
+          const actor = yield* createEffectActor(
+            synchronizationMachine(configuration, host, owner, profile)
+          )
+          const done = yield* waitFor(
+            actor,
+            (state) => state.status === "done"
+          ).pipe(Effect.orDie)
+          return yield* done.output!
         })
-      )
+      ).pipe(Effect.uninterruptible)
   )
 }
 export function archiveAgent<TError, TRequirements>(
@@ -62,12 +54,17 @@ export function archiveAgent<TError, TRequirements>(
 ) {
   return Effect.fn("Agents.archiveAndProject")(
     (owner: string, id: AgentId, archived: boolean) =>
-      Effect.uninterruptible(
+      Effect.scoped(
         Effect.gen(function* () {
-          const profile = yield* catalog.archive(id, archived)
-          yield* project(owner, profile)
-          return profile
+          const actor = yield* createEffectActor(
+            archiveMachine(catalog, project, owner, id, archived)
+          )
+          const done = yield* waitFor(
+            actor,
+            (state) => state.status === "done"
+          ).pipe(Effect.orDie)
+          return yield* done.output!
         })
-      )
+      ).pipe(Effect.uninterruptible)
   )
 }

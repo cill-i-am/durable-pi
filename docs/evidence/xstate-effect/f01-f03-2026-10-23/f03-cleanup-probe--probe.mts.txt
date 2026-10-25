@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeFilesOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/files-owner.ts'
+import {makeFilesCache} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-cache.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json')
+const {Effect,Deferred,Fiber,Scope,Exit,Cause}=await import(require.resolve('effect'))
+const result=await Effect.runPromise(Effect.gen(function*(){
+ const started=yield* Deferred.make<void>(),aborted=yield* Deferred.make<void>(),scope=yield* Scope.make()
+ let reject!:(cause:unknown)=>void
+ const original=globalThis.fetch
+ globalThis.fetch=(input,options)=>String(input).includes('/upload')?new Promise((_,fail)=>{reject=fail;options!.signal!.addEventListener('abort',()=>Effect.runSync(Deferred.succeed(aborted,undefined)));Effect.runSync(Deferred.succeed(started,undefined))}):Promise.resolve(Response.json({files:[]}))
+ try{
+ const owner=yield* makeFilesOwner('alpha',makeFilesCache([])).pipe(Scope.provide(scope))
+ const upload=yield* Effect.forkChild(owner.upload([new File(['a'],'proof.txt')],true))
+ yield* Deferred.await(started)
+ const closing=yield* Effect.forkChild(Effect.exit(Scope.close(scope,Exit.void)))
+ yield* Deferred.await(aborted)
+ reject(Cause.fromReasons([...Cause.fail('late typed').reasons,...Cause.die(new Error('late defect')).reasons,...Cause.interrupt(77123).reasons]))
+ const exit=yield* Fiber.join(closing);yield* Fiber.join(upload)
+ return {status:exit._tag,reasons:Exit.isFailure(exit)?exit.cause.reasons.map(x=>x._tag):[]}
+ }finally{globalThis.fetch=original}
+}))
+console.log(JSON.stringify(result));assert.equal(result.status,'Failure');assert.ok(result.reasons.includes('Interrupt'))

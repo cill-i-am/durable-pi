@@ -1,0 +1,46 @@
+{
+  "aba": {
+    "selected": "submitted",
+    "emitted": [
+      "submitted"
+    ]
+  },
+  "cleanup": {
+    "input": [
+      "Fail",
+      "Die",
+      "Interrupt"
+    ],
+    "output": [
+      "Die",
+      "Die"
+    ],
+    "rendered": "Error: Fail(\"late typed fault\")\n    at createEffectLogic\nError: late native defect\n    at <anonymous> (/private/tmp/f04-independent/probe.mts:32:89)\n    at createEffectLogic"
+  }
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: a later A selection must retain its authority after A→B→A
++ actual - expected
+
+  {
++   emitted: [
++     'submitted'
++   ],
++   selected: 'submitted'
+-   emitted: [],
+-   selected: 'A'
+  }
+
+    at <anonymous> (/private/tmp/f04-independent/probe.mts:39:8) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: { selected: 'submitted', emitted: [ 'submitted' ] },
+  expected: { selected: 'A', emitted: [] },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1,0 +1,36 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/memory-summary-runner.test.ts (23 tests | 2 failed) 5064ms
+   × does not admit native work when disposal wins a pending controller read 5005ms
+   × joins accepted Summary admission storage before its resources may close 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-summary-runner.test.ts > does not admit native work when disposal wins a pending controller read
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/memory-summary-runner.test.ts:577:1
+    575| })
+    576|
+    577| it("does not admit native work when disposal wins a pending controller…
+       | ^
+    578|   const f = fixture(),
+    579|     entered = gate(),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/memory-summary-runner.test.ts > joins accepted Summary admission storage before its resources may close
+{
+  _id: 'Cause',
+  failures: [ { _tag: 'Die', defect: [Object] } ],
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 44 passed (46)
+   Start at  20:14:44
+   Duration  5.36s (tests 93%, import 6%, transform 2%)
+

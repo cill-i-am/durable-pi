@@ -1,0 +1,14 @@
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+[15:20:26.382] ERROR (#45): App delivery recovery exhausted Error: Synthetic Apps storage scan unavailable
+    at Object.pump (worker.mjs:75104:15)
+    at ProbeAppRunner.onJob (worker.mjs:35415:34)
+    at worker.mjs:26065:95
+    at runWithoutCurrentAgent (worker.mjs:24603:48)
+    at Object.onJob (worker.mjs:26065:55)
+    at tryN.baseDelayMs (worker.mjs:25389:135)
+    at tryN (worker.mjs:24730:18)
+    at async JobDriver._driveJob (worker.mjs:25389:15)
+    at async JobDriver._driveDueJobs (worker.mjs:25360:5)
+    at async JobDriver.runAlarm (worker.mjs:25282:9)
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.

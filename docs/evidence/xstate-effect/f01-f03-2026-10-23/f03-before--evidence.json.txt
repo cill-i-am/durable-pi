@@ -1,0 +1,44 @@
+{
+  "port": 63109,
+  "cases": {
+    "duplicateUpload": {
+      "calls": 1
+    },
+    "lateAgent": {
+      "agent": "beta",
+      "files": [
+        {
+          "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "name": "alpha.txt",
+          "mime": "text/plain",
+          "kind": "text",
+          "size": 1,
+          "createdAt": "2026-10-23T00:00:00Z",
+          "status": "ready",
+          "trashed": false
+        }
+      ],
+      "selected": [
+        {
+          "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "name": "alpha.txt",
+          "mime": "text/plain",
+          "kind": "text",
+          "size": 1,
+          "createdAt": "2026-10-23T00:00:00Z",
+          "status": "ready",
+          "trashed": false
+        }
+      ],
+      "uploads": []
+    },
+    "cancelAcquire": {
+      "calls": 2,
+      "stops": 0
+    },
+    "denied": {
+      "error": "Microphone denied",
+      "retryEnabled": true
+    }
+  }
+}

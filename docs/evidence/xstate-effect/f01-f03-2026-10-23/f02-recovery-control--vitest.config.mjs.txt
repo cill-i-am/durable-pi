@@ -1,0 +1,2 @@
+import {defineConfig} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/vitest/dist/config.js'
+export default defineConfig({root:'/private/tmp/f02-recovery-control',test:{include:['*.test.ts']}})

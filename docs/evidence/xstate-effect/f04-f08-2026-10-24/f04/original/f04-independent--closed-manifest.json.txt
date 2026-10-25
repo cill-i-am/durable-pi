@@ -1,0 +1,35 @@
+{
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "capturedAt": "2026-10-23T16:36:07.033244+00:00",
+  "files": {
+    "src/features/terminal/native-terminal-addon.ts": "292b03615e48a422f915e615c7f732d2bae0e52e30cb421828d7aab994ebedc3",
+    "src/features/terminal/interactive-terminal.tsx": "f0a3667517cc7b5919989dbadbe95a99a87b3b434c11332a641aecb9af0ffc4f",
+    "src/features/terminal/file-transfers.tsx": "05f4897e134e8c4092786c187f3775709b45ab6f353a34832d9873c69528f7a9",
+    "src/features/terminal/owned-work.ts": "1840616557aa67b2bdd2189ab3bf2e48663e3926a2960ed2894dba4b35267772",
+    "src/features/terminal/terminal-ui.machine.ts": "7fde6fbd4b3d259404c587d25ef9f342fccb4f265cb341acd910fd0383f0b2fb",
+    "src/features/terminal/interactive-host.machine.ts": "042da1ad12f381357ab51e84b7f5ac2140cf901e9c54eec14332cbb406b5f6ce",
+    "src/features/terminal/export-save.ts": "f25e922253de975db72c015ab451504bdaccdbc7cd464c3b5dd2771b3906b05c",
+    "src/features/terminal/session-lease.ts": "aa9c5e11333e8eeefe2bd918dc882f67c5865514cf3605a48e9f91ab7252189e",
+    "src/features/terminal/socket.machine.ts": "c054478f305fbb24f61d4f7f7e14a91aa6da6adfc9667e6018f86f3958f442ee",
+    "src/features/terminal/terminal-owner.ts": "f8d5a6e67ef7d2380de1a5b9623b4ce7ad186a09cc7646a22ef8ef25be57dbe2",
+    "src/features/terminal/terminal-workbench.tsx": "c8c4d79e91d57c280e95c6ebf5e2d1e568bf2078c50cfd1ad729075f5923e868",
+    "src/features/terminal/index.ts": "0384db184b4f259a8befe3cfe35b95d7057a3796572b7b6236658d89eefb6c3a",
+    "src/features/terminal/session-lease.machine.ts": "2fde5f9ece34204ba4d6276d2366917623dac3225b1d7c43b3b509187d91f048",
+    "src/features/terminal/use-terminal.ts": "2242e185b90635aec18062c221c4549c48fb676fbbf89565031a76702ff166ff",
+    "src/features/terminal/export-save.machine.ts": "573a0e8a06f8d41cb308653dff3bc7b6557b9fa1ff6987b03ee19e0ca11742e9",
+    "tests/terminal-ui-lifecycle.test.ts": "c933196f69d91d1d760cef0da873b8357825cb30609a3ca7a0861c39013ce92d",
+    "tests/terminal-native-addon.test.ts": "cd17cb0a487896c243446abab4ec015f5e06120e0d826f35378c44b6fcf3249f",
+    "tests/browser/terminal-ui.spec.ts": "b0ac88f38ccf2aba380159f2330f736ee75dc9fefb252cec9ec16270260ebf29",
+    "docs/xstate-effect-terminal-ui.md": "7791e294e11453e468039db5e27f75b09a5b1cff03230564a0d0716b70f719a6"
+  },
+  "closedAt": "2026-10-23T16:36:35.620619+00:00",
+  "probeSha256": "24faf3d105ff2a19b7c5ef6d6623e35a10773651e3f5d6cf9a1b97722339d198",
+  "results": {
+    "independentOriginalProbe": "after-final.log exit0 unchanged",
+    "affectedSuite": "focused-after.log 53/53",
+    "originalFailures": [
+      "before.log",
+      "focused.log"
+    ]
+  }
+}

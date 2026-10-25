@@ -1,0 +1,66 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/inference-stream-ownership.test.ts (8 tests | 3 failed | 5 skipped) 29ms
+   × shutdown joins an admitted refusal's completion callback 25ms
+   × joined iterator release keeps every original Cause reason 2ms
+   × one request object has one native dispatch even when start is repeated 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/inference-stream-ownership.test.ts > shutdown joins an admitted refusal's completion callback
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/inference-stream-ownership.test.ts:78:21
+     76|     await Promise.all(active.map((request) => request.settled))
+     77|     await new Promise((resolve) => setTimeout(resolve, 10))
+     78|     expect(stopped).toBe(false)
+       |                     ^
+     79|     release.resolve()
+     80|     expect(Exit.isSuccess(await shutdown)).toBe(true)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/inference-stream-ownership.test.ts > joined iterator release keeps every original Cause reason
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/inference-stream-ownership.test.ts:134:7
+    132|               reason.defect.error === "remote stop unconfirmed")
+    133|         )
+    134|     ).toBe(true)
+       |       ^
+    135|     expect(
+    136|       Cause.isCause(result) &&
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/inference-stream-ownership.test.ts > one request object has one native dispatch even when start is repeated
+AssertionError: expected "vi.fn()" to be called once, but got 2 times
+ ❯ tests/inference-stream-ownership.test.ts:158:22
+    156|     runtime.runSync(streams.start(request))
+    157|     await request.stream.result()
+    158|     expect(dispatch).toHaveBeenCalledOnce()
+       |                      ^
+    159|     expect(finish).toHaveBeenCalledOnce()
+    160|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 5 skipped (8)
+   Start at  16:54:21
+   Duration  563ms (import 75%, transform 15%, tests 6%, setup 2%, worker 1%)
+

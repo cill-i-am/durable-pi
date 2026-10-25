@@ -1,0 +1,20 @@
+# F14 independent query review — closed
+
+The final 12-file owner manifest matches every inspected source/test hash. No unresolved concrete finding remains within this bounded review. No production edits, broad gates, provider effects or Git mutations were made by the reviewer.
+
+## Findings and unchanged rechecks
+
+1. Selected-plan identity regression: a valid-shaped response for plan002 was published under selected plan001. The original pre-migration projection fence had been omitted. Exact mounted usePlans probe `plan-identity.mjs` failed before repair and now passes unchanged: selected detail remains null and a response-identity error is shown. Final use-plans hash8492a4b3951564046b3efa253abf9a719387baf9b0b941004c42f6c22a7c3ffd.
+2. Foreign history rows: a matching root plan response could contain another plan's history revisions. The exact mounted PlanInspector probe `history-identity.mjs` rendered the foreign marker before repair; unchanged recheck now rejects it. This malformed-response gap predated this migration. The probe exports the existing private component in an isolated bundle only; production behavior is unchanged by the instrumentation. Both initial and paginated response boundaries now validate each history entry. Final workbench hashb25880b275a7bb0efc27c446e5ffadfa64afc5d25e980d6ad9dd888c61df6786.
+
+## Independent proof
+
+- `plan-identity-before.log` red; `plan-identity-final.log` green on final source.
+- `history-identity-before.log` red; `history-identity-after.log` green on final source.
+- `annotated-cleanup.mts`/`.log`: actual query owner plus native request abort/join retains Fail+annotated Interrupt81234 without Die. Scope closure remains pending until the held native promise settles. Original native annotations survive; the official integration may append stack annotations. An initial strict entire-reason equality assertion was corrected to accept additional stack annotations and is retained separately; it was not a production defect.
+- `focused-final.log`: independent final28/28 tests in3files covering query ownership, planning projection and activity presentation.
+- Owner's additional actual mounted ActivityWorkbench regressions are6/6 in `/private/tmp/f14-query-browser-final-reviewed.log`; independently inspected as supporting evidence, not counted as a reviewer-executed gate.
+
+## Read scope and limits
+
+Reviewed official query-machine decisions, captured semantic keys, manual/poll/online serialization, hidden polling, ordinary failure polling beyond five failures, stale-result fencing, selected and paginated result identity, native scope join and compound Cause preservation. Existing plans/model2.5s, list5s/latest or15s/cursor, record3s and explicit history observation remain. Query snapshots are volatile; there is no new persisted representation. The browser probes mount actual hook/component code with synthetic local HTTP. They do not prove live providers, full-shell browser coverage or protected CI. Parent owns integrated gates.

@@ -1,0 +1,3 @@
+import { defineConfig } from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/vitest/dist/config.js'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi'
+export default defineConfig({root,resolve:{alias:[{find:'@',replacement:root+'/src'},{find:/^effect$/,replacement:root+'/node_modules/effect/dist/index.js'},{find:/^vitest$/,replacement:root+'/node_modules/vitest/dist/index.js'}]},test:{setupFiles:['tests/agents-platform-stubs.ts'],include:['/private/tmp/f01-f02-independent.test.ts'],server:{deps:{inline:['alchemy']}}}})

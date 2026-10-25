@@ -214,6 +214,41 @@ try {
     security.getByRole("button", { name: "Remove My laptop key", exact: true })
   ).toBeFocused()
 
+  // Removing a focused editor lets the native Drawer restore its popup on
+  // the next frame. Exercise slower rendering and assert stable focus after
+  // that restoration, rather than accepting a transient focus on the opener.
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 })
+  try {
+    for (let cycle = 0; cycle < 6; cycle++) {
+      await security
+        .getByRole("button", { name: "Remove My laptop key", exact: true })
+        .click()
+      await expect(
+        security.getByRole("button", { name: "Cancel", exact: true })
+      ).toBeFocused()
+      await security
+        .getByRole("button", { name: "Cancel", exact: true })
+        .click()
+      await expect(
+        security.getByRole("button", { name: "Cancel", exact: true })
+      ).toHaveCount(0)
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve))
+          )
+      )
+      await expect(
+        security.getByRole("button", {
+          name: "Remove My laptop key",
+          exact: true,
+        })
+      ).toBeFocused()
+    }
+  } finally {
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 })
+  }
+
   const longName = "K".repeat(100)
   fixture.sql.prepare("UPDATE passkey SET name=?").run(longName)
   await page.setViewportSize({ width: 320, height: 740 })

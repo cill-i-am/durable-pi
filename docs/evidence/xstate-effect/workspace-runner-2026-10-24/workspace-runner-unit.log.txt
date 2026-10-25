@@ -1,0 +1,32 @@
+$ vitest run
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/web-apps.test.ts (27 tests | 1 failed) 7768ms
+   × times out a bounded render and joins native teardown before the lease can be reused 5006ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/web-apps.test.ts > times out a bounded render and joins native teardown before the lease can be reused
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/web-apps.test.ts:456:1
+    454|   expect(calls).toBe(0)
+    455| })
+    456| it("times out a bounded render and joins native teardown before the le…
+       | ^
+    457|   const f = setup()
+    458|   let aborted = false,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 329 passed (330)
+      Tests  1 failed | 3792 passed (3793)
+   Start at  21:51:41
+   Duration  58.85s (tests 58%, import 38%, transform 3%, setup 1%)
+
+    Isolate  330 workers spawned · ~120ms startup each (spawn + environment, per file)
+             at least ~4.27s faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.

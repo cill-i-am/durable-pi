@@ -1,69 +1,40 @@
+import { Effect, Exit, Scope } from "effect"
 import { useEffect, useRef } from "react"
 
 import { isInteractionSoundEnabled } from "./interaction-sound-preference"
+import { makeInteractionSoundResource } from "./interaction-sound-resource"
 
-const closeAudio = async (audio: AudioContext) => {
-  try {
-    await audio.close()
-  } catch {}
-}
+type SoundResource = Effect.Success<
+  ReturnType<typeof makeInteractionSoundResource>
+>
 
 export const useInteractionSound = () => {
-  const context = useRef<AudioContext | null>(null)
+  const resource = useRef<SoundResource | null>(null)
 
-  useEffect(
-    () => () => {
-      const audio = context.current
-      context.current = null
-      if (audio !== null) {
-        void closeAudio(audio)
-      }
-    },
-    []
-  )
+  useEffect(() => {
+    const scope = Effect.runSync(Scope.make())
+    resource.current = Effect.runSync(
+      makeInteractionSoundResource(
+        () => ("AudioContext" in window ? new AudioContext() : null),
+        isInteractionSoundEnabled
+      ).pipe(Effect.provideService(Scope.Scope, scope))
+    )
+    return () => {
+      resource.current = null
+      // React cleanup cannot await. The closing Effect retains ownership until
+      // every click scope and the native AudioContext.close promise have joined.
+      Effect.runFork(
+        Scope.close(scope, Exit.void).pipe(
+          Effect.catchCause((cause) =>
+            Effect.logError("InteractionSound.cleanupFailed", cause)
+          )
+        )
+      )
+    }
+  }, [])
 
   return async ({ preview = false }: { preview?: boolean } = {}) => {
-    if (
-      (!preview && !isInteractionSoundEnabled()) ||
-      !("AudioContext" in window)
-    ) {
-      return
-    }
-    try {
-      const audio = context.current ?? new AudioContext()
-      context.current = audio
-      if (audio.state === "suspended") {
-        await audio.resume()
-      }
-      if (
-        context.current !== audio ||
-        audio.state !== "running" ||
-        (!preview && !isInteractionSoundEnabled())
-      ) {
-        return
-      }
-
-      const oscillator = audio.createOscillator()
-      const gain = audio.createGain()
-      const start = audio.currentTime
-      const end = start + 0.02
-      oscillator.type = "triangle"
-      oscillator.frequency.setValueAtTime(850, start)
-      oscillator.frequency.exponentialRampToValueAtTime(160, end)
-      gain.gain.setValueAtTime(0.12, start)
-      gain.gain.exponentialRampToValueAtTime(0.0001, end)
-      oscillator.connect(gain)
-      gain.connect(audio.destination)
-      oscillator.addEventListener(
-        "ended",
-        () => {
-          oscillator.disconnect()
-          gain.disconnect()
-        },
-        { once: true }
-      )
-      oscillator.start(start)
-      oscillator.stop(end)
-    } catch {}
+    const sound = resource.current
+    if (sound) await Effect.runPromiseExit(sound.play(preview))
   }
 }

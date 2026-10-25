@@ -1,0 +1,27 @@
+{
+  "view": {
+    "agent": "beta",
+    "applied": 0,
+    "data": {
+      "routines": [],
+      "runs": []
+    },
+    "attempt": null,
+    "busy": false
+  },
+  "calls": [
+    {
+      "agent": "alpha",
+      "path": "/api/agent/routines"
+    },
+    {
+      "agent": "alpha",
+      "path": "/api/agent/routines/save",
+      "body": "{\"id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"operationId\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"expectedRevision\":0,\"title\":\"proof\",\"prompt\":\"proof\",\"schedule\":{\"type\":\"webhook\"},\"status\":\"active\"}"
+    },
+    {
+      "agent": "beta",
+      "path": "/api/agent/routines"
+    }
+  ]
+}

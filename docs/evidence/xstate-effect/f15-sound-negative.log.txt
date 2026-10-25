@@ -1,0 +1,26 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi
+
+ ❯ tests/interaction-sound.test.ts (22 tests | 1 failed | 21 skipped) 19ms
+   × disconnects the acquired oscillator when gain acquisition fails 18ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/interaction-sound.test.ts > disconnects the acquired oscillator when gain acquisition fails
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ tests/interaction-sound.test.ts:38:22
+     36|   vi.stubGlobal("AudioContext", Audio)
+     37|   await useInteractionSound()()
+     38|   expect(disconnect).toHaveBeenCalledTimes(1)
+       |                      ^
+     39| })
+     40|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 21 skipped (22)
+   Start at  14:11:46
+   Duration  313ms (import 75%, transform 11%, tests 10%, setup 3%, worker 1%)
+

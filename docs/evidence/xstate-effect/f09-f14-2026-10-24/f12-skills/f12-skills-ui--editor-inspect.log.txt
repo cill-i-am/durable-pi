@@ -1,0 +1,8 @@
+{"broken":true,"transformed":1}
+INSPECT {"type":"@xstate.transition","event":{"type":"SAVED","generation":1},"snapshot":"library"}
+Warning: Detected unsettled top-level await at file:///private/tmp/f12-skills-ui/editor-control.mjs:11
+const file='/private/tmp/f12-skills-ui/editor-control-'+(broken?'broken':'good')+'.mjs';await writeFile(file,result.outputFiles[0].text);await import(file+'?'+Date.now())
+                                                                                                                                         ^
+
+
+

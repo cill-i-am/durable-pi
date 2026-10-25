@@ -1,0 +1,72 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/browser-ui-lifecycle.test.ts > Browser UI observation and commands > explicit Close interrupts observation, fetches current generation and joins the old HTTP settlement
+[17:00:27.668] ERROR (#1): Error [AssertionError]: expected [ { …(2) }, { …(2) } ] to deeply equal [ { …(2) }, { …(2) } ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser-ui-lifecycle.test.ts:213:23 {
+  actual: [
+    { path: '/api/agent/browser/open', body: [Object] },
+    { path: '/api/agent/browser/close', body: [Object] }
+  ],
+  expected: [
+    { path: '/api/agent/browser/open', body: [Object] },
+    { path: '/api/agent/browser/close', body: [Object] }
+  ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/browser-ui-lifecycle.test.ts (7 tests | 1 failed | 6 skipped) 31ms
+   ❯ Browser UI observation and commands (5)
+     × explicit Close interrupts observation, fetches current generation and joins the old HTTP settlement 31ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/browser-ui-lifecycle.test.ts > Browser UI observation and commands > explicit Close interrupts observation, fetches current generation and joins the old HTTP settlement
+AssertionError: expected [ { …(2) }, { …(2) } ] to deeply equal [ { …(2) }, { …(2) } ]
+
+- Expected
++ Received
+
+@@ -6,10 +6,15 @@
+      },
+      "path": "/api/agent/browser/open",
+    },
+    {
+      "body": {
+-       "generation": 9,
++       "action": {
++         "key": "Tab",
++         "kind": "key",
++       },
++       "generation": 1,
++       "version": 7,
+      },
+      "path": "/api/agent/browser/close",
+    },
+  ]
+
+ ❯ tests/browser-ui-lifecycle.test.ts:213:23
+    211|         yield* waitFor(actor, (s) => s.matches({ resource: "waiting" }…
+    212|         expect(openSignal?.aborted).toBe(true)
+    213|         expect(posts).toEqual([
+       |                       ^
+    214|           {
+    215|             path: "/api/agent/browser/open",
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 skipped (7)
+   Start at  17:00:27
+   Duration  362ms (import 64%, transform 20%, tests 12%, setup 3%, worker 1%)
+

@@ -1,0 +1,61 @@
+{
+  "result": "scoped clear",
+  "sourceUnchanged": true,
+  "sourceHashes": {
+    "src/features/execution/execution.machine.ts": "d9167c3489c7ecd9245dc0127569bd485b7f2767ee30fc320b4e76c0dd804b09",
+    "src/features/execution/execution-owner.ts": "3b826692627acb31ba4121937183239c32c134bef05dee1028b41a2516e6eac9",
+    "src/features/execution/use-execution.ts": "355eaf2ca586eb467e9be4f427d89ce7dc6c2b30adf3e07cbdd9647d5f9df3a0",
+    "tests/execution-ui-lifecycle.test.ts": "af71204208197e742a678b7fb1beea06d7513135d98e6c7630a9d748b5043fd1"
+  },
+  "focused": {
+    "files": 1,
+    "tests": 9,
+    "exitCode": 0
+  },
+  "independent": {
+    "mountedHookABAAndVisibility": {
+      "exitCode": 0,
+      "proof": [
+        "selected A-B-A fences late command",
+        "agent A-B-A retires original scope",
+        "10 seconds virtual hidden time produces no reads; visible resumes"
+      ]
+    },
+    "actualHTTPAdapter": {
+      "exitCode": 0,
+      "proof": [
+        "dispose pending history aborts and joins before any detail read",
+        "dispose pending command preserves checked failure and native defect after held rejection",
+        "observer disposal never posts backend cancel",
+        "explicit retry retains run ID/code/input and accepts interrupted terminal state without replay"
+      ]
+    }
+  },
+  "artifacts": {
+    "source-before.txt": {
+      "sha256": "b85566c47aeeaccf85c76fe3a4f818b72c6d93f9e0fc44bd822d94f596d24687",
+      "bytes": 427
+    },
+    "native.log": {
+      "sha256": "46bc06617bdbb89ff661755035859745d0ac5c25f43a382eb4c6c5fc4806d73d",
+      "bytes": 786
+    },
+    "aba.log": {
+      "sha256": "ed1fd372cfcf1dd4f124ea7c74be3e1a29f04f6c2aff4980349d07b5e166fb11",
+      "bytes": 856
+    },
+    "native-probe.mts": {
+      "sha256": "9808469e588cdc79a563590d97531fa7a8e0662f28e19f26b308ed031fe1a3ab",
+      "bytes": 4878
+    },
+    "aba-probe.mjs": {
+      "sha256": "7501c4aee16a16892c9a45bb5bd8a290c32aa12302464b47de5787c31a937d45",
+      "bytes": 4945
+    },
+    "focused.log": {
+      "sha256": "ddba4deaef46fdaddf89da513f065b7ec24ecbeb0b3d316a74ea320f7060271f",
+      "bytes": 243
+    }
+  },
+  "limits": "Read-only review. Mounted actual React hook/Chromium and actual Effect owner/HTTP adapter with all network intercepted/synthetic fetch. No production server, workerd, provider, full build or full browser gate."
+}

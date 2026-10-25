@@ -1,0 +1,35 @@
+import { afterEach, expect, it, vi } from "vitest"
+import { Cause, Effect, Exit, Scope } from "effect"
+import { conversationConnection } from "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/connection"
+import { makeRecovery } from "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/updates/recovery"
+vi.mock("/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/performance", () => ({markReady:vi.fn()}))
+afterEach(()=>vi.unstubAllGlobals())
+const gate = <T>() => {let resolve!: (value:T)=>void; let reject!: (error:unknown)=>void; const promise=new Promise<T>((yes,no)=>{resolve=yes;reject=no});return {promise,resolve,reject}}
+it("actual TanStack response cleanup joins before replacement or consumer completion", async()=>{
+ const release=gate<void>(), entered=gate<void>();
+ const response=new Response(new ReadableStream<Uint8Array>({start(controller){controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))},cancel(){entered.resolve();return release.promise}}),{headers:{'content-type':'text/event-stream'}})
+ const fetcher=vi.fn().mockResolvedValueOnce(response).mockResolvedValue(new Response("denied",{status:403}));vi.stubGlobal('fetch',fetcher)
+ let settled=false;const complete=(async()=>{try{for await(const _ of conversationConnection('owner-agent').subscribe!()) {}}catch{}finally{settled=true}})()
+ try {await entered.promise;await new Promise(r=>setTimeout(r,350));expect(fetcher).toHaveBeenCalledTimes(1);expect(settled).toBe(false)}finally{release.resolve();await complete}
+})
+it("recovery scope retains a compound native check failure arriving after abort",async()=>{
+ const entered=gate<void>(),release=gate<unknown>();const defect=new Error('late version cleanup defect');const failure=Cause.combine(Cause.fail('checked-version'),Cause.die(defect));
+ const scope=Effect.runSync(Scope.make());const recovery=Effect.runSync(makeRecovery({currentRevision:'a'.repeat(40),reload:()=>{},version:()=>{entered.resolve();return release.promise}}).pipe(Effect.provideService(Scope.Scope,scope)))
+ await Effect.runPromise(recovery.check());await entered.promise;recovery.revoke();let settled=false;const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(exit=>{settled=true;return exit});await new Promise(r=>setTimeout(r,5));expect(settled).toBe(false);release.reject(failure);const closed=await closing;
+ expect(Exit.isFailure(closed)&&closed.cause.reasons.some(reason=>reason._tag==='Die'&&reason.defect===defect)).toBe(true)
+})
+it("Stop dispatch remains available while a prior retry acknowledgement is held",async()=>{
+ const {makeTurnCommand}=await import('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/turn-command-owner')
+ const entered=gate<void>(),release=gate<void>();const requests:string[]=[];const scope=Effect.runSync(Scope.make());
+ const owner=Effect.runSync(makeTurnCommand(input=>Effect.gen(function*(){requests.push(input.action+':'+input.turnId);if(input.action==='retry'){entered.resolve();yield* Effect.promise(()=>release.promise)}})).pipe(Effect.provideService(Scope.Scope,scope)))
+ try {owner.send({type:'RETRY',turnId:'failed-original',allowed:true});await entered.promise;owner.send({type:'CANCEL',turnId:'running-retry'});await new Promise(r=>setTimeout(r,10));expect(requests).toContain('cancel:running-retry')}finally{release.resolve();await Effect.runPromise(Scope.close(scope,Exit.void))}
+})
+it("reload callers settle if an already owned version check fails concurrently",async()=>{
+ const release=gate<unknown>(),entered=gate<void>();const scope=Effect.runSync(Scope.make());const recovery=Effect.runSync(makeRecovery({currentRevision:'a'.repeat(40),reload:()=>{},version:()=>{entered.resolve();return release.promise}}).pipe(Effect.provideService(Scope.Scope,scope)));
+ await Effect.runPromise(recovery.check());await entered.promise;release.reject(Cause.die('concurrent check defect'));const reply=Effect.runPromise(recovery.reload());
+ try {const result=await Promise.race([reply,new Promise(resolve=>setTimeout(()=>resolve('unsettled'),100))]);expect(result).not.toBe('unsettled')}finally{recovery.revoke();await Effect.runPromiseExit(Scope.close(scope,Exit.void));await reply}
+})
+it("permission denial with failed unread-body cleanup remains terminal with full Cause",async()=>{
+ const defect=new Error('denied body cleanup');const compound=Cause.combine(Cause.fail('checked denied cleanup'),Cause.die(defect));const denied=new Response(new ReadableStream({cancel(){throw compound}}),{status:401});const fetcher=vi.fn().mockResolvedValueOnce(denied).mockResolvedValue(new Response('denied',{status:403}));vi.stubGlobal('fetch',fetcher)
+ const result=await(async()=>{try{for await(const _ of conversationConnection('owner-agent').subscribe!()){}}catch(cause){return cause}})();expect(fetcher).toHaveBeenCalledTimes(1);expect(Cause.isCause(result)&&result.reasons.some(reason=>reason._tag==='Die'&&reason.defect===defect)).toBe(true)
+})

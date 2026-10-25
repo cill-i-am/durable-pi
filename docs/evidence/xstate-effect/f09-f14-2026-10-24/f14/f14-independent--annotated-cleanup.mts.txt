@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'
+const require=createRequire(root+'/package.json')
+const {Cause,Context,Deferred,Effect,Equal,Exit,Fiber,Scope}=await import(require.resolve('effect'))
+const {makeActivityQueryOwner,activityQueryRequest}=await import(root+'/src/features/activity/query-owner.ts')
+console.log(JSON.stringify({source:'src/features/activity/query-owner.ts',sha256:createHash('sha256').update(await readFile(root+'/src/features/activity/query-owner.ts')).digest('hex')}))
+const annotation=Context.makeUnsafe(new Map([['native-annotation','preserved-81234']]))
+const checked=Cause.makeFailReason('checked-native').annotate(annotation)
+const interrupted=Cause.makeInterruptReason(81234).annotate(annotation)
+await Effect.runPromise(Effect.scoped(Effect.gen(function*(){
+ const scope=yield*Scope.make(),started=yield*Deferred.make(),aborted=yield*Deferred.make();let reject,closed=false
+ yield*makeActivityQueryOwner({key:'exact/native',interval:2500,auto:true,visible:true},{read:()=>activityQueryRequest(signal=>new Promise((resolve,fail)=>{reject=fail;signal.addEventListener('abort',()=>Effect.runSync(Deferred.succeed(aborted,undefined)));Effect.runSync(Deferred.succeed(started,undefined))}))}).pipe(Scope.provide(scope))
+ yield*Deferred.await(started)
+ const closing=yield*Scope.close(scope,Exit.void).pipe(Effect.exit,Effect.tap(()=>Effect.sync(()=>{closed=true})),Effect.forkChild)
+ yield*Deferred.await(aborted);assert.equal(closed,false,'native join must still be held after signal abort')
+ reject(Cause.fromReasons([checked,interrupted]))
+ const exit=yield*Fiber.join(closing);assert(Exit.isFailure(exit));const reasons=exit.cause.reasons
+ const hasChecked=reasons.some(reason=>Equal.equals(reason,checked)||(reason._tag==='Die'&&Equal.equals(reason.defect,checked)))
+ const hasInterrupt=reasons.some(reason=>reason._tag==='Interrupt'&&reason.fiberId===81234&&reason.annotations.get('native-annotation')==='preserved-81234')
+ console.log(JSON.stringify({closed,hasChecked,hasInterrupt,reasons:reasons.map(reason=>({_tag:reason._tag,fiberId:reason.fiberId,annotations:[...reason.annotations],defect:reason._tag==='Die'?{_tag:reason.defect?._tag,error:reason.defect?.error,annotations:reason.defect?.annotations?[...reason.defect.annotations]:undefined}:undefined}))}))
+ assert(hasChecked,'full annotated checked reason must survive');assert(hasInterrupt,'original annotated native interruption must survive')
+})))

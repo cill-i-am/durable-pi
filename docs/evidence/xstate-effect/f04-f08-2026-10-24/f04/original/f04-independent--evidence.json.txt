@@ -1,0 +1,22 @@
+{
+  "aba": {
+    "selected": "A",
+    "emitted": []
+  },
+  "cleanup": {
+    "input": [
+      "Fail",
+      "Die",
+      "Interrupt"
+    ],
+    "output": [
+      "Interrupt",
+      "Die",
+      "Die",
+      "Interrupt",
+      "Interrupt",
+      "Interrupt"
+    ],
+    "rendered": "Error: Fail(\"late typed fault\")\n    at createEffectLogic\nError: late native defect\n    at <anonymous> (/private/tmp/f04-independent/probe.mts:32:89)\n    at createEffectLogic"
+  }
+}

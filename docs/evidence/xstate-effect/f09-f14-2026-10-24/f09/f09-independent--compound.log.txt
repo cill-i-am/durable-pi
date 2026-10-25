@@ -1,0 +1,1 @@
+{"joined":true,"nativeInterrupt":true,"interruptAnnotation":"family-read","nativeDefect":true,"defectAnnotation":"family-read","nativeChecked":true,"checkedAnnotation":"family-read"}

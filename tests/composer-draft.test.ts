@@ -123,10 +123,30 @@ describe("tab-local composer recovery", () => {
       }),
     ]) {
       store.setItem(key, text)
-      expect(readDraft(store, "owner", "agent")).toEqual(emptyDraft())
+      expect(() => readDraft(store, "owner", "agent")).toThrow()
+      expect(store.getItem(key)).toBe(text)
     }
     writeDraft(store, "owner", "agent", { ...emptyDraft(), text: "draft" })
     writeDraft(store, "owner", "agent", emptyDraft())
     expect(store.getItem(key)).toBeNull()
   })
+})
+
+it("does not turn an unreadable or newer saved draft into a writable empty draft", () => {
+  const store = storage()
+  readDraft(store, "owner", "agent")
+  const key = draftKey("owner", "agent")
+  for (const raw of [
+    "{broken",
+    JSON.stringify({
+      ...emptyDraft(),
+      version: 2,
+      text: "Retain the original draft",
+      attempt: { operationId: "original-attempt" },
+    }),
+  ]) {
+    store.setItem(key, raw)
+    expect(() => readDraft(store, "owner", "agent")).toThrow()
+    expect(store.getItem(key)).toBe(raw)
+  }
 })

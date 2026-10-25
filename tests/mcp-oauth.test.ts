@@ -4,9 +4,13 @@ import {
   type AuthOptions,
 } from "@modelcontextprotocol/client"
 import { Effect } from "effect"
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 
 import { ConnectionStore } from "../src/access/adapters/connections"
+import {
+  mcpConnectionClient,
+  type McpManager,
+} from "../src/access/adapters/mcp"
 import { ConnectionOAuthProvider } from "../src/access/adapters/oauth"
 import { database } from "./database"
 
@@ -246,4 +250,154 @@ describe("native MCP OAuth concurrency regression", () => {
     await provider.consumeState(state)
     expect((await provider.checkState(state)).valid).toBe(false)
   })
+})
+
+describe("connection generation owns pending OAuth state", () => {
+  it("does not recapture a new generation when the SDK repeats the same server assignment", async () => {
+    const { provider, store } = await fixture()
+    Effect.runSync(store.change(connectionId, 1, false))
+    Effect.runSync(store.change(connectionId, 2, true))
+    provider.serverId = connectionId
+    await expect(provider.state()).rejects.toThrow("changed")
+    await expect(
+      provider.saveTokens({ access_token: "stale", token_type: "Bearer" })
+    ).rejects.toThrow("changed")
+  })
+  it("rejects old pending state and PKCE after reconnect even when SDK cleanup left every key", async () => {
+    const { provider, store, storage, values } = await fixture()
+    await provider.saveCodeVerifier("synthetic-old-verifier")
+    const state = await provider.state()
+    const challenge = Buffer.from(
+      await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode("synthetic-old-verifier")
+      )
+    ).toString("base64url")
+    await provider.redirectToAuthorization(
+      new URL(`${issuer}/authorize?state=${state}&code_challenge=${challenge}`)
+    )
+    const retained = values.size
+    Effect.runSync(store.change(connectionId, 1, false))
+    Effect.runSync(store.change(connectionId, 2, true))
+    const next = new ConnectionOAuthProvider(
+      storage,
+      store,
+      "https://app.example.com/api/agent/connections/callback"
+    )
+    next.serverId = connectionId
+    next.clientId = "synthetic"
+    expect((await next.checkState(state)).valid).toBe(false)
+    await expect(
+      next.runWithCodeVerifierState(state, () => next.codeVerifier())
+    ).rejects.toThrow("No code verifier")
+    expect(values.size).toBe(retained)
+    expect((await next.tokens())?.access_token).toBe("synthetic-old")
+    expect((await next.checkState(await next.state())).valid).toBe(true)
+  })
+  it("keeps legacy credentials but rejects unversioned pending authorization", async () => {
+    const { provider, values } = await fixture()
+    const nonce = "legacy-nonce",
+      state = `${nonce}.${connectionId}`
+    values.set(`/Durable Pi/${connectionId}/state/${nonce}`, {
+      nonce,
+      serverId: connectionId,
+      createdAt: Date.now(),
+    })
+    values.set(
+      `/Durable Pi/${connectionId}/synthetic/code_verifier`,
+      "legacy-verifier"
+    )
+    expect((await provider.checkState(state)).valid).toBe(false)
+    await expect(
+      provider.runWithCodeVerifierState(state, () => provider.codeVerifier())
+    ).rejects.toThrow("No code verifier")
+    expect((await provider.tokens())?.access_token).toBe("synthetic-old")
+  })
+})
+
+it.each(["authenticating", "connected", "ready"])(
+  "rejects a stale callback before the native manager sees it while %s",
+  async (phase) => {
+    const { provider, store, storage } = await fixture()
+    const state = await provider.state()
+    // Deliberately retain storage to represent SDK cleanup failure.
+    Effect.runSync(store.change(connectionId, 1, false))
+    Effect.runSync(store.change(connectionId, 2, true))
+    const next = new ConnectionOAuthProvider(
+      storage,
+      store,
+      "https://app.example.com/api/agent/connections/callback"
+    )
+    next.serverId = connectionId
+    const callback = vi.fn(async () => ({
+      authSuccess: true,
+      serverId: connectionId,
+    }))
+    const manager = {
+      mcpConnections: {
+        [connectionId]: {
+          connectionState: phase,
+          options: { transport: { authProvider: next } },
+        },
+      },
+      handleCallbackRequest: callback,
+    } as unknown as McpManager
+    const client = mcpConnectionClient(manager)
+    const outcome = await Effect.runPromiseExit(
+      client.callback(
+        new Request(
+          `https://app.example.com/api/agent/connections/callback?code=synthetic&state=${state}`
+        ),
+        () => true
+      )
+    )
+    expect(outcome._tag).toBe("Failure")
+    expect(callback).not.toHaveBeenCalled()
+    const current = await next.state()
+    expect(
+      await Effect.runPromise(
+        client.callback(
+          new Request(
+            `https://app.example.com/api/agent/connections/callback?code=synthetic&state=${current}`
+          ),
+          () => true
+        )
+      )
+    ).toEqual({ authenticated: true, connectionId, revision: 3 })
+    expect(callback).toHaveBeenCalledTimes(1)
+  }
+)
+it("checks the family receipt after delayed callback state validation", async () => {
+  const { provider } = await fixture(),
+    state = await provider.state()
+  let authorized = true
+  const check = provider.callbackRevision.bind(provider)
+  provider.callbackRevision = async (state) => {
+    const revision = await check(state)
+    authorized = false
+    return revision
+  }
+  const callback = vi.fn(async () => ({
+    authSuccess: true,
+    serverId: connectionId,
+  }))
+  const manager = {
+    mcpConnections: {
+      [connectionId]: { options: { transport: { authProvider: provider } } },
+    },
+    handleCallbackRequest: callback,
+  } as unknown as McpManager
+  expect(
+    (
+      await Effect.runPromiseExit(
+        mcpConnectionClient(manager).callback(
+          new Request(
+            `https://app.example.com/api/agent/connections/callback?code=synthetic&state=${state}`
+          ),
+          () => authorized
+        )
+      )
+    )._tag
+  ).toBe("Failure")
+  expect(callback).not.toHaveBeenCalled()
 })

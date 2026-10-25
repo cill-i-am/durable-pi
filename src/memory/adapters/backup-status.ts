@@ -1,27 +1,34 @@
 import { eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 
-import { coalesce } from "../../storage/expressions"
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import { BackupStatusRecord, type BackupStatusLedger } from "../backup-status"
+import {
+  BackupControl,
+  decideBackup,
+  initialBackupControl,
+  type BackupEvent,
+} from "../backup.machine"
 import { MemoryStorageError } from "../domain"
 import { memoryBackupStatus } from "./schema"
 
 export class SqliteBackupStatus implements BackupStatusLedger {
-  constructor(private readonly db: Sqlite) {}
+  readonly transactionGroup: object
+  constructor(private readonly db: Sqlite) {
+    this.transactionGroup = db
+  }
+  private raw() {
+    return this.db.use((orm) =>
+      orm
+        .select()
+        .from(memoryBackupStatus)
+        .where(eq(memoryBackupStatus.id, 1))
+        .limit(1)
+    )
+  }
   read(): ReturnType<BackupStatusLedger["read"]> {
     return mapSqliteError(
-      this.db.use((orm) =>
-        orm
-          .select({
-            date: memoryBackupStatus.date,
-            watermark: memoryBackupStatus.watermark,
-            error: memoryBackupStatus.error,
-          })
-          .from(memoryBackupStatus)
-          .where(eq(memoryBackupStatus.id, 1))
-          .limit(1)
-      ),
+      this.raw(),
       () => new MemoryStorageError({ operation: "read backup status" })
     ).pipe(
       Effect.map((rows) =>
@@ -31,35 +38,55 @@ export class SqliteBackupStatus implements BackupStatusLedger {
       )
     )
   }
-  record(status: BackupStatusRecord): ReturnType<BackupStatusLedger["record"]> {
+  private save(state: BackupControl) {
+    return this.db.use((orm) =>
+      orm
+        .insert(memoryBackupStatus)
+        .values({ id: 1, ...state })
+        .onConflictDoUpdate({ target: memoryBackupStatus.id, set: state })
+    )
+  }
+  private load() {
+    return Effect.gen({ self: this }, function* () {
+      const row = (yield* this.raw())[0]
+      if (!row) return initialBackupControl()
+      if (row.schemaVersion === 0 && row.workflowVersion === 0) {
+        const converted = initialBackupControl(
+          Schema.decodeUnknownSync(BackupStatusRecord)(row)
+        )
+        yield* this.save(converted)
+        return converted
+      }
+      return Schema.decodeUnknownSync(BackupControl)(row)
+    })
+  }
+  control(): ReturnType<BackupStatusLedger["control"]> {
     return mapSqliteError(
-      this.db.use((orm) =>
-        orm
-          .insert(memoryBackupStatus)
-          .values({ id: 1, ...status })
-          .onConflictDoUpdate({
-            target: memoryBackupStatus.id,
-            set: {
-              ...status,
-              date: coalesce(status.date, memoryBackupStatus.date),
-            },
-          })
+      this.db.transaction(() => this.load()),
+      () => new MemoryStorageError({ operation: "read backup control" })
+    )
+  }
+  transition(
+    event: BackupEvent,
+    current: () => boolean = () => true
+  ): ReturnType<BackupStatusLedger["transition"]> {
+    return mapSqliteError(
+      this.db.transaction(() =>
+        Effect.gen({ self: this }, function* () {
+          const state = yield* this.load()
+          if (!current()) return state
+          const next = decideBackup(state, event)
+          yield* this.save(next)
+          return next
+        })
       ),
       () => new MemoryStorageError({ operation: "write backup status" })
-    ).pipe(Effect.asVoid)
+    )
+  }
+  record(status: BackupStatusRecord): ReturnType<BackupStatusLedger["record"]> {
+    return this.transition({ type: "RECORD", ...status }).pipe(Effect.asVoid)
   }
   fail(message: string): ReturnType<BackupStatusLedger["fail"]> {
-    return mapSqliteError(
-      this.db.use((orm) =>
-        orm
-          .insert(memoryBackupStatus)
-          .values({ id: 1, date: null, watermark: "", error: message })
-          .onConflictDoUpdate({
-            target: memoryBackupStatus.id,
-            set: { error: message },
-          })
-      ),
-      () => new MemoryStorageError({ operation: "write backup status" })
-    ).pipe(Effect.asVoid)
+    return this.transition({ type: "REPORT", message }).pipe(Effect.asVoid)
   }
 }

@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ tests/object-ui-lifecycle.test.ts (15 tests | 1 failed | 14 skipped) 21ms
+   × newer read survives an older list completion and unrelated requests never replay saves 20ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/object-ui-lifecycle.test.ts > newer read survives an older list completion and unrelated requests never replay saves
+AssertionError: expected undefined to be 2 // Object.is equality
+
+- Expected:
+2
+
++ Received:
+undefined
+
+ ❯ tests/object-ui-lifecycle.test.ts:114:49
+    112|   // The superseded caller settles at replacement; let the held native…
+    113|   await new Promise<void>((resolve) => setImmediate(resolve))
+    114|   expect(owner.getSnapshot().list[0]?.revision).toBe(2)
+       |                                                 ^
+    115| })
+    116| it.each(['{"schemaVersion":99,"draft":"keep"}', "not-json"])(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 skipped (15)
+   Start at  17:38:54
+   Duration  392ms (import 59%, transform 30%, tests 7%, setup 3%, worker 1%)
+

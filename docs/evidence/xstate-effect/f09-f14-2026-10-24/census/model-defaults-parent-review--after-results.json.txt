@@ -1,0 +1,240 @@
+[
+  {
+    "scenario": "duplicate",
+    "before": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": false
+        }
+      ],
+      "pending": [
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": false
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        }
+      ],
+      "agent": "alpha"
+    },
+    "observed": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": false
+        }
+      ],
+      "acks": [
+        "alpha"
+      ],
+      "pending": {
+        "agent": "alpha",
+        "pending": false
+      },
+      "agent": "alpha",
+      "text": "Models & connections\nModel connection\nChatGPTConnected\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelSol\nReasoning efforthigh\n SavedSave default",
+      "effort": "high▼"
+    }
+  },
+  {
+    "scenario": "agent-switch",
+    "before": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": true
+        }
+      ],
+      "pending": [
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": false
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "beta",
+          "pending": true
+        },
+        {
+          "agent": "beta",
+          "pending": false
+        }
+      ],
+      "agent": "beta"
+    },
+    "observed": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": true
+        }
+      ],
+      "acks": [],
+      "pending": {
+        "agent": "beta",
+        "pending": false
+      },
+      "agent": "beta",
+      "text": "Models & connections\nModel connection\nChatGPTConnected\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelSol\nReasoning effortmedium\nSave default",
+      "effort": "medium▼"
+    }
+  },
+  {
+    "scenario": "newer-catalog",
+    "before": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": false
+        }
+      ],
+      "pending": [
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": false
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        }
+      ],
+      "agent": "alpha"
+    },
+    "observed": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": false
+        }
+      ],
+      "acks": [
+        "alpha"
+      ],
+      "pending": {
+        "agent": "alpha",
+        "pending": false
+      },
+      "agent": "alpha",
+      "text": "Models & connections\nModel connection\nChatGPTConnected\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelSol\nReasoning effortlow\n SavedSave default",
+      "effort": "low▼"
+    }
+  },
+  {
+    "scenario": "refresh-failure",
+    "before": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": false
+        }
+      ],
+      "pending": [
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": false
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        },
+        {
+          "agent": "alpha",
+          "pending": true
+        }
+      ],
+      "agent": "alpha"
+    },
+    "observed": {
+      "posts": [
+        {
+          "agent": "alpha",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "thinking": "high",
+            "job": "conversation"
+          },
+          "aborted": false
+        }
+      ],
+      "acks": [
+        "alpha"
+      ],
+      "pending": {
+        "agent": "alpha",
+        "pending": false
+      },
+      "agent": "alpha",
+      "text": "Models & connections\nModel connection\nChatGPTNeeds attention\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nDefault saved, but availability could not refresh. Refresh to check current settings.\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelgpt-6.1-sol\nReasoning efforthigh\n\nCould not verify model availability. Refresh to retry.\n\n SavedSave default",
+      "effort": "high▼"
+    }
+  }
+]

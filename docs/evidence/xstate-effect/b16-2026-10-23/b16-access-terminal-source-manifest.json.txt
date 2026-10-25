@@ -1,0 +1,37 @@
+{
+  "capturedAt": "2026-10-23T16:07:27.680752+00:00",
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi",
+  "files": {
+    "src/access/callback.machine.ts": "3fa5830e37d8d46765600d0d0907c84bd68275eb20f04a641a96104db45fe617",
+    "src/access/adapters/pi.ts": "f2881d58d3d88be80be857cf6868c1ce18a8950056012f69b54889c6527af00f",
+    "tests/access-callback.test.ts": "6410cc4fe43208b2f5bcfbb3b4543eeb19b36c16bb44193590f4eaa0b38d942e",
+    "tests/access-callback-machine.test.ts": "3fdb8836c45c86ab935e42b0eb5065e3d550ed6499b4324e91e2b84d41389ceb",
+    "src/terminal/host.machine.ts": "60cff4b6dcb4fbdeaa2169ef2b14064e57e5d3b4c024559c535593e9749a7560",
+    "src/terminal/host.ts": "d3664a1be0ee0c39da5d5fdec46f292d238325eead2a36fb114ea56ade123f9f",
+    "src/terminal/worker.ts": "8874c69e0ff104d64d4cbc23a37ee85364fc665e6d54b2f1c6853d0d0afb9893",
+    "tests/terminal-host.test.ts": "8930c9efd4d7fa2a618b252b93f85234905b1ae763dbcd52f0d093fbc55bd552",
+    "src/access/gate.ts": "f8e535e4b09fb1ff8f21cc2c4ff65a85688ca59ec3356d89d393aa1b8e59988d"
+  },
+  "evidence": {
+    "baseline": "/private/tmp/b16-host-baseline.log",
+    "callback_before": "/private/tmp/b16-callback-characterization.log",
+    "terminal_before": "/private/tmp/b16-terminal-characterization.log",
+    "positive": "/private/tmp/b16-owned-expanded.log",
+    "callback_negative": "/private/tmp/b16-callback-negative.log",
+    "terminal_negative": "/private/tmp/b16-terminal-negative.log",
+    "types": "/private/tmp/b16-owned-types.log",
+    "lint": "/private/tmp/b16-owned-lint.log",
+    "format": "/private/tmp/b16-owned-format.log",
+    "reviewed_positive": "/private/tmp/b16-owned-reviewed.log",
+    "nested_cause_before": "/private/tmp/b16-terminal-nested-cause-before.log",
+    "nested_cause_after": "/private/tmp/b16-terminal-nested-cause-after.log",
+    "dispatch_before": "/private/tmp/b16-access-dispatch-before.log",
+    "types_reviewed": "/private/tmp/b16-owned-types-reviewed.log",
+    "lint_reviewed": "/private/tmp/b16-owned-lint-reviewed.log",
+    "format_reviewed": "/private/tmp/b16-owned-format-reviewed.log",
+    "dispatch_negative": "/private/tmp/b16-access-dispatch-negative.log",
+    "nested_cause_negative": "/private/tmp/b16-terminal-cause-negative.log",
+    "independent_dispatch_after": "/private/tmp/b16-callback-authority-after.log",
+    "independent_nested_cause_after": "/private/tmp/b16-terminal-production-cause-after.log"
+  }
+}

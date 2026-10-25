@@ -1,0 +1,23 @@
+# F07 independent review: closed with two corrected findings
+
+Reviewed the 16-path freeze in `/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi`, including the actual ObjectStore, mutation/read/creation/origin machines, browser persistence decoder and React ownership/call sites. All corrected hashes match `/private/tmp/f07-objects-ui/review-source-freeze.json`. This reviewer made no production edits, Git changes, external requests or broad duplicate gate runs.
+
+## Findings and unchanged rechecks
+
+1. ObjectStore's cleanup observer retained native Causes containing defects but stripped every Interrupt reason. A held production `ObjectStore.refresh()` disposed before a native Fail + Die + Interrupt(81234) rejection lost that explicit native interruption. The owner removed the blanket filter; pure expected interruption is still excluded by the existing `Cause.hasDies` observation condition. The unchanged probe now retains Interrupt(81234) alongside both defects.
+   - Fixed `store.ts` SHA256: `4606b476bcd121f764f731b0ae41f230a08c6ef51427c1af90bf292a33652b51`.
+   - Probe `/private/tmp/f07-compound-cleanup-review.mts`, SHA256 `6df7210ddaa8c9581cf5548abb0569475c49aec186edee3d92904037d12c04ee`.
+   - Red and green: `/private/tmp/f07-compound-cleanup-review-before.log`, `/private/tmp/f07-compound-cleanup-review-after.log`.
+
+2. The version1 decoder accepted contradictory pending/problem metadata. A record with `pending:false` and `problem.kind:uncertain` could be dismissed, replacing storage with `[]` without cancellation. This is malformed persisted-data handling, not a normal canonical write. The decoder now rejects impossible combinations before hydration, preserving original bytes and blocking writes. Valid interrupted intent (`pending:true`, `problem:null`) remains compatible and restores uncertainty. The unchanged production-store probe now returns dismissal=false, preserves bytes and makes zero native calls.
+   - Fixed `object-storage.ts` SHA256: `37445e39830ee7f0623f402d7cdd574cdf39483ff1c03b7d78c9259ca12a5ef9`.
+   - Probe `/private/tmp/f07-storage-invariant-review.mts`, SHA256 `f1c470784ef966c64a0633d25d5f0c93198eb24529fc960c7889fcfbe7c54079`.
+   - Red and green: `/private/tmp/f07-storage-invariant-review-before.log`, `/private/tmp/f07-storage-invariant-review-after.log`.
+
+Run each preserved probe from the worktree with `/opt/homebrew/opt/node@24/bin/node --import tsx <probe-path>`. Both independent reruns exited 0. The owner separately added exact regressions and reports 22 focused tests plus scoped types/lint; those logs and hashes are in its corrected freeze. The original browser checkpoint predates these two boundary-only corrections; no redundant browser rerun was claimed.
+
+## Bounded clear and limits
+
+The remaining inspected paths retain immutable mutation identity/content across explicit retry, generate new identity only for explicit conflict reapply, persist before dispatch and keep uncertainty after acknowledgement-persistence failure. Conflict lineage survives compatible restoration; unknown/invalid records preserve their bytes. Agent providers own disjoint stores and callbacks are fenced after disposal. Read replacement, selected-view revision and origin-dialog closure fence late completions, while scopes join native settlement. Local disposal never sends server cancellation.
+
+No additional concrete defect found in this bounded review. It is not certification of backend B14, workerd recovery, live provider delivery, production or hosted CI. Foreign Promise cleanup still depends on actual settlement. Final composed frontend integration and publication gates remain root-owned.

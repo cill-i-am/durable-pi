@@ -1,0 +1,20 @@
+$ node scripts/test-communication-runtime.mjs
+PASS native coordination callback joins before actor runtime and SQL disposal.
+PASS native apps callback joins before actor runtime and SQL disposal.
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Actor resources closed before accepted conversation work joined
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:150:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0
+[ELIFECYCLE] Command failed with exit code 1.

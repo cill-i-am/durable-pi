@@ -1,129 +1,113 @@
-import { Schema } from "effect"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import type { EventFromLogic, SnapshotFrom } from "xstate"
 
-import {
-  CodeRun,
-  CodeInput,
-  RunHistory,
-  type RunInput,
-  type RunSummary,
-} from "@/execution/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+import { executionRequests, makeExecutionOwner } from "./execution-owner"
+import { executionMachine } from "./execution.machine"
 
+type Machine = ReturnType<typeof executionMachine>
 export function useExecution(
   agentId: string,
   selected: string | null,
   setSelected: (id: string | null) => void
 ) {
-  const [runs, setRuns] = useState<RunSummary[]>([])
-  const [detail, setDetail] = useState<CodeRun | null>(null)
-  const [error, setError] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [attempt, setAttempt] = useState<RunInput | null>(null)
-  const sequence = useRef(0),
-    lock = useRef(false)
-  const refresh = useCallback(async () => {
-    if (lock.current) return
-    const generation = ++sequence.current
-    try {
-      const history = Schema.decodeUnknownSync(RunHistory)(
-        await agentApi(agentId)("execution")
-      )
-      const run = selected
-        ? Schema.decodeUnknownSync(CodeRun)(
-            await agentApi(agentId)(`execution/${encodeURIComponent(selected)}`)
-          )
-        : null
-      if (generation === sequence.current) {
-        setRuns([...history.runs])
-        setDetail(run)
-      }
-    } catch (cause) {
-      if (generation === sequence.current)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load runs."
-        )
-    }
-  }, [agentId, selected])
+  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+  const view = useRef({ agentId, selected, setSelected })
+  useLayoutEffect(() => {
+    view.current = { agentId, selected, setSelected }
+  }, [agentId, selected, setSelected])
   useEffect(() => {
-    setDetail(null)
-    setError("")
-    const stop = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      2500,
-      true
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owned = yield* makeExecutionOwner(
+          {
+            agentId,
+            selected: view.current.selected,
+            visible: document.visibilityState === "visible",
+          },
+          {
+            ...executionRequests(agentId),
+            select: ({ id, expected }) =>
+              Effect.sync(() => {
+                const current = view.current
+                if (
+                  mounted &&
+                  current.agentId === agentId &&
+                  current.selected === expected
+                )
+                  current.setSelected(id)
+              }),
+          }
+        )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.subscribe((value) => {
+              if (mounted) setSnapshot(value)
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        const visibility = () => {
+          Effect.runFork(
+            send(owned, {
+              type: "VISIBILITY",
+              visible: document.visibilityState === "visible",
+            })
+          )
+        }
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            document.addEventListener("visibilitychange", visibility)
+          ),
+          () =>
+            Effect.sync(() =>
+              document.removeEventListener("visibilitychange", visibility)
+            )
+        )
+        if (mounted) {
+          setActor(owned)
+          setSnapshot(owned.getSnapshot())
+        }
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
     )
     return () => {
-      stop()
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      sequence.current++
-    }
-  }, [refresh])
-  async function command(path: string, input: unknown) {
-    if (lock.current) return null
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    setError("")
-    try {
-      const run = Schema.decodeUnknownSync(CodeRun)(
-        await agentApi(agentId)(path, input)
-      )
-      setSelected(run.id)
-      setDetail(run)
-      setRuns((values) =>
-        [run, ...values.filter((value) => value.id !== run.id)].slice(0, 50)
-      )
-      return run
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The request failed. Retry the same run."
-      )
-      return null
-    } finally {
-      lock.current = false
-      setBusy(false)
-    }
-  }
-  async function start(code: string, data: string) {
-    if (!attempt) {
-      try {
-        Schema.decodeUnknownSync(CodeInput)({ code, data })
-      } catch {
-        setError(
-          "Use valid JSON input and code within the displayed size limits."
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
         )
-        return
-      }
+      )
     }
-    const input = attempt ?? { id: crypto.randomUUID(), code, data }
-    setAttempt(input)
-    if (await command("execution/run", input)) setAttempt(null)
+  }, [agentId])
+  useLayoutEffect(() => {
+    if (actor?.getSnapshot().context.view.agentId === agentId)
+      Effect.runFork(send(actor, { type: "VIEW", selected }))
+  }, [actor, agentId, selected])
+  const current = snapshot?.context.view.agentId === agentId ? snapshot : null
+  const deliver = (event: EventFromLogic<Machine>) => {
+    if (actor?.getSnapshot().context.view.agentId === agentId)
+      Effect.runFork(send(actor, event))
   }
   return {
-    runs,
-    detail: detail?.id === selected ? detail : null,
+    runs: current?.context.runs ?? [],
+    detail:
+      current?.context.detail?.id === selected ? current.context.detail : null,
     selected,
-    busy,
-    error,
-    attempt,
-    refresh: () => {
-      setError("")
-      return refresh()
-    },
-    start,
-    cancel: async (id: string) => {
-      const result = await command(
-        `execution/${encodeURIComponent(id)}/cancel`,
-        {}
-      )
-      if (result) setAttempt((current) => (current?.id === id ? null : current))
-      return result
-    },
+    busy: !current || current.matches({ command: "requesting" }),
+    error: current?.context.error ?? "",
+    attempt: current?.context.attempt ?? null,
+    refresh: () => deliver({ type: "REFRESH" }),
+    start: (code: string, data: string) =>
+      deliver({ type: "START", id: crypto.randomUUID(), code, data }),
+    cancel: (id: string) => deliver({ type: "CANCEL", id }),
   }
 }

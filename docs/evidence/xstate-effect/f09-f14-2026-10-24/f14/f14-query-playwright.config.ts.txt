@@ -1,0 +1,2 @@
+import { defineConfig } from "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/@playwright/test/index.mjs"
+export default defineConfig({ testDir:"/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser", testMatch:"activity-query.spec.ts", workers:1, retries:0, timeout:10000, reporter:"list", outputDir:"/private/tmp/f14-query-browser-results", use:{baseURL:"http://127.0.0.1:4459",browserName:"chromium"} })

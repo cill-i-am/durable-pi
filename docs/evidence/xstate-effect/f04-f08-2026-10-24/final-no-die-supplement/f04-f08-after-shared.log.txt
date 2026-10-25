@@ -1,0 +1,7 @@
+{"owner":"F04-terminal","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F04-terminal","nativeChecked":true,"checkedAnnotation":"F04-terminal"}
+{"owner":"F05-browser","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F05-browser","nativeChecked":true,"checkedAnnotation":"F05-browser"}
+{"owner":"F05-execution","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F05-execution","nativeChecked":true,"checkedAnnotation":"F05-execution"}
+{"owner":"F06-access","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F06-access","nativeChecked":true,"checkedAnnotation":"F06-access"}
+{"owner":"F06-connections","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F06-connections","nativeChecked":true,"checkedAnnotation":"F06-connections"}
+{"owner":"F07-objects","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F07-objects","nativeChecked":true,"checkedAnnotation":"F07-objects"}
+{"owner":"F08-auth","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F08-auth","nativeChecked":true,"checkedAnnotation":"F08-auth"}

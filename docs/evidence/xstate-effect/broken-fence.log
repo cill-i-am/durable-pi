@@ -1,0 +1,95 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/xstate-effect.test.ts (7 tests | 2 failed) 35ms
+   ❯ durable pure decision contract (4)
+     × commits one portable intent; duplicate and stale events cannot dispatch 6ms
+     × reconstructs authoritative domain data without repeating external work 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/xstate-effect.test.ts > durable pure decision contract > commits one portable intent; duplicate and stale events cannot dispatch
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "commands": [],
++   "commands": [
++     {
++       "attempt": 1,
++       "content": "Prepare attachment",
++       "generation": 1,
++       "operationId": "operation-1",
++       "type": "pi.submit",
++     },
++   ],
+    "state": {
+      "context": {
+        "attempt": 1,
+        "content": "Prepare attachment",
+        "deadline": 9007199254740991,
+        "generation": 1,
+        "operationId": "operation-1",
+-       "revision": 0,
++       "revision": 1,
+      },
+      "libraryVersion": "6.0.0-alpha.68/1.0.0-alpha.8",
+      "piVersion": "1.3.0",
+      "schemaVersion": 1,
+-     "value": "ready",
++     "value": "pending",
+      "workflowVersion": 1,
+    },
+  }
+
+ ❯ tests/xstate-effect.test.ts:130:47
+    128|       { ...start, attempt: 0 },
+    129|     ])
+    130|       expect(decideSubmission(before, event)).toEqual({
+       |                                               ^
+    131|         state: before,
+    132|         commands: [],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/xstate-effect.test.ts > durable pure decision contract > reconstructs authoritative domain data without repeating external work
+AssertionError: expected { schemaVersion: 1, …(5) } to deeply equal { schemaVersion: 1, …(5) }
+
+- Expected
++ Received
+
+@@ -3,13 +3,13 @@
+      "attempt": 1,
+      "content": "Prepare attachment",
+      "deadline": 9007199254740991,
+      "generation": 1,
+      "operationId": "operation-1",
+-     "revision": 1,
++     "revision": 2,
+    },
+    "libraryVersion": "6.0.0-alpha.68/1.0.0-alpha.8",
+    "piVersion": "1.3.0",
+    "schemaVersion": 1,
+-   "value": "pending",
++   "value": "complete",
+    "workflowVersion": 1,
+  }
+
+ ❯ tests/xstate-effect.test.ts:152:55
+    150|       { ...completed, attempt: 2 },
+    151|     ])
+    152|       expect(decideSubmission(restored, stale).state).toEqual(pending)
+       |                                                       ^
+    153|     expect(decideSubmission(restored, completed)).toMatchObject({
+    154|       state: { value: "complete", context: { revision: 2 } },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 5 passed (7)
+   Start at  23:35:26
+   Duration  347ms (import 72%, tests 14%, transform 10%, setup 3%, worker 1%)
+

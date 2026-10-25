@@ -1,0 +1,132 @@
+[WebServer] (node:94703) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 3 tests using 1 worker
+
+(node:94735) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › email restores an uncertain immutable request after reload without dispatching it (7.9s)
+(node:94821) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › whatsapp restores an uncertain immutable request after reload without dispatching it (7.9s)
+(node:94894) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:79:1 › Memory import admits one immutable file read and submission (2.7s)
+
+
+  1) [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › email restores an uncertain immutable request after reload without dispatching it 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: 'Retry same request', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: 'Retry same request', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Retry same request', exact: true })
+
+
+      64 |     await expect(
+      65 |       page.getByRole("button", { name: "Retry same request", exact: true })
+    > 66 |     ).toBeVisible()
+         |       ^
+      67 |     expect(bodies).toHaveLength(1)
+      68 |     await page
+      69 |       .getByRole("button", { name: "Retry same request", exact: true })
+        at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/browser/settings-import-lifecycle.spec.ts:66:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/settings-import-lifecycle--f91b2-load-without-dispatching-it-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/settings-import-lifecycle--f91b2-load-without-dispatching-it-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/settings-import-lifecycle--f91b2-load-without-dispatching-it-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/settings-import-lifecycle--f91b2-load-without-dispatching-it-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › whatsapp restores an uncertain immutable request after reload without dispatching it 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: 'Retry same request', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: 'Retry same request', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Retry same request', exact: true })
+
+
+      64 |     await expect(
+      65 |       page.getByRole("button", { name: "Retry same request", exact: true })
+    > 66 |     ).toBeVisible()
+         |       ^
+      67 |     expect(bodies).toHaveLength(1)
+      68 |     await page
+      69 |       .getByRole("button", { name: "Retry same request", exact: true })
+        at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/browser/settings-import-lifecycle.spec.ts:66:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/settings-import-lifecycle--f3c53-load-without-dispatching-it-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/settings-import-lifecycle--f3c53-load-without-dispatching-it-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/settings-import-lifecycle--f3c53-load-without-dispatching-it-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/settings-import-lifecycle--f3c53-load-without-dispatching-it-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [desktop] › tests/browser/settings-import-lifecycle.spec.ts:79:1 › Memory import admits one immutable file read and submission 
+
+    Error: expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"jsonl": "{\"kind\":\"user\",\"text\":\"Synthetic history\",\"date\":\"2026-10-23T12:00:00Z\"}"}, {"jsonl": "{\"kind\":\"user\",\"text\":\"Synthetic history\",\"date\":\"2026-10-23T12:00:00Z\"}"}]
+
+      110 |     page.getByText("Import response unavailable.", { exact: true })
+      111 |   ).toBeVisible()
+    > 112 |   expect(bodies).toHaveLength(1)
+          |                  ^
+      113 |   expect(bodies[0]).toEqual({ jsonl })
+      114 | })
+      115 |
+        at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/browser/settings-import-lifecycle.spec.ts:112:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/settings-import-lifecycle--21172-le-file-read-and-submission-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/settings-import-lifecycle--21172-le-file-read-and-submission-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/settings-import-lifecycle--21172-le-file-read-and-submission-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/settings-import-lifecycle--21172-le-file-read-and-submission-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › email restores an uncertain immutable request after reload without dispatching it 
+    [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › whatsapp restores an uncertain immutable request after reload without dispatching it 
+    [desktop] › tests/browser/settings-import-lifecycle.spec.ts:79:1 › Memory import admits one immutable file read and submission 

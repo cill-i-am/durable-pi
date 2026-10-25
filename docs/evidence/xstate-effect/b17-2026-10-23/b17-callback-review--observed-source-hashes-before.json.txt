@@ -1,0 +1,17 @@
+{
+  "src/access/connection-service.ts": "c6ad28b058944b455ed80e5b89070d44beea16fc4589b61556d181e54103422c",
+  "src/access/connection-domain.ts": "ad72a38de348f2048976586fb6a66d3c4bc08194795ab221ae1e2178a5027eb0",
+  "src/access/connection-client.ts": "a6b93ff51c24827851d7a0e55848e88a54b5b1416cb3f05c7712b4cf403435dc",
+  "src/access/connection.machine.ts": "a21d3fc09a0dd510c7ae37a1a3167f397b14715edace4aa8e3d3c9fd16bedaa7",
+  "src/access/connection-host.machine.ts": "30d3571b745a4ab4ff350328a75e46888fe0d15fc3a6516de1b9faf4c6b9422a",
+  "src/access/connection-command.machine.ts": "b74b45dcdf377d4a156937778509376269b92810e803d46c8503382a790834cb",
+  "src/access/adapters/mcp.ts": "5c49ae762961064b399f29c9d5ec288f367583be1cdce28c9e352d642c2ebc35",
+  "src/access/adapters/connections.ts": "052ff09806a14ece35cf6c9ef4184e4aa7b9eab3086384c0e5e4f702578499d4",
+  "src/access/adapters/connection-http.ts": "9beced174f3165032cf4cacada08e100a0da8e405bda142f7e422a11c8fbc008",
+  "src/agent/worker.ts": "4401f8733c7682972e39d8cb5feb235fa2f3902f6d86d4a7ccaccbe1405573a9",
+  "tests/connection-lifecycle.test.ts": "74fbafa651f68ad404868a54ccf2ac47fb22c70539eff16dfec867e6db32c54f",
+  "tests/connection-fixture.ts": "878a6049b49ef35348688c25ea5cd82f45c083f7cedc241a5e104602cebe6dd6",
+  "src/access/adapters/oauth.ts": "0a7466a79838a0b25824e63e676541dddd597df6c51f9accc781050803b9c94e",
+  "node_modules/agents/dist/client-BnYbNT3z.js": "8fa34eb559d058f5f3a02e0670ec1cb4152916ad2860e5b4dd474f3f7984b128",
+  "node_modules/agents/dist/mcp/client/do-oauth-client-provider.js": "b0198c7aff3eaecd0f65f618b1077e8d8db82724e3e8215484d48e17bed4e23e"
+}

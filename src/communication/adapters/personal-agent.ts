@@ -3,6 +3,7 @@ import { Cause, Effect, Layer, ManagedRuntime } from "effect"
 import type { PersonalAgent } from "../../agent/worker"
 import { agentRpc, agentRpcNative } from "../../agents/adapters/rpc"
 import { agentObjectName, type AgentId } from "../../agents/domain"
+import { observeConversationSchedule } from "../../conversations/adapters/lifecycle"
 import { ConversationStorageError } from "../../conversations/turns"
 import { resolveRoute, validateRoute } from "../../inference/policy"
 import { makeCommunication, Communication } from "../communication"
@@ -11,6 +12,7 @@ import { TaskExecution } from "../execution"
 import { Mailbox, MailboxTransport } from "../mailbox"
 import { WebCryptoContinuationIdentity } from "./identity"
 import { communicationNative } from "./interop"
+import { observeCommunicationSchedule } from "./lifecycle"
 import { piMailbox } from "./pi"
 import { mailboxHandler, mailboxTransport } from "./rpc"
 import { sqliteMailbox } from "./sqlite"
@@ -99,7 +101,14 @@ export function personalCommunication(
   const transportService = Effect.runSync(
     Effect.provide(MailboxTransport, transport)
   )
-  const wake = () => edge(() => owner.communicationRunner.wake())
+  const wake = () =>
+    observeCommunicationSchedule("wake mailbox", () =>
+      owner.communicationRunner.wake()
+    )
+  const armMailbox = () =>
+    observeCommunicationSchedule("arm mailbox discovery", () =>
+      owner.communicationRunner.armDiscovery()
+    )
   const permit = (e: Envelope) =>
     Effect.gen(function* () {
       if (!(yield* mailbox.prove(e)) || !(yield* activePair(e))) return false
@@ -160,6 +169,23 @@ export function personalCommunication(
         transactionGroup: owner.db,
         current,
         wake,
+        armMailbox,
+        recovery: () =>
+          observeCommunicationSchedule("read mailbox recovery", () =>
+            owner.communicationRunner.recovery()
+          ),
+        reconcileQueue: () =>
+          observeCommunicationSchedule("reconcile mailbox queue", () =>
+            owner.communicationRunner.reconcileQueue()
+          ),
+        armRecovery: (epoch) =>
+          observeCommunicationSchedule("arm mailbox recovery", () =>
+            owner.communicationRunner.armRecovery(epoch)
+          ),
+        retryRecovery: (epoch, deadline) =>
+          observeCommunicationSchedule("retry mailbox", () =>
+            owner.communicationRunner.retryRecovery(epoch, deadline)
+          ),
         contacts: () =>
           Effect.gen(function* () {
             const self = yield* mailbox.identity()
@@ -178,8 +204,19 @@ export function personalCommunication(
           }),
         idle: () =>
           local(owner.conversations.active().pipe(Effect.map((turn) => !turn))),
+        prearm: () =>
+          observeConversationSchedule("arm conversation discovery", () =>
+            owner.runner.armDiscovery()
+          ).pipe(
+            Effect.mapError(() =>
+              failure(
+                "transport",
+                "Conversation recovery could not be scheduled."
+              )
+            )
+          ),
         wakeConversation: () => edge(() => owner.runner.wake()),
-        resume: (task, operationId) =>
+        resume: (task, operationId, discoveryDeadline) =>
           Effect.gen(function* () {
             const original = yield* owner.conversations.get(
               task.request.correlationId
@@ -227,7 +264,8 @@ export function personalCommunication(
               },
               undefined,
               [],
-              original.routing ?? undefined
+              original.routing ?? undefined,
+              { discoveryDeadline }
             )
             return { kind: "admitted" as const, turnId: admitted.turn.id }
           }),
@@ -249,6 +287,6 @@ export function personalCommunication(
     mailbox,
     pi,
     runtime,
-    rpc: mailboxHandler(mailbox, transport, wake, permit),
+    rpc: mailboxHandler(mailbox, transport, armMailbox, permit),
   }
 }

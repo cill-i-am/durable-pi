@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { writeFile } from 'node:fs/promises'
+import { makeTerminalOwner, terminalCommand } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-owner.ts'
+import { nativeOperation } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/interop.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/package.json')
+const {Effect,Deferred,Fiber,Scope,Exit,Cause}=await import(require.resolve('effect'))
+const {send,waitFor}=await import(require.resolve('@xstate/effect'))
+const history={runs:[],savedAt:null,busy:false,cleanupError:null,session:null}
+const run=(id:string)=>({id,command:'echo proof',status:'running' as const,output:'',error:null,exitCode:null,createdAt:1,finishedAt:null,savedAt:null})
+const evidence:any={}
+const aba=Effect.gen(function*(){
+ const started=yield* Deferred.make<void>(),release=yield* Deferred.make<void>(),selected:string[]=[]
+ const actor=yield* makeTerminalOwner({agentId:'one',selected:'A',visible:false},{read:()=>Effect.succeed({history,run:null}),command:()=>Deferred.succeed(started,undefined).pipe(Effect.andThen(Deferred.await(release)),Effect.as({history:null,run:run('submitted')}))})
+ actor.on('selected',event=>selected.push(event.id))
+ const command=yield* Effect.forkChild(terminalCommand(actor,{type:'start',attempt:{kind:'command',input:{id:'submitted',command:'echo proof'}}}))
+ yield* Deferred.await(started)
+ yield* send(actor,{type:'SELECT',selected:'B'});yield* waitFor(actor,s=>s.context.selected==='B')
+ yield* send(actor,{type:'SELECT',selected:'A'});yield* waitFor(actor,s=>s.context.selected==='A')
+ yield* Deferred.succeed(release,undefined);yield* Fiber.join(command)
+ return {selected:actor.getSnapshot().context.selected,emitted:selected}
+}).pipe(Effect.scoped)
+evidence.aba=await Effect.runPromise(aba)
+const cleanup=Effect.gen(function*(){
+ const scope=yield* Scope.make(),started=yield* Deferred.make<void>(),aborted=yield* Deferred.make<void>()
+ let reject!:(cause:unknown)=>void
+ const actor=yield* makeTerminalOwner({agentId:'one',selected:null,visible:false},{read:()=>Effect.succeed({history,run:null}),command:()=>nativeOperation(signal=>new Promise((_,fail)=>{reject=fail;signal.addEventListener('abort',()=>Effect.runSync(Deferred.succeed(aborted,undefined)));Effect.runSync(Deferred.succeed(started,undefined))}),cause=>cause)}).pipe(Scope.provide(scope))
+ const command=yield* Effect.forkChild(terminalCommand(actor,{type:'start',attempt:{kind:'command',input:{id:'held',command:'echo proof'}}}))
+ yield* Deferred.await(started)
+ const closing=yield* Effect.forkChild(Effect.exit(Scope.close(scope,Exit.void)))
+ yield* Deferred.await(aborted)
+ const native=Cause.fromReasons([...Cause.fail('late typed fault').reasons,...Cause.die(new Error('late native defect')).reasons,...Cause.interrupt(78123).reasons])
+ reject(native)
+ const exit=yield* Fiber.join(closing);yield* Fiber.join(command)
+ return {input:native.reasons.map(r=>r._tag),output:Exit.isFailure(exit)?exit.cause.reasons.map(r=>r._tag):[],rendered:Exit.isFailure(exit)?Cause.pretty(exit.cause):'Success'}
+})
+evidence.cleanup=await Effect.runPromise(cleanup)
+console.log(JSON.stringify(evidence,null,2));await writeFile('/private/tmp/f04-independent/evidence.json',JSON.stringify(evidence,null,2))
+assert.deepEqual(evidence.aba,{selected:'A',emitted:[]},'a later A selection must retain its authority after A→B→A')
+assert.ok(evidence.cleanup.output.includes('Interrupt'),'joined native compound Cause must retain its Interrupt reason')

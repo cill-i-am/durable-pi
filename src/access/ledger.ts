@@ -1,6 +1,7 @@
 import type { Effect } from "effect"
+import { Schema } from "effect"
 
-import type { AccessMode, Approval, ToolPolicy } from "./contracts"
+import { Approval, type AccessMode, type ToolPolicy } from "./contracts"
 import type { AccessError } from "./gate"
 
 export type ToolIntent = {
@@ -9,11 +10,15 @@ export type ToolIntent = {
   tool: string
   input: string
 }
-export type ToolOperation = Approval & {
-  grantRevision: number
-  result: string | null
-  decision: string | null
-}
+export const ToolOperation = Schema.Struct({
+  ...Approval.fields,
+  schemaVersion: Schema.Literal(1),
+  workflowVersion: Schema.Literal(1),
+  grantRevision: Schema.Number,
+  result: Schema.NullOr(Schema.String),
+  decision: Schema.NullOr(Schema.String),
+})
+export type ToolOperation = typeof ToolOperation.Type
 export type DispatchDecision = "pending" | "execute" | { result: string }
 
 /** Durable authorization ledger. Claims fence current grants and persist dispatch

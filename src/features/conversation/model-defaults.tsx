@@ -1,6 +1,5 @@
-import { Schema } from "effect"
 import { Check } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { useCallback, useId, useRef } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -13,11 +12,11 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select"
-import { ModelSelection, type ModelSettings } from "@/conversations/turns"
-import { agentApi } from "@/http/client"
-import { resolveRoute, type JobType } from "@/inference/policy"
+import type { ModelSettings } from "@/conversations/turns"
+import { resolveRoute } from "@/inference/policy"
 
-import { useModelCatalog } from "./use-model-catalog"
+import type { useModelCatalog } from "./use-model-catalog"
+import { useModelDefaults, type ModelDefaultsProps } from "./use-model-defaults"
 
 const settingsJobs = {
   conversation: "Everyday conversation",
@@ -28,80 +27,36 @@ const settingsJobs = {
   extraction: "Structured extraction",
   memory: "Memory summaries",
 } as const
-export function ModelDefaults({
-  agentId,
-  selection,
-  onSaved,
-  onPendingChange,
-  onModelAccess,
-}: {
-  agentId: string
-  selection: ModelSelection
-  onSaved: () => void
-  onPendingChange: (pending: boolean) => void
-  onModelAccess?: () => void
-}) {
+export function ModelDefaults(props: ModelDefaultsProps) {
+  const agent = useRef(props.agentId)
+  agent.current = props.agentId
+  const currentAgent = useCallback(() => agent.current, [])
+  return (
+    <ModelDefaultsView
+      key={props.agentId}
+      {...props}
+      currentAgent={currentAgent}
+    />
+  )
+}
+function ModelDefaultsView(
+  props: ModelDefaultsProps & { currentAgent: () => string }
+) {
   const labels = useId()
-  const { model, thinking } = selection
-  const [error, setError] = useState("")
-  const { catalog, catalogError, refresh, unavailable, setCatalog, cancel } =
-    useModelCatalog(agentId, selection.settingsRevision)
-  const [settingsJob, setSettingsJob] = useState<JobType>("conversation")
-  const [draft, setDraft] = useState<ModelSettings>(selection)
-  const [dirty, setDirty] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  useEffect(() => {
-    if (!dirty && !saving)
-      setDraft(
-        catalog?.assignments[settingsJob] ??
-          (settingsJob === "conversation"
-            ? { model, thinking }
-            : resolveRoute(settingsJob))
-      )
-  }, [catalog, settingsJob, model, thinking, dirty, saving])
-  useEffect(() => {
-    onPendingChange(dirty || saving)
-  }, [dirty, saving, onPendingChange])
-  async function save() {
-    if (saving || unavailable(draft)) return
-    setSaving(true)
-    setError("")
-    await cancel()
-    try {
-      const confirmed = Schema.decodeUnknownSync(ModelSelection)(
-        await agentApi(agentId)("settings", { ...draft, job: settingsJob })
-      )
-      await cancel()
-      setCatalog((current) =>
-        current &&
-        current.selection.settingsRevision > confirmed.settingsRevision
-          ? current
-          : current
-            ? {
-                ...current,
-                selection: confirmed,
-                assignments: {
-                  ...current.assignments,
-                  [settingsJob]: resolveRoute(settingsJob, draft),
-                },
-              }
-            : current
-      )
-      await refresh()
-      onSaved()
-      setDirty(false)
-      setSaved(true)
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not save model settings."
-      )
-    } finally {
-      setSaving(false)
-    }
-  }
+  const { onModelAccess } = props
+  const state = useModelDefaults(props, props.currentAgent)
+  const {
+    catalog,
+    catalogError,
+    unavailable,
+    draft,
+    dirty,
+    saved,
+    error,
+    unconfirmed,
+    busy: saving,
+    job: settingsJob,
+  } = state
   return (
     <section className="settings-section" aria-label="Models">
       <header className="settings-section-heading flex flex-wrap items-center justify-between gap-3">
@@ -110,7 +65,7 @@ export function ModelDefaults({
           <Button
             size="sm"
             variant="link"
-            disabled={dirty || saving}
+            disabled={dirty || saving || unconfirmed}
             onClick={onModelAccess}
           >
             Model access
@@ -120,7 +75,17 @@ export function ModelDefaults({
       <div className="settings-section-body">
         {(error || catalogError) && (
           <Alert>
-            <AlertDescription>{error || catalogError}</AlertDescription>
+            <AlertDescription>
+              {error || catalogError}
+              <Button
+                size="sm"
+                variant="link"
+                disabled={saving}
+                onClick={() => void state.event({ type: "REFRESH" })}
+              >
+                Reload models
+              </Button>
+            </AlertDescription>
           </Alert>
         )}
         <div>
@@ -137,8 +102,14 @@ export function ModelDefaults({
               disabled={saving || dirty || !catalog}
               onValueChange={(value) => {
                 if (value) {
-                  setSettingsJob(value)
-                  setDraft(catalog?.assignments[value] ?? resolveRoute(value))
+                  void state.event({
+                    type: "JOB",
+                    job: value,
+                    draft: catalog?.assignments[value] ?? resolveRoute(value),
+                    settingsRevision:
+                      catalog?.selection.settingsRevision ??
+                      props.selection.settingsRevision,
+                  })
                 }
               }}
             >
@@ -162,9 +133,7 @@ export function ModelDefaults({
             draft={draft}
             saving={saving}
             onChange={(next) => {
-              setDirty(true)
-              setSaved(false)
-              setDraft(next)
+              void state.change(next)
             }}
           />
         </FieldGroup>
@@ -187,19 +156,25 @@ export function ModelDefaults({
               variant="ghost"
               disabled={saving}
               onClick={() => {
-                setDirty(false)
-                setSaved(false)
-                setError("")
+                void state.event({ type: "CANCEL" })
               }}
             >
               Cancel changes
             </Button>
           )}
           <Button
-            disabled={saving || !dirty || !!unavailable(draft)}
-            onClick={() => void save()}
+            disabled={
+              saving || (!unconfirmed && (!dirty || !!unavailable(draft)))
+            }
+            onClick={() =>
+              void state.event({ type: unconfirmed ? "CHECK" : "SAVE" })
+            }
           >
-            {saving ? "Saving…" : "Save default"}
+            {saving
+              ? "Saving…"
+              : unconfirmed
+                ? "Check saved default"
+                : "Save default"}
           </Button>
         </div>
       </div>

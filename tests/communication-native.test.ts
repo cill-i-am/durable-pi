@@ -67,16 +67,22 @@ it.each(["finish", "restart", "cancel", "input", "lost-authority"])(
         context: "EUR 2400, metric units, unpublished. No external actions.",
       },
     }
-    await run(mailbox.accept(envelope, Date.now()))
+    await run(
+      mailbox.accept(envelope, Date.now(), {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    )
     let h!: Harness,
       released = scenario === "finish" || scenario === "input",
       permitted = true,
-      starts = 0
+      starts = 0,
+      submissions = 0
     const service = piMailbox(
       () => Promise.resolve(h),
       {
-        submit: async (id, text, operation) =>
-          (await h.conversation(id as ConversationId, ctx))!.submit(
+        submit: async (id, text, operation) => {
+          submissions++
+          return (await h.conversation(id as ConversationId, ctx))!.submit(
             {
               type: "input",
               content: text,
@@ -84,7 +90,8 @@ it.each(["finish", "restart", "cancel", "input", "lost-authority"])(
               whenBusy: "followUp",
             },
             ctx
-          ),
+          )
+        },
         abort: async (id) =>
           (await h.conversation(id as ConversationId, ctx))!.abort(ctx),
       },
@@ -148,7 +155,12 @@ it.each(["finish", "restart", "cancel", "input", "lost-authority"])(
     }
     try {
       await open()
-      let task = (await run(mailbox.claimTask(Date.now())))!
+      let task = (await run(
+        mailbox.claimTask(Date.now(), {
+          owner: "native-test",
+          deadline: Date.now() + 60_000,
+        })
+      ))!
       await run(service.advance(task))
       await until(
         async () => starts,
@@ -157,6 +169,13 @@ it.each(["finish", "restart", "cancel", "input", "lost-authority"])(
       const before = await run(service.inspect(task.id))
       if (scenario === "restart") {
         await h.close(ctx)
+        await run(mailbox.restoreControl(Date.now()))
+        task = (await run(
+          mailbox.claimTask(Date.now(), {
+            owner: "native-restart",
+            deadline: Date.now() + 60_000,
+          })
+        ))!
         await run(service.settled(task.id))
         expect(service.pins()).toHaveLength(0)
         released = true
@@ -176,7 +195,20 @@ it.each(["finish", "restart", "cancel", "input", "lost-authority"])(
             Date.now()
           )
         )
-        task = (await run(mailbox.claimTask(Date.now())))!
+        await run(
+          mailbox.releaseTask({
+            taskId: task.id,
+            owner: task.control.owner!,
+            revision: task.revision,
+            now: Date.now(),
+          })
+        )
+        task = (await run(
+          mailbox.claimTask(Date.now(), {
+            owner: "native-cancel",
+            deadline: Date.now() + 60_000,
+          })
+        ))!
       }
       if (scenario === "lost-authority") permitted = false
       released = true
@@ -193,8 +225,17 @@ it.each(["finish", "restart", "cancel", "input", "lost-authority"])(
               ? "awaiting_input"
               : "completed"
       )
-      await run(mailbox.finish(task.id, task.revision, result!, Date.now()))
+      await run(
+        mailbox.finish(
+          task.id,
+          task.revision,
+          result!,
+          Date.now(),
+          task.control.owner!
+        )
+      )
       const saved = await run(service.inspect(task.id))
+      if (scenario === "restart") expect(submissions).toBe(1)
       expect(saved?.conversation).toBe(before?.conversation)
       expect(saved?.requests).toBeLessThanOrEqual(3)
       expect(saved?.route.contextWindow).toBe(8192)

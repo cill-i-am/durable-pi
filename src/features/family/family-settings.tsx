@@ -1,3 +1,4 @@
+import { Effect, Fiber } from "effect"
 import {
   ArrowUpRight,
   Check,
@@ -7,6 +8,7 @@ import {
   Users,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -43,6 +45,8 @@ import {
 import type { FamilyMember } from "@/family/contracts"
 
 import { useFamily } from "./context"
+import { makeFamilyChange } from "./family-change-owner"
+import { familyChangeMachine, type FamilyChange } from "./family-change.machine"
 
 export function FamilySettings({
   onPendingChange,
@@ -51,45 +55,92 @@ export function FamilySettings({
   onPendingChange: (pending: boolean) => void
   onModelAccess: () => void
 }) {
-  const { family, refresh } = useFamily()
+  const { family, refresh, current } = useFamily()
+  const authority = `${family.id}:${family.members.find((member) => member.role === "owner")?.id}`
   const [inviteOpen, setInviteOpen] = useState(false)
   const [removing, setRemoving] = useState<typeof FamilyMember.Type | null>(
     null
   )
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState("")
-  const [notice, setNotice] = useState("")
+  const resource = useRef<Effect.Success<
+    ReturnType<typeof makeFamilyChange>
+  > | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+    ReturnType<typeof familyChangeMachine>
+  > | null>(null)
   const cancel = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    onPendingChange(pending)
-  }, [pending, onPendingChange])
-  async function change(
-    work: () => Promise<{ error?: { message?: string } | null }>,
-    success: string
-  ) {
-    if (pending) return false
-    setPending(true)
-    setError("")
-    setNotice("")
-    try {
-      const result = await work()
-      if (result.error)
-        throw new Error(
-          result.error.message || "Could not update family access."
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const value = yield* makeFamilyChange({
+          authorized: () => {
+            const latest = current()
+            return (
+              latest?.role === "owner" &&
+              `${latest.id}:${latest.members.find((member) => member.role === "owner")?.id}` ===
+                authority
+            )
+          },
+          change: async (command) => {
+            const latest = current()!
+            const result =
+              command.kind === "invite" || command.kind === "resend"
+                ? await authClient.organization.inviteMember({
+                    email: command.email,
+                    organizationId: latest.id,
+                    role: "member",
+                    ...(command.kind === "resend" ? { resend: true } : {}),
+                  })
+                : command.kind === "cancel"
+                  ? await authClient.organization.cancelInvitation({
+                      invitationId: command.id,
+                    })
+                  : await authClient.organization.removeMember({
+                      memberIdOrEmail: command.id,
+                      organizationId: latest.id,
+                    })
+            if (result.error)
+              throw new Error(
+                result.error.message || "Could not update family access."
+              )
+          },
+          refresh,
+        })
+        if (!mounted) {
+          value.revoke()
+          return
+        }
+        resource.current = value
+        const subscription = value.actor.subscribe((state) => {
+          if (mounted) setSnapshot(state)
+        })
+        setSnapshot(value.actor.getSnapshot())
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => subscription.unsubscribe())
         )
-      setNotice(success)
-      return true
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not update family access. Please try again."
-      )
-      return false
-    } finally {
-      await refresh()
-      setPending(false)
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      resource.current?.revoke()
+      resource.current = null
+      Effect.runFork(Fiber.interrupt(fiber))
     }
+  }, [authority, current, refresh])
+  const { pending, error, notice, sent, removed } = changeView(
+    snapshot,
+    removing
+  )
+  useEffect(() => {
+    onPendingChange(pending)
+    return () => onPendingChange(false)
+  }, [pending, onPendingChange])
+  function change(command: FamilyChange) {
+    resource.current?.actor.send({ type: "CHANGE", command })
+  }
+  function reset() {
+    resource.current?.actor.send({ type: "RESET" })
   }
   const owner = family.role === "owner"
   return (
@@ -100,7 +151,13 @@ export function FamilySettings({
           <p>One family. A private space for each person.</p>
         </div>
         {owner && (
-          <Button onClick={() => setInviteOpen(true)} disabled={pending}>
+          <Button
+            onClick={() => {
+              reset()
+              setInviteOpen(true)
+            }}
+            disabled={pending}
+          >
             <Plus />
             Invite someone
           </Button>
@@ -163,7 +220,7 @@ export function FamilySettings({
                         <DropdownMenuItem
                           variant="destructive"
                           onClick={() => {
-                            setError("")
+                            reset()
                             setRemoving(person)
                           }}
                         >
@@ -201,16 +258,11 @@ export function FamilySettings({
                       variant="ghost"
                       disabled={pending}
                       onClick={() =>
-                        void change(
-                          () =>
-                            authClient.organization.inviteMember({
-                              email: invite.email,
-                              organizationId: family.id,
-                              role: "member",
-                              resend: true,
-                            }),
-                          `Invitation sent to ${invite.email}.`
-                        )
+                        change({
+                          kind: "resend",
+                          id: invite.id,
+                          email: invite.email,
+                        })
                       }
                     >
                       Resend
@@ -235,13 +287,7 @@ export function FamilySettings({
                         <DropdownMenuGroup>
                           <DropdownMenuItem
                             onClick={() =>
-                              void change(
-                                () =>
-                                  authClient.organization.cancelInvitation({
-                                    invitationId: invite.id,
-                                  }),
-                                "Invitation cancelled."
-                              )
+                              change({ kind: "cancel", id: invite.id })
                             }
                           >
                             Cancel invitation
@@ -293,22 +339,13 @@ export function FamilySettings({
           onOpenChange={setInviteOpen}
           familyName={family.name}
           pending={pending}
-          onInvite={async (email) =>
-            change(
-              () =>
-                authClient.organization.inviteMember({
-                  email,
-                  organizationId: family.id,
-                  role: "member",
-                }),
-              `Invitation sent to ${email}.`
-            )
-          }
+          onInvite={(email) => change({ kind: "invite", email })}
+          sent={sent}
           error={error}
         />
       )}
       <AlertDialog
-        open={!!removing}
+        open={!!removing && !removed}
         dismissible={!pending}
         onOpenChange={(open) => {
           if (!open && !pending) setRemoving(null)
@@ -344,15 +381,10 @@ export function FamilySettings({
               disabled={pending}
               onClick={() => {
                 if (removing)
-                  void change(
-                    () =>
-                      authClient.organization.removeMember({
-                        memberIdOrEmail: removing.id,
-                        organizationId: family.id,
-                      }),
-                    `${removing.name} was removed from the family.`
-                  ).then((ok) => {
-                    if (ok) setRemoving(null)
+                  change({
+                    kind: "remove",
+                    id: removing.id,
+                    name: removing.name,
                   })
               }}
             >
@@ -363,6 +395,20 @@ export function FamilySettings({
       </AlertDialog>
     </section>
   )
+}
+
+function changeView(
+  snapshot: SnapshotFrom<ReturnType<typeof familyChangeMachine>> | null,
+  removing: typeof FamilyMember.Type | null
+) {
+  const pending = !snapshot || !snapshot.matches("idle")
+  const error = snapshot?.context.error ?? ""
+  const notice = snapshot?.context.notice ?? ""
+  const command = snapshot?.context.command
+  const sent = !!notice && command?.kind === "invite"
+  const removed =
+    !!notice && command?.kind === "remove" && command.id === removing?.id
+  return { pending, error, notice, sent, removed }
 }
 
 function invitationStatus(invite: { delivery: string; status: string }) {
@@ -379,17 +425,18 @@ function InviteSheet({
   familyName,
   pending,
   onInvite,
+  sent,
   error,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   familyName: string
   pending: boolean
-  onInvite: (email: string) => Promise<boolean>
+  onInvite: (email: string) => void
+  sent: boolean
   error: string
 }) {
   const [email, setEmail] = useState("")
-  const [sent, setSent] = useState(false)
   return (
     <Sheet
       open={open}
@@ -399,7 +446,6 @@ function InviteSheet({
           onOpenChange(value)
           if (!value) {
             setEmail("")
-            setSent(false)
           }
         }
       }}
@@ -429,9 +475,7 @@ function InviteSheet({
           <form
             onSubmit={(event) => {
               event.preventDefault()
-              void onInvite(email.trim()).then((ok) => {
-                if (ok) setSent(true)
-              })
+              onInvite(email.trim())
             }}
           >
             <FieldGroup>

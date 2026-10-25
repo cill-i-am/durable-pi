@@ -1,0 +1,28 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ tests/auth-ui-lifecycle.test.ts (11 tests | 1 failed) 5062ms
+   ❯ Auth admission, challenges, and owned resources (11)
+     × unknown SDK verification errors cannot reopen passkey mutation before authoritative refresh 5006ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/auth-ui-lifecycle.test.ts > Auth admission, challenges, and owned resources > unknown SDK verification errors cannot reopen passkey mutation before authoritative refresh
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/auth-ui-lifecycle.test.ts:488:6
+    486|   )
+    487|
+    488|   it.effect(
+       |      ^
+    489|     "unknown SDK verification errors cannot reopen passkey mutation be…
+    490|     () =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  20:38:56
+   Duration  5.51s (tests 94%, import 5%, transform 1%)
+

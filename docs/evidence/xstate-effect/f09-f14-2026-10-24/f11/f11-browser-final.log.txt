@@ -1,0 +1,28 @@
+[WebServer] (node:26875) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 10 tests using 1 worker
+
+(node:27107) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/apps-mounted.spec.ts:53:1 › held app mutation cannot overwrite the next mounted agent (746ms)
+  ✓   2 [desktop] › tests/browser/apps-mounted.spec.ts:84:1 › removed iframe action cannot start a follow-up render (491ms)
+  ✓   3 [desktop] › tests/browser/apps-mounted.spec.ts:110:1 › form acknowledgement preserves a newer mounted draft (364ms)
+  ✓   4 [desktop] › tests/browser/apps-mounted.spec.ts:124:1 › app retry uses the same operation and immutable payload (516ms)
+  ✓   5 [desktop] › tests/browser/apps-mounted.spec.ts:156:1 › sandbox frame rejects wrong sources, channels and revoked authority (789ms)
+(node:27226) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [mobile] › tests/browser/apps-mounted.spec.ts:53:1 › held app mutation cannot overwrite the next mounted agent (467ms)
+  ✓   7 [mobile] › tests/browser/apps-mounted.spec.ts:84:1 › removed iframe action cannot start a follow-up render (649ms)
+  ✓   8 [mobile] › tests/browser/apps-mounted.spec.ts:110:1 › form acknowledgement preserves a newer mounted draft (429ms)
+  ✓   9 [mobile] › tests/browser/apps-mounted.spec.ts:124:1 › app retry uses the same operation and immutable payload (566ms)
+  ✓  10 [mobile] › tests/browser/apps-mounted.spec.ts:156:1 › sandbox frame rejects wrong sources, channels and revoked authority (909ms)
+
+  10 passed (13.5s)

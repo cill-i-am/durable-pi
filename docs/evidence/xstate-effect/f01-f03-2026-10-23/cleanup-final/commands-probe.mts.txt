@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeSubmission} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/submission-owner.ts'
+import {makeTurnCommand} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/turn-command-owner.ts'
+import {nativeOperation} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/shared/interop.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json')
+const {Cause,Context,Effect,Exit,Scope}=await import(require.resolve('effect')),{send}=await import(require.resolve('@xstate/effect'))
+class NativeRequest extends Context.Service()('F01Command.NativeRequest'){}
+const results=[]
+for(const [name,sentinel] of [['submission',90104],['turn',90105]] as const){
+ let enter!:()=>void,abort!:()=>void,reject!:(reason:unknown)=>void
+ const entered=new Promise<void>(r=>enter=r),aborted=new Promise<void>(r=>abort=r),scope=await Effect.runPromise(Scope.make())
+ const native=()=>nativeOperation(signal=>{signal.addEventListener('abort',abort,{once:true});enter();return new Promise<never>((_,fail)=>reject=fail)},x=>x)
+ let owner:any
+ if(name==='submission'){owner=await Effect.runPromise(makeSubmission(null,{persist:()=>Effect.succeed(true),send:native,acknowledge:()=>Effect.void,rejectModel:()=>Effect.void}).pipe(Scope.provide(scope)));void Effect.runPromiseExit(owner.submit({text:'review',mode:'followUp',files:[],profile:'auto',job:'conversation'}))}
+ else {owner=await Effect.runPromise(makeTurnCommand(native).pipe(Scope.provide(scope)));await Effect.runPromise(send(owner,{type:'RETRY',turnId:'review',allowed:true}))}
+ await entered;let settled=false
+ const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(x=>{settled=true;return x})
+ await aborted;assert.equal(settled,false)
+ const annotations=Context.make(NativeRequest,name)
+ reject(Cause.fromReasons([Cause.makeFailReason(`${name} native checked`).annotate(annotations),Cause.makeInterruptReason(sentinel).annotate(annotations)]))
+ const exit=await closing,reasons=Exit.isFailure(exit)?exit.cause.reasons:[],interrupt=reasons.find((r:any)=>r._tag==='Interrupt'&&r.fiberId===sentinel),checked=reasons.find((r:any)=>r._tag==='Die'&&r.defect?._tag==='Fail')
+ const result={owner:name,joined:true,scopeFailure:Exit.isFailure(exit),nativeInterrupt:!!interrupt,interruptAnnotation:interrupt?.annotations.get(NativeRequest.key),nativeChecked:!!checked,checkedAnnotation:checked?.defect.annotations.get(NativeRequest.key)}
+ results.push(result);console.log(JSON.stringify(result))
+}
+for(const r of results){assert.equal(r.scopeFailure,true);assert.equal(r.nativeInterrupt,true);assert.equal(r.interruptAnnotation,r.owner);assert.equal(r.checkedAnnotation,r.owner)}

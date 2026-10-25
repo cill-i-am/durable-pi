@@ -1,0 +1,13 @@
+
+Running 4 tests using 1 worker
+
+(node:41581) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:329:1 › actual routine editor retains a lost save until the explicit same-change retry completes (6.1s)
+  ✓  2 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:375:1 › actual webhook controls retry the same generated key and hide it after a newer configuration (3.2s)
+(node:42607) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [mobile] › tests/browser/routines-ui-lifecycle.spec.ts:329:1 › actual routine editor retains a lost save until the explicit same-change retry completes (4.7s)
+  ✓  4 [mobile] › tests/browser/routines-ui-lifecycle.spec.ts:375:1 › actual webhook controls retry the same generated key and hide it after a newer configuration (2.5s)
+
+  4 passed (1.4m)

@@ -24,7 +24,7 @@ import { ConversationExecution } from "../src/conversations/execution"
 import { conversationPump } from "../src/conversations/pump"
 import { conversationFixture } from "./conversation-fixture"
 
-it("replays an acknowledged native Pi input after a lost host acknowledgment and restart without another model request", async () => {
+it("reconciles an acknowledged native Pi input after a lost host acknowledgment and restart without another model request", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pi-conversation-pump-"))
   const path = join(directory, "pi.sqlite")
   const faux = fauxProvider({ provider: "openai", tokensPerSecond: 100000 })
@@ -128,8 +128,11 @@ it("replays an acknowledged native Pi input after a lost host acknowledgment and
     conversation = (await harness.conversation(original.id, context))!
     expect(await Effect.runPromise(f.memory.settled())).toBe(false)
     await Effect.runPromise(pump.run())
-    expect(submitted).toHaveLength(2)
-    expect(submitted[1]).toEqual(submitted[0])
+    expect(submitted).toHaveLength(1)
+    expect(submitted[0]).toEqual({
+      operationId: root.id,
+      session: String(original.id),
+    })
     await Effect.runPromise(pump.run())
     expect(Effect.runSync(f.store.get(root.id))).toMatchObject({
       status: "done",

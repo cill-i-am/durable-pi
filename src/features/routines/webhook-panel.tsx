@@ -1,6 +1,4 @@
-import { Schema } from "effect"
 import { ArrowLeft, KeyRound } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
 
 import { CopyButton } from "@/components/copy-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -8,9 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { agentApi, agentUrl, api } from "@/http/client"
 import type { Routine } from "@/routines/contracts"
-import { type ConfigureWebhook, WebhookInfo } from "@/webhooks/contracts"
+
+import { useWebhook } from "./use-webhook"
 
 function createKey() {
   return (
@@ -31,128 +29,24 @@ export function WebhookPanel({
   onBack: () => void
   onPendingChange: (value: boolean) => void
 }) {
-  const [info, setInfo] = useState<WebhookInfo | null>(null)
-  const [attempt, setAttempt] = useState<ConfigureWebhook | null>(null)
-  const [busy, setBusy] = useState(false),
-    lock = useRef(false)
-  const [error, setError] = useState(""),
-    [message, setMessage] = useState("")
-  const [key, setKey] = useState<{ value: string; revision: number } | null>(
-    null
-  )
+  const {
+    info,
+    attempt,
+    busy,
+    error,
+    message,
+    key,
+    send,
+    resolve,
+    retry,
+    refresh,
+  } = useWebhook(agentId, routine.id, onPendingChange)
   const endpoint = new URL(
     `/api/hooks/${agentId}/${routine.id}`,
     typeof window === "undefined"
       ? "https://app.internal"
       : window.location.origin
   ).href
-  const load = useCallback(
-    async () =>
-      Schema.decodeUnknownSync(WebhookInfo)(
-        await api(`${agentUrl(agentId, "webhooks")}&routine=${routine.id}`)
-      ),
-    [agentId, routine.id]
-  )
-  useEffect(() => {
-    let mounted = true
-    void load()
-      .then((value) => {
-        if (mounted) setInfo(value)
-      })
-      .catch(() => {
-        if (mounted)
-          setError(
-            "Could not load webhook settings. Return to routines and try again."
-          )
-      })
-    return () => {
-      mounted = false
-    }
-  }, [load])
-  async function send(change: ConfigureWebhook) {
-    if (lock.current) return
-    lock.current = true
-    setBusy(true)
-    setAttempt(change)
-    onPendingChange(true)
-    setError("")
-    setMessage("")
-    setKey(null)
-    let confirmed = false
-    try {
-      const result = Schema.decodeUnknownSync(WebhookInfo)(
-        await agentApi(agentId)("webhooks/configure", change)
-      )
-      const current = await load()
-      setInfo(current)
-      const stillCurrent = current.revision === result.revision
-      setKey(
-        change.key && stillCurrent
-          ? { value: change.key, revision: result.revision }
-          : null
-      )
-      confirmed = true
-      setAttempt(null)
-      setMessage(
-        !stillCurrent
-          ? "The webhook changed again in another tab. Current settings have been loaded; rotate to create a new key."
-          : change.key
-            ? "Key saved. Copy it now; it cannot be retrieved later."
-            : "Webhook disabled. Unadmitted events were cancelled."
-      )
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "This change was not confirmed. Retry the same request or resolve it."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-      onPendingChange(!confirmed)
-    }
-  }
-  async function resolve() {
-    if (!attempt || lock.current) return
-    lock.current = true
-    setBusy(true)
-    onPendingChange(true)
-    setError("")
-    let confirmed = false
-    try {
-      const result = await agentApi(agentId)<{ applied: boolean }>(
-        "webhooks/cancel",
-        { operationId: attempt.operationId }
-      )
-      const current = await load()
-      setInfo(current)
-      setKey(
-        result.applied &&
-          attempt.key &&
-          current.revision === attempt.expectedRevision + 1
-          ? { value: attempt.key, revision: current.revision }
-          : null
-      )
-      setAttempt(null)
-      confirmed = true
-      setMessage(
-        result.applied
-          ? "The change was already applied. Current settings have been loaded."
-          : "The unconfirmed change was cancelled."
-      )
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not resolve this request. Retry."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-      onPendingChange(!confirmed)
-    }
-  }
-
   const locked = busy || !!attempt
   return (
     <section className="flex min-w-0 flex-col gap-5">
@@ -182,7 +76,19 @@ export function WebhookPanel({
       </p>
       {error && (
         <Alert>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {error}
+            {!attempt && (
+              <Button
+                variant="link"
+                size="sm"
+                disabled={busy}
+                onClick={() => void refresh()}
+              >
+                Retry settings
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
       {message && (
@@ -192,7 +98,7 @@ export function WebhookPanel({
       )}
       {attempt && (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" disabled={busy} onClick={() => void send(attempt)}>
+          <Button size="sm" disabled={busy} onClick={() => void retry()}>
             Retry same change
           </Button>
           <Button

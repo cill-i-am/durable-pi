@@ -1,0 +1,44 @@
+[WebServer] (node:93680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 26 tests using 1 worker
+
+(node:93687) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/conversation-owner-lifecycle.spec.ts:29:1 › unreadable saved data survives restoration and blocks update reload without submitting (3.2s)
+  ✓   2 [desktop] › tests/browser/conversation-owner-lifecycle.spec.ts:81:1 › failed persistence cannot dispatch a message (2.3s)
+  ✓   3 [desktop] › tests/browser/conversation-owner-lifecycle.spec.ts:111:1 › a held acknowledgement clears only its own attempt and preserves newer text (2.4s)
+  ✓   4 [desktop] › tests/browser/conversation-queue.spec.ts:6:1 › an idle reply starts immediately in the UI and only later messages are queued (4.0s)
+  ✓   5 [desktop] › tests/browser/conversation-recovery.spec.ts:117:1 › Check keeps the original identity, coalesces held clicks, and waits for a newer snapshot after acknowledgement (2.9s)
+  ✓   6 [desktop] › tests/browser/conversation-recovery.spec.ts:169:1 › owned cleanup disables recovery and only explicit Try Stop again requests cancellation (2.9s)
+  ✓   7 [desktop] › tests/browser/conversation-recovery.spec.ts:235:1 › a known access denial after recovery refresh clears the saved reply and its controls (2.3s)
+  ✓   8 [desktop] › tests/browser/conversation-window.spec.ts:6:1 › new replies stay in view when the recent history window rolls forward (3.4s)
+  ✓   9 [desktop] › tests/browser/stale-tab.spec.ts:50:1 › an explicit update reload preserves unsent text and original file references without sending (4.4s)
+  ✓  10 [desktop] › tests/browser/stale-tab.spec.ts:103:1 › a retired settings chunk keeps chat intact and offers full reload instead of repeating navigation (4.5s)
+  ✓  11 [desktop] › tests/browser/stale-tab.spec.ts:148:1 › an unconfirmed send restores its original identity and never submits on reload (5.6s)
+  ✓  12 [desktop] › tests/browser/stale-tab.spec.ts:188:1 › the update waits for a file upload to settle (2.1s)
+  ✓  13 [desktop] › tests/browser/stale-tab.spec.ts:226:1 › failed tab storage blocks reload until the draft can be preserved (3.0s)
+(node:94198) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  14 [mobile] › tests/browser/conversation-owner-lifecycle.spec.ts:29:1 › unreadable saved data survives restoration and blocks update reload without submitting (3.0s)
+  ✓  15 [mobile] › tests/browser/conversation-owner-lifecycle.spec.ts:81:1 › failed persistence cannot dispatch a message (2.2s)
+  ✓  16 [mobile] › tests/browser/conversation-owner-lifecycle.spec.ts:111:1 › a held acknowledgement clears only its own attempt and preserves newer text (2.4s)
+  ✓  17 [mobile] › tests/browser/conversation-queue.spec.ts:6:1 › an idle reply starts immediately in the UI and only later messages are queued (4.2s)
+  ✓  18 [mobile] › tests/browser/conversation-recovery.spec.ts:117:1 › Check keeps the original identity, coalesces held clicks, and waits for a newer snapshot after acknowledgement (3.0s)
+  ✓  19 [mobile] › tests/browser/conversation-recovery.spec.ts:169:1 › owned cleanup disables recovery and only explicit Try Stop again requests cancellation (3.0s)
+  ✓  20 [mobile] › tests/browser/conversation-recovery.spec.ts:235:1 › a known access denial after recovery refresh clears the saved reply and its controls (2.4s)
+  ✓  21 [mobile] › tests/browser/conversation-window.spec.ts:6:1 › new replies stay in view when the recent history window rolls forward (3.2s)
+  ✓  22 [mobile] › tests/browser/stale-tab.spec.ts:50:1 › an explicit update reload preserves unsent text and original file references without sending (2.9s)
+  ✓  23 [mobile] › tests/browser/stale-tab.spec.ts:103:1 › a retired settings chunk keeps chat intact and offers full reload instead of repeating navigation (5.0s)
+  ✓  24 [mobile] › tests/browser/stale-tab.spec.ts:148:1 › an unconfirmed send restores its original identity and never submits on reload (5.6s)
+  ✓  25 [mobile] › tests/browser/stale-tab.spec.ts:188:1 › the update waits for a file upload to settle (2.1s)
+  ✓  26 [mobile] › tests/browser/stale-tab.spec.ts:226:1 › failed tab storage blocks reload until the draft can be preserved (3.0s)
+
+  26 passed (1.5m)

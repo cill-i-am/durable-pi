@@ -1,4 +1,5 @@
 import type { RemoteConnectionState } from "./connection-client"
+import { advanceConnection } from "./connection.machine"
 import {
   ConnectionError,
   connectionUrl,
@@ -34,13 +35,10 @@ export function changeConnection(
   active: boolean
 ): SavedConnection {
   if (!current) throw new ConnectionError({ message: "Connection not found." })
-  if (current.active === active && current.revision === expectedRevision + 1)
-    return current
-  if (current.revision !== expectedRevision)
-    throw new ConnectionError({
-      message: "This connection changed. Reload before updating it.",
-    })
-  return { ...current, revision: current.revision + 1, active }
+  return advanceConnection(current, {
+    type: active ? "ACTIVATE" : "DISCONNECT",
+    expectedRevision,
+  })
 }
 export function selectTools(
   current: ToolSelection,
@@ -107,4 +105,12 @@ export function describeConnection(
     } catch {}
   }
   return { ...record, status, authorizeUrl, tools }
+}
+
+export function requireConnectionWrite(eligible: boolean) {
+  if (!eligible)
+    throw new ConnectionError({
+      message:
+        "Connection authority changed or expired. Reload before updating it.",
+    })
 }

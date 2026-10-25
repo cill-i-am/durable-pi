@@ -1,24 +1,14 @@
-import { Schema } from "effect"
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 
-import { ConnectionList, type RemoteTool } from "@/access/connections"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { agentApi } from "@/http/client"
-import { SkillBody, SkillName, type SaveSkill } from "@/skills/contracts"
-import {
-  HostedSkillCatalog,
-  SkillSource,
-  type HostedSkill,
-} from "@/skills/source"
+import type { SaveSkill } from "@/skills/contracts"
+import type { SkillSource } from "@/skills/source"
 
-const Preview = Schema.Struct({
-  name: SkillName,
-  body: SkillBody,
-  source: SkillSource,
-})
+import { useHostedSkill } from "./use-hosted-skill"
+
 export function HostedSkillImport({
   onPreview,
   onCancel,
@@ -26,83 +16,9 @@ export function HostedSkillImport({
   onPreview: (draft: SaveSkill) => void
   onCancel: () => void
 }) {
-  const [providers, setProviders] = useState<readonly RemoteTool[]>([])
-  const [selected, setSelected] = useState("")
   const [app, setApp] = useState("personal-skills")
-  const [catalog, setCatalog] = useState<readonly HostedSkill[] | null>(null)
-  const [error, setError] = useState("")
-  const [busy, setBusy] = useState(true)
-  const request = useRef(0)
-  const locked = useRef(false)
-  useEffect(() => {
-    const version = ++request.current
-    void agentApi("home")("connections")
-      .then(Schema.decodeUnknownSync(ConnectionList))
-      .then((result) => {
-        if (version !== request.current) return
-        const tools = result.connections
-          .filter((connection) => connection.status === "ready")
-          .flatMap((connection) =>
-            connection.tools.filter((tool) => tool.remoteName === "skills")
-          )
-        setProviders(tools)
-        setSelected(tools[0]?.name ?? "")
-      })
-      .catch(() => {
-        if (version === request.current)
-          setError(
-            "Could not load your connections. Close this import and retry."
-          )
-      })
-      .finally(() => {
-        if (version === request.current) setBusy(false)
-      })
-    return () => {
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      request.current++
-    }
-  }, [])
-  async function load(skill?: HostedSkill) {
-    if (locked.current || !selected) return
-    locked.current = true
-    const version = ++request.current
-    setBusy(true)
-    setError("")
-    try {
-      if (skill) {
-        const preview = Schema.decodeUnknownSync(Preview)(
-          await agentApi("home")("skills/import/read", {
-            toolName: selected,
-            skill,
-          })
-        )
-        if (version === request.current)
-          onPreview({
-            id: crypto.randomUUID(),
-            expectedRevision: 0,
-            ...preview,
-          })
-      } else {
-        const loaded = Schema.decodeUnknownSync(HostedSkillCatalog)(
-          await agentApi("home")("skills/import/list", {
-            toolName: selected,
-            app: app.trim(),
-          })
-        )
-        if (version === request.current) setCatalog(loaded.skills)
-      }
-    } catch (cause) {
-      if (version === request.current)
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Could not read this skill. Nothing was saved."
-        )
-    } finally {
-      locked.current = false
-      if (version === request.current) setBusy(false)
-    }
-  }
+  const { providers, selected, catalog, error, busy, event } =
+    useHostedSkill(onPreview)
   return (
     <section
       className="flex flex-col gap-4 rounded-lg border p-4"
@@ -110,7 +26,14 @@ export function HostedSkillImport({
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-medium">From Executor</h3>
-        <Button size="xs" variant="ghost" onClick={onCancel}>
+        <Button
+          size="xs"
+          variant="ghost"
+          onClick={() => {
+            event({ type: "CANCEL" })
+            onCancel()
+          }}
+        >
           Cancel
         </Button>
       </div>
@@ -147,8 +70,7 @@ export function HostedSkillImport({
                     aria-pressed={selected === tool.name}
                     disabled={busy}
                     onClick={() => {
-                      setSelected(tool.name)
-                      setCatalog(null)
+                      event({ type: "PROVIDER", name: tool.name })
                     }}
                   >
                     {tool.connectionName}
@@ -163,9 +85,9 @@ export function HostedSkillImport({
                 value={app}
                 maxLength={160}
                 disabled={busy}
-                onChange={(event) => {
-                  setApp(event.target.value)
-                  setCatalog(null)
+                onChange={(change) => {
+                  setApp(change.target.value)
+                  event({ type: "CLEAR_CATALOG" })
                 }}
               />
             </Field>
@@ -174,7 +96,7 @@ export function HostedSkillImport({
             variant="outline"
             size="sm"
             disabled={busy || !app.trim()}
-            onClick={() => void load()}
+            onClick={() => event({ type: "BROWSE", app: app.trim() })}
           >
             {busy ? "Reading…" : "Browse skills"}
           </Button>
@@ -211,7 +133,9 @@ export function HostedSkillImport({
                     size="xs"
                     variant="outline"
                     disabled={busy}
-                    onClick={() => void load(skill)}
+                    onClick={() =>
+                      event({ type: "READ", skill, id: crypto.randomUUID() })
+                    }
                   >
                     Preview
                   </Button>

@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, ManagedRuntime } from "effect"
+import { Cause, Clock, Effect, Exit, ManagedRuntime } from "effect"
 import { describe, expect, it, vi } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -60,6 +60,8 @@ function fixture(extract: ExtractVideo = () => Effect.succeed(result)) {
   const make = (prefix = "private-bot") =>
     ManagedRuntime.make(
       workspaceLayer(db, bucket, prefix, () => Effect.sync(() => active), {
+        arm: () =>
+          Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
         document: undefined,
         video: extract,
       })
@@ -256,6 +258,9 @@ describe("private video preparation", () => {
       )
       await f.runtime.dispose()
       const restored = f.make()
+      await restored.runPromise(
+        Effect.flatMap(Workspace, (w) => w.restorePreparation())
+      )
       const next = () =>
         restored.runPromise(Effect.flatMap(Workspace, (w) => w.extractNext()))
       await next()
@@ -315,16 +320,30 @@ describe("private video preparation", () => {
         `CREATE TRIGGER video_budget_${action} BEFORE ${action} ON chat_turns WHEN length(CAST(coalesce(NEW.prompt,'') || NEW.input || NEW.answer || NEW.skill_context AS BLOB)) > 2000000 BEGIN SELECT RAISE(ABORT,'row too large'); END`
       )
     const turn = Effect.runSync(
-      store.admit(
-        { operationId: crypto.randomUUID(), text: "Inspect these" },
-        attached
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            { operationId: crypto.randomUUID(), text: "Inspect these" },
+            attached,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
       )
     ).turn
     Effect.runSync(store.savePrompt(turn.id, JSON.stringify(attached.content)))
     const follow = Effect.runSync(
-      store.admit(
-        { operationId: crypto.randomUUID(), text: "Follow-up" },
-        attached
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            { operationId: crypto.randomUUID(), text: "Follow-up" },
+            attached,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
       )
     ).turn
     expect(follow.input.filter((c) => c.type === "image")).toHaveLength(24)
@@ -345,16 +364,34 @@ describe("private video preparation", () => {
       )
     )
     const parent = Effect.runSync(
-      store.admit({
-        operationId: crypto.randomUUID(),
-        text: "Start",
-      })
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            { operationId: crypto.randomUUID(), text: "Start" },
+            undefined,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
     ).turn
     Effect.runSync(store.prepare(parent.id))
     const steered = Effect.runSync(
-      store.admit(
-        { operationId: crypto.randomUUID(), text: "Use these", mode: "steer" },
-        attached
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            {
+              operationId: crypto.randomUUID(),
+              text: "Use these",
+              mode: "steer",
+            },
+            attached,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
       )
     ).turn
     expect(steered.parent_id).toBe(parent.id)
@@ -375,6 +412,7 @@ describe("private video preparation", () => {
     expect(
       f.db.all("SELECT status,attempts FROM workspace_video_preparations")
     ).toEqual([{ status: "running", attempts: 1 }])
+    await f.run((w) => w.restorePreparation())
     await f.run((w) => w.extractNext())
     expect((await f.run((w) => w.list()))[0]?.video?.status).toBe("ready")
     await f.runtime.dispose()

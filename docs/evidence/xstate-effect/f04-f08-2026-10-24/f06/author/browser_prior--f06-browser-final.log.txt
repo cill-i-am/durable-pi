@@ -1,0 +1,21 @@
+[WebServer] (node:96315) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 1 worker
+
+(node:96337) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.1s)
+  ✓   2 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.6s)
+  ✓   3 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.7s)
+  ✓   4 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (3.1s)
+  ✓   5 [desktop] › tests/browser/access.spec.ts:5:1 › refresh tool access before the next conversation and persist an override (4.9s)
+(node:96392) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.1s)
+  ✓   7 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.6s)
+  ✓   8 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.6s)
+  ✓   9 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (3.1s)
+  ✓  10 [mobile] › tests/browser/access.spec.ts:5:1 › refresh tool access before the next conversation and persist an override (4.9s)
+
+  10 passed (33.2s)

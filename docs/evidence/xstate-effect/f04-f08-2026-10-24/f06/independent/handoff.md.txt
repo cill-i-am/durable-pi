@@ -1,0 +1,9 @@
+# Independent F06 review
+
+Closed clear on all 16 exact final hashes from `/private/tmp/f06-source-freeze.json`. This reviewer made no production edits.
+
+Two independently reproduced issues are repaired: (1) a late Always allow acknowledgement after a newer deny policy no longer claims permission for future calls; it can still confirm the already-admitted one-action approval. The machine also invalidates remembered permission on later policy changes and the React projection applies the same fence immediately. (2) late Die-containing native cleanup Causes preserve their original Interrupt and annotations across both Access and Connections owners; scope closure joins settlement before reporting the full Cause.
+
+The actual-production-owner reproduction `probe.mts` is byte-unchanged before and after. `before.log` records stale remember=true and dropped native Interrupt86123. `after-reviewer.log` records remember=false under current deny revision4 and the original Interrupt86123 in both compound cleanup results. All 65 affected tests across six files pass (`affected-final.log`), including unchanged approval card/decision/backend-adjacent tests. The owner's two new desktop/mobile late-policy browser cases pass (`/private/tmp/f06-review-browser.log`); no duplicate broad build/browser gate was run.
+
+Limits: this is a local owner/race review with synthetic native promise settlement, not live Access authorization or remote MCP delivery proof. Parent owns composed repository gates. The owner reported an unrelated concurrent F11 syntax issue blocking its latest full-tree typecheck, outside these frozen F06 sources.

@@ -4,8 +4,14 @@ import { DatabaseSync } from "node:sqlite"
 import { Effect, Layer, ManagedRuntime, Redacted, Schema } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
+import { AccessStore } from "../src/access/adapters/sqlite"
 import { PersonalAgent } from "../src/agent/worker"
+import {
+  FamilyAdmission,
+  type familyAdmissionApplication,
+} from "../src/agents/family-admission"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { conversationPump } from "../src/conversations/pump"
 import {
   Conversations,
   conversationApplication,
@@ -18,9 +24,11 @@ import {
   OAuthCredential,
   credentialApplication,
 } from "../src/inference/credentials"
+import { conversationFixture } from "./conversation-fixture"
 import { d1 } from "./d1"
 import { database } from "./database"
 import { credential, catalog } from "./inference-fixture"
+import { routineFixture } from "./routine-fixture"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
@@ -41,13 +49,18 @@ vi.mock("../src/observability/events", () => ({
   reportService: vi.fn(),
 }))
 const runtimes: ManagedRuntime.ManagedRuntime<
-  ModelCredentials | Conversations,
+  ModelCredentials | Conversations | FamilyAdmission,
   never
 >[] = []
 const authDatabases: DatabaseSync[] = []
+const backgroundTasks: Promise<unknown>[] = []
 afterEach(async () => {
+  const outcomes = await Promise.allSettled(backgroundTasks.splice(0))
   for (const runtime of runtimes.splice(0)) await runtime.dispose()
   for (const db of authDatabases.splice(0)) db.close()
+  expect(outcomes.filter((outcome) => outcome.status === "rejected")).toEqual(
+    []
+  )
 })
 
 function fixture(rotate?: () => Promise<void>) {
@@ -81,8 +94,28 @@ function fixture(rotate?: () => Promise<void>) {
       model: "gpt-6.1-sol",
       thinking: "medium",
     })
+    // These historical/domain seeds stand in for an already armed lease;
+    // runner.armDiscovery below is the host boundary exercised by revocation.
+    const admit = (input: Parameters<ConversationStore["admit"]>[0]) =>
+      turns.admit(input, undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    const accessStore = new AccessStore(db, () =>
+      Effect.succeed([
+        { name: "test", description: "Test approval", mode: "ask" as const },
+      ])
+    )
+    const notifyAccess = vi.fn()
+    const abort = vi.fn(() => Effect.void)
+    const armDiscovery = vi.fn(async () => Date.now() + 60_000)
+    const wake = vi.fn(async () => {})
+    const host: PersonalAgent = Object.create(PersonalAgent.prototype)
+    const family = host as unknown as {
+      familyAdmissionLayer(): ReturnType<typeof familyAdmissionApplication>
+    }
     const runtime = ManagedRuntime.make(
       Layer.mergeAll(
+        family.familyAdmissionLayer(),
         credentialApplication(ledger, refresh),
         conversationApplication(turns)
       )
@@ -91,11 +124,26 @@ function fixture(rotate?: () => Promise<void>) {
     const storage = new Map<string, unknown>()
     const pause = vi.fn(() => Effect.void)
     const coordination = new CoordinationStore(db)
+    const revoke = vi.fn(() => Effect.void)
     const reconcile = vi.fn(() => Effect.void)
-    const host: PersonalAgent = Object.create(PersonalAgent.prototype)
+    const pump = Effect.runSync(conversationFixture(db))
     Object.assign(host, {
       actorRuntime: runtime,
+      db,
+      accessStore,
+      access: { notify: notifyAccess },
+      conversationExecution: { abort },
+      runner: { armDiscovery, wake },
       conversationService: runtime.runSync(Conversations),
+      // Prototype hosts skip initializers. HTTP requests must still reconcile
+      // this host's retained pump, including its joined-release receipts.
+      conversationPump: conversationPump(
+        runtime.runSync(Conversations),
+        pump.memory,
+        pump.journal,
+        pump.execution,
+        pump.host
+      ),
       catalogService: { read: () => Effect.succeed(catalog) },
       notifyConversation: vi.fn(),
       credentialService: runtime.runSync(ModelCredentials),
@@ -111,6 +159,7 @@ function fixture(rotate?: () => Promise<void>) {
           Effect.succeed([{ id: "routine", revision: 1, status: "active" }]),
         setStatus: pause,
         cancelPendingRun: () => Effect.succeed(undefined),
+        inFlight: () => Effect.succeed(undefined),
       },
       conversations: turns,
       coordination: { store: coordination },
@@ -118,7 +167,7 @@ function fixture(rotate?: () => Promise<void>) {
         catalog: () => Effect.succeed([1]),
         group: () => Effect.succeed({ turnId: "finished-request" }),
       },
-      delegations: { reconcile },
+      delegations: { revoke, reconcile },
       backgroundMailbox: { list: () => Effect.succeed([]) },
       env: {
         AUTH_DB: d1(sql),
@@ -138,12 +187,29 @@ function fixture(rotate?: () => Promise<void>) {
           },
         },
         waitUntil: (work: Promise<unknown>) => {
+          backgroundTasks.push(work)
+          // Attach rejection handling immediately; afterEach checks every result.
           void work.catch(() => {})
         },
       },
     })
     people.set(key, host)
-    return { host, db, ledger, pause, coordination, reconcile, turns }
+    return {
+      host,
+      db,
+      ledger,
+      pause,
+      coordination,
+      revoke,
+      reconcile,
+      turns,
+      admit,
+      accessStore,
+      notifyAccess,
+      abort,
+      armDiscovery,
+      wake,
+    }
   }
   return { sql, actor, refresh }
 }
@@ -243,10 +309,81 @@ it("pauses old scheduled work when removal and a new membership occur between ac
   expect(Effect.runSync(member.coordination.closed("finished-request"))).toBe(
     true
   )
-  expect(member.reconcile).toHaveBeenCalledWith("finished-request")
+  expect(member.revoke).toHaveBeenCalledWith("finished-request")
+  expect(member.revoke.mock.invocationCallOrder[0]).toBeLessThan(
+    member.reconcile.mock.invocationCallOrder[0]!
+  )
+  expect(member.reconcile).toHaveBeenCalledWith("finished-request", {
+    allowDispatch: false,
+  })
   await member.host.familyAdmission()
   expect(member.pause).toHaveBeenCalledTimes(1)
 })
+
+it.each([false, true])(
+  "saves Stop and cancels access before waking owned cleanup after membership replacement, prearm fails=%s",
+  async (prearmFails) => {
+    const f = fixture()
+    f.actor("cillian")
+    const member = f.actor("claire")
+    await member.host.familyAdmission()
+    const id = "original-running-root"
+    await Effect.runPromise(
+      member.admit({ operationId: id, text: "Original private work" })
+    )
+    await Effect.runPromise(
+      member.turns.submitted(id, "original-native-session")
+    )
+    const before = await Effect.runPromise(member.turns.get(id))
+    expect(before).toMatchObject({ status: "running" })
+    await Effect.runPromise(
+      member.accessStore.begin({
+        id: "approval",
+        turnId: id,
+        tool: "test",
+        input: "private",
+      })
+    )
+    expect(
+      await Effect.runPromise(member.accessStore.get("approval"))
+    ).toMatchObject({ status: "pending" })
+    if (prearmFails)
+      member.armDiscovery.mockRejectedValueOnce(
+        new Error("Discovery unavailable")
+      )
+    // A wake may re-enter admission; it must not run native work before the
+    // durable revocation is visible, or deadlock the generation transition.
+    member.wake.mockImplementationOnce(async () => {
+      expect(await Effect.runPromise(member.turns.get(id))).toMatchObject({
+        status: "stopping",
+      })
+      expect(
+        await Effect.runPromise(member.accessStore.get("approval"))
+      ).toMatchObject({ status: "cancelled" })
+      await member.host.familyAdmission()
+    })
+    f.sql.exec(
+      "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+    )
+    expect(await member.host.familyAdmission()).toMatchObject({
+      owner: "claire",
+    })
+    await member.wake.mock.results[0]?.value
+    const stopped = await Effect.runPromise(member.turns.get(id))
+    expect(stopped).toMatchObject({
+      id,
+      text: "Original private work",
+      session_id: "original-native-session",
+      status: "stopping",
+      control: { owner: null, unconfirmed: prearmFails ? "stop" : null },
+    })
+    expect(stopped!.revision).toBeGreaterThan(before!.revision)
+    expect(member.armDiscovery).toHaveBeenCalledOnce()
+    expect(member.notifyAccess).toHaveBeenCalledOnce()
+    expect(member.wake).toHaveBeenCalledOnce()
+    expect(member.abort).not.toHaveBeenCalled()
+  }
+)
 
 it("fences completed main sessions without child groups when membership changes", async () => {
   const f = fixture()
@@ -256,25 +393,28 @@ it("fences completed main sessions without child groups when membership changes"
   // More than one discovery page, and no delegation group owns these sessions.
   for (let n = 0; n < 25; n++) {
     const id = `old-main-${n}`
-    await Effect.runPromise(member.turns.admit({ operationId: id, text: id }))
+    await Effect.runPromise(member.admit({ operationId: id, text: id }))
     await Effect.runPromise(member.turns.saveSession(id, String(100 + n)))
     member.db.run("UPDATE chat_turns SET status='done' WHERE id=?", id)
   }
   await Effect.runPromise(
-    member.coordination.accept({
-      id: "old-message",
-      operationId: "old-operation",
-      from: { sessionId: "old-main-0", agentId: "main" },
-      to: { sessionId: "old-main-24", agentId: "main" },
-      text: "Continue old work after re-invitation",
-      provenance: {
-        author: { kind: "agent", id: "private-bot", sessionId: "old-main-0" },
-        conversationId: "private-bot",
-        recipients: [],
+    member.coordination.accept(
+      {
+        id: "old-message",
+        operationId: "old-operation",
+        from: { sessionId: "old-main-0", agentId: "main" },
+        to: { sessionId: "old-main-24", agentId: "main" },
+        text: "Continue old work after re-invitation",
+        provenance: {
+          author: { kind: "agent", id: "private-bot", sessionId: "old-main-0" },
+          conversationId: "private-bot",
+          recipients: [],
+        },
+        createdAt: Date.now(),
+        deadline: Date.now() + 600000,
       },
-      createdAt: Date.now(),
-      deadline: Date.now() + 600000,
-    })
+      Date.now() + 60_000
+    )
   )
   f.sql.exec(
     "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
@@ -319,7 +459,7 @@ it("does not let concurrent old-generation cleanup fence newly authorized work",
   let laterSettled = false
   const later = member.host.familyAdmission().then(async (value) => {
     await Effect.runPromise(
-      member.turns.admit({
+      member.admit({
         operationId: "fresh-work",
         text: "Authorized under the new membership",
       })
@@ -340,7 +480,47 @@ it("does not let concurrent old-generation cleanup fence newly authorized work",
   expect(member.pause).toHaveBeenCalledTimes(1)
 })
 
-it("lets native abort cleanup recheck membership after durable fencing without a cycle", async () => {
+it("commits known detached-child revocation before starting cleanup-only reconciliation", async () => {
+  const f = fixture()
+  f.actor("cillian")
+  const member = f.actor("claire")
+  await member.host.familyAdmission()
+  f.sql.exec(
+    "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+  )
+  let entered!: () => void,
+    release!: () => void,
+    committed = false
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  member.revoke.mockImplementationOnce(() =>
+    Effect.promise(async () => {
+      entered()
+      await held
+      committed = true
+    })
+  )
+  member.reconcile.mockImplementationOnce(() =>
+    Effect.sync(() => {
+      expect(committed).toBe(true)
+    })
+  )
+  const fencing = member.host.familyAdmission()
+  await started
+  expect(member.reconcile).not.toHaveBeenCalled()
+  release()
+  await fencing
+  expect(member.revoke).toHaveBeenCalledWith("finished-request")
+  expect(member.reconcile).toHaveBeenCalledWith("finished-request", {
+    allowDispatch: false,
+  })
+})
+
+it("lets owned cleanup recheck membership after durable fencing without a cycle", async () => {
   const f = fixture()
   f.actor("cillian")
   const member = f.actor("claire")
@@ -419,7 +599,7 @@ it.each([false, true])(
     )
     await member.host.familyAdmission()
     await Effect.runPromise(
-      member.turns.admit({
+      member.admit({
         operationId: "fresh-after-read",
         text: "New membership",
       })
@@ -479,3 +659,47 @@ it("chat model changes use the existing settings API and remain private to the c
     await member.host.modelSettingsAction({ action: "read" })
   ).toMatchObject({ selection: { model: "gpt-6-luna" } })
 })
+
+it.each(["removed", "replaced"] as const)(
+  "cancels manual pending work on an already-paused routine when membership is %s",
+  async (change) => {
+    const f = fixture()
+    f.actor("cillian")
+    const member = f.actor("claire")
+    await member.host.familyAdmission()
+    const routines = routineFixture(member.db, () => true)
+    Object.assign(member.host, { routines: routines.service })
+    const routine = routines.save({
+      id: crypto.randomUUID(),
+      operationId: crypto.randomUUID(),
+      expectedRevision: 0,
+      title: "Paused routine",
+      prompt: "Read saved facts.",
+      status: "paused",
+      schedule: { type: "once", at: Date.now() + 3600_000 },
+    }).routine
+    const pending = routines.runNow({
+      id: routine.id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: routine.revision,
+    }).run!
+    f.sql.exec("DELETE FROM member WHERE userId='claire'")
+    if (change === "replaced")
+      f.sql.exec(
+        "INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+      )
+    const current = await member.host.familyAdmission()
+    expect(current?.membershipId ?? null).toBe(
+      change === "replaced" ? "replacement" : null
+    )
+    expect(routines.runs()).toMatchObject([
+      { id: pending.id, turnId: pending.turnId, status: "cancelled" },
+    ])
+    expect(routines.inFlight()).toBeUndefined()
+    expect(routines.get(routine.id)).toMatchObject({
+      status: "paused",
+      revision: routine.revision,
+    })
+    expect(await Effect.runPromise(member.turns.recent())).toHaveLength(0)
+  }
+)

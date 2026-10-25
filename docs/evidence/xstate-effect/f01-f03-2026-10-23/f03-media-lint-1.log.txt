@@ -1,0 +1,4 @@
+src/features/files/voice-recorder.machine.ts:20:55: error architecture(boundaries): Application and domain code use typed tags or decoded error contracts, not class prototypes.
+src/features/files/voice-recorder.machine.ts:23:10: error architecture(boundaries): Application and domain code use typed tags or decoded error contracts, not class prototypes.
+src/features/files/use-file-preview.ts:59:66: error react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'resource' help: Either include it or remove the dependency array.
+src/features/files/files-panel.tsx:420:1: error eslint(complexity): function `FilePreview` has a complexity of 21. Maximum allowed is 20.

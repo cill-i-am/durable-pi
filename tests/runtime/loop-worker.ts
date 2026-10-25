@@ -168,7 +168,14 @@ export class LoopBot extends DurableObject<Record<string, never>> {
     if (path === "/loops/start") {
       if (!(await Effect.runPromise(this.turns.get("loop-run")))) {
         await Effect.runPromise(
-          this.turns.admit({ operationId: "loop-run", text: "Synthetic loop" })
+          this.turns.admit(
+            { operationId: "loop-run", text: "Synthetic loop" },
+            undefined,
+            [],
+            undefined,
+            // Pi drives this recovery probe; there is no ConversationRunner.
+            { discoveryDeadline: Date.now() + 60_000 }
+          )
         )
         const pi = await this.harness.pi()
         const conversation = await pi.root(BACKGROUND_CONTEXT, {
@@ -179,10 +186,7 @@ export class LoopBot extends DurableObject<Record<string, never>> {
           BACKGROUND_CONTEXT
         )
         await Effect.runPromise(
-          this.turns.saveSession("loop-run", String(conversation.id))
-        )
-        this.db.run(
-          "UPDATE chat_turns SET status='running' WHERE id='loop-run'"
+          this.turns.submitted("loop-run", String(conversation.id))
         )
         await this.harness
           .session(String(conversation.id))

@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  21:05:32
+   Duration  383ms (import 69%, tests 22%, transform 5%, setup 3%, worker 1%)
+

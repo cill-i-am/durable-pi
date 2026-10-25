@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeFamilyAccess} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-access-owner.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json')
+const {Cause,Context,Effect,Exit,Scope}=await import(require.resolve('effect'))
+class NativeRequest extends Context.Service()('F09.NativeRequest'){}
+const scope=await Effect.runPromise(Scope.make())
+let enter!:()=>void,abort!:()=>void,reject!:(reason:unknown)=>void
+const entered=new Promise<void>(r=>enter=r),aborted=new Promise<void>(r=>abort=r)
+const owner=await Effect.runPromise(makeFamilyAccess({read:signal=>{signal.addEventListener('abort',abort,{once:true});enter();return new Promise((_resolve,fail)=>reject=fail)},signOut:async()=>{},leave:()=>assert.fail('no navigation while closing')}).pipe(Scope.provide(scope)))
+await entered;let settled=false;owner.revoke()
+const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(x=>{settled=true;return x});await aborted
+assert.equal(settled,false)
+const annotation=Context.make(NativeRequest,'family-read'),defect=new Error('native failure')
+reject(Cause.fromReasons([Cause.makeFailReason('native checked').annotate(annotation),Cause.makeDieReason(defect).annotate(annotation),Cause.makeInterruptReason(89234).annotate(annotation)]))
+const exit=await closing;assert.ok(Exit.isFailure(exit))
+const reasons=exit.cause.reasons,interrupt=reasons.find((r:any)=>r._tag==='Interrupt'&&r.fiberId===89234),die=reasons.find((r:any)=>r._tag==='Die'&&r.defect===defect)
+const checked=reasons.find((r:any)=>r._tag==='Die'&&r.defect?._tag==='Fail'&&r.defect.error==='native checked')
+console.log(JSON.stringify({joined:true,nativeInterrupt:!!interrupt,interruptAnnotation:interrupt?.annotations.get(NativeRequest.key),nativeDefect:!!die,defectAnnotation:die?.annotations.get(NativeRequest.key),nativeChecked:!!checked,checkedAnnotation:checked?.defect.annotations.get(NativeRequest.key)}))
+assert.equal(interrupt?.annotations.get(NativeRequest.key),'family-read');assert.equal(die?.annotations.get(NativeRequest.key),'family-read');assert.equal(checked?.defect.annotations.get(NativeRequest.key),'family-read')

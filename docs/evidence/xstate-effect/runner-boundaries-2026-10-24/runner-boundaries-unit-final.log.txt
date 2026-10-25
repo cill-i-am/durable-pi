@@ -1,0 +1,13 @@
+$ vitest run
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+
+ Test Files  331 passed (331)
+      Tests  3811 passed (3811)
+   Start at  22:13:50
+   Duration  56.24s (tests 58%, import 38%, transform 3%, setup 1%)
+
+    Isolate  331 workers spawned · ~118ms startup each (spawn + environment, per file)
+             at least ~4.22s faster with isolate: false — reuses workers across files instead of one per file
+

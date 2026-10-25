@@ -1,0 +1,19 @@
+{
+  "source": {
+    "src/terminal/terminal.ts": "10e738f353bb09298c96dc24eeda4a4af0de1c0b200dbf5906de1ebed6ff4cbc",
+    "src/terminal/service-host.machine.ts": "08a0c568861044645d44041e25149bbc719b9be0c938cba8749c297552b421e5",
+    "tests/terminal.test.ts": "9270da5bbc04a0f79334887de2b60839014df5a7757333d279f3ed67e1718660",
+    "tests/terminal-service-host.test.ts": "376b1e42c94168ec690848d0b93ead5abc9eecc35e9c4b5a1d4d3e5dcca5a79c",
+    "docs/xstate-effect-terminal-service-host.md": "dcbbf18973b19efa19d7a629aaf54661f97c0c08c9426cf06ff4891661976355"
+  },
+  "unchanged_probe": "760f2898461a5f431e190058532784ee7ad210089946a8942f40e85a43aad233",
+  "before_manifest": "754938d725d0ab00f0f9314e7808815abd63adfbc35f87b280dbf08d544b2598",
+  "evidence": {
+    "/private/tmp/terminal-host-independent/confirmed-review.log": "2703ceecc19b8dfd702da88c72cfc0983a136f3c53e15ca23cc14c7ed3fd435d",
+    "/private/tmp/terminal-host-independent/after-review.log": "2883a524cac5a9c03771177955e6a5871464185f9c9f2375562a2e880552d4c4",
+    "/private/tmp/terminal-host-independent/review.test.ts": "760f2898461a5f431e190058532784ee7ad210089946a8942f40e85a43aad233",
+    "/private/tmp/terminal-host-independent/vitest.config.mjs": "85c9d0e17b647ee8e8285e4f53f9c9c651aa421c9d10cc63095c1422b34a92c7"
+  },
+  "scope": "Production Terminal/official Effect actor/NodeSQLite plus synthetic native runtime; no Sandbox/workerd/real provider",
+  "result": "Closed: one concrete finding repaired; unchanged two independent probes pass; no remaining concrete finding in bounded source/ownership review."
+}

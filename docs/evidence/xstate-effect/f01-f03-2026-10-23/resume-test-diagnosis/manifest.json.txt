@@ -1,0 +1,29 @@
+{
+  "status": "fixed-test-only",
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi",
+  "source": {
+    "tests/conversation-resume.test.ts": "161dd71152a1537bd0db06004f0eb7bccc49c0afa8247de24208587117188827",
+    "src/features/conversation/connection.ts": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228",
+    "src/features/conversation/connection-owner.ts": "ba24e41817a27ef2e307578f27731f76732889b9610cfcd52132e46587b8aba5",
+    "src/features/conversation/connection-response.ts": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015",
+    "src/features/conversation/connection.machine.ts": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3"
+  },
+  "evidence": {
+    "original.test.ts": "c2ca56c97904d5599a87991a4a885985ec0bd0d375e501c84fb770badf6cfad3",
+    "initial-stalled.test.ts": "9844befb0822b7acb61e77f268959f5cfb9e53900f3fed6ed18e8a1f8380bd27",
+    "initial-stalled.log": "c9e7ee1cf3168c603e12304f67d9395aed1598dc4a2b8f6d2e1b074686644c23",
+    "native-scheduler-only.test.ts": "5b05b2eee3a7134f7ba30f91a484e092e6599b5e7225af33a8bc658814e6d3db",
+    "native-scheduler.log": "3f540fc77e3c4007544ca63e015a640f23ea60e97ad375234a203a48f49e9c68",
+    "probe.test.ts": "92488f682eccd78693a0f45e2eb240bf34494f824ecf90aa0131fa5d769142a0",
+    "native-entry-barrier.log": "4622792a1cb9cb9c9642f595827d3d34098599b646bfafb887b25dd59c3a632e",
+    "focused-final.log": "e7d530e32aeb2c7c33aa2a84a5ac7b7f7ee446ebd544727909a14c562937af43",
+    "lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "format.log": "7739d2dd615db218df36d3c6de11d5ed8db3c444b919bb0ac6ecd511b9d104f0"
+  },
+  "checks": "24/24 in3affected suites, scoped lint/format/diffcheck pass",
+  "limits": [
+    "All original assertions and5000ms test timeout unchanged.",
+    "No production edits, Git writes or broad gates.",
+    "Full static/unit integration rerun parent-owned."
+  ]
+}

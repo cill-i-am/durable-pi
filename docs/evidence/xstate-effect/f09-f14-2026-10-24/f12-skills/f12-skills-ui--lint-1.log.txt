@@ -1,0 +1,2 @@
+src/features/skills/skills.machine.ts:47:37: error architecture(boundaries): Application and domain code use typed tags or decoded error contracts, not class prototypes.
+src/features/skills/skill-view.machine.ts:16:60: error architecture(boundaries): Application and domain code use typed tags or decoded error contracts, not class prototypes.

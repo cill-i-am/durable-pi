@@ -1,0 +1,50 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+B16_TERMINAL_CAUSE_MUTATION_APPLIED
+ ❯ tests/terminal-host.test.ts (6 tests | 1 failed | 5 skipped) 23ms
+   × preserves the drain Cause through the production ManagedRuntime promise boundary 23ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-host.test.ts > preserves the drain Cause through the production ManagedRuntime promise boundary
+AssertionError: expected [ { tag: 'Die', …(2) } ] to deeply equal [ { tag: 'Fail', …(2) }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "annotation": "checked",
+-     "tag": "Fail",
+-     "value": Error {
+-       "message": "checked drain failure",
+-     },
+-   },
+-   {
+-     "annotation": "defect",
++     "annotation": undefined,
+      "tag": "Die",
+      "value": Error {
+-       "message": "drain cleanup defect",
++       "message": "checked drain failure",
+      },
+    },
+  ]
+
+ ❯ tests/terminal-host.test.ts:301:7
+    299|         annotation: reason.annotations.get(Annotation.key),
+    300|       }))
+    301|     ).toEqual([
+       |       ^
+    302|       { tag: "Fail", value: checked, annotation: "checked" },
+    303|       { tag: "Die", value: defect, annotation: "defect" },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 skipped (6)
+   Start at  17:04:19
+   Duration  504ms (import 51%, transform 41%, tests 6%, setup 2%, worker 1%)
+

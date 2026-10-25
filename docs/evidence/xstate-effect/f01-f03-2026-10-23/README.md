@@ -1,0 +1,25 @@
+# F01–F03 publication evidence
+
+This package preserves the conversation/draft/reload and file/media migration evidence, plus final cleanup and polling corrections. Imported files are byte-for-byte copies. `manifest.json` maps every stored artifact to its original path, checkpoint group, byte length and SHA-256; `SHA256SUMS` covers the package including its generated indexes. Equal-byte supplemental aliases are recorded once instead of duplicating logs.
+
+## Source and gate boundary
+
+`final-source-manifest.json` captures **64 current repository paths** in the integration worktree: the original extraction 58, shared HTTP/native 4, final F01 repair/full scope, pending-file polling 3, the resume test, and the F01 domain doc, with overlaps counted once. Its ordered provenance records which later correction supersedes each historical hash. Historical freeze manifests remain unchanged; their source-specific results are not silently upgraded to this final composition.
+
+**One completed composed checkpoint is included:** the parent-provided `composed-checkpoint/f01-f03-composed-unit-build-repaired.log.txt` records route generation, **3,422 tests across 302 files**, the production client/server build, built website routing check and all seven Worker builds. This was run in the integration worktree after the resume test correction. Final 15 native suites, full browser, passkey and two-build recovery results were still pending when this package was captured; no completed aggregate/CI gate is claimed. The focused 81-test polling checkpoint and resume 24-test checkpoint below establish their named scopes only. Curating this package ran no tests, builds, providers, deployment or Git mutation.
+
+## Read the evidence in this order
+
+| Evidence | What it establishes and what it does not |
+| --- | --- |
+| Root `f01-*`, `f02-*`, `f03-*` files and `historical-manifest.json.txt` | The 138 original raw lane artifacts: characterization, focused tests, browser checkpoints, independent review, expected negative controls and diagnostic/setup failures. These precede some later repairs. A filename containing `final` means that author's historical checkpoint, not the final integrated repository. |
+| `shared-http-native/` | The 24 raw shared-correction artifacts plus the original README/checksum/manifest. Actual installed Effect and scoped owners join native promises and unread response cancellation; preserve checked failure plus annotated native interruption. Apps/F04–F08 cases are dependency/consumer controls, not additional F01–F03 feature acceptance. |
+| `cleanup-final/` | Unchanged F01/F02/F03 native-promise probes, original failures, local F01 collector correction, 35 focused tests and eight expected negative failures. Connection Interrupt 90101, submission 90104 and turn 90105 annotations survive joined cancellation. F02/F03 positive controls and microphone/preview checks retain their original scope. The independent final closure is stored once under `shared-http-native/final-no-die-supplement/`. |
+| `polling-compatibility/` | Compatibility correction keeps the existing 2s observation recovery while preparation is pending, including recovery after at least four transient read failures. The combined compatibility log includes F12 as a related control, not publication of F12. `f01-f03-composed-focused-2.log.txt` records 81 tests across 10 affected files. |
+| `resume-test-diagnosis/` | Test-only scheduler correction: default fake timers froze Effect's native `setImmediate`, then timer advancement ran before actor backoff entry. The final test fakes timeout APIs only and awaits observable 250ms timer installation. Original assertions and 5000ms timeout remain. The final focused log records 24 tests across 3 suites; production connection hashes are unchanged. |
+
+## Failures and proof limits
+
+Before/intermediate failures and private mutation controls are intentionally retained. In particular, `f01-native-interrupt-after.log.txt` records an intermediate object-identity assertion issue; the final cases check semantic native interruption IDs and annotations because Effect may reconstruct reason objects. The negative control restores the blanket reason filter in private copies and fails eight preservation assertions. Resume `initial-stalled` and `native-scheduler` logs are failed partial fixes, not unresolved production failures. Empty lint/type logs mean no emitted diagnostics in that recorded command, not an independently proven broader gate.
+
+Browser records exercise actual mounted components/Chromium with synthetic HTTP and microphone/media controls at their recorded source checkpoints. Here “native” means real native promises, stream/SDK interfaces and installed Effect actor scheduling under controlled tests. It does **not** mean hosted-provider acceptance, workerd restart, remote rollback, real authentication, remote exactly-once execution or deployment. Those claims require their separate backend/runtime evidence. Local abort joins observed cleanup; it cannot undo a remote write.

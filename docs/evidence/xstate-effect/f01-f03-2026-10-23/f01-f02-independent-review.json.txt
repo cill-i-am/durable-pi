@@ -1,0 +1,80 @@
+{
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+  "reviewer": "/root/mailbox_independent_review",
+  "readOnly": true,
+  "f02": {
+    "state": "closed",
+    "hashes": {
+      "src/features/updates/recovery.ts": "824c3359c52b7c7b243607f61d4550423486694c0ae75191dd1333a9fb0777ef",
+      "src/features/updates/recovery.machine.ts": "014f3cfa3afd9d8d81c2f66b85a723cda69d1a84527296691f9e8c030728e463",
+      "src/features/updates/update-recovery.tsx": "4ac32ac5b33db0e6d18b234aa4a4088e845b36c4e5570dbb871f6ae91d4f4e78",
+      "src/features/updates/version-request.ts": "004e59ed087a509148f5d36b0e308b12abba17075e7810828af620e2cb6503d8",
+      "tests/client-recovery.test.ts": "cc39c94ab6b2d09a98f5f3abfaf19ae5b7f504a5008e4840db2f2814f0783546",
+      "tests/update-version-request.test.ts": "292a9d1586245e0833c312e5d52cd638cd4ac8585aba0e6a2900d2908abc50cd",
+      "tests/browser/stale-tab.spec.ts": "c673fa2276698dd38d6e3579fa983595b03bdf5cc8e45457a364622406ce65e9",
+      "tests/browser/update-recovery-owner.spec.ts": "b13beef1ec0b5a0f8f2a63f2e40912b74e5869ed024cb64c6ec0d5403d52b4a5",
+      "docs/f02-update-recovery.md": "4d30442b9f2eb9762a5591b0bc599d776b0f7a84a68d77190f29ca308f3ef142"
+    },
+    "probe": "/private/tmp/f01-f02-independent.test.ts",
+    "unchangedProbeResult": "/private/tmp/f02-independent-recheck.log",
+    "focusedResult": "/private/tmp/f02-independent-focused.log",
+    "finding": "Late structured native check Cause swallowed during joined closure; now retained and independently rechecked.",
+    "followOn": "Corrected: caller races its Deferred against terminal actor notification; original probe passes.",
+    "followOnEvidence": "/private/tmp/f02-independent-reload-race.log",
+    "finalProbe": "/private/tmp/f01-f02-independent-final.log"
+  },
+  "f01": {
+    "state": "closed",
+    "unaffectedFocused": "/private/tmp/f01-independent-domain.log",
+    "openFindings": [],
+    "closedFindings": [
+      "TanStack native body cleanup now joined before replacement",
+      "Stop independently admitted per target while retry/other cancellation is pending",
+      "Authorization denial retains original ApiError plus unread-body cleanup Cause outside SDK wrapping and admits no replacement fetch"
+    ],
+    "hashes": {
+      "src/features/conversation/connection.ts": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228",
+      "src/features/conversation/connection.machine.ts": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3",
+      "src/features/conversation/connection-owner.ts": "e9dc29620f1dc56135af773ad2d855a8f52ab2a54a59a98230899690ee414298",
+      "src/features/conversation/composer-draft.ts": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190",
+      "src/features/conversation/composer-draft.machine.ts": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe",
+      "src/features/conversation/composer-draft-owner.ts": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999",
+      "src/features/conversation/draft.ts": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534",
+      "src/features/conversation/use-composer-draft.ts": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03",
+      "src/features/conversation/submission.machine.ts": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116",
+      "src/features/conversation/submission-owner.ts": "daed66ab1d2a10f8db5890d961a4aee96bbb56f4f4ad210450e8f91c7eb45883",
+      "src/features/conversation/turn-command.machine.ts": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704",
+      "src/features/conversation/turn-command-owner.ts": "6c0dcbe6c0b79f75630fcd72e18c147ebc2e53ef7b54ef98666f1db73a420c55",
+      "src/features/conversation/use-conversation-commands.ts": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc",
+      "src/features/conversation/use-conversation.ts": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2",
+      "src/features/conversation/conversation.tsx": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f",
+      "tests/composer-draft.test.ts": "96c4e3787bf79241d3c7fb5e30587293cffbebe5098fa522067dade2c66b2d0d",
+      "tests/composer-draft-machine.test.ts": "f0a63ce93eb34a72fce1674af1bb7fea451c61f0fb78ac35008e5a037f486230",
+      "tests/conversation-connection-machine.test.ts": "eeb04839a0f7a05f13fb1645d9bc577daf83af8598cab9e4d9eda8d6ad416a33",
+      "tests/conversation-connection-composition.test.ts": "40d104fae4c825de71497c08ca755baa9feba159482d32683476f3fddf85e1d6",
+      "tests/conversation-submission-machine.test.ts": "6f0473fd3d43339ffb12c33b6471246c05768c20adfe0351011a6604845f2545",
+      "tests/browser/conversation-owner-lifecycle.spec.ts": "9c7753a972235b629b7aaad1ad7eee951d078bd62fc6702757b6c80fde5f7225",
+      "src/features/conversation/connection-response.ts": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015"
+    }
+  },
+  "evidence": {
+    "firstTwoRed": "/private/tmp/f01-f02-independent-direct.log",
+    "stopRed": "/private/tmp/f01-independent-stop-before.log",
+    "finalOriginal4Probes": "/private/tmp/f01-f02-independent-final.log",
+    "final50Focused": "/private/tmp/f01-f02-independent-focused-final.log",
+    "permissionCleanupRed": "/private/tmp/f01-independent-denied-cleanup-before.log",
+    "final5UnchangedProbes": "/private/tmp/f01-f02-independent-closed.log",
+    "final53Focused": "/private/tmp/f01-f02-independent-focused-closed.log",
+    "finalFileCount": 31,
+    "finalHashMismatches": [],
+    "probeSha256": "88aeae0ba007e7a5cd51927ccc224f7dc5d5a1635cb5497df8af72cc30b06372"
+  },
+  "limits": [
+    "This was a read-only F01/F02 review; only temporary probes/reports were authored.",
+    "No real providers or deployed services used.",
+    "Author browser and two-build evidence inspected; no duplicate independent broad browser gate run.",
+    "Last authorization-cleanup-only change is proved with actual installed SDK; prior browser results precede that narrow final delta.",
+    "Parent owns final integration gates, exact-tree publication and shared tracking."
+  ],
+  "remainingFindings": []
+}

@@ -10,7 +10,7 @@ import { ConversationLatency } from "../src/conversations/latency"
 afterEach(() => vi.useRealTimers())
 
 it("delivers the entire first-text batch when the consumer has paused before its initial cursor", async () => {
-  vi.useFakeTimers()
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
   const turn = {
     id: "turn",
     text: "question",
@@ -69,7 +69,7 @@ it("delivers the entire first-text batch when the consumer has paused before its
 })
 
 async function pausedConsumer() {
-  vi.useFakeTimers()
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
   let state = {
     turns: [],
     model: "initial",
@@ -78,6 +78,8 @@ async function pausedConsumer() {
   }
   let notify = () => {}
   const unsubscribe = vi.fn()
+  const checkpoint = new ConversationCheckpoint()
+  const published = vi.spyOn(checkpoint, "current")
   const response = conversationEvents(
     {
       snapshot: () => Effect.sync(() => state),
@@ -93,13 +95,16 @@ async function pausedConsumer() {
     new AbortController().signal,
     true,
     Effect.runPromiseExit,
-    { checkpoint: new ConversationCheckpoint(), after: null }
+    { checkpoint, after: null }
   )
-  await vi.advanceTimersByTimeAsync(0)
+  await vi.waitFor(() => expect(published).toHaveBeenCalledTimes(1))
   for (let i = 1; i <= 4; i++) {
     state = { ...state, model: i === 4 ? "latest" : `model-${i}` }
     notify()
     await vi.advanceTimersByTimeAsync(80)
+    // The fourth update waits for reader demand once all four native slots fill.
+    if (i < 4)
+      await vi.waitFor(() => expect(published).toHaveBeenCalledTimes(i + 1))
   }
   return { reader: response.body!.getReader(), unsubscribe }
 }

@@ -1,0 +1,34 @@
+# Additive workspace command and route-error retry owners
+
+Source: `/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi`. Exact seven-file manifest `/private/tmp/workspace-controls-freeze.json`; paths `/private/tmp/workspace-controls-owned.txt`. No prior 27-file F10 source moved (all hashes rechecked). No package, Git, worker, shared, storage, route definition or URL changes.
+
+## Applicability and ownership
+
+The canonical ownership/applicability paragraphs require machines whenever later permitted work depends on events or async completion; current correctness and file size do not exempt these controls. Search previously retained an executable command in afterSearch until Base UI close completion; route error recovery used a React retrying setter around invalidate/reset. Both are application lifetimes. Base UI retains native opening/closing, animation, overlay mechanics and focus placement; Router retains invalidation, loader cancellation, URL/search and navigation authority. Element handles, search contents, selected-agent facts and telemetry reference receipts remain mechanisms/projections. Existing bounded observability reporting is untouched.
+
+## Invariants and implementation
+
+- `workspace-command.machine.ts` alone admits opening, closing and captured action/agent commands. Closing ignores subsequent choices. Its matching revision completion authorizes at most one dispatch; reopening replaces the revision and revokes the old command. Current lock is checked both at admission and the capability dispatch boundary. Lock invalidates the pending command; unlocking does not automatically reopen or replay it. Exact current-agent selection still invokes the existing parent selection callback, preserving navigation back to that agent's conversation.
+- `use-workspace-command.ts` gives the actor an Effect scope, owns the keyboard listener, fences retired dispatch, and exposes only snapshot projections and events. No new animation timer or navigation wrapper. Native focus return keeps the original trigger/fallback behavior; selecting a command retains the existing skipped focus return for the next view. The superseded searchOpen setter, afterSearch ref and skipSearchFocusReturn ref control path are removed.
+- `workspace-link-retry.machine.ts` owns ready -> invalidating -> resetting -> ready. Only an explicit retry can start work; duplicate retries while occupied are ignored. The error identity is captured with that attempt. Error replacement keeps the held native request occupied, and its acknowledgement cannot reset the replacement error. An ordinary invalidation failure returns to ready for an explicit retry.
+- `use-workspace-link-retry.ts` keeps one actor for the mounted recovery view. It joins actual Router invalidation settlement on scope close and fences reset on unmount/current error identity. It observes and retains mixed annotated cleanup Causes despite official actor shutdown materializing child Exits. Expected interruption-only shutdown stays local; no Die(Cause) nesting. Router owns its native cancellation semantics; the host does not invent a cancellation API. The retrying React progression setter and imperative retry function are removed.
+- Local state is ephemeral. Existing browser data and durable identities remain unchanged; no migration or reset is needed.
+
+## Evidence
+
+Highest-risk before characterization used the actual WorkspaceLinkError component in local Chromium with native Router context and a held invalidation Promise. Unmount followed by resolution called the retired reset once. `/private/tmp/workspace-controls-before.log` fails the expected zero assertion with actual1. The same first browser case now records calls1/resets0.
+
+- `/private/tmp/workspace-controls-final-focused.log`: **84/84** across the new nine control cases and existing workspace navigation/URL tests. Includes close/duplicate/reopen/lock/current selection, listener release, malformed event rejection (the pinned integration emits an invalidEvent dead letter), duplicate retry, explicit retry after failure, held success/compound cleanup, and error replacement.
+- `/private/tmp/workspace-controls-browser-final.log`: **9/9** actual-component Chromium checks. Late unmount, explicit retry recovery, error replacement, desktop1100/mobile390 native focus return, current-agent selection and lock/unlock without replay. The ephemeral harness lives in `/private/tmp/workspace-controls-browser/`; it uses actual component source, Router context, Base UI and application CSS, with family/sidebar/diagnostics fixture capabilities and held Router invalidation. It is not a full application/provider proof. The final subsequent production edit was only an explicit TypeScript context annotation with no runtime change.
+- `/private/tmp/workspace-controls-negative.log`: copied private machine removes the close-revision guard. The unchanged race test fails a meaningful expected-empty dispatch list with actual Memory command. Production source was never mutated for the control. Private files `/private/tmp/workspace-controls-negative/`.
+- Scoped types, lint and format logs: `/private/tmp/workspace-controls-types-final.log`, `workspace-controls-lint-final.log`, `workspace-controls-format-final.log`. Type config `/private/tmp/workspace-controls-types.json`.
+
+Commands use `PATH=/opt/homebrew/opt/node@24/bin:$PATH`:
+```
+pnpm exec vitest run tests/workspace-control-lifetimes.test.ts tests/workspace-navigation.test.tsx tests/workspace-url.test.ts --maxWorkers=2
+node /private/tmp/workspace-controls-browser/run.mjs
+pnpm exec vitest run --config /private/tmp/workspace-controls-negative/vitest.config.mjs -t 'a late close' --maxWorkers=1
+pnpm exec tsc --noEmit --project /private/tmp/workspace-controls-types.json
+```
+
+Parent owns final integration, inventory/evidence edits and broad gates. This handoff does not claim independent closure, hosted CI, publication or deployment.

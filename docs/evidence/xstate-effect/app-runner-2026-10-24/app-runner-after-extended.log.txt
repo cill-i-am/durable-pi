@@ -1,0 +1,25 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/app-lifecycle.test.ts (19 tests | 1 failed) 81ms
+   × joins accepted scheduling, rejects queued admission on close, and cannot return a late lease 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/app-lifecycle.test.ts > joins accepted scheduling, rejects queued admission on close, and cannot return a late lease
+{
+  _id: 'Cause',
+  failures: [
+    { _tag: 'Fail', error: [Object] },
+    { _tag: 'Fail', error: [Object] }
+  ],
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 18 passed (19)
+   Start at  20:01:45
+   Duration  374ms (import 54%, tests 28%, transform 15%, setup 2%, worker 1%)
+

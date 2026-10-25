@@ -1,0 +1,39 @@
+{
+  "at": "2026-10-23T16:48:06.538741+00:00",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+  "head": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+  "source": {
+    "src/features/files/file-types.ts": "aba941fb551326eaf47ba46f6e70ea03e00928954aa254cc799abf95e7268a60",
+    "src/features/files/file-cache.ts": "13cc26aa07be76ca1851bb8231b101838058aad8045bbb71fe6e7cd3b2c25613",
+    "src/features/files/uploads.ts": "fe007286cb5d476fbbffbf41a632639075fc54b5ea5750d529a49ada7edd35e3",
+    "src/features/files/upload.machine.ts": "3e020c6bd5e4efaa4a14d8caa4cc2e5a6233013301d592c5248fb38961a3c1f5",
+    "src/features/files/uploads.machine.ts": "1fc633ad763ca88a2212406eaa96129f8b950648457f138115f54bc4c331ab93",
+    "src/features/files/file-refresh.machine.ts": "e870628cda9f794846684374b5038a9fa266416cc7c32b8c4ca4bdf8243e3cbd",
+    "src/features/files/file-mutation.machine.ts": "7c0630acaf75162191d17192b2fd77e6dedcb786a9f768d90a398b3915413077",
+    "src/features/files/files-owner.ts": "b0c354f1a2f2998d5250202de135f4bdfe618064cfe662e1c506b872f5b33b8c",
+    "src/features/files/use-files.ts": "a628d3e5e71758c3512d7fac9d24536e435ee334f7bfdce8a51f35c103d73f7a",
+    "tests/files-lifecycle.test.ts": "362c37673b8971c40688ca96f897e6ce096e2fc518dcc865175ac20640d7c192",
+    "tests/browser/files-lifecycle.spec.ts": "252dbfd60333326359a756899e1d3d366d8faefbadd5ef1b471fa54bcc22245c",
+    "docs/xstate-effect-files-ui.md": "2cf26352ef02ee0c57cfb190c76663f9792a4a44a192a7d3f351b18ce2628463",
+    "src/features/files/owned-work.ts": "56e674c2a81197da06e0612b26e8e7b1d25a432461d6a759b48d2ba576b87e68"
+  },
+  "evidence": {
+    "unit": "/private/tmp/f03-unit.log",
+    "browser": "/private/tmp/f03-browser.log",
+    "negative": "/private/tmp/f03-browser-negative-final.log",
+    "before": "/private/tmp/f03-before/evidence.json",
+    "typecheck": "/private/tmp/f03-types.log",
+    "lint": "/private/tmp/f03-lint.log",
+    "format": "/private/tmp/f03-format.log",
+    "cleanupBefore": "/private/tmp/f03-cleanup-probe/before.log",
+    "cleanupAfter": "/private/tmp/f03-cleanup-probe/after.log",
+    "pendingCommitUnit": "/private/tmp/f03-pending-commit-tests.log",
+    "pendingCommitTypes": "/private/tmp/f03-pending-commit-types.log",
+    "pendingCommitLint": "/private/tmp/f03-pending-commit-lint.log",
+    "independentReview": "/private/tmp/f03-upload-independent-review.md",
+    "pendingCommitBefore": "/private/tmp/f03-upload-independent-probe.log",
+    "pendingCommitAfter": "/private/tmp/f03-upload-independent-probe-after.log"
+  },
+  "scope": "F03 upload/query/mutation owner frozen after independent pending-commit observation correction; media source separately reviewed",
+  "cleanupProbeSha256": "e7a9763a3e29fee4dc787c095aabe965d5dc417b11878d7963c85c304b4cc765"
+}

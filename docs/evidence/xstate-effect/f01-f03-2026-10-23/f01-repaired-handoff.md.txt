@@ -1,0 +1,24 @@
+# F01 repaired handoff after independent review
+
+Supersedes the source freeze/evidence conclusions in `/private/tmp/f01-handoff.md`; the baseline and original pre-fix draft characterization there remain valid historical evidence.
+
+Exact final repair manifest: `/private/tmp/f01-repaired-freeze-manifest.json` (22 files), source list `/private/tmp/f01-repaired-owned-files.txt`. Base remains e521e980c3f60992bae9b63ed113e19da0a4e9f0 in xstate-native-ci-budget. No Git/package/server/provider/deployment actions.
+
+## Independent findings and repairs
+
+1. The actual TanStack SSE parser calls reader.cancel without awaiting its settlement. Its [DONE] frame allowed replacement fetch after250ms while underlying body cancellation remained held. Added feature-local `connection-response.ts`: a bounded native reader bridge retains its cancellation promise, preserves SDK parsing, and closes/joins before every replacement fetch and generator exit. Ordinary native read Error remains retryable. Structured native Cause is retained before SDK StreamReadError wrapping; late cancellation Cause also survives abort. The stream host records cleanup with onExit and deduplicates only failures the consumer actually observed, not merely a failed machine snapshot.
+2. A single retry/cancel invocation slot dropped Stop while retry acknowledgement was held, or while cancelling another target. Retry remains serialized with its stable operation identity. Root-level machine cancellation admission now tracks per-turn IDs and launches scope-owned Effect actions independently. Exact duplicate held cancellation coalesces; different current targets proceed immediately. The host retains cleanup by request key and joins all native requests on scope close.
+
+Both unchanged reviewer F01 probes passed in `/private/tmp/f01-repaired-reviewer-probes.log`. That log also contained a newly added fourth F02 failure, which the F02 owner subsequently repaired independently; it is not an unresolved F01 result. Independent reviewer paused deeper review for a parent-priority B16 investigation; do not infer review closure.
+
+## Final local proof
+
+- 37/37 focused tests: `/private/tmp/f01-repaired-focused.log`.
+- Full tsc clean: `/private/tmp/f01-repaired-types.log`.
+- Scoped lint clean: `/private/tmp/f01-repaired-lint.log`.
+- All22 owned files format clean: `/private/tmp/f01-repaired-format.log`.
+- Repaired28-case desktop/mobile browser run passed: `/private/tmp/f01-repaired-browser.log`. Includes actual Stop while retry HTTP acknowledgement is held, then cancellation of the active SSE-published turn. Final exact-source rerun after structured reader Cause preservation is `/private/tmp/f01-repaired-final-browser.log` (28/28 pass).
+- Additional meaningful mutation controls: `/private/tmp/f01-repair-negative-controls.json`. Removing the SDK cleanup join fails with actual2fetches vs expected1; suppressing cancellation during retry fails the expected per-turn request list. Both sources restored to identical pre-mutation hashes. Raw `/private/tmp/f01-negative-sdk-cleanup-join.log`, `/private/tmp/f01-negative-stop-during-retry.log`.
+- Earlier unreadable-draft and persistence-before-send mutation controls remain `/private/tmp/f01-negative-controls.json`.
+
+Commands retain Node24 PATH. Focused command is the five test files listed in original handoff; browser config `/private/tmp/f01-playwright.config.ts` uses isolated4463/dist/browser-f01 and synthetic local server responses. No live-provider, full-gate, deployment, or final independent approval claim.

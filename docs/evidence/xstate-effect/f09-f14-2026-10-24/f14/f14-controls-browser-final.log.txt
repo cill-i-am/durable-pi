@@ -1,0 +1,25 @@
+[WebServer] (node:58208) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 14 tests using 1 worker
+
+(node:58269) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/activity-controls-lifecycle.spec.ts:80:1 › same-task duplicate retry preserves one operation and uncertain acknowledgement (3.0s)
+  ✓   2 [desktop] › tests/browser/activity-controls-lifecycle.spec.ts:134:1 › saved steering survives reload with its original text and operation (4.4s)
+  ✓   3 [desktop] › tests/browser/activity-controls-lifecycle.spec.ts:210:1 › unconfirmed remote stop retains its saved retry and is never displayed as stopped (2.9s)
+  ✓   4 [desktop] › tests/browser/communication-recovery.spec.ts:142:1 › Retry result retains the saved outcome and disables mailbox controls while pending (2.9s)
+  ✓   5 [desktop] › tests/browser/communication-recovery.spec.ts:215:1 › result recovery errors retain the original task identity and saved output (2.8s)
+  ✓   6 [desktop] › tests/browser/communication-recovery.spec.ts:266:1 › Retry result appears only for outgoing terminal results with unconfirmed continuation (2.7s)
+  ✓   7 [desktop] › tests/browser/communication-recovery.spec.ts:294:1 › Retry mailbox uses the displayed failed epoch and preserves a newer exhaustion after a stale response (5.7s)
+(node:59088) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   8 [mobile] › tests/browser/activity-controls-lifecycle.spec.ts:80:1 › same-task duplicate retry preserves one operation and uncertain acknowledgement (2.8s)
+  ✓   9 [mobile] › tests/browser/activity-controls-lifecycle.spec.ts:134:1 › saved steering survives reload with its original text and operation (4.3s)
+  ✓  10 [mobile] › tests/browser/activity-controls-lifecycle.spec.ts:210:1 › unconfirmed remote stop retains its saved retry and is never displayed as stopped (2.8s)
+  ✓  11 [mobile] › tests/browser/communication-recovery.spec.ts:142:1 › Retry result retains the saved outcome and disables mailbox controls while pending (2.6s)
+  ✓  12 [mobile] › tests/browser/communication-recovery.spec.ts:215:1 › result recovery errors retain the original task identity and saved output (2.8s)
+  ✓  13 [mobile] › tests/browser/communication-recovery.spec.ts:266:1 › Retry result appears only for outgoing terminal results with unconfirmed continuation (2.6s)
+  ✓  14 [mobile] › tests/browser/communication-recovery.spec.ts:294:1 › Retry mailbox uses the displayed failed epoch and preserves a newer exhaustion after a stale response (5.7s)
+
+  14 passed (51.5s)

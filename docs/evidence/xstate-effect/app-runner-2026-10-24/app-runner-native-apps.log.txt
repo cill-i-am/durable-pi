@@ -1,0 +1,4 @@
+$ node scripts/test-apps-runtime.mjs
+WAIT Apps SIGKILL recovery: health-only startup, no object requests until real discovery deadline plus native completion margin.
+PASS native Apps: retained empty discovery, real shared admission and Pi receipt after no-poke SIGKILL, bounded SDK exhaustion, second restart and exact receipt replay.
+Apps native evidence: /var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/apps-native-positive-78557-evidence.json

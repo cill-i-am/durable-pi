@@ -1,0 +1,7 @@
+{
+  "previousCommit": "231b1c44ee8dd9a000eddd92cb12ffc0125cda28",
+  "files": {
+    "scripts/check-passkeys.mjs": "05b9e0d41b80bbfb5e741516682b49378247768831f6425e6cff3528646fc087",
+    "src/features/auth/passkey-settings.tsx": "5ffd3f1d99e11c7825e6bd79943bac26a6b8b78703fbd57bac95956e69588f5a"
+  }
+}

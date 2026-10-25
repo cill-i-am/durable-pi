@@ -1,0 +1,1 @@
+tests/skills-ui-lifecycle.test.ts(38,3): error TS2322: Type 'number' is not assignable to type 'string'.

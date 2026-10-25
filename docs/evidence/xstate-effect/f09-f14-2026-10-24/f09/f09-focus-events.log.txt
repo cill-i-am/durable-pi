@@ -1,0 +1,342 @@
+[WebServer] (node:58133) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:58209) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FOCUS-DIAGNOSTIC {
+  focused: true,
+  active: '<input id="chatgpt-return-address" data-slot="input" required="" autocomplete="off" spellcheck="false" autocapitalize="none" maxlength="8192" placeholder="http://127.0.0.1:…/auth/callback?…" aria-describedby="chatgpt-return-help" class="w-full rounded-[11px] border border-input bg-control px-3.75 py-3.5 shadow-(--shadow-field) transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-[15px] md:leading-4.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-11 min-w-0 text-base sm:text-sm" type="url" value="">',
+  events: [
+    {
+      type: 'focus',
+      time: 1028.0999999046326,
+      target: '_r_1s_',
+      active: '_r_1s_',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1028.1999998092651,
+      target: '_r_1s_',
+      active: '_r_1s_',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1589.1999998092651,
+      target: '_r_1s_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1589.1999998092651,
+      target: '_r_1s_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1589.5,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1589.5,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1610.5,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1610.5,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1614,
+      target: 'chatgpt-return-address',
+      active: 'chatgpt-return-address',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1614,
+      target: 'chatgpt-return-address',
+      active: 'chatgpt-return-address',
+      focused: true
+    }
+  ]
+}
+  ✓  1 [mobile] › ../../../../../../private/tmp/f09-focus-events.spec.ts:304:5 › admin reconnects ChatGPT in Settings with a private return-address field and recovery (5.6s)
+(node:58396) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FOCUS-DIAGNOSTIC {
+  focused: true,
+  active: '<input id="chatgpt-return-address" data-slot="input" required="" autocomplete="off" spellcheck="false" autocapitalize="none" maxlength="8192" placeholder="http://127.0.0.1:…/auth/callback?…" aria-describedby="chatgpt-return-help" class="w-full rounded-[11px] border border-input bg-control px-3.75 py-3.5 shadow-(--shadow-field) transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-[15px] md:leading-4.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-11 min-w-0 text-base sm:text-sm" type="url" value="">',
+  events: [
+    {
+      type: 'focus',
+      time: 1262.5999999046326,
+      target: '_r_1u_',
+      active: '_r_1u_',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1262.6999998092651,
+      target: '_r_1u_',
+      active: '_r_1u_',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1610.4000000953674,
+      target: '_r_1u_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1610.4000000953674,
+      target: '_r_1u_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1610.7999997138977,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1610.7999997138977,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1630.6999998092651,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1630.6999998092651,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1635.7999997138977,
+      target: 'chatgpt-return-address',
+      active: 'chatgpt-return-address',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1635.7999997138977,
+      target: 'chatgpt-return-address',
+      active: 'chatgpt-return-address',
+      focused: true
+    }
+  ]
+}
+  ✓  2 [mobile] › ../../../../../../private/tmp/f09-focus-events.spec.ts:304:5 › admin reconnects ChatGPT in Settings with a private return-address field and recovery (5.7s)
+(node:58731) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FOCUS-DIAGNOSTIC {
+  focused: true,
+  active: `<div data-open="" data-nested="" data-swipe-direction="down" id="_r_20_" role="dialog" tabindex="-1" data-base-ui-focusable="" data-slot="dialog-content" data-detail="true" data-sidebar="expanded" data-family="true" data-overlay-mobile="true" data-mobile-layout="panel" data-desktop="dialog" class="fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl border border-border bg-popover p-7 text-sm text-popover-foreground shadow-(--shadow-dialog) duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 workspace-settings translate-none responsive-overlay" aria-labelledby="base-ui-_r_22_" style="--drawer-swipe-movement-x: 0px; --drawer-swipe-movement-y: 0px; --drawer-swipe-progress: 0; --nested-drawers: 0; --drawer-snap-point-offset: 0px; --drawer-swipe-strength: 1; --drawer-frontmost-height: 796px;"><div class="responsive-overlay-handle" aria-hidden="true"><span></span></div><div data-drawer-content="" class="responsive-overlay-body"><aside class="settings-navigation"><div class="settings-agent"><svg viewBox="0 0 40 40" aria-hidden="true" class="agent-mark" data-tone="primary"><path d="M8 9C12 2 25 2 29 8C37 9 39 18 35 23C34 33 28 38 20 35C10 39 3 30 5 24C0 18 3 12 8 9Z" fill="currentColor"></path><ellipse cx="15" cy="20" rx="2" ry="3" fill="var(--agent-mark-ink)"></ellipse><ellipse cx="26" cy="20" rx="2" ry="3" fill="var(--agent-mark-ink)"></ellipse></svg><span>Navi</span></div><div class="settings-nav-content"><h2 id="base-ui-_r_22_" data-slot="dialog-title" class="font-heading text-base leading-none font-medium settings-title">Settings</h2><nav aria-label="Settings sections"><a data-slot="button" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 max-md:min-h-11 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*='size-'])]:size-4 text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 settings-nav-item" href="/agents/home/settings/general"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-2" aria-hidden="true"><path d="M14 17H5"></path><path d="M19 7h-9"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg><span><strong>General</strong><small>Appearance, messages and security</small></span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></a><a data-slot="button" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 max-md:min-h-11 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*='size-'])]:size-4 text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 settings-nav-item" href="/agents/home/settings/models"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plug" aria-hidden="true"><path d="M12 22v-5"></path><path d="M15 8V2"></path><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"></path><path d="M9 8V2"></path></svg><span><strong>Models &amp; connections</strong><small>Subscription and job defaults</small></span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></a><a data-slot="button" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 max-md:min-h-11 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*='size-'])]:size-4 text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 settings-nav-item" href="/agents/home/settings/access"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg><span><strong>Agents &amp; tools</strong><small>Capabilities and permissions</small></span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></a><a data-slot="button" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 max-md:min-h-11 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*='size-'])]:size-4 text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 settings-nav-item" href="/agents/home/settings/skills"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open" aria-hidden="true"><path d="M12 5v16"></path><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"></path></svg><span><strong>Skills</strong><small>Instructions and revisions</small></span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></a><a data-slot="button" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 max-md:min-h-11 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*='size-'])]:size-4 text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 settings-nav-item" href="/agents/home/settings/family"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path `... 95872 more characters,
+  events: [
+    {
+      type: 'focus',
+      time: 1000.5999999046326,
+      target: '_r_20_',
+      active: '_r_20_',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1000.5999999046326,
+      target: '_r_20_',
+      active: '_r_20_',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1552.5,
+      target: '_r_20_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1552.5,
+      target: '_r_20_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1552.9000000953674,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1552.9000000953674,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1568.5999999046326,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1568.5999999046326,
+      target: '',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1570.4000000953674,
+      target: '_r_20_',
+      active: '_r_20_',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1570.4000000953674,
+      target: '_r_20_',
+      active: '_r_20_',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1578.1999998092651,
+      target: '_r_20_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1578.3000001907349,
+      target: '_r_20_',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1578.8000001907349,
+      target: 'chatgpt-return-address',
+      active: 'chatgpt-return-address',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1578.8000001907349,
+      target: 'chatgpt-return-address',
+      active: 'chatgpt-return-address',
+      focused: true
+    },
+    {
+      type: 'blur',
+      time: 1579.8000001907349,
+      target: 'chatgpt-return-address',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focusout',
+      time: 1579.8000001907349,
+      target: 'chatgpt-return-address',
+      active: '',
+      focused: true
+    },
+    {
+      type: 'focus',
+      time: 1580.1999998092651,
+      target: '_r_20_',
+      active: '_r_20_',
+      focused: true
+    },
+    {
+      type: 'focusin',
+      time: 1580.1999998092651,
+      target: '_r_20_',
+      active: '_r_20_',
+      focused: true
+    }
+  ]
+}
+  ✘  3 [mobile] › ../../../../../../private/tmp/f09-focus-events.spec.ts:304:5 › admin reconnects ChatGPT in Settings with a private return-address field and recovery (8.9s)
+
+
+  1) [mobile] › ../../../../../../private/tmp/f09-focus-events.spec.ts:304:5 › admin reconnects ChatGPT in Settings with a private return-address field and recovery 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByLabel('Return address', { exact: true })
+    Expected: focused
+    Received: inactive
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeFocused" getByLabel('Return address', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('Return address', { exact: true })
+        14 × locator resolved to <input value="" type="url" required="" maxlength="8192" data-slot="input" autocomplete="off" spellcheck="false" autocapitalize="none" id="chatgpt-return-address" aria-describedby="chatgpt-return-help" placeholder="http://127.0.0.1:…/auth/callback?…" class="w-full rounded-[11px] border border-input bg-control px-3.75 py-3.5 shadow-(--shadow-field) transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:te…/>
+           - unexpected value "inactive"
+
+
+      396 |   await popup.close()
+      397 |   const field = page.getByLabel("Return address", { exact: true })
+    > 398 |   try { await expect(field).toBeFocused() } finally { console.log("FOCUS-DIAGNOSTIC", await page.evaluate(() => ({focused:document.hasFocus(), active:document.activeElement?.outerHTML, events:(window as any).__focusEvents}))) }
+          |                             ^
+      399 |   await expect(
+      400 |     page.getByText("the last page may say it can’t connect", { exact: false })
+      401 |   ).toBeVisible()
+        at /private/tmp/f09-focus-events.spec.ts:398:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-focus-events-results/f09-focus-events-admin-rec-f2bbd--address-field-and-recovery-mobile-repeat2/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f09-focus-events-results/f09-focus-events-admin-rec-f2bbd--address-field-and-recovery-mobile-repeat2/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-focus-events-results/f09-focus-events-admin-rec-f2bbd--address-field-and-recovery-mobile-repeat2/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../private/tmp/f09-focus-events-results/f09-focus-events-admin-rec-f2bbd--address-field-and-recovery-mobile-repeat2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [mobile] › ../../../../../../private/tmp/f09-focus-events.spec.ts:304:5 › admin reconnects ChatGPT in Settings with a private return-address field and recovery 
+  2 passed (26.3s)

@@ -61,19 +61,64 @@ export const TaskStatus = Schema.Literals([
   "cancelled",
   "awaiting_input",
 ])
-export const Task = Schema.Struct({
+export const LegacyTask = Schema.Struct({
   id: MessageId,
   direction: Schema.Literals(["incoming", "outgoing"]),
   request: Envelope,
   status: TaskStatus,
   outcome: Schema.NullOr(Outcome),
-  revision: Schema.Int,
+  revision: Time,
   leaseUntil: Schema.NullOr(Time),
   resumed: Schema.Boolean,
   cancelRequested: Schema.Boolean,
 })
+export const ControlPhase = Schema.Literals([
+  "submit",
+  "observe",
+  "stop",
+  "continuation",
+])
+export const TaskControl = Schema.Struct({
+  owner: Schema.NullOr(text(180)),
+  phase: ControlPhase,
+  deadline: Schema.NullOr(Time),
+  attempts: Time,
+  unconfirmed: Schema.Boolean,
+})
+export const TaskStop = Schema.Struct({
+  status: Schema.Literals(["none", "pending", "confirmed", "unconfirmed"]),
+  attempts: Time,
+  deadline: Schema.NullOr(Time),
+  nextAt: Schema.NullOr(Time),
+})
+export const Task = Schema.Struct({
+  ...LegacyTask.fields,
+  schemaVersion: Schema.Literal(1),
+  workflowVersion: Schema.Literal(1),
+  control: TaskControl,
+  stop: TaskStop,
+})
 export type Task = typeof Task.Type
-export const Delivery = Schema.Struct({
+export const ControlAttempt = Schema.Struct({
+  taskId: MessageId,
+  owner: text(180),
+  revision: Time,
+  phase: ControlPhase,
+})
+export type ControlAttempt = typeof ControlAttempt.Type
+export const TaskRelease = Schema.Struct({
+  taskId: MessageId,
+  owner: text(180),
+  revision: Time,
+  now: Time,
+  outcome: Schema.optional(Outcome),
+  failed: Schema.optional(Schema.Boolean),
+  stop: Schema.optional(Schema.Literals(["confirmed", "unconfirmed"])),
+})
+export type TaskRelease = typeof TaskRelease.Type
+export type TaskClaim = { owner: string; deadline: number }
+export type DiscoveryAdmission = { discoveryDeadline: number }
+export const LegacyDelivery = Schema.Struct({
   envelope: Envelope,
   status: Schema.Literals([
     "pending",
@@ -82,11 +127,16 @@ export const Delivery = Schema.Struct({
     "failed",
     "expired",
   ]),
-  attempts: Schema.Int,
-  attemptLimit: Schema.Int,
+  attempts: Time,
+  attemptLimit: Time,
   nextAt: Schema.NullOr(Time),
   error: Schema.NullOr(Schema.String),
   receipt: Schema.NullOr(Receipt),
+})
+export const Delivery = Schema.Struct({
+  ...LegacyDelivery.fields,
+  schemaVersion: Schema.Literal(1),
+  workflowVersion: Schema.Literal(1),
 })
 export type Delivery = typeof Delivery.Type
 export class CommunicationError extends Schema.TaggedError<CommunicationError>()(
@@ -94,6 +144,7 @@ export class CommunicationError extends Schema.TaggedError<CommunicationError>()
   {
     code: Schema.Literals([
       "invalid",
+      "incompatible",
       "forbidden",
       "conflict",
       "not_found",
@@ -113,6 +164,9 @@ export const MAX_TASK_MS = 60 * 60 * 1000
 export const RESULT_WINDOW_MS = 24 * 60 * 60 * 1000
 export const MAX_ATTEMPTS = 8
 export const LEASE_MS = 30000
+export const CONTROL_ATTEMPTS = 3
+export const STOP_ATTEMPTS = 5
+export const STOP_DEADLINE_MS = 300000
 export const MAX_OPEN_TASKS = 3
 export const MAX_RECORDS = 10000
 export const canonicalEnvelope = Schema.encodeSync(
@@ -125,12 +179,22 @@ export const terminal = (t: Task) =>
     t.status
   )
 
+export const MailboxRecovery = Schema.Struct({
+  schemaVersion: Schema.Literal(1),
+  workflowVersion: Schema.Literal(1),
+  epoch: MessageId,
+  failedAt: Time,
+  discoveryToken: Schema.NullOr(Schema.String),
+  message: text(500),
+})
+export type MailboxRecovery = typeof MailboxRecovery.Type
 export const MailboxView = Schema.Struct({
+  recovery: Schema.NullOr(MailboxRecovery),
   tasks: Schema.Array(Task),
   deliveries: Schema.Array(Delivery),
 })
 export type MailboxView = typeof MailboxView.Type
 export const MailboxControl = Schema.Struct({
   id: MessageId,
-  action: Schema.Literals(["cancel", "retry"]),
+  action: Schema.Literals(["cancel", "retry", "retry_mailbox"]),
 })

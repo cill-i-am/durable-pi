@@ -1,0 +1,16 @@
+[
+  {
+    "name": "draft-unreadable",
+    "exit": 1,
+    "before": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe",
+    "after": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe",
+    "restored": true
+  },
+  {
+    "name": "submission-before-save",
+    "exit": 1,
+    "before": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116",
+    "after": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116",
+    "restored": true
+  }
+]

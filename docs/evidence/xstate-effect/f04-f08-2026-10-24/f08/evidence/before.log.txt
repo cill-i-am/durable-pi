@@ -1,0 +1,19 @@
+{"challengeNavigations":1,"uploads":1}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: leaving a challenge must fence late success navigation
+
+1 !== 0
+
+    at file:///private/tmp/f08-auth-ui/stale-probe.mjs:23:9 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

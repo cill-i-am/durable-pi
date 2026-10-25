@@ -10,9 +10,14 @@ import { importFailure } from "@/features/updates/recovery"
 import { ReloadRecovery } from "@/features/updates/update-recovery"
 import { reportClientError } from "@/observability/browser"
 
+import { useWorkspaceLinkRetry } from "./use-workspace-link-retry"
+
 export function WorkspaceLinkError({ reset, error }: ErrorComponentProps) {
   const router = useRouter()
-  const [retrying, setRetrying] = useState(false)
+  const { retrying, retry } = useWorkspaceLinkRetry(error, {
+    invalidate: () => router.invalidate(),
+    reset,
+  })
   const [receipt, setReceipt] = useState<{ error: unknown; id: string }>()
   const reference = receipt?.error === error ? receipt?.id : undefined
   useEffect(() => {
@@ -24,15 +29,6 @@ export function WorkspaceLinkError({ reset, error }: ErrorComponentProps) {
       disposed = true
     }
   }, [error])
-  async function retry() {
-    setRetrying(true)
-    try {
-      await router.invalidate()
-      reset()
-    } finally {
-      setRetrying(false)
-    }
-  }
   if (importFailure(error))
     return (
       <main id="main-content" tabIndex={-1} className="loading-view">
@@ -51,7 +47,7 @@ export function WorkspaceLinkError({ reset, error }: ErrorComponentProps) {
           Error reference: <code>{reference}</code>
         </p>
       )}
-      <Button disabled={retrying} onClick={() => void retry()}>
+      <Button disabled={retrying} onClick={retry}>
         {retrying ? "Opening…" : "Try again"}
       </Button>
       <Link

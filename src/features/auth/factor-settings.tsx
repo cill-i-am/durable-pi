@@ -1,3 +1,4 @@
+import { Redacted } from "effect"
 import { QRCodeSVG } from "qrcode.react"
 import { useEffect, useState } from "react"
 
@@ -12,15 +13,49 @@ import {
   FieldDescription,
 } from "@/components/ui/field"
 
+import { useAuthBusy } from "./auth-owner"
+import { useFactor } from "./factor-owner"
 import { PasswordInput } from "./password-input"
-import { securityError } from "./security-errors"
 import { VerificationCode } from "./verification-code"
 
 type View =
   | { kind: "manage" }
   | { kind: "password"; action: "enable" | "disable" | "codes" }
-  | { kind: "verify"; uri: string; codes: string[] }
-  | { kind: "codes"; codes: string[] }
+  | { kind: "verify"; uri: string; codes: readonly string[] }
+  | { kind: "codes"; codes: readonly string[] }
+
+function factorProjection(state: ReturnType<typeof useFactor>["snapshot"]) {
+  const material = state?.context.material
+    ? Redacted.value(state.context.material)
+    : null
+  const pending = !state || state.matches("requesting") || state.matches("done")
+  const view: View = state?.matches("codes")
+    ? { kind: "codes", codes: material!.codes }
+    : state?.matches("verify") || state?.context.request?.action === "verify"
+      ? { kind: "verify", uri: material!.uri, codes: material!.codes }
+      : state?.matches("manage")
+        ? { kind: "manage" }
+        : {
+            kind: "password",
+            action:
+              state?.context.action === "disable"
+                ? "disable"
+                : state?.context.action === "codes"
+                  ? "codes"
+                  : "enable",
+          }
+  const error = state?.context.error ?? ""
+  return { view, pending, error }
+}
+
+function useEnrollment(onDone: () => void) {
+  const { data: session } = authClient.useSession()
+  return useFactor(
+    session?.session.id ?? "signed-out",
+    !!session?.user.twoFactorEnabled,
+    onDone
+  )
+}
 
 export function FactorSettings({
   onBusyChange,
@@ -29,81 +64,19 @@ export function FactorSettings({
   onBusyChange: (busy: boolean) => void
   onDone: () => void
 }) {
-  const { data: session } = authClient.useSession()
-  const [view, setView] = useState<View>(
-    session?.user.twoFactorEnabled
-      ? { kind: "manage" }
-      : { kind: "password", action: "enable" }
-  )
+  const factor = useEnrollment(onDone)
+  const { view, pending, error } = factorProjection(factor.snapshot)
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
   const [showKey, setShowKey] = useState(false)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState("")
+  useAuthBusy(pending || view.kind === "codes", onBusyChange)
   useEffect(() => {
-    onBusyChange(pending || view.kind === "codes")
-  }, [pending, view.kind, onBusyChange])
-  useEffect(() => () => onBusyChange(false), [onBusyChange])
-  async function submit(event: React.SubmitEvent<HTMLFormElement>) {
+    if (view.kind !== "password") setPassword("")
+    if (view.kind === "codes") setCode("")
+  }, [view.kind])
+  function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending) return
-    setPending(true)
-    setError("")
-    try {
-      if (view.kind === "verify") {
-        const result = await authClient.twoFactor.verifyTotp({
-          code,
-          trustDevice: false,
-        })
-        if (result.error) {
-          setError(securityError(result.error))
-          return
-        }
-        setView({ kind: "codes", codes: view.codes })
-        setCode("")
-      } else if (view.kind === "password") {
-        if (view.action === "enable") {
-          const result = await authClient.twoFactor.enable({
-            password,
-            method: "totp",
-          })
-          if (result.error) {
-            setError(securityError(result.error))
-            return
-          }
-          if (result.data.method !== "totp")
-            throw new Error("Missing setup information")
-          setView({
-            kind: "verify",
-            uri: result.data.totpURI,
-            codes: result.data.backupCodes,
-          })
-        } else if (view.action === "codes") {
-          const result = await authClient.twoFactor.generateBackupCodes({
-            password,
-          })
-          if (result.error) {
-            setError(securityError(result.error))
-            return
-          }
-          setView({ kind: "codes", codes: result.data.backupCodes })
-        } else {
-          const result = await authClient.twoFactor.disable({ password })
-          if (result.error) {
-            setError(securityError(result.error))
-            return
-          }
-          onDone()
-        }
-        setPassword("")
-      }
-    } catch {
-      setError(
-        "Could not confirm that change. Check your connection and try again. If codes were replaced, generate a new set."
-      )
-    } finally {
-      setPending(false)
-    }
+    factor.send({ type: "SUBMIT", secret: Redacted.make({ password, code }) })
   }
   const title = factorTitle(view)
   return (
@@ -118,13 +91,13 @@ export function FactorSettings({
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={() => setView({ kind: "password", action: "codes" })}
+              onClick={() => factor.send({ type: "CHOOSE", action: "codes" })}
             >
               Generate new recovery codes
             </Button>
             <Button
               variant="outline"
-              onClick={() => setView({ kind: "password", action: "disable" })}
+              onClick={() => factor.send({ type: "CHOOSE", action: "disable" })}
             >
               Turn off two-factor
             </Button>
@@ -155,27 +128,14 @@ export function FactorSettings({
             </CopyButton>
             <Button
               variant="outline"
-              onClick={() => {
-                const url = URL.createObjectURL(
-                  new Blob(
-                    [
-                      "Durable Pi recovery codes\nEach code works once.\n\n" +
-                        view.codes.join("\n"),
-                    ],
-                    { type: "text/plain" }
-                  )
-                )
-                const link = document.createElement("a")
-                link.href = url
-                link.download = "durable-pi-recovery-codes.txt"
-                link.click()
-                setTimeout(() => URL.revokeObjectURL(url), 1000)
-              }}
+              onClick={() => factor.send({ type: "DOWNLOAD" })}
             >
               Download
             </Button>
           </div>
-          <Button onClick={onDone}>I’ve saved my codes</Button>
+          <Button onClick={() => factor.send({ type: "DONE" })}>
+            I’ve saved my codes
+          </Button>
         </>
       ) : (
         <form onSubmit={submit}>
@@ -270,7 +230,11 @@ export function FactorSettings({
         </Alert>
       )}
       {view.kind !== "codes" && (
-        <Button variant="ghost" disabled={pending} onClick={onDone}>
+        <Button
+          variant="ghost"
+          disabled={pending}
+          onClick={() => factor.send({ type: "DONE" })}
+        >
           Back to account security
         </Button>
       )}

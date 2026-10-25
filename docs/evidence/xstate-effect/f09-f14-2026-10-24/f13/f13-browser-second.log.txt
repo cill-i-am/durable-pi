@@ -1,0 +1,40 @@
+[WebServer] (node:8189) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 22 tests using 1 worker
+
+(node:8202) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/email.spec.ts:10:1 › enable and revoke an address; uncertain replies require an explicit resend (5.2s)
+  ✓   2 [desktop] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 200 response cannot clear a newer failure (3.4s)
+  ✓   3 [desktop] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 409 response cannot clear a newer failure (3.4s)
+  ✓   4 [desktop] › tests/browser/memory-recovery.spec.ts:226:1 › paused summaries preserve their operation ID after an uncertain response and reload until explicit retry succeeds (3.5s)
+  ✓   5 [desktop] › tests/browser/memory-recovery.spec.ts:287:1 › backup retry keeps the failed receipt and last complete backup until authoritative status changes (3.1s)
+  ✓   6 [desktop] › tests/browser/memory-recovery.spec.ts:376:1 › backup scheduler exhaustion offers exact epoch recovery without starting a backup attempt (3.0s)
+  ✓   7 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › email restores an uncertain immutable request after reload without dispatching it (4.1s)
+  ✓   8 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › whatsapp restores an uncertain immutable request after reload without dispatching it (4.1s)
+  ✓   9 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:79:1 › Memory import admits one immutable file read and submission (2.8s)
+  ✓  10 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:128:1 › WhatsApp requires confirmation before retry and retains that exact authorization after an uncertain response (4.9s)
+  ✓  11 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:191:1 › leaving Memory during a held native file read prevents its later submission (3.1s)
+(node:8512) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  12 [mobile] › tests/browser/email.spec.ts:10:1 › enable and revoke an address; uncertain replies require an explicit resend (5.3s)
+  ✓  13 [mobile] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 200 response cannot clear a newer failure (3.3s)
+  ✓  14 [mobile] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 409 response cannot clear a newer failure (3.2s)
+  ✓  15 [mobile] › tests/browser/memory-recovery.spec.ts:226:1 › paused summaries preserve their operation ID after an uncertain response and reload until explicit retry succeeds (3.5s)
+  ✓  16 [mobile] › tests/browser/memory-recovery.spec.ts:287:1 › backup retry keeps the failed receipt and last complete backup until authoritative status changes (3.0s)
+  ✓  17 [mobile] › tests/browser/memory-recovery.spec.ts:376:1 › backup scheduler exhaustion offers exact epoch recovery without starting a backup attempt (2.9s)
+  ✓  18 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › email restores an uncertain immutable request after reload without dispatching it (4.0s)
+  ✓  19 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › whatsapp restores an uncertain immutable request after reload without dispatching it (4.0s)
+  ✓  20 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:79:1 › Memory import admits one immutable file read and submission (2.6s)
+  ✓  21 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:128:1 › WhatsApp requires confirmation before retry and retains that exact authorization after an uncertain response (5.3s)
+  ✓  22 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:191:1 › leaving Memory during a held native file read prevents its later submission (2.7s)
+
+  22 passed (1.4m)

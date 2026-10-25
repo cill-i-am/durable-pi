@@ -1,0 +1,19 @@
+
+Running 10 tests using 1 worker
+
+(node:26009) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:61:1 › duplicate commands and a lost acknowledgement keep the exact request for explicit retry (445ms)
+  ✓   2 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:74:1 › old agent completion aborts and cannot close the new agent editor or start another verification read (429ms)
+  ✓   3 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:87:1 › A to B to A navigation cannot let an old save close the current editor (362ms)
+  ✓   4 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:98:1 › webhook retry preserves the secret and a newer revision prevents disclosure (496ms)
+  ✓   5 [desktop] › tests/browser/routines-ui-lifecycle.spec.ts:110:1 › resolve reads the current webhook before revealing the exact already-applied key (430ms)
+(node:26081) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [mobile] › tests/browser/routines-ui-lifecycle.spec.ts:61:1 › duplicate commands and a lost acknowledgement keep the exact request for explicit retry (495ms)
+  ✓   7 [mobile] › tests/browser/routines-ui-lifecycle.spec.ts:74:1 › old agent completion aborts and cannot close the new agent editor or start another verification read (407ms)
+  ✓   8 [mobile] › tests/browser/routines-ui-lifecycle.spec.ts:87:1 › A to B to A navigation cannot let an old save close the current editor (321ms)
+  ✓   9 [mobile] › tests/browser/routines-ui-lifecycle.spec.ts:98:1 › webhook retry preserves the secret and a newer revision prevents disclosure (503ms)
+  ✓  10 [mobile] › tests/browser/routines-ui-lifecycle.spec.ts:110:1 › resolve reads the current webhook before revealing the exact already-applied key (421ms)
+
+  10 passed (7.7s)

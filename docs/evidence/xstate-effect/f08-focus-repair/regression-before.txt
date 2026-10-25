@@ -1,0 +1,50 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+ExpectError: expect(locator).toBeFocused() failed
+
+Locator:  getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true })
+Expected: focused
+Received: inactive
+Timeout:  5000ms
+
+Call log:
+  - Expect "toBeFocused" getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true }) with timeout 5000ms
+  - waiting for getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true })
+    14 × locator resolved to <button tabindex="0" type="button" data-slot="button" aria-label="Remove My laptop key" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-inv…>Remove</button>
+       - unexpected value "inactive"
+
+    at captureRawStack (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/node_modules/.pnpm/playwright-core@1.64.1/node_modules/playwright-core/lib/coreBundle.js:9282:17)
+    at callMatcherAsStep (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/node_modules/.pnpm/playwright@1.64.1/node_modules/playwright/lib/matchers/expect.js:13316:57)
+    at Object.toBeFocused (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/node_modules/.pnpm/playwright@1.64.1/node_modules/playwright/lib/matchers/expect.js:13308:23)
+    at <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/scripts/check-passkeys.mjs:249:9) {
+  matcherResult: {
+    message: 'expect(locator).toBeFocused() failed\n' +
+      '\n' +
+      "Locator:  getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true })\n" +
+      'Expected: focused\n' +
+      'Received: inactive\n' +
+      'Timeout:  5000ms\n' +
+      '\n' +
+      'Call log:\n' +
+      `  - Expect "toBeFocused" getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true }) with timeout 5000ms\n` +
+      "  - waiting for getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true })\n" +
+      '    14 × locator resolved to <button tabindex="0" type="button" data-slot="button" aria-label="Remove My laptop key" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-inv…>Remove</button>\n' +
+      '       - unexpected value "inactive"\n',
+    pass: false,
+    actual: 'inactive',
+    name: 'toBeFocused',
+    expected: 'focused',
+    log: [
+      `  - Expect "toBeFocused" getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true }) with timeout 5000ms`,
+      "  - waiting for getByRole('dialog', { name: 'Account security', exact: true }).getByRole('button', { name: 'Remove My laptop key', exact: true })",
+      '    14 × locator resolved to <button tabindex="0" type="button" data-slot="button" aria-label="Remove My laptop key" class="group/button inline-flex shrink-0 items-center justify-center rounded-sm border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-inv…>Remove</button>',
+      '       - unexpected value "inactive"'
+    ],
+    timeout: 5000,
+    ariaSnapshot: '- button "Remove My laptop key": Remove'
+  }
+}
+
+Node.js v24.21.0

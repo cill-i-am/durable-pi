@@ -1,5 +1,5 @@
 import type { MCPClientManager } from "agents/mcp/client"
-import { ManagedRuntime } from "effect"
+import { Effect, ManagedRuntime } from "effect"
 import { afterEach } from "vitest"
 
 import { mcpConnectionClient } from "../src/access/adapters/mcp"
@@ -21,7 +21,9 @@ export function connectionFixture(
   manager: MCPClientManager
 ) {
   const runtime = ManagedRuntime.make(
-    connectionApplication(store, mcpConnectionClient(manager))
+    connectionApplication(store, mcpConnectionClient(manager), () =>
+      Effect.succeed({ deadline: Date.now() + 10_000, current: () => true })
+    )
   )
   runtimes.add(runtime)
   return { runtime, service: runtime.runSync(RemoteConnections) }

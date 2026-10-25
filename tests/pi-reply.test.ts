@@ -4,7 +4,7 @@ import type {
   SubmissionRecord,
 } from "@earendil-works/pi-durable"
 import type { PiHarness } from "agents/harness/pi"
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -45,7 +45,17 @@ function fixture() {
     thinking: "off",
   })
   const root = Effect.runSync(
-    store.admit({ operationId: "root", text: "hello" })
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        store.admit(
+          { operationId: "root", text: "hello" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: now + 60_000 }
+        )
+      )
+    )
   ).turn
   Effect.runSync(store.saveSession(root.id, "session"))
   return { store, root: Effect.runSync(store.get(root.id))! }
@@ -153,13 +163,29 @@ describe("Pi snapshot and receipt consistency", () => {
   it("settles a stop before initial submission or before a queued steer was submitted", () => {
     const { root, store } = fixture()
     const child = Effect.runSync(
-      store.admit({
-        operationId: "child",
-        text: "change it",
-        mode: "steer",
-      })
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            {
+              operationId: "child",
+              text: "change it",
+              mode: "steer",
+            },
+            undefined,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
     ).turn
-    Effect.runSync(store.requestStop(root.id))
+    Effect.runSync(
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.requestStop(root.id, { discoveryDeadline: now + 60_000 })
+        )
+      )
+    )
     const stopping = Effect.runSync(store.get(root.id))!
     expect(
       replySettled(stopping, [stopping, child], {

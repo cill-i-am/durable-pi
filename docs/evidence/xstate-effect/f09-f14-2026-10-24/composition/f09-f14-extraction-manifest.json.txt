@@ -1,0 +1,2582 @@
+{
+  "schemaVersion": 1,
+  "stage": "copied-and-verified",
+  "at": "2026-10-23T20:18:14.763742+00:00",
+  "target": "/Users/cillianbarron/.codex/worktrees/xstate-workspace-settings/durable-pi",
+  "heads": {
+    "A": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+    "B": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+    "C": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+    "target": "31d762a8adf993c858c3ea36e54e3ad53fe146a5"
+  },
+  "files": [
+    {
+      "path": "src/features/family/chatgpt-sign-in.tsx",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/chatgpt-sign-in.tsx",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "c1a8b317ab7d3044bc28e9dcb7b3ed7218b59e422c740921d0f49734a176276b",
+      "bytes": 9879,
+      "baseline": {
+        "sourceHeadBlob": "1286ed2af6178168f79d377dd5e6ca86a433e34f",
+        "targetHeadBlob": "1286ed2af6178168f79d377dd5e6ca86a433e34f",
+        "sha256": "af77597efb51d54c1e05220b0fdd8fb9cdb1b01df599b78f745acda9011ce86e",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/chatgpt-sign-in.tsx"
+    },
+    {
+      "path": "src/features/family/context.tsx",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/context.tsx",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "54780e1fe4270d8c21d470447863ec5fbf107c4ee0ef88dfa326a133de786f65",
+      "bytes": 4972,
+      "baseline": {
+        "sourceHeadBlob": "96e9b982288191e965ea68d0cd36f81b81e9b964",
+        "targetHeadBlob": "96e9b982288191e965ea68d0cd36f81b81e9b964",
+        "sha256": "e7d65b84581da71a0cf22c1bf35e142c55a0b0352ba23776d9d1f0403fa9df35",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/context.tsx"
+    },
+    {
+      "path": "src/features/family/family-access-owner.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-access-owner.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "1889bd76cae1e24e0130c5b5339a23adde9bd9deda0c0823f76d2ec9279aee65",
+      "bytes": 2353,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-access-owner.ts"
+    },
+    {
+      "path": "src/features/family/family-access.machine.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-access.machine.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "5d2309e04b592db076734015a4df62cdbb9cc7f2ce2da922622f680e1ff9618d",
+      "bytes": 4112,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-access.machine.ts"
+    },
+    {
+      "path": "src/features/family/family-change-owner.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-change-owner.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "25f6eb18c3884fd5fcb049b66b699c0178c769eaf8d14acbff11e14441b728bd",
+      "bytes": 2076,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-change-owner.ts"
+    },
+    {
+      "path": "src/features/family/family-change.machine.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-change.machine.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "ab6ece184567c71d53cc9a5ba3793a2b9decfdc6aea083a015f8b6a2269ca341",
+      "bytes": 2407,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-change.machine.ts"
+    },
+    {
+      "path": "src/features/family/family-join-owner.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-join-owner.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "a3055c6cb9c21085740c8959a10236c0e799abe6c732e74966ebd88cd4aaf55d",
+      "bytes": 4763,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-join-owner.ts"
+    },
+    {
+      "path": "src/features/family/family-join.machine.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-join.machine.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "46cbf40da0ab8af19421fd8f3b4ab1ffdc02e17f8ca5b4ef6e05582c956bc713",
+      "bytes": 11855,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-join.machine.ts"
+    },
+    {
+      "path": "src/features/family/family-requests.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-requests.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "2fd265d293420fe4a8aa8c23d88527bb142cecaca8712b0b5b87b143568d65ec",
+      "bytes": 1474,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-requests.ts"
+    },
+    {
+      "path": "src/features/family/family-settings.tsx",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/family-settings.tsx",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "2390c5fb54f1ad4d0df61fab87764739b7b058b08a2a284b2fb9c8ffd16a98d2",
+      "bytes": 17683,
+      "baseline": {
+        "sourceHeadBlob": "9a7ff70f30de730e7e4ee8876f758b0bedf77ce7",
+        "targetHeadBlob": "9a7ff70f30de730e7e4ee8876f758b0bedf77ce7",
+        "sha256": "3698f456425d77901c4ac278b28c1383ebe0f8829b2e3617821ced8f2cc995a1",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/family-settings.tsx"
+    },
+    {
+      "path": "src/features/family/invitation-record.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/invitation-record.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "a0194f5cecb5e5025b11593d566d03f0ee579e500d20ae8419984b2b040e41da",
+      "bytes": 1626,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/invitation-record.ts"
+    },
+    {
+      "path": "src/features/family/join.tsx",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/join.tsx",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "dda893405c11cc9553a0bd09daef58bed6468f8018f2b6309c12499755022dcf",
+      "bytes": 16416,
+      "baseline": {
+        "sourceHeadBlob": "13587656ee54495ffad5e5c3a2847083535545b5",
+        "targetHeadBlob": "13587656ee54495ffad5e5c3a2847083535545b5",
+        "sha256": "c36f6dc012217815130cdf1460bcc40c6ee5336b511fe3d6a171a31e23d0c28c",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/join.tsx"
+    },
+    {
+      "path": "src/features/family/model-access.machine.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/model-access.machine.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "3143dd1783e902f37e7653994dcdb6402c88557dcbbdd87fadeb9e8260683935",
+      "bytes": 1392,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/model-access.machine.ts"
+    },
+    {
+      "path": "src/features/family/model-access.tsx",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/model-access.tsx",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "cad22ab6f3c707a9c7f6a304069392d8b5ebb9de62f015d359c1aefa36f678df",
+      "bytes": 5093,
+      "baseline": {
+        "sourceHeadBlob": "fd1de7cf90a610e837a5731acec3bf3031c0b5bc",
+        "targetHeadBlob": "fd1de7cf90a610e837a5731acec3bf3031c0b5bc",
+        "sha256": "a309f70298055d9b6215b55f1e51ac970f215680174d93a27bd87a62051d561b",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/model-access.tsx"
+    },
+    {
+      "path": "src/features/family/model-sign-in-owner.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/model-sign-in-owner.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "5769103f19702bc8e4ee3e22f4ad37ce7ef1f2139a8187c8e4e0e53c5de366f9",
+      "bytes": 4428,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/model-sign-in-owner.ts"
+    },
+    {
+      "path": "src/features/family/model-sign-in.machine.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/family/model-sign-in.machine.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "564753441ea3b56c5eec561bb4e33b92854e7e0f0a38fc8b05407a51fc5fea2f",
+      "bytes": 8079,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/family/model-sign-in.machine.ts"
+    },
+    {
+      "path": "tests/family-ui-lifecycle.test.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/family-ui-lifecycle.test.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "00f7cbc7980d7d0ebfd32a25a6b66f18b376fc99b17b0c2d79e4fc083d82bb77",
+      "bytes": 19144,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/family-ui-lifecycle.test.ts"
+    },
+    {
+      "path": "tests/browser/family-ownership.spec.ts",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/family-ownership.spec.ts",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "6e6294d45170e23c5cf93b4150d1d8535775993cba4767af99402e95cef04de6",
+      "bytes": 7993,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/family-ownership.spec.ts"
+    },
+    {
+      "path": "docs/f09-family-ownership.md",
+      "lane": "F09",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/docs/f09-family-ownership.md",
+      "sourceManifest": "/private/tmp/f09-family-final-manifest.json",
+      "sourceManifestSha256": "142657f288870a2071bf3faaf63dd9ab3ea5f23fddb219e86c23aae43746183f",
+      "sha256": "af0f63ffac7d8c4c4d89f510f0f5924e925f41e453275c608cc7fe932fed4bd4",
+      "bytes": 5791,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/docs/f09-family-ownership.md"
+    },
+    {
+      "path": "src/features/agents/agents.tsx",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agents.tsx",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "20e2decc5344a255fcb0d6cd3f1eb02db6bcf3a113ce41c1ac36ac90ea736338",
+      "bytes": 15255,
+      "baseline": {
+        "sourceHeadBlob": "8212b2f96940035bebfeb80b364411111204fc02",
+        "targetHeadBlob": "8212b2f96940035bebfeb80b364411111204fc02",
+        "sha256": "59f792e4c1fc49fd6990c6588eaf9f3798c51b9dfb714a3e0f6fb64b761404a7",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agents.tsx"
+    },
+    {
+      "path": "src/features/agents/archive-agent-dialog.tsx",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/archive-agent-dialog.tsx",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "5a59593e98d693c17838ccc714afd9cb8c3e2fcb79af4ff9e77a072b3504d747",
+      "bytes": 1879,
+      "baseline": {
+        "sourceHeadBlob": "fa0f71dc9adc88de68a62c8bedf28d1aae29e815",
+        "targetHeadBlob": "fa0f71dc9adc88de68a62c8bedf28d1aae29e815",
+        "sha256": "ebca5491b23b406d30bb5bed856548d586529566bd19e80bd58e9f60a84c523e",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/archive-agent-dialog.tsx"
+    },
+    {
+      "path": "src/features/agents/use-agent-statuses.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/use-agent-statuses.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "f230452c787ea921c7d610fb047b0fb7a5b2ab4a0e796d6c7fa086155e94820d",
+      "bytes": 3737,
+      "baseline": {
+        "sourceHeadBlob": "e45f3651ce7b40ffb0f7a43467ff40f5be9befe8",
+        "targetHeadBlob": "e45f3651ce7b40ffb0f7a43467ff40f5be9befe8",
+        "sha256": "da1513c4eefc81e291e905667a5d5497660bba3f0dcd99ce9041539b38052fda",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/use-agent-statuses.ts"
+    },
+    {
+      "path": "src/features/agents/catalog-state.test.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/catalog-state.test.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "b74781875d2dd1a63e5fb73150189629cceaa64689fd2307f566481d88d0faac",
+      "bytes": 3837,
+      "baseline": {
+        "sourceHeadBlob": "f5b4d518aa4832639b299ec5a0907dda5a0f10c7",
+        "targetHeadBlob": "f5b4d518aa4832639b299ec5a0907dda5a0f10c7",
+        "sha256": "8c35875d79bc5c3a1d0beb4196508791cf159b9ee33c544d89644f005930d68b",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/catalog-state.test.ts"
+    },
+    {
+      "path": "src/features/agents/agent-requests.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-requests.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "33489df0e383e02cffdc2bab66d944e1b406f1c9082493f2a0cc3814432f384c",
+      "bytes": 1613,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-requests.ts"
+    },
+    {
+      "path": "src/features/agents/agent-editor.machine.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-editor.machine.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "1724893297f9aa7f59df60c42bb113ccbe85452a1104eb7b182b3fc1776366e3",
+      "bytes": 6153,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-editor.machine.ts"
+    },
+    {
+      "path": "src/features/agents/agent-editor-owner.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-editor-owner.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "f41ee495568ae58322993f29a4e44cd4a7badba3a34b75570faab96b10e6b99f",
+      "bytes": 1076,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-editor-owner.ts"
+    },
+    {
+      "path": "src/features/agents/use-agent-editor.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/use-agent-editor.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "dbbe39311389db8795594a0ff5d99c8938565b44c84846839e450cea425be4e9",
+      "bytes": 3487,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/use-agent-editor.ts"
+    },
+    {
+      "path": "src/features/agents/agent-catalog.machine.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-catalog.machine.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "dd502151724c69a028103ebaf3e0458cc9ad88154922efdf5dfe1546a5c0cf17",
+      "bytes": 3240,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-catalog.machine.ts"
+    },
+    {
+      "path": "src/features/agents/agent-catalog-owner.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-catalog-owner.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "dee89cb4b94fef5d07fa391161032bdf68e9dc70f6b4bd548b72df765630a54a",
+      "bytes": 1701,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-catalog-owner.ts"
+    },
+    {
+      "path": "src/features/agents/use-agent-catalog.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/use-agent-catalog.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "a7f15d10326cdef40b52c75bf4fa98bde40727d735ea33f653f1d9351cff544d",
+      "bytes": 3502,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/use-agent-catalog.ts"
+    },
+    {
+      "path": "src/features/agents/agent-statuses.machine.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-statuses.machine.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "9b71689e007966a33c9b53ec7fe407a4454d7b8ce722b0a886d4b653ee37d291",
+      "bytes": 3127,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-statuses.machine.ts"
+    },
+    {
+      "path": "src/features/agents/agent-statuses-owner.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-statuses-owner.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "3d442fcec9e023e9eae48eeedda37f494fd324789f9deebd5a40f1f510d7f669",
+      "bytes": 1140,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-statuses-owner.ts"
+    },
+    {
+      "path": "src/features/agents/agent-archive.machine.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-archive.machine.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "4fa6621e3af7bca39bb89eb37dbec6b130ee5a1b8ff5156f15233dc567fee86b",
+      "bytes": 3598,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-archive.machine.ts"
+    },
+    {
+      "path": "src/features/agents/agent-archive-owner.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-archive-owner.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "4566de30a592ee19a38fab610c370762ccae9121cf0b0f96d754a68d25557956",
+      "bytes": 836,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/agent-archive-owner.ts"
+    },
+    {
+      "path": "src/features/agents/use-agent-archive.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/use-agent-archive.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "f31b612d78ce0c7d9e4a464474aa2c83a6b34e81529e24f93c272c8d2d693621",
+      "bytes": 2832,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/agents/use-agent-archive.ts"
+    },
+    {
+      "path": "src/app/workspace.tsx",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace.tsx",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "a7e9b3f6abc3bb89625cb4b1b43fcf7508a98fbde5d14b122436a2997142957c",
+      "bytes": 30893,
+      "baseline": {
+        "sourceHeadBlob": "46ed9850422c14471d4131ebeeec3f48fb5c5452",
+        "targetHeadBlob": "82bbb1c0f63a1cf19a98e135be1b993f043d770f",
+        "sha256": "c0e63e75f2235720a0482d3fbf4a61097add3d2ca7f293a3c857ef2e10dac49a",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/composition/workspace.composed.tsx",
+      "composition": {
+        "authorization": "Parent explicitly authorized standard3-way merge retaining only inherited refresh={conversation.reload}; no conflict or additional delta",
+        "sourceHeadSha256": "5a1e93ca656ade5754ec04aa13131ba04ff1b147dd34630b146c1046d513d7f2",
+        "reviewedSourceSha256": "14c5ec789648b6c88a5f358bf688517647374b4b16987830c99ea0e1ae9a5e4a",
+        "targetHeadSha256": "c0e63e75f2235720a0482d3fbf4a61097add3d2ca7f293a3c857ef2e10dac49a",
+        "composedSha256": "a7e9b3f6abc3bb89625cb4b1b43fcf7508a98fbde5d14b122436a2997142957c",
+        "patch": "/private/tmp/f09-f14-extraction-stage/composition/workspace.inherited-refresh.patch",
+        "patchSha256": "497fdca423652dfd9db6bfe4b72e96b9f92cfd23e9930575d60f449ad8b63804"
+      },
+      "authorFrozenSha256": "14c5ec789648b6c88a5f358bf688517647374b4b16987830c99ea0e1ae9a5e4a"
+    },
+    {
+      "path": "src/app/workbench-presence.machine.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workbench-presence.machine.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "c3bec9e76e422500f2a3e40d03f515771c27527d3eab127a5f5dbe839aea98ff",
+      "bytes": 2018,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/app/workbench-presence.machine.ts"
+    },
+    {
+      "path": "src/app/use-workbench-presence.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workbench-presence.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "31001de37090a4921499cfe5c0648f026001e26252588f1c4a0dcb7a4e882d69",
+      "bytes": 1948,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/app/use-workbench-presence.ts"
+    },
+    {
+      "path": "src/app/workspace-guard.machine.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-guard.machine.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "dce18b3f4f8228e58a12f7fa9ab0eb9c08d0af8e20e17386a1f9e5a2f20465db",
+      "bytes": 2006,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/app/workspace-guard.machine.ts"
+    },
+    {
+      "path": "src/app/use-workspace-guard.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workspace-guard.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "ca17200ec55840494676450e512b4dbdc0a24d3a38020df4433991c35c50965c",
+      "bytes": 2754,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/app/use-workspace-guard.ts"
+    },
+    {
+      "path": "tests/agent-editor-machine.test.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-editor-machine.test.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "6227c2db9f30a09361de9ca06ba4c22572aa79ff28e15d3ab9db96d96f14390c",
+      "bytes": 9823,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/agent-editor-machine.test.ts"
+    },
+    {
+      "path": "tests/agent-observation-lifetime.test.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-observation-lifetime.test.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "1be4cc98228496b54eda4bf267922280cf33b4f897994e9c457b76d2ce30e9ae",
+      "bytes": 5141,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/agent-observation-lifetime.test.ts"
+    },
+    {
+      "path": "tests/agent-archive-machine.test.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-archive-machine.test.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "63ee42a63c590d0750df653f8d700f09124fcef87b0698e22b9de163bea2f259",
+      "bytes": 2643,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/agent-archive-machine.test.ts"
+    },
+    {
+      "path": "tests/workspace-lifetime-machine.test.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/workspace-lifetime-machine.test.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "56eba3e3fdece333b63d9992a4bbccd6140ccd09137f49cac872a224a065799a",
+      "bytes": 2594,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/workspace-lifetime-machine.test.ts"
+    },
+    {
+      "path": "tests/browser/agent-owner-lifecycle.spec.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/agent-owner-lifecycle.spec.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "943811159d5e522c0d218338b8d6bd95113e26fe7e33cd4bd99c3f25bca6dc82",
+      "bytes": 6162,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/agent-owner-lifecycle.spec.ts"
+    },
+    {
+      "path": "tests/agent-request-cleanup.test.ts",
+      "lane": "F10",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-request-cleanup.test.ts",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "sourceManifestSha256": "cc4e41d864f59f419adbdfef33db963b174d46dc9a8237dd0db81c8f087e804f",
+      "sha256": "f47446ec8762463c680bc256e04c5d6f9e63e8136fcfc91e0f81961d2711726d",
+      "bytes": 4726,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/agent-request-cleanup.test.ts"
+    },
+    {
+      "path": "src/features/apps/app-canvas.tsx",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/app-canvas.tsx",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "7f32f0fd6f75b833d9e04146cf659eb582158adf384c4f911d60e58cbbe5044d",
+      "bytes": 8016,
+      "baseline": {
+        "sourceHeadBlob": "a3a64491910291d9816dcc98c7017bea55f9bcdb",
+        "targetHeadBlob": "a3a64491910291d9816dcc98c7017bea55f9bcdb",
+        "sha256": "e572ff095c6146a85cdb12279270cddecbf94488f6dcd485ea278612ffff817b",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/app-canvas.tsx"
+    },
+    {
+      "path": "src/features/apps/app-form.machine.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/app-form.machine.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "5de90c95c7f2b11a9a6fcd396aebd76f4245727710934a8033f8b60002358451",
+      "bytes": 4590,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/app-form.machine.ts"
+    },
+    {
+      "path": "src/features/apps/app-list.machine.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/app-list.machine.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "3f9e59dbadb77a30c771bd2f2929dff1a60ab5db3b46d2f738463a4b2ab33d54",
+      "bytes": 2354,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/app-list.machine.ts"
+    },
+    {
+      "path": "src/features/apps/app-owner.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/app-owner.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "25d8c4d9c9bc2857d60899b70dc44ef5316170a3e92a6203ebcfb47766391dd1",
+      "bytes": 3866,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/app-owner.ts"
+    },
+    {
+      "path": "src/features/apps/app-ui.machine.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/app-ui.machine.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "ab0882bf1d8c85951665722695fadb7b07228bf9d3ddc94e83c56a34e00aef60",
+      "bytes": 8952,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/app-ui.machine.ts"
+    },
+    {
+      "path": "src/features/apps/app-view.tsx",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/app-view.tsx",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "a89e39400ab9f514d6e1c9a90692b7f23ccf9f149e559e559e6f3aaadacb676a",
+      "bytes": 9869,
+      "baseline": {
+        "sourceHeadBlob": "3fb2c2d5091238e651003f9d5bc329395ff48a5d",
+        "targetHeadBlob": "3fb2c2d5091238e651003f9d5bc329395ff48a5d",
+        "sha256": "465cfc0e1b6973cd9a8d7883dfb9b0d25ae9049082a64c9f8125a5b6b63f4b38",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/app-view.tsx"
+    },
+    {
+      "path": "src/features/apps/apps-workbench.tsx",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/apps-workbench.tsx",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "165763b7bbab8f180f4a17d70715c509f265f2d7b144d57e9685515f9c0e82ca",
+      "bytes": 4431,
+      "baseline": {
+        "sourceHeadBlob": "36799d7a8352617d528b5db4f100e5ae83ab0794",
+        "targetHeadBlob": "36799d7a8352617d528b5db4f100e5ae83ab0794",
+        "sha256": "ca36a84238ba97fe12c27c7f58f95c70cc317fb9bc8281f646daeb3e6eb05d75",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/apps-workbench.tsx"
+    },
+    {
+      "path": "src/features/apps/index.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/index.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "8413cb2acc0123d5816add98ea31c3d4a4a789555a3e77dc2f349d574d9a5873",
+      "bytes": 90,
+      "baseline": {
+        "sourceHeadBlob": "3d5a75cb3235d64f2d5b7b7b0ff18a64103057bc",
+        "targetHeadBlob": "3d5a75cb3235d64f2d5b7b7b0ff18a64103057bc",
+        "sha256": "8413cb2acc0123d5816add98ea31c3d4a4a789555a3e77dc2f349d574d9a5873",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/index.ts"
+    },
+    {
+      "path": "src/features/apps/inline-app.tsx",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/inline-app.tsx",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "5728b529fc06e5c4c3e3d296329fdc34737032980ba37f508635880a09cc6796",
+      "bytes": 1836,
+      "baseline": {
+        "sourceHeadBlob": "296d35d597061205164e44e52e54f1527e06a9fd",
+        "targetHeadBlob": "296d35d597061205164e44e52e54f1527e06a9fd",
+        "sha256": "ed54d22d213e3e6692ee5272ca635c9310d8303ca423b23e533616631348c0b6",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/inline-app.tsx"
+    },
+    {
+      "path": "src/features/apps/use-app-form.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/use-app-form.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "b29ad94f20c0c664db98358db2e51c35bd7119505a72abb94fc855e78ef2aa6e",
+      "bytes": 3348,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/use-app-form.ts"
+    },
+    {
+      "path": "src/features/apps/use-app-list.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/use-app-list.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "317bf0572f4758b4cb4fbb60dca02bef526615a060e7aca26fa415d3afd15113",
+      "bytes": 2946,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/use-app-list.ts"
+    },
+    {
+      "path": "src/features/apps/use-app.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/use-app.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "8a44157a494d1fdcf355d06ba4b26a8d17e24fb4a1789a89aa2c4471dad054d8",
+      "bytes": 3166,
+      "baseline": {
+        "sourceHeadBlob": "acbe089a0f8bd83db64fb37f0de5de6cd0761721",
+        "targetHeadBlob": "acbe089a0f8bd83db64fb37f0de5de6cd0761721",
+        "sha256": "b59bd633ef9458bf7969a32bcf2f5da6ce4fa5300b8fd930390602fc557f6436",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/use-app.ts"
+    },
+    {
+      "path": "src/features/apps/web-canvas-owner.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/web-canvas-owner.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "1f0a41cbc358af00093804278c0515bd2e8d5128c28314d7f2b3ac7f38d0e1c7",
+      "bytes": 5221,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/web-canvas-owner.ts"
+    },
+    {
+      "path": "src/features/apps/web-canvas.machine.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/web-canvas.machine.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "c1571abf987af2984e9d851ed8a7e1c7ba613a1bf92dadf30eb0ea63306e3966",
+      "bytes": 8539,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/web-canvas.machine.ts"
+    },
+    {
+      "path": "src/features/apps/web-canvas.tsx",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/web-canvas.tsx",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "22968ce73d209f3c4268ff05f038c43465478d6ab8020e220de5c0dd31c913b6",
+      "bytes": 5090,
+      "baseline": {
+        "sourceHeadBlob": "b462397827f69cb9d57b6703ad34b29c2caa97ec",
+        "targetHeadBlob": "b462397827f69cb9d57b6703ad34b29c2caa97ec",
+        "sha256": "5db362a15840928019716769245bf86eb50efd5ae36bc32791bc4dbdb0794325",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/web-canvas.tsx"
+    },
+    {
+      "path": "src/features/apps/web-frame.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/web-frame.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "da485b2fa765a748a81a813c0c5876d7c99917e57a1f7fd529cfc3ff9bdfed55",
+      "bytes": 3906,
+      "baseline": {
+        "sourceHeadBlob": "c5fc99af3f901b3b406b6bfb8cb97f39e29a5ec0",
+        "targetHeadBlob": "c5fc99af3f901b3b406b6bfb8cb97f39e29a5ec0",
+        "sha256": "da485b2fa765a748a81a813c0c5876d7c99917e57a1f7fd529cfc3ff9bdfed55",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/apps/web-frame.ts"
+    },
+    {
+      "path": "tests/apps-ui-lifecycle.test.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/apps-ui-lifecycle.test.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "2fbd08cce35f5c84e7d8a13e636b3bda17654179d9b9f6c1851c4bff54cbb558",
+      "bytes": 14910,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/apps-ui-lifecycle.test.ts"
+    },
+    {
+      "path": "tests/browser/apps-mounted.spec.ts",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/apps-mounted.spec.ts",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "0c43dfc5b8fc0ec84a48edfde5c0a40035825cec50a4415a374a39ea571b2bad",
+      "bytes": 7266,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/apps-mounted.spec.ts"
+    },
+    {
+      "path": "tests/browser/fixtures/apps-lifecycle.tsx",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/fixtures/apps-lifecycle.tsx",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "b8437e21341b155f97447b201b60249ec8f835d7c2e2804ed03bb50a2aabd45c",
+      "bytes": 3962,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/fixtures/apps-lifecycle.tsx"
+    },
+    {
+      "path": "docs/xstate-effect-apps-ui.md",
+      "lane": "F11",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/docs/xstate-effect-apps-ui.md",
+      "sourceManifest": "/private/tmp/f11-source-freeze.json",
+      "sourceManifestSha256": "b498aa4c4f4b9586c0b55f2193a4b9a6f262576132e54f2e7216f9dec4664897",
+      "sha256": "1fb7279fc979003db29c9eef29013f859c5a3a9f45b93c739f580278dd27421a",
+      "bytes": 5806,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/docs/xstate-effect-apps-ui.md"
+    },
+    {
+      "path": "src/features/routines/routine-work.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/routine-work.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "c06c63b8047a1e6de908dd2c0304854582a3bee4af796e70f23bc33d0ba22424",
+      "bytes": 1260,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/routine-work.ts"
+    },
+    {
+      "path": "src/features/routines/routines-owner.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/routines-owner.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "7c0a620bf8469ee30148becf4388f5eb7e19aafe60c8af700b47b074b1adbe55",
+      "bytes": 1863,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/routines-owner.ts"
+    },
+    {
+      "path": "src/features/routines/routines-ui.machine.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/routines-ui.machine.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "f8ba9df46613545d2d0386333ebe2ff5f9e9c32629051d7abb13906255b39f5b",
+      "bytes": 11748,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/routines-ui.machine.ts"
+    },
+    {
+      "path": "src/features/routines/routines-workbench.tsx",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/routines-workbench.tsx",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "2f683405d1039af436508c026cebb096e925ea7a168a601371c312376d61c27e",
+      "bytes": 25056,
+      "baseline": {
+        "sourceHeadBlob": "2681e50f1e86d04bbaa9130ade5675d360652461",
+        "targetHeadBlob": "2681e50f1e86d04bbaa9130ade5675d360652461",
+        "sha256": "a4b9ee96b7ddb192db26c21624b74280dcf2fae2990b7c11641d4a99a37d69ad",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/routines-workbench.tsx"
+    },
+    {
+      "path": "src/features/routines/use-routines.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/use-routines.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "18e8196affb264a5dfec41ccb59b4e3aa7483cccca1c4bf44672a85b25c3da64",
+      "bytes": 4844,
+      "baseline": {
+        "sourceHeadBlob": "8d49c617891c3dd92c69b31230fa4236d05af92f",
+        "targetHeadBlob": "8d49c617891c3dd92c69b31230fa4236d05af92f",
+        "sha256": "fadda54fd5e373a3df06c991cc196a30dac586594a6da3672bdbc94d99034ff3",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/use-routines.ts"
+    },
+    {
+      "path": "src/features/routines/use-webhook.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/use-webhook.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "b5843ce35ceec4bb4d40042721e5a6a0f70b9eafd8585ce784ece280db1dbe96",
+      "bytes": 2989,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/use-webhook.ts"
+    },
+    {
+      "path": "src/features/routines/webhook-owner.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/webhook-owner.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "858a0fd9effdc7f4c6999af58c85f67427194ec2dea60f3b009e117587a57016",
+      "bytes": 2234,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/webhook-owner.ts"
+    },
+    {
+      "path": "src/features/routines/webhook-panel.tsx",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/webhook-panel.tsx",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "d8909e7fb67c2f1fff1709f58e0f0cc43c3cb556257e38cebe05fcaa8036f709",
+      "bytes": 7099,
+      "baseline": {
+        "sourceHeadBlob": "f5b1c3833984f9cf8b95ce838000003563221a36",
+        "targetHeadBlob": "f5b1c3833984f9cf8b95ce838000003563221a36",
+        "sha256": "a9752f6ec4c8eab294f170d8d891d23341fb0079da6c09e782e90051ec68bedf",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/webhook-panel.tsx"
+    },
+    {
+      "path": "src/features/routines/webhook-ui.machine.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/webhook-ui.machine.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "6af5a1a24e5690a5d536c319bfe8ec2e5cfa45d3581c1793bbe7a764848e56fc",
+      "bytes": 7278,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/routines/webhook-ui.machine.ts"
+    },
+    {
+      "path": "tests/routines-ui-lifecycle.test.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/routines-ui-lifecycle.test.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "39f5c28f3ba4e0ad51dab4a6b1058718c5cc5415490a5bc20bf574b82f377f71",
+      "bytes": 23104,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/routines-ui-lifecycle.test.ts"
+    },
+    {
+      "path": "tests/browser/routines-ui-lifecycle.spec.ts",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/routines-ui-lifecycle.spec.ts",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "edee74bab5704af4c15767a9fcc45bf61daf8e03af0b3a1d90ec6b4f18796d9d",
+      "bytes": 15880,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/routines-ui-lifecycle.spec.ts"
+    },
+    {
+      "path": "docs/xstate-effect-routines-skills-ui.md",
+      "lane": "F12-routines",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/docs/xstate-effect-routines-skills-ui.md",
+      "sourceManifest": "/private/tmp/f12-routines-source-freeze.json",
+      "sourceManifestSha256": "653bdd299988927609f4eff3b60a8ff41d30200b7c407272ea3eadad9472f1be",
+      "sha256": "ac073f0676e1414c5a00da32afd1158e23056e75abad2aaa512ab1bce0e01def",
+      "bytes": 7080,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/docs/xstate-effect-routines-skills-ui.md"
+    },
+    {
+      "path": "src/features/skills/hosted-skill-import.tsx",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/hosted-skill-import.tsx",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "6f857d9b09b01daad54450ef986dc73d33948bde73413aa11d9f0c0e84faba7e",
+      "bytes": 6098,
+      "baseline": {
+        "sourceHeadBlob": "784013ca1ae6e87d9873192c817c7d5ffb62ac5e",
+        "targetHeadBlob": "784013ca1ae6e87d9873192c817c7d5ffb62ac5e",
+        "sha256": "e0424c1f1561074572a46990c4ec70fc110d4f2b45213e5dc31d1bbea5e5d76b",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/hosted-skill-import.tsx"
+    },
+    {
+      "path": "src/features/skills/hosted-skill-owner.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/hosted-skill-owner.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "c368482cea4fc5616e2d4ff8bdbac8c5f191de7d6d17e7ed50c4de103d2e5e21",
+      "bytes": 1674,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/hosted-skill-owner.ts"
+    },
+    {
+      "path": "src/features/skills/hosted-skill.machine.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/hosted-skill.machine.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "abd9e0e940b08b2714eb38220bc745fa82a83a2eb9151f0b8a71d1daec8ef870",
+      "bytes": 6807,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/hosted-skill.machine.ts"
+    },
+    {
+      "path": "src/features/skills/skill-view.machine.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/skill-view.machine.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "511e4f6ae4963b865f0576e2c30669afa70416812535c717482009abe4e170d8",
+      "bytes": 5842,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/skill-view.machine.ts"
+    },
+    {
+      "path": "src/features/skills/skills-owner.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/skills-owner.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "03f2923eba463156bcddf4f316c590e48adfb4df02f37493b002a974f88986c3",
+      "bytes": 5015,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/skills-owner.ts"
+    },
+    {
+      "path": "src/features/skills/skills-panel.tsx",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/skills-panel.tsx",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "7ab9b37a593887a12e6037786e8e83fa99b019ae7686fc3c62024bc61aea2529",
+      "bytes": 19520,
+      "baseline": {
+        "sourceHeadBlob": "1a1f48ef6fe82661c3e590c9ca60f5f402db0306",
+        "targetHeadBlob": "1a1f48ef6fe82661c3e590c9ca60f5f402db0306",
+        "sha256": "05dad84092b2b60a2baf4846ec72b042e3ed6198add98556850a62ee1a4dbbb9",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/skills-panel.tsx"
+    },
+    {
+      "path": "src/features/skills/skills.machine.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/skills.machine.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "c004c630d08d2b4a4d816055bd6865467a4393798c8d0e4b763de5680f2b2b1e",
+      "bytes": 8029,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/skills.machine.ts"
+    },
+    {
+      "path": "src/features/skills/use-hosted-skill.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/use-hosted-skill.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "49c6457a9b90e7b7805f8c72e4f4195d14faf45991bd11fbf8398e3ae48f08b7",
+      "bytes": 2784,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/use-hosted-skill.ts"
+    },
+    {
+      "path": "src/features/skills/use-skill-view.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/use-skill-view.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "3c58761c0de3724b5bbe1994325d7704745cbcf206369c3fca3c2c2a9e6bf731",
+      "bytes": 3135,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/use-skill-view.ts"
+    },
+    {
+      "path": "src/features/skills/use-skills.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/use-skills.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "149bc12c2e9eb0f7257847ce68cb238d903cc462493f928dabc0da5486e4e814",
+      "bytes": 3337,
+      "baseline": {
+        "sourceHeadBlob": "05adad076b7b8c4de98353d549216ec20e89fc1f",
+        "targetHeadBlob": "05adad076b7b8c4de98353d549216ec20e89fc1f",
+        "sha256": "b94281a6c480605f4e2094d453db5c68dda54de3bbd94b8fa6c0ce17168e7c73",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/skills/use-skills.ts"
+    },
+    {
+      "path": "tests/skills-ui-lifecycle.test.ts",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/skills-ui-lifecycle.test.ts",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "32195cc538b7ac395930d0a6c00e5d298a80468145f8c6e7ca726c7257456d6c",
+      "bytes": 28546,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/skills-ui-lifecycle.test.ts"
+    },
+    {
+      "path": "tests/browser/skills-lifecycle.mjs",
+      "lane": "F12-skills",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/skills-lifecycle.mjs",
+      "sourceManifest": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+      "sourceManifestSha256": "e63f8713fc29543ad1ed9400e1eca69964250976aec2b1cda66265b2a2b08ec2",
+      "sha256": "9117400da3aa08f04d0252d01e9d1a12a1d3e0968c180bf22c496e51be46ce81",
+      "bytes": 12958,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/skills-lifecycle.mjs"
+    },
+    {
+      "path": "src/features/channel-settings/settings.machine.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/channel-settings/settings.machine.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "840bca56a63a6a515573941fdd88692fe6d231b06f43d15b19707ca000ac01ea",
+      "bytes": 8752,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/channel-settings/settings.machine.ts"
+    },
+    {
+      "path": "src/features/channel-settings/settings-request.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/channel-settings/settings-request.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "f7e5e5f5be8aec09a83c2be1caca1bf4bf11320c1b40a9d8796b97104033b629",
+      "bytes": 3961,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/channel-settings/settings-request.ts"
+    },
+    {
+      "path": "src/features/channel-settings/settings-owner.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/channel-settings/settings-owner.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "e2245ba61c7b243ab0f21087eee9a93a939d1ac9c349fc1f35ff01599519ca86",
+      "bytes": 1271,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/channel-settings/settings-owner.ts"
+    },
+    {
+      "path": "src/features/channel-settings/use-channel-settings.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/channel-settings/use-channel-settings.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "bd80cfe8ac36800aaecba4057e7bf23eb18866eaf1d82a873b36d6b33c116d04",
+      "bytes": 3618,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/channel-settings/use-channel-settings.ts"
+    },
+    {
+      "path": "src/features/memory/import.machine.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/memory/import.machine.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "077f4f4edd4a6efcb0f84fdeefd0ccf7b937e17ab68e4a4bcfabf51c590fc509",
+      "bytes": 3805,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/memory/import.machine.ts"
+    },
+    {
+      "path": "src/features/memory/import-owner.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/memory/import-owner.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "33859e77e319992c80f17de528705cf99a542d06c8c07772ff75cc62f31b8d01",
+      "bytes": 1866,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/memory/import-owner.ts"
+    },
+    {
+      "path": "src/features/memory/memory-import.tsx",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/memory/memory-import.tsx",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "67251916394d41296c8ec1f13141163b00c5b42f9577e99b87951cb9b94c6f3c",
+      "bytes": 4759,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/memory/memory-import.tsx"
+    },
+    {
+      "path": "tests/channel-settings-ui.test.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/channel-settings-ui.test.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "812d9b93a6414ccf89324588e6adf59aa6b01cec5f7b24646678af265c210c5d",
+      "bytes": 14699,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/channel-settings-ui.test.ts"
+    },
+    {
+      "path": "tests/memory-import-ui.test.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-import-ui.test.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "96d6ad09658a7398986c202855ca5bdd39eda31213b1697baaca77623e7f6792",
+      "bytes": 4360,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/memory-import-ui.test.ts"
+    },
+    {
+      "path": "tests/browser/settings-import-lifecycle.spec.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/browser/settings-import-lifecycle.spec.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "21c0aacb66dc10dd93bb00bb1c7abe28a44cb62d68e8d4ce503963c791b80569",
+      "bytes": 7969,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/settings-import-lifecycle.spec.ts"
+    },
+    {
+      "path": "src/features/email/email-settings.tsx",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/email/email-settings.tsx",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "d92cf92b5ae48e9ef6a92dad6e80c3204b3077cb71d4838677258d2afd1a8cda",
+      "bytes": 7203,
+      "baseline": {
+        "sourceHeadBlob": "b0a2d7f8e1ff20a98d8236790ba1c111a7ca1212",
+        "targetHeadBlob": "b0a2d7f8e1ff20a98d8236790ba1c111a7ca1212",
+        "sha256": "82f5ab61846c213acd69860a32dcc884850c31ffb1b6650ceb2d5ff89fd44c11",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/email/email-settings.tsx"
+    },
+    {
+      "path": "src/features/whatsapp/whatsapp-settings.tsx",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/whatsapp/whatsapp-settings.tsx",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "20c60ab139065b774b60fef88ea921edd055fe533d51471bd974c10163d548d3",
+      "bytes": 7855,
+      "baseline": {
+        "sourceHeadBlob": "7cd519009f52d76121d0b6ea0d20dc4b717702ed",
+        "targetHeadBlob": "7cd519009f52d76121d0b6ea0d20dc4b717702ed",
+        "sha256": "cb34f3a1e8471620516871f615e8108a0239c079675d1eb226a70a762861836b",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/whatsapp/whatsapp-settings.tsx"
+    },
+    {
+      "path": "src/features/memory/memory-panel.tsx",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/private/tmp/lifecycle-coverage-census/source/src/features/memory/memory-panel.tsx",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "095917c6db24773cabd07f2fb4e92f7937860960e88a60818f46d057e5e46828",
+      "bytes": 14969,
+      "baseline": {
+        "sourceHeadBlob": "7bf4fcab953cb35fb84bbe031e479228d0da0495",
+        "targetHeadBlob": "7bf4fcab953cb35fb84bbe031e479228d0da0495",
+        "sha256": "250c5e620310556eee84bede9472e429220b9fe974bf2d5170bd90ab98651a6e",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": true,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/memory/memory-panel.tsx"
+    },
+    {
+      "path": "tests/browser/email.spec.ts",
+      "lane": "F13",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+      "sourceHead": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/browser/email.spec.ts",
+      "sourceManifest": "/private/tmp/f13-final-manifest.json",
+      "sourceManifestSha256": "78d3c5191b9ac230b3edeac6b14b66e91618c607d2f55c6ceb2ffd8d3c155849",
+      "sha256": "e47ef426ef41ce1ca63445083685a60f82dcebeb8f1c717b143c34260238f349",
+      "bytes": 4129,
+      "baseline": {
+        "sourceHeadBlob": "247ff2703b51a3027a99d99c2c074809c17f128e",
+        "targetHeadBlob": "247ff2703b51a3027a99d99c2c074809c17f128e",
+        "sha256": "4d67ded316cf6a12b270534d65ad498eaeef09acc1d2a65c1e2bcdba3f61c60e",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/email.spec.ts"
+    },
+    {
+      "path": "src/features/activity/query.machine.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/query.machine.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "ba2b951ec704c6f77cea29668aadc2b3908b124bfb670faa4fa3006a5ce2a4a4",
+      "bytes": 5496,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/query.machine.ts"
+    },
+    {
+      "path": "src/features/activity/query-owner.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/query-owner.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "2291e60e83d73f3940d6dded5b50e9cf029e5e98ba5f92750c332682da9b5801",
+      "bytes": 4830,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/query-owner.ts"
+    },
+    {
+      "path": "src/features/activity/use-activity-query.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/use-activity-query.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "4a4ff6ce15148d7a2167b33ec7ff82059010593bf3b26b9b498fde82c2aa57b3",
+      "bytes": 5325,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/use-activity-query.ts"
+    },
+    {
+      "path": "src/features/activity/use-plans.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/use-plans.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "8492a4b3951564046b3efa253abf9a719387baf9b0b941004c42f6c22a7c3ffd",
+      "bytes": 2959,
+      "baseline": {
+        "sourceHeadBlob": "8c500a09239b1645dc30f0c7f0e2b13aaccb7d9f",
+        "targetHeadBlob": "8c500a09239b1645dc30f0c7f0e2b13aaccb7d9f",
+        "sha256": "851d33ec88ac512ada5cf95279865f2509e56cfbbee2225f855a8d1c4393574c",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/use-plans.ts"
+    },
+    {
+      "path": "src/features/activity/activity-timeline.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/activity-timeline.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "d37eb63262bf33a0312519b895cd2bf772421d3d17147ac1e5ac551b9b99af78",
+      "bytes": 10108,
+      "baseline": {
+        "sourceHeadBlob": "f70b73201d86a8daebd538dd6f2295368062c21d",
+        "targetHeadBlob": "f70b73201d86a8daebd538dd6f2295368062c21d",
+        "sha256": "ed3bf380f835c5a58e5e4ab770ae98047efa55b91f72a19345248284fa819611",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/activity-timeline.tsx"
+    },
+    {
+      "path": "src/features/activity/activity-record.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/activity-record.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "3530a0a5f133bd2b7dc9f9c2236b3c468b55a50a594c08a8ee84d821bbb8905f",
+      "bytes": 9561,
+      "baseline": {
+        "sourceHeadBlob": "fb048a1f4f699b8f12cdbe08032e68666eaad5c1",
+        "targetHeadBlob": "fb048a1f4f699b8f12cdbe08032e68666eaad5c1",
+        "sha256": "cb6c7dd54a0cee1ab87cbbd3fc26a0dca14a902b0cbd5e14f48ddfa72dbaba76",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/activity-record.tsx"
+    },
+    {
+      "path": "src/features/activity/run-timeline.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/run-timeline.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "59209fb541a6da8dc0d7bb5070eca6717e2e5de9f09dbecd8be32437b0ba2f4a",
+      "bytes": 8659,
+      "baseline": {
+        "sourceHeadBlob": "3b93e47529ab3bcc7dc8880fc9123658a7408edf",
+        "targetHeadBlob": "3b93e47529ab3bcc7dc8880fc9123658a7408edf",
+        "sha256": "fbd57e2ba07cd891c8139ca3925f9a3db070fcde3c677a201d254df3e1e00f43",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/run-timeline.tsx"
+    },
+    {
+      "path": "src/features/activity/inference-runs.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/inference-runs.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "625890327ddb2b38ad65b30af1cd62f35dadd0765329b1a680829ca77948dd10",
+      "bytes": 3972,
+      "baseline": {
+        "sourceHeadBlob": "964e311e2ccccff42a8c1d47f4671f6e9edcea5d",
+        "targetHeadBlob": "964e311e2ccccff42a8c1d47f4671f6e9edcea5d",
+        "sha256": "b144858ef1c658175949167d8d5395521beca09267c55e3e16f7f8022f0c6dbe",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/inference-runs.tsx"
+    },
+    {
+      "path": "src/features/activity/activity-workbench.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/activity-workbench.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "b25880b275a7bb0efc27c446e5ffadfa64afc5d25e980d6ad9dd888c61df6786",
+      "bytes": 19571,
+      "baseline": {
+        "sourceHeadBlob": "656ebeb11ede0e4c08c19b2b81247559d300cf46",
+        "targetHeadBlob": "656ebeb11ede0e4c08c19b2b81247559d300cf46",
+        "sha256": "58981b95bea9c21c7e966587b058d71aa0e2fd62671ab2f90b8d7dc9a9e117c6",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/activity-workbench.tsx"
+    },
+    {
+      "path": "tests/activity-query-owner.test.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/activity-query-owner.test.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "81d0fc2fa66afe7b5d425ffeb816d89c81ae3ae3546ad7abd2a8d45541371d7f",
+      "bytes": 12645,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/activity-query-owner.test.ts"
+    },
+    {
+      "path": "tests/browser/activity-query.spec.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/activity-query.spec.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "4800c4a81dafae6c82f29eab5b6246f71b5ba497d457a10872cafc6e662841a0",
+      "bytes": 4661,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/activity-query.spec.ts"
+    },
+    {
+      "path": "tests/browser/fixtures/activity-query.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/fixtures/activity-query.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "77d158e78c33de0886eef4d13307ee0bb40c148da6c82a5a0278bf73a1b19b2b",
+      "bytes": 5029,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/fixtures/activity-query.tsx"
+    },
+    {
+      "path": "src/features/activity/background-actions.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/background-actions.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "53397e6698d64997ecc145ea636f317414926597c1296003fe138199dccf7624",
+      "bytes": 2403,
+      "baseline": {
+        "sourceHeadBlob": "1e1483c37d9c4dee7dc42b4b61137e5235c31227",
+        "targetHeadBlob": "1e1483c37d9c4dee7dc42b4b61137e5235c31227",
+        "sha256": "7e86f07e8ee7d5d4e3c39c3e31a43fe0ac26680ad5870c89b59fb8926d0535e4",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/background-actions.tsx"
+    },
+    {
+      "path": "src/features/activity/bot-tasks.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/bot-tasks.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "1970eab46a9b2e519edb26ea1b6751baf2d0352f2534b772e903f7654bf16800",
+      "bytes": 10550,
+      "baseline": {
+        "sourceHeadBlob": "818290e9b3cea1dec48cf2fd6105c1f43bd630ee",
+        "targetHeadBlob": "818290e9b3cea1dec48cf2fd6105c1f43bd630ee",
+        "sha256": "e134abbe2ea510cbc9d264a6b5528d6c2eb43a0cefcad9a2d1eb0dacf114bf40",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/bot-tasks.tsx"
+    },
+    {
+      "path": "src/features/activity/delegated-work.tsx",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/delegated-work.tsx",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "9b5ca523872c1d1598f62ca954a16b3b73724b26e17d7db903275a3edd1e7003",
+      "bytes": 16749,
+      "baseline": {
+        "sourceHeadBlob": "b444f7c09b7938975983ab944bbb3d6fc0cc07b7",
+        "targetHeadBlob": "b444f7c09b7938975983ab944bbb3d6fc0cc07b7",
+        "sha256": "161a50ae710799f148f1d8b49d66f0d064cbf08b02f8e200b6652cd8ce55963f",
+        "kind": "tracked"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/delegated-work.tsx"
+    },
+    {
+      "path": "src/features/activity/task-control.machine.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/task-control.machine.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "812fdf5dab829c870ae6978b0c5ce275cef72cbd4b5fe2768fcfc8146cb832bf",
+      "bytes": 9760,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/task-control.machine.ts"
+    },
+    {
+      "path": "src/features/activity/task-control-owner.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/task-control-owner.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "4794e77c8103ecf03f92eb6e358533ba676bb5855b8299d770f8b900be133691",
+      "bytes": 7614,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/task-control-owner.ts"
+    },
+    {
+      "path": "src/features/activity/use-task-control.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/use-task-control.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "6ef3e5e5ee52c2545371f4c3ffa0a4078cee98782bdb20ca17dd5783ea1cd4b9",
+      "bytes": 3426,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/use-task-control.ts"
+    },
+    {
+      "path": "src/features/activity/mailbox-control.machine.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/mailbox-control.machine.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "67e386bcdedbf995e6256a3c6d0e7ac53dfd9e4d5b5efa50be39573ffc82dc64",
+      "bytes": 5918,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/mailbox-control.machine.ts"
+    },
+    {
+      "path": "src/features/activity/mailbox-control-owner.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/mailbox-control-owner.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "9fdbb3ab718d6f4cee119a52938855059bccb7f94dfceb1de77cfe20c0313d7f",
+      "bytes": 1992,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/mailbox-control-owner.ts"
+    },
+    {
+      "path": "src/features/activity/use-mailbox-control.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/use-mailbox-control.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "24e67fefe244e13c8a89dbdfdcdd8e5f37b7177bf98c2d1ddd567a5b01c5b571",
+      "bytes": 3280,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/src/features/activity/use-mailbox-control.ts"
+    },
+    {
+      "path": "tests/activity-controls-ui.test.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/activity-controls-ui.test.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "d0951f77b87360fa57c6880e513353cc0fcb9f9b310b0cc8086a298bedcb3830",
+      "bytes": 23524,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/activity-controls-ui.test.ts"
+    },
+    {
+      "path": "tests/browser/activity-controls-lifecycle.spec.ts",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/activity-controls-lifecycle.spec.ts",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "0deb047167630f7b92741cc742977e5464889b92a917e630842cd87f751b4595",
+      "bytes": 8349,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/tests/browser/activity-controls-lifecycle.spec.ts"
+    },
+    {
+      "path": "docs/xstate-effect-activity-ui.md",
+      "lane": "F14",
+      "sourceWorktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+      "sourceHead": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/docs/xstate-effect-activity-ui.md",
+      "sourceManifest": "/private/tmp/f14-source-freeze.json",
+      "sourceManifestSha256": "bbb1122d0382b8956590cf861712d909a3daab14418bd2e31eafbdd6d280a317",
+      "sha256": "fc02020f8daa6776be9020b0ab0102e6e7d8d64fbd8f80591911972297c261db",
+      "bytes": 7369,
+      "baseline": {
+        "sourceHeadBlob": null,
+        "targetHeadBlob": null,
+        "sha256": null,
+        "kind": "absent"
+      },
+      "usedFrozenBackingCopy": false,
+      "frozenStageSource": "/private/tmp/f09-f14-extraction-stage/frozen/docs/xstate-effect-activity-ui.md"
+    }
+  ],
+  "deletions": [
+    {
+      "path": "src/features/agents/catalog-state.ts",
+      "lane": "F10",
+      "sourceManifest": "/private/tmp/f10-freeze-manifest.json",
+      "baseline": {
+        "sourceHeadBlob": "dc1b2f3c766b7b3f77d3f8f56423164827a0081d",
+        "targetHeadBlob": "dc1b2f3c766b7b3f77d3f8f56423164827a0081d",
+        "sha256": "308f8bcc05c5ce06cb469b798e20ffde2168227440bb7d5d2671f83a0183316b"
+      }
+    }
+  ],
+  "overlaps": {},
+  "liveSourceDrift": [
+    {
+      "lane": "F13",
+      "path": "src/features/memory/memory-panel.tsx",
+      "expected": "095917c6db24773cabd07f2fb4e92f7937860960e88a60818f46d057e5e46828",
+      "live": "357d491674877b17d6808586726958ab10a070a2d35532e391f0ab01a80a9772"
+    }
+  ],
+  "issues": [],
+  "skipped": [
+    {
+      "lane": "F09",
+      "manifestField": "sharedDependencies",
+      "reason": "dependency/preserved scope, never copied",
+      "paths": [
+        "src/http/client.ts",
+        "src/shared/interop.ts",
+        "src/shared/effect.ts"
+      ]
+    },
+    {
+      "lane": "F11",
+      "path": "src/http/client.ts",
+      "reason": "shared four-file repair supplied by parent frontend stack",
+      "expectedSha256": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66"
+    },
+    {
+      "lane": "F11",
+      "path": "src/shared/interop.ts",
+      "reason": "shared four-file repair supplied by parent frontend stack",
+      "expectedSha256": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99"
+    },
+    {
+      "lane": "F11",
+      "path": "tests/http-client-lifetime.test.ts",
+      "reason": "shared four-file repair supplied by parent frontend stack",
+      "expectedSha256": "8c1e25b0c323880035d5132c0a8a0e4d2f6deb4828c9de45293131de845a82be"
+    },
+    {
+      "lane": "F11",
+      "path": "tests/native-operation-lifetime.test.ts",
+      "reason": "shared four-file repair supplied by parent frontend stack",
+      "expectedSha256": "cb82bf319c9ba446039d794157afe7e0b7a5cda203267956f34aa2b6e60efca4"
+    },
+    {
+      "lane": "F12-routines",
+      "manifestField": "dependencies",
+      "reason": "dependency/preserved scope, never copied",
+      "paths": [
+        "src/shared/interop.ts",
+        "src/shared/effect.ts",
+        "src/http/client.ts"
+      ]
+    },
+    {
+      "lane": "F12-skills",
+      "manifestField": "sharedDependencies",
+      "reason": "dependency/preserved scope, never copied",
+      "paths": [
+        "src/shared/interop.ts",
+        "src/shared/effect.ts",
+        "src/http/client.ts"
+      ]
+    },
+    {
+      "lane": "F13",
+      "manifestField": "preserved",
+      "reason": "dependency/preserved scope, never copied",
+      "paths": [
+        "src/features/memory/summary-recovery.machine.ts",
+        "src/features/memory/summary-recovery-owner.ts",
+        "src/features/memory/summary-recovery.tsx",
+        "src/features/memory/backup-recovery.machine.ts",
+        "src/features/memory/backup-recovery-owner.ts",
+        "src/features/memory/backup-recovery.tsx",
+        "tests/memory-summary-recovery-ui.test.ts",
+        "tests/memory-backup-recovery-ui.test.ts",
+        "tests/browser/memory-recovery.spec.ts",
+        "package.json",
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "lane": "F14",
+      "manifestField": "sharedDependencyHashes",
+      "reason": "dependency/preserved scope, never copied",
+      "paths": [
+        "src/http/client.ts"
+      ]
+    }
+  ],
+  "pendingExcluded": [
+    "model-defaults lifecycle follow-up",
+    "workspace deferred command and route retry follow-up",
+    "Memory search/source/tree query follow-up"
+  ],
+  "limitations": [
+    "No dependency files/inheritedF15/tracker/package copied",
+    "No tests/builds/Git mutation; exact extraction only"
+  ],
+  "resolvedBaselineDifferences": [
+    {
+      "path": "src/app/workspace.tsx",
+      "authorization": "Parent explicitly authorized standard3-way merge retaining only inherited refresh={conversation.reload}; no conflict or additional delta",
+      "sourceHeadSha256": "5a1e93ca656ade5754ec04aa13131ba04ff1b147dd34630b146c1046d513d7f2",
+      "reviewedSourceSha256": "14c5ec789648b6c88a5f358bf688517647374b4b16987830c99ea0e1ae9a5e4a",
+      "targetHeadSha256": "c0e63e75f2235720a0482d3fbf4a61097add3d2ca7f293a3c857ef2e10dac49a",
+      "composedSha256": "a7e9b3f6abc3bb89625cb4b1b43fcf7508a98fbde5d14b122436a2997142957c",
+      "patch": "/private/tmp/f09-f14-extraction-stage/composition/workspace.inherited-refresh.patch",
+      "patchSha256": "497fdca423652dfd9db6bfe4b72e96b9f92cfd23e9930575d60f449ad8b63804"
+    }
+  ],
+  "backupRoot": "/private/tmp/f09-f14-extraction-stage/baseline"
+}

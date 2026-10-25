@@ -1,0 +1,12 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+
+ Test Files  9 passed (9)
+      Tests  75 passed (75)
+   Start at  16:58:25
+   Duration  4.76s (tests 48%, import 41%, transform 10%, setup 1%)
+
+    Isolate  9 workers spawned · ~78ms startup each (spawn + environment, per file)
+             at least ~274ms faster with isolate: false — reuses workers across files instead of one per file
+

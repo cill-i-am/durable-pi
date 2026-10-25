@@ -1,0 +1,982 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-24T17:49:23.432095+00:00",
+  "base": "231b1c44ee8dd9a000eddd92cb12ffc0125cda28",
+  "scope": "F09-F14 and three frontend census follow-ups",
+  "source": {
+    "docs/f09-family-ownership.md": {
+      "sha256": "af0f63ffac7d8c4c4d89f510f0f5924e925f41e453275c608cc7fe932fed4bd4",
+      "lane": "F09",
+      "originalSha256": "af0f63ffac7d8c4c4d89f510f0f5924e925f41e453275c608cc7fe932fed4bd4",
+      "integrationChange": null
+    },
+    "docs/xstate-effect-activity-ui.md": {
+      "sha256": "fc02020f8daa6776be9020b0ab0102e6e7d8d64fbd8f80591911972297c261db",
+      "lane": "F14",
+      "originalSha256": "fc02020f8daa6776be9020b0ab0102e6e7d8d64fbd8f80591911972297c261db",
+      "integrationChange": null
+    },
+    "docs/xstate-effect-apps-ui.md": {
+      "sha256": "1fb7279fc979003db29c9eef29013f859c5a3a9f45b93c739f580278dd27421a",
+      "lane": "F11",
+      "originalSha256": "1fb7279fc979003db29c9eef29013f859c5a3a9f45b93c739f580278dd27421a",
+      "integrationChange": null
+    },
+    "docs/xstate-effect-frontend-completion.md": {
+      "sha256": "f7798ba04b2c11c9ce39382931c96bf9e0958e92e81efd19ed94fe10be2100fc",
+      "lane": "parent integration",
+      "originalSha256": null,
+      "integrationChange": null
+    },
+    "docs/xstate-effect-routines-skills-ui.md": {
+      "sha256": "ac073f0676e1414c5a00da32afd1158e23056e75abad2aaa512ab1bce0e01def",
+      "lane": "F12-routines",
+      "originalSha256": "ac073f0676e1414c5a00da32afd1158e23056e75abad2aaa512ab1bce0e01def",
+      "integrationChange": null
+    },
+    "package.json": {
+      "sha256": "622bfa1d23b6bb47c67f965d6dd56cd2da5e3b179cd882b3a8f4c407f4d7a678",
+      "lane": "parent integration",
+      "originalSha256": null,
+      "integrationChange": null
+    },
+    "src/app/use-workbench-presence.ts": {
+      "sha256": "31001de37090a4921499cfe5c0648f026001e26252588f1c4a0dcb7a4e882d69",
+      "lane": "F10",
+      "originalSha256": "31001de37090a4921499cfe5c0648f026001e26252588f1c4a0dcb7a4e882d69",
+      "integrationChange": null
+    },
+    "src/app/use-workspace-command.ts": {
+      "sha256": "658ec4b99a0d7fad59876ed357643a560bdfbf5f0af943f4372d1f641f12816f",
+      "lane": "workspace-controls",
+      "originalSha256": "658ec4b99a0d7fad59876ed357643a560bdfbf5f0af943f4372d1f641f12816f",
+      "integrationChange": null
+    },
+    "src/app/use-workspace-guard.ts": {
+      "sha256": "ca17200ec55840494676450e512b4dbdc0a24d3a38020df4433991c35c50965c",
+      "lane": "F10",
+      "originalSha256": "ca17200ec55840494676450e512b4dbdc0a24d3a38020df4433991c35c50965c",
+      "integrationChange": null
+    },
+    "src/app/use-workspace-link-retry.ts": {
+      "sha256": "d43f184f4d8242a37e4104345883cb273b97d2c7d14ad56fddeed51a22a7eec1",
+      "lane": "workspace-controls",
+      "originalSha256": "b36060fdc12a204c46ce799408686d81fa7622e426b8630cbac3ea00d2e98d67",
+      "integrationChange": "Retain all compound cleanup failures across successive retries; join and observe final scope exit."
+    },
+    "src/app/workbench-presence.machine.ts": {
+      "sha256": "c3bec9e76e422500f2a3e40d03f515771c27527d3eab127a5f5dbe839aea98ff",
+      "lane": "F10",
+      "originalSha256": "c3bec9e76e422500f2a3e40d03f515771c27527d3eab127a5f5dbe839aea98ff",
+      "integrationChange": null
+    },
+    "src/app/workspace-command.machine.ts": {
+      "sha256": "a525dae154ad7fe9d0964f845f5770b92473de7afca9d6ebf5de4ebb0177c65c",
+      "lane": "workspace-controls",
+      "originalSha256": "a525dae154ad7fe9d0964f845f5770b92473de7afca9d6ebf5de4ebb0177c65c",
+      "integrationChange": null
+    },
+    "src/app/workspace-guard.machine.ts": {
+      "sha256": "dce18b3f4f8228e58a12f7fa9ab0eb9c08d0af8e20e17386a1f9e5a2f20465db",
+      "lane": "F10",
+      "originalSha256": "dce18b3f4f8228e58a12f7fa9ab0eb9c08d0af8e20e17386a1f9e5a2f20465db",
+      "integrationChange": null
+    },
+    "src/app/workspace-link-error.tsx": {
+      "sha256": "38ba72d4adf8678da5ea16c9bb2f3eb3118308316ea4e03311b754312d343afa",
+      "lane": "workspace-controls",
+      "originalSha256": "38ba72d4adf8678da5ea16c9bb2f3eb3118308316ea4e03311b754312d343afa",
+      "integrationChange": null
+    },
+    "src/app/workspace-link-retry.machine.ts": {
+      "sha256": "90b07ce96fc4303c6d11acd20f8d27c047afa3c8290a3b7f54e9f0215e3adfe4",
+      "lane": "workspace-controls",
+      "originalSha256": "90b07ce96fc4303c6d11acd20f8d27c047afa3c8290a3b7f54e9f0215e3adfe4",
+      "integrationChange": null
+    },
+    "src/app/workspace-navigation.tsx": {
+      "sha256": "52930c00bffd87177cba9cefdf80cf6bb49d3359de7d4c3f9ffbd231ee047e7c",
+      "lane": "workspace-controls",
+      "originalSha256": "52930c00bffd87177cba9cefdf80cf6bb49d3359de7d4c3f9ffbd231ee047e7c",
+      "integrationChange": null
+    },
+    "src/app/workspace.tsx": {
+      "sha256": "a7e9b3f6abc3bb89625cb4b1b43fcf7508a98fbde5d14b122436a2997142957c",
+      "lane": "F10",
+      "originalSha256": "a7e9b3f6abc3bb89625cb4b1b43fcf7508a98fbde5d14b122436a2997142957c",
+      "integrationChange": null
+    },
+    "src/features/activity/activity-record.tsx": {
+      "sha256": "3530a0a5f133bd2b7dc9f9c2236b3c468b55a50a594c08a8ee84d821bbb8905f",
+      "lane": "F14",
+      "originalSha256": "3530a0a5f133bd2b7dc9f9c2236b3c468b55a50a594c08a8ee84d821bbb8905f",
+      "integrationChange": null
+    },
+    "src/features/activity/activity-timeline.tsx": {
+      "sha256": "d37eb63262bf33a0312519b895cd2bf772421d3d17147ac1e5ac551b9b99af78",
+      "lane": "F14",
+      "originalSha256": "d37eb63262bf33a0312519b895cd2bf772421d3d17147ac1e5ac551b9b99af78",
+      "integrationChange": null
+    },
+    "src/features/activity/activity-workbench.tsx": {
+      "sha256": "bc4319c29b423a4d2afb379432b5294ee275d8fc8008def9e4fdd7123fcdbe55",
+      "lane": "F14",
+      "originalSha256": "b25880b275a7bb0efc27c446e5ffadfa64afc5d25e980d6ad9dd888c61df6786",
+      "integrationChange": "Remove unused hook import after query extraction."
+    },
+    "src/features/activity/background-actions.tsx": {
+      "sha256": "ec9f7074a8e2834f341b8e98d837c402384c3070de7efa76ec9ff97706b9e22f",
+      "lane": "F14",
+      "originalSha256": "53397e6698d64997ecc145ea636f317414926597c1296003fe138199dccf7624",
+      "integrationChange": "Retain original captions before an actual request starts."
+    },
+    "src/features/activity/bot-tasks.tsx": {
+      "sha256": "1970eab46a9b2e519edb26ea1b6751baf2d0352f2534b772e903f7654bf16800",
+      "lane": "F14",
+      "originalSha256": "1970eab46a9b2e519edb26ea1b6751baf2d0352f2534b772e903f7654bf16800",
+      "integrationChange": null
+    },
+    "src/features/activity/delegated-work.tsx": {
+      "sha256": "7c5a0cf0c07c25d585cf5d906e7f4fc05b87bebe2be0380b2acef8d4df9323a2",
+      "lane": "F14",
+      "originalSha256": "9b5ca523872c1d1598f62ca954a16b3b73724b26e17d7db903275a3edd1e7003",
+      "integrationChange": "Retain original captions before an actual request starts."
+    },
+    "src/features/activity/inference-runs.tsx": {
+      "sha256": "625890327ddb2b38ad65b30af1cd62f35dadd0765329b1a680829ca77948dd10",
+      "lane": "F14",
+      "originalSha256": "625890327ddb2b38ad65b30af1cd62f35dadd0765329b1a680829ca77948dd10",
+      "integrationChange": null
+    },
+    "src/features/activity/mailbox-control-owner.ts": {
+      "sha256": "9fdbb3ab718d6f4cee119a52938855059bccb7f94dfceb1de77cfe20c0313d7f",
+      "lane": "F14",
+      "originalSha256": "9fdbb3ab718d6f4cee119a52938855059bccb7f94dfceb1de77cfe20c0313d7f",
+      "integrationChange": null
+    },
+    "src/features/activity/mailbox-control.machine.ts": {
+      "sha256": "67e386bcdedbf995e6256a3c6d0e7ac53dfd9e4d5b5efa50be39573ffc82dc64",
+      "lane": "F14",
+      "originalSha256": "67e386bcdedbf995e6256a3c6d0e7ac53dfd9e4d5b5efa50be39573ffc82dc64",
+      "integrationChange": null
+    },
+    "src/features/activity/query-owner.ts": {
+      "sha256": "2291e60e83d73f3940d6dded5b50e9cf029e5e98ba5f92750c332682da9b5801",
+      "lane": "F14",
+      "originalSha256": "2291e60e83d73f3940d6dded5b50e9cf029e5e98ba5f92750c332682da9b5801",
+      "integrationChange": null
+    },
+    "src/features/activity/query.machine.ts": {
+      "sha256": "ba2b951ec704c6f77cea29668aadc2b3908b124bfb670faa4fa3006a5ce2a4a4",
+      "lane": "F14",
+      "originalSha256": "ba2b951ec704c6f77cea29668aadc2b3908b124bfb670faa4fa3006a5ce2a4a4",
+      "integrationChange": null
+    },
+    "src/features/activity/run-timeline.tsx": {
+      "sha256": "59209fb541a6da8dc0d7bb5070eca6717e2e5de9f09dbecd8be32437b0ba2f4a",
+      "lane": "F14",
+      "originalSha256": "59209fb541a6da8dc0d7bb5070eca6717e2e5de9f09dbecd8be32437b0ba2f4a",
+      "integrationChange": null
+    },
+    "src/features/activity/task-control-owner.ts": {
+      "sha256": "4794e77c8103ecf03f92eb6e358533ba676bb5855b8299d770f8b900be133691",
+      "lane": "F14",
+      "originalSha256": "4794e77c8103ecf03f92eb6e358533ba676bb5855b8299d770f8b900be133691",
+      "integrationChange": null
+    },
+    "src/features/activity/task-control.machine.ts": {
+      "sha256": "812fdf5dab829c870ae6978b0c5ce275cef72cbd4b5fe2768fcfc8146cb832bf",
+      "lane": "F14",
+      "originalSha256": "812fdf5dab829c870ae6978b0c5ce275cef72cbd4b5fe2768fcfc8146cb832bf",
+      "integrationChange": null
+    },
+    "src/features/activity/use-activity-query.ts": {
+      "sha256": "4a4ff6ce15148d7a2167b33ec7ff82059010593bf3b26b9b498fde82c2aa57b3",
+      "lane": "F14",
+      "originalSha256": "4a4ff6ce15148d7a2167b33ec7ff82059010593bf3b26b9b498fde82c2aa57b3",
+      "integrationChange": null
+    },
+    "src/features/activity/use-mailbox-control.ts": {
+      "sha256": "24e67fefe244e13c8a89dbdfdcdd8e5f37b7177bf98c2d1ddd567a5b01c5b571",
+      "lane": "F14",
+      "originalSha256": "24e67fefe244e13c8a89dbdfdcdd8e5f37b7177bf98c2d1ddd567a5b01c5b571",
+      "integrationChange": null
+    },
+    "src/features/activity/use-plans.ts": {
+      "sha256": "8492a4b3951564046b3efa253abf9a719387baf9b0b941004c42f6c22a7c3ffd",
+      "lane": "F14",
+      "originalSha256": "8492a4b3951564046b3efa253abf9a719387baf9b0b941004c42f6c22a7c3ffd",
+      "integrationChange": null
+    },
+    "src/features/activity/use-task-control.ts": {
+      "sha256": "1777b0c91a6c18d8ebae4b29de03a29903e962326891f375afad7ef3ba65de38",
+      "lane": "F14",
+      "originalSha256": "6ef3e5e5ee52c2545371f4c3ffa0a4078cee98782bdb20ca17dd5783ea1cd4b9",
+      "integrationChange": "Expose sending projection separately from blocked restoration without changing admission."
+    },
+    "src/features/agents/agent-archive-owner.ts": {
+      "sha256": "4566de30a592ee19a38fab610c370762ccae9121cf0b0f96d754a68d25557956",
+      "lane": "F10",
+      "originalSha256": "4566de30a592ee19a38fab610c370762ccae9121cf0b0f96d754a68d25557956",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-archive.machine.ts": {
+      "sha256": "4fa6621e3af7bca39bb89eb37dbec6b130ee5a1b8ff5156f15233dc567fee86b",
+      "lane": "F10",
+      "originalSha256": "4fa6621e3af7bca39bb89eb37dbec6b130ee5a1b8ff5156f15233dc567fee86b",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-catalog-owner.ts": {
+      "sha256": "dee89cb4b94fef5d07fa391161032bdf68e9dc70f6b4bd548b72df765630a54a",
+      "lane": "F10",
+      "originalSha256": "dee89cb4b94fef5d07fa391161032bdf68e9dc70f6b4bd548b72df765630a54a",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-catalog.machine.ts": {
+      "sha256": "dd502151724c69a028103ebaf3e0458cc9ad88154922efdf5dfe1546a5c0cf17",
+      "lane": "F10",
+      "originalSha256": "dd502151724c69a028103ebaf3e0458cc9ad88154922efdf5dfe1546a5c0cf17",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-editor-owner.ts": {
+      "sha256": "f41ee495568ae58322993f29a4e44cd4a7badba3a34b75570faab96b10e6b99f",
+      "lane": "F10",
+      "originalSha256": "f41ee495568ae58322993f29a4e44cd4a7badba3a34b75570faab96b10e6b99f",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-editor.machine.ts": {
+      "sha256": "1724893297f9aa7f59df60c42bb113ccbe85452a1104eb7b182b3fc1776366e3",
+      "lane": "F10",
+      "originalSha256": "1724893297f9aa7f59df60c42bb113ccbe85452a1104eb7b182b3fc1776366e3",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-requests.ts": {
+      "sha256": "33489df0e383e02cffdc2bab66d944e1b406f1c9082493f2a0cc3814432f384c",
+      "lane": "F10",
+      "originalSha256": "33489df0e383e02cffdc2bab66d944e1b406f1c9082493f2a0cc3814432f384c",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-statuses-owner.ts": {
+      "sha256": "3d442fcec9e023e9eae48eeedda37f494fd324789f9deebd5a40f1f510d7f669",
+      "lane": "F10",
+      "originalSha256": "3d442fcec9e023e9eae48eeedda37f494fd324789f9deebd5a40f1f510d7f669",
+      "integrationChange": null
+    },
+    "src/features/agents/agent-statuses.machine.ts": {
+      "sha256": "9b71689e007966a33c9b53ec7fe407a4454d7b8ce722b0a886d4b653ee37d291",
+      "lane": "F10",
+      "originalSha256": "9b71689e007966a33c9b53ec7fe407a4454d7b8ce722b0a886d4b653ee37d291",
+      "integrationChange": null
+    },
+    "src/features/agents/agents.tsx": {
+      "sha256": "20e2decc5344a255fcb0d6cd3f1eb02db6bcf3a113ce41c1ac36ac90ea736338",
+      "lane": "F10",
+      "originalSha256": "20e2decc5344a255fcb0d6cd3f1eb02db6bcf3a113ce41c1ac36ac90ea736338",
+      "integrationChange": null
+    },
+    "src/features/agents/archive-agent-dialog.tsx": {
+      "sha256": "5a59593e98d693c17838ccc714afd9cb8c3e2fcb79af4ff9e77a072b3504d747",
+      "lane": "F10",
+      "originalSha256": "5a59593e98d693c17838ccc714afd9cb8c3e2fcb79af4ff9e77a072b3504d747",
+      "integrationChange": null
+    },
+    "src/features/agents/catalog-state.test.ts": {
+      "sha256": "b74781875d2dd1a63e5fb73150189629cceaa64689fd2307f566481d88d0faac",
+      "lane": "F10",
+      "originalSha256": "b74781875d2dd1a63e5fb73150189629cceaa64689fd2307f566481d88d0faac",
+      "integrationChange": null
+    },
+    "src/features/agents/use-agent-archive.ts": {
+      "sha256": "f31b612d78ce0c7d9e4a464474aa2c83a6b34e81529e24f93c272c8d2d693621",
+      "lane": "F10",
+      "originalSha256": "f31b612d78ce0c7d9e4a464474aa2c83a6b34e81529e24f93c272c8d2d693621",
+      "integrationChange": null
+    },
+    "src/features/agents/use-agent-catalog.ts": {
+      "sha256": "a7f15d10326cdef40b52c75bf4fa98bde40727d735ea33f653f1d9351cff544d",
+      "lane": "F10",
+      "originalSha256": "a7f15d10326cdef40b52c75bf4fa98bde40727d735ea33f653f1d9351cff544d",
+      "integrationChange": null
+    },
+    "src/features/agents/use-agent-editor.ts": {
+      "sha256": "dbbe39311389db8795594a0ff5d99c8938565b44c84846839e450cea425be4e9",
+      "lane": "F10",
+      "originalSha256": "dbbe39311389db8795594a0ff5d99c8938565b44c84846839e450cea425be4e9",
+      "integrationChange": null
+    },
+    "src/features/agents/use-agent-statuses.ts": {
+      "sha256": "f230452c787ea921c7d610fb047b0fb7a5b2ab4a0e796d6c7fa086155e94820d",
+      "lane": "F10",
+      "originalSha256": "f230452c787ea921c7d610fb047b0fb7a5b2ab4a0e796d6c7fa086155e94820d",
+      "integrationChange": null
+    },
+    "src/features/apps/app-canvas.tsx": {
+      "sha256": "7f32f0fd6f75b833d9e04146cf659eb582158adf384c4f911d60e58cbbe5044d",
+      "lane": "F11",
+      "originalSha256": "7f32f0fd6f75b833d9e04146cf659eb582158adf384c4f911d60e58cbbe5044d",
+      "integrationChange": null
+    },
+    "src/features/apps/app-form.machine.ts": {
+      "sha256": "5de90c95c7f2b11a9a6fcd396aebd76f4245727710934a8033f8b60002358451",
+      "lane": "F11",
+      "originalSha256": "5de90c95c7f2b11a9a6fcd396aebd76f4245727710934a8033f8b60002358451",
+      "integrationChange": null
+    },
+    "src/features/apps/app-list.machine.ts": {
+      "sha256": "3f9e59dbadb77a30c771bd2f2929dff1a60ab5db3b46d2f738463a4b2ab33d54",
+      "lane": "F11",
+      "originalSha256": "3f9e59dbadb77a30c771bd2f2929dff1a60ab5db3b46d2f738463a4b2ab33d54",
+      "integrationChange": null
+    },
+    "src/features/apps/app-owner.ts": {
+      "sha256": "25d8c4d9c9bc2857d60899b70dc44ef5316170a3e92a6203ebcfb47766391dd1",
+      "lane": "F11",
+      "originalSha256": "25d8c4d9c9bc2857d60899b70dc44ef5316170a3e92a6203ebcfb47766391dd1",
+      "integrationChange": null
+    },
+    "src/features/apps/app-ui.machine.ts": {
+      "sha256": "ab0882bf1d8c85951665722695fadb7b07228bf9d3ddc94e83c56a34e00aef60",
+      "lane": "F11",
+      "originalSha256": "ab0882bf1d8c85951665722695fadb7b07228bf9d3ddc94e83c56a34e00aef60",
+      "integrationChange": null
+    },
+    "src/features/apps/app-view.tsx": {
+      "sha256": "a89e39400ab9f514d6e1c9a90692b7f23ccf9f149e559e559e6f3aaadacb676a",
+      "lane": "F11",
+      "originalSha256": "a89e39400ab9f514d6e1c9a90692b7f23ccf9f149e559e559e6f3aaadacb676a",
+      "integrationChange": null
+    },
+    "src/features/apps/apps-workbench.tsx": {
+      "sha256": "165763b7bbab8f180f4a17d70715c509f265f2d7b144d57e9685515f9c0e82ca",
+      "lane": "F11",
+      "originalSha256": "165763b7bbab8f180f4a17d70715c509f265f2d7b144d57e9685515f9c0e82ca",
+      "integrationChange": null
+    },
+    "src/features/apps/index.ts": {
+      "sha256": "8413cb2acc0123d5816add98ea31c3d4a4a789555a3e77dc2f349d574d9a5873",
+      "lane": "F11",
+      "originalSha256": "8413cb2acc0123d5816add98ea31c3d4a4a789555a3e77dc2f349d574d9a5873",
+      "integrationChange": null
+    },
+    "src/features/apps/inline-app.tsx": {
+      "sha256": "5728b529fc06e5c4c3e3d296329fdc34737032980ba37f508635880a09cc6796",
+      "lane": "F11",
+      "originalSha256": "5728b529fc06e5c4c3e3d296329fdc34737032980ba37f508635880a09cc6796",
+      "integrationChange": null
+    },
+    "src/features/apps/use-app-form.ts": {
+      "sha256": "b29ad94f20c0c664db98358db2e51c35bd7119505a72abb94fc855e78ef2aa6e",
+      "lane": "F11",
+      "originalSha256": "b29ad94f20c0c664db98358db2e51c35bd7119505a72abb94fc855e78ef2aa6e",
+      "integrationChange": null
+    },
+    "src/features/apps/use-app-list.ts": {
+      "sha256": "317bf0572f4758b4cb4fbb60dca02bef526615a060e7aca26fa415d3afd15113",
+      "lane": "F11",
+      "originalSha256": "317bf0572f4758b4cb4fbb60dca02bef526615a060e7aca26fa415d3afd15113",
+      "integrationChange": null
+    },
+    "src/features/apps/use-app.ts": {
+      "sha256": "8a44157a494d1fdcf355d06ba4b26a8d17e24fb4a1789a89aa2c4471dad054d8",
+      "lane": "F11",
+      "originalSha256": "8a44157a494d1fdcf355d06ba4b26a8d17e24fb4a1789a89aa2c4471dad054d8",
+      "integrationChange": null
+    },
+    "src/features/apps/web-canvas-owner.ts": {
+      "sha256": "1f0a41cbc358af00093804278c0515bd2e8d5128c28314d7f2b3ac7f38d0e1c7",
+      "lane": "F11",
+      "originalSha256": "1f0a41cbc358af00093804278c0515bd2e8d5128c28314d7f2b3ac7f38d0e1c7",
+      "integrationChange": null
+    },
+    "src/features/apps/web-canvas.machine.ts": {
+      "sha256": "c1571abf987af2984e9d851ed8a7e1c7ba613a1bf92dadf30eb0ea63306e3966",
+      "lane": "F11",
+      "originalSha256": "c1571abf987af2984e9d851ed8a7e1c7ba613a1bf92dadf30eb0ea63306e3966",
+      "integrationChange": null
+    },
+    "src/features/apps/web-canvas.tsx": {
+      "sha256": "22968ce73d209f3c4268ff05f038c43465478d6ab8020e220de5c0dd31c913b6",
+      "lane": "F11",
+      "originalSha256": "22968ce73d209f3c4268ff05f038c43465478d6ab8020e220de5c0dd31c913b6",
+      "integrationChange": null
+    },
+    "src/features/apps/web-frame.ts": {
+      "sha256": "da485b2fa765a748a81a813c0c5876d7c99917e57a1f7fd529cfc3ff9bdfed55",
+      "lane": "F11",
+      "originalSha256": "da485b2fa765a748a81a813c0c5876d7c99917e57a1f7fd529cfc3ff9bdfed55",
+      "integrationChange": null
+    },
+    "src/features/channel-settings/settings-owner.ts": {
+      "sha256": "e2245ba61c7b243ab0f21087eee9a93a939d1ac9c349fc1f35ff01599519ca86",
+      "lane": "F13",
+      "originalSha256": "e2245ba61c7b243ab0f21087eee9a93a939d1ac9c349fc1f35ff01599519ca86",
+      "integrationChange": null
+    },
+    "src/features/channel-settings/settings-request.ts": {
+      "sha256": "f7e5e5f5be8aec09a83c2be1caca1bf4bf11320c1b40a9d8796b97104033b629",
+      "lane": "F13",
+      "originalSha256": "f7e5e5f5be8aec09a83c2be1caca1bf4bf11320c1b40a9d8796b97104033b629",
+      "integrationChange": null
+    },
+    "src/features/channel-settings/settings.machine.ts": {
+      "sha256": "840bca56a63a6a515573941fdd88692fe6d231b06f43d15b19707ca000ac01ea",
+      "lane": "F13",
+      "originalSha256": "840bca56a63a6a515573941fdd88692fe6d231b06f43d15b19707ca000ac01ea",
+      "integrationChange": null
+    },
+    "src/features/channel-settings/use-channel-settings.ts": {
+      "sha256": "bd80cfe8ac36800aaecba4057e7bf23eb18866eaf1d82a873b36d6b33c116d04",
+      "lane": "F13",
+      "originalSha256": "bd80cfe8ac36800aaecba4057e7bf23eb18866eaf1d82a873b36d6b33c116d04",
+      "integrationChange": null
+    },
+    "src/features/conversation/model-defaults-owner.ts": {
+      "sha256": "d24e9fcaa6a3343941958a17b36d673162989bae8f5e863bb88d4e049278c85e",
+      "lane": "model-default",
+      "originalSha256": "d24e9fcaa6a3343941958a17b36d673162989bae8f5e863bb88d4e049278c85e",
+      "integrationChange": null
+    },
+    "src/features/conversation/model-defaults.machine.ts": {
+      "sha256": "2282dd245a0236e2434e8b37bccd9a3c14410750d526f21107aac8870bb91a01",
+      "lane": "model-default",
+      "originalSha256": "2282dd245a0236e2434e8b37bccd9a3c14410750d526f21107aac8870bb91a01",
+      "integrationChange": null
+    },
+    "src/features/conversation/model-defaults.tsx": {
+      "sha256": "1bf9a9652de6b5b3901a651f1f8bf965ca4ae5786d5a901d1b487b1a31bc5093",
+      "lane": "model-default",
+      "originalSha256": "1bf9a9652de6b5b3901a651f1f8bf965ca4ae5786d5a901d1b487b1a31bc5093",
+      "integrationChange": null
+    },
+    "src/features/conversation/use-model-defaults.ts": {
+      "sha256": "80b1d5763fec394673fb50e9e708578f8fa49bb4af881299812d9b33550f708d",
+      "lane": "model-default",
+      "originalSha256": "80b1d5763fec394673fb50e9e708578f8fa49bb4af881299812d9b33550f708d",
+      "integrationChange": null
+    },
+    "src/features/email/email-settings.tsx": {
+      "sha256": "d92cf92b5ae48e9ef6a92dad6e80c3204b3077cb71d4838677258d2afd1a8cda",
+      "lane": "F13",
+      "originalSha256": "d92cf92b5ae48e9ef6a92dad6e80c3204b3077cb71d4838677258d2afd1a8cda",
+      "integrationChange": null
+    },
+    "src/features/family/chatgpt-sign-in.tsx": {
+      "sha256": "c1a8b317ab7d3044bc28e9dcb7b3ed7218b59e422c740921d0f49734a176276b",
+      "lane": "F09",
+      "originalSha256": "c1a8b317ab7d3044bc28e9dcb7b3ed7218b59e422c740921d0f49734a176276b",
+      "integrationChange": null
+    },
+    "src/features/family/context.tsx": {
+      "sha256": "54780e1fe4270d8c21d470447863ec5fbf107c4ee0ef88dfa326a133de786f65",
+      "lane": "F09",
+      "originalSha256": "54780e1fe4270d8c21d470447863ec5fbf107c4ee0ef88dfa326a133de786f65",
+      "integrationChange": null
+    },
+    "src/features/family/family-access-owner.ts": {
+      "sha256": "1889bd76cae1e24e0130c5b5339a23adde9bd9deda0c0823f76d2ec9279aee65",
+      "lane": "F09",
+      "originalSha256": "1889bd76cae1e24e0130c5b5339a23adde9bd9deda0c0823f76d2ec9279aee65",
+      "integrationChange": null
+    },
+    "src/features/family/family-access.machine.ts": {
+      "sha256": "5d2309e04b592db076734015a4df62cdbb9cc7f2ce2da922622f680e1ff9618d",
+      "lane": "F09",
+      "originalSha256": "5d2309e04b592db076734015a4df62cdbb9cc7f2ce2da922622f680e1ff9618d",
+      "integrationChange": null
+    },
+    "src/features/family/family-change-owner.ts": {
+      "sha256": "25f6eb18c3884fd5fcb049b66b699c0178c769eaf8d14acbff11e14441b728bd",
+      "lane": "F09",
+      "originalSha256": "25f6eb18c3884fd5fcb049b66b699c0178c769eaf8d14acbff11e14441b728bd",
+      "integrationChange": null
+    },
+    "src/features/family/family-change.machine.ts": {
+      "sha256": "ab6ece184567c71d53cc9a5ba3793a2b9decfdc6aea083a015f8b6a2269ca341",
+      "lane": "F09",
+      "originalSha256": "ab6ece184567c71d53cc9a5ba3793a2b9decfdc6aea083a015f8b6a2269ca341",
+      "integrationChange": null
+    },
+    "src/features/family/family-join-owner.ts": {
+      "sha256": "a3055c6cb9c21085740c8959a10236c0e799abe6c732e74966ebd88cd4aaf55d",
+      "lane": "F09",
+      "originalSha256": "a3055c6cb9c21085740c8959a10236c0e799abe6c732e74966ebd88cd4aaf55d",
+      "integrationChange": null
+    },
+    "src/features/family/family-join.machine.ts": {
+      "sha256": "46cbf40da0ab8af19421fd8f3b4ab1ffdc02e17f8ca5b4ef6e05582c956bc713",
+      "lane": "F09",
+      "originalSha256": "46cbf40da0ab8af19421fd8f3b4ab1ffdc02e17f8ca5b4ef6e05582c956bc713",
+      "integrationChange": null
+    },
+    "src/features/family/family-requests.ts": {
+      "sha256": "2fd265d293420fe4a8aa8c23d88527bb142cecaca8712b0b5b87b143568d65ec",
+      "lane": "F09",
+      "originalSha256": "2fd265d293420fe4a8aa8c23d88527bb142cecaca8712b0b5b87b143568d65ec",
+      "integrationChange": null
+    },
+    "src/features/family/family-settings.tsx": {
+      "sha256": "2390c5fb54f1ad4d0df61fab87764739b7b058b08a2a284b2fb9c8ffd16a98d2",
+      "lane": "F09",
+      "originalSha256": "2390c5fb54f1ad4d0df61fab87764739b7b058b08a2a284b2fb9c8ffd16a98d2",
+      "integrationChange": null
+    },
+    "src/features/family/invitation-record.ts": {
+      "sha256": "a0194f5cecb5e5025b11593d566d03f0ee579e500d20ae8419984b2b040e41da",
+      "lane": "F09",
+      "originalSha256": "a0194f5cecb5e5025b11593d566d03f0ee579e500d20ae8419984b2b040e41da",
+      "integrationChange": null
+    },
+    "src/features/family/join.tsx": {
+      "sha256": "dda893405c11cc9553a0bd09daef58bed6468f8018f2b6309c12499755022dcf",
+      "lane": "F09",
+      "originalSha256": "dda893405c11cc9553a0bd09daef58bed6468f8018f2b6309c12499755022dcf",
+      "integrationChange": null
+    },
+    "src/features/family/model-access.machine.ts": {
+      "sha256": "3143dd1783e902f37e7653994dcdb6402c88557dcbbdd87fadeb9e8260683935",
+      "lane": "F09",
+      "originalSha256": "3143dd1783e902f37e7653994dcdb6402c88557dcbbdd87fadeb9e8260683935",
+      "integrationChange": null
+    },
+    "src/features/family/model-access.tsx": {
+      "sha256": "cad22ab6f3c707a9c7f6a304069392d8b5ebb9de62f015d359c1aefa36f678df",
+      "lane": "F09",
+      "originalSha256": "cad22ab6f3c707a9c7f6a304069392d8b5ebb9de62f015d359c1aefa36f678df",
+      "integrationChange": null
+    },
+    "src/features/family/model-sign-in-owner.ts": {
+      "sha256": "5769103f19702bc8e4ee3e22f4ad37ce7ef1f2139a8187c8e4e0e53c5de366f9",
+      "lane": "F09",
+      "originalSha256": "5769103f19702bc8e4ee3e22f4ad37ce7ef1f2139a8187c8e4e0e53c5de366f9",
+      "integrationChange": null
+    },
+    "src/features/family/model-sign-in.machine.ts": {
+      "sha256": "564753441ea3b56c5eec561bb4e33b92854e7e0f0a38fc8b05407a51fc5fea2f",
+      "lane": "F09",
+      "originalSha256": "564753441ea3b56c5eec561bb4e33b92854e7e0f0a38fc8b05407a51fc5fea2f",
+      "integrationChange": null
+    },
+    "src/features/memory/import-owner.ts": {
+      "sha256": "33859e77e319992c80f17de528705cf99a542d06c8c07772ff75cc62f31b8d01",
+      "lane": "F13",
+      "originalSha256": "33859e77e319992c80f17de528705cf99a542d06c8c07772ff75cc62f31b8d01",
+      "integrationChange": null
+    },
+    "src/features/memory/import.machine.ts": {
+      "sha256": "077f4f4edd4a6efcb0f84fdeefd0ccf7b937e17ab68e4a4bcfabf51c590fc509",
+      "lane": "F13",
+      "originalSha256": "077f4f4edd4a6efcb0f84fdeefd0ccf7b937e17ab68e4a4bcfabf51c590fc509",
+      "integrationChange": null
+    },
+    "src/features/memory/memory-import.tsx": {
+      "sha256": "67251916394d41296c8ec1f13141163b00c5b42f9577e99b87951cb9b94c6f3c",
+      "lane": "F13",
+      "originalSha256": "67251916394d41296c8ec1f13141163b00c5b42f9577e99b87951cb9b94c6f3c",
+      "integrationChange": null
+    },
+    "src/features/memory/memory-panel.tsx": {
+      "sha256": "357d491674877b17d6808586726958ab10a070a2d35532e391f0ab01a80a9772",
+      "lane": "memory-query",
+      "originalSha256": "357d491674877b17d6808586726958ab10a070a2d35532e391f0ab01a80a9772",
+      "integrationChange": null
+    },
+    "src/features/memory/query-owner.ts": {
+      "sha256": "1770cee814d7f333fc3b4ffcac347848108782e9b150ec47b48e427afc49ee02",
+      "lane": "memory-query",
+      "originalSha256": "1770cee814d7f333fc3b4ffcac347848108782e9b150ec47b48e427afc49ee02",
+      "integrationChange": null
+    },
+    "src/features/memory/query.machine.ts": {
+      "sha256": "a031348cc44b1aa16ed892c897be56b81d523b1c4f2783df1b9f04b07a5a534b",
+      "lane": "memory-query",
+      "originalSha256": "a031348cc44b1aa16ed892c897be56b81d523b1c4f2783df1b9f04b07a5a534b",
+      "integrationChange": null
+    },
+    "src/features/memory/use-memory-query.ts": {
+      "sha256": "1f1c8bd679c7f190e242ae95a9c0ce96868e3a70b57f56114fd9f8931ed4688c",
+      "lane": "memory-query",
+      "originalSha256": "1f1c8bd679c7f190e242ae95a9c0ce96868e3a70b57f56114fd9f8931ed4688c",
+      "integrationChange": null
+    },
+    "src/features/routines/routine-work.ts": {
+      "sha256": "c06c63b8047a1e6de908dd2c0304854582a3bee4af796e70f23bc33d0ba22424",
+      "lane": "F12-routines",
+      "originalSha256": "c06c63b8047a1e6de908dd2c0304854582a3bee4af796e70f23bc33d0ba22424",
+      "integrationChange": null
+    },
+    "src/features/routines/routines-owner.ts": {
+      "sha256": "7c0a620bf8469ee30148becf4388f5eb7e19aafe60c8af700b47b074b1adbe55",
+      "lane": "F12-routines",
+      "originalSha256": "7c0a620bf8469ee30148becf4388f5eb7e19aafe60c8af700b47b074b1adbe55",
+      "integrationChange": null
+    },
+    "src/features/routines/routines-ui.machine.ts": {
+      "sha256": "f8ba9df46613545d2d0386333ebe2ff5f9e9c32629051d7abb13906255b39f5b",
+      "lane": "F12-routines",
+      "originalSha256": "f8ba9df46613545d2d0386333ebe2ff5f9e9c32629051d7abb13906255b39f5b",
+      "integrationChange": null
+    },
+    "src/features/routines/routines-workbench.tsx": {
+      "sha256": "2f683405d1039af436508c026cebb096e925ea7a168a601371c312376d61c27e",
+      "lane": "F12-routines",
+      "originalSha256": "2f683405d1039af436508c026cebb096e925ea7a168a601371c312376d61c27e",
+      "integrationChange": null
+    },
+    "src/features/routines/use-routines.ts": {
+      "sha256": "18e8196affb264a5dfec41ccb59b4e3aa7483cccca1c4bf44672a85b25c3da64",
+      "lane": "F12-routines",
+      "originalSha256": "18e8196affb264a5dfec41ccb59b4e3aa7483cccca1c4bf44672a85b25c3da64",
+      "integrationChange": null
+    },
+    "src/features/routines/use-webhook.ts": {
+      "sha256": "b5843ce35ceec4bb4d40042721e5a6a0f70b9eafd8585ce784ece280db1dbe96",
+      "lane": "F12-routines",
+      "originalSha256": "b5843ce35ceec4bb4d40042721e5a6a0f70b9eafd8585ce784ece280db1dbe96",
+      "integrationChange": null
+    },
+    "src/features/routines/webhook-owner.ts": {
+      "sha256": "858a0fd9effdc7f4c6999af58c85f67427194ec2dea60f3b009e117587a57016",
+      "lane": "F12-routines",
+      "originalSha256": "858a0fd9effdc7f4c6999af58c85f67427194ec2dea60f3b009e117587a57016",
+      "integrationChange": null
+    },
+    "src/features/routines/webhook-panel.tsx": {
+      "sha256": "d8909e7fb67c2f1fff1709f58e0f0cc43c3cb556257e38cebe05fcaa8036f709",
+      "lane": "F12-routines",
+      "originalSha256": "d8909e7fb67c2f1fff1709f58e0f0cc43c3cb556257e38cebe05fcaa8036f709",
+      "integrationChange": null
+    },
+    "src/features/routines/webhook-ui.machine.ts": {
+      "sha256": "6af5a1a24e5690a5d536c319bfe8ec2e5cfa45d3581c1793bbe7a764848e56fc",
+      "lane": "F12-routines",
+      "originalSha256": "6af5a1a24e5690a5d536c319bfe8ec2e5cfa45d3581c1793bbe7a764848e56fc",
+      "integrationChange": null
+    },
+    "src/features/skills/hosted-skill-import.tsx": {
+      "sha256": "6f857d9b09b01daad54450ef986dc73d33948bde73413aa11d9f0c0e84faba7e",
+      "lane": "F12-skills",
+      "originalSha256": "6f857d9b09b01daad54450ef986dc73d33948bde73413aa11d9f0c0e84faba7e",
+      "integrationChange": null
+    },
+    "src/features/skills/hosted-skill-owner.ts": {
+      "sha256": "c368482cea4fc5616e2d4ff8bdbac8c5f191de7d6d17e7ed50c4de103d2e5e21",
+      "lane": "F12-skills",
+      "originalSha256": "c368482cea4fc5616e2d4ff8bdbac8c5f191de7d6d17e7ed50c4de103d2e5e21",
+      "integrationChange": null
+    },
+    "src/features/skills/hosted-skill.machine.ts": {
+      "sha256": "abd9e0e940b08b2714eb38220bc745fa82a83a2eb9151f0b8a71d1daec8ef870",
+      "lane": "F12-skills",
+      "originalSha256": "abd9e0e940b08b2714eb38220bc745fa82a83a2eb9151f0b8a71d1daec8ef870",
+      "integrationChange": null
+    },
+    "src/features/skills/skill-view.machine.ts": {
+      "sha256": "511e4f6ae4963b865f0576e2c30669afa70416812535c717482009abe4e170d8",
+      "lane": "F12-skills",
+      "originalSha256": "511e4f6ae4963b865f0576e2c30669afa70416812535c717482009abe4e170d8",
+      "integrationChange": null
+    },
+    "src/features/skills/skills-owner.ts": {
+      "sha256": "03f2923eba463156bcddf4f316c590e48adfb4df02f37493b002a974f88986c3",
+      "lane": "F12-skills",
+      "originalSha256": "03f2923eba463156bcddf4f316c590e48adfb4df02f37493b002a974f88986c3",
+      "integrationChange": null
+    },
+    "src/features/skills/skills-panel.tsx": {
+      "sha256": "7ab9b37a593887a12e6037786e8e83fa99b019ae7686fc3c62024bc61aea2529",
+      "lane": "F12-skills",
+      "originalSha256": "7ab9b37a593887a12e6037786e8e83fa99b019ae7686fc3c62024bc61aea2529",
+      "integrationChange": null
+    },
+    "src/features/skills/skills.machine.ts": {
+      "sha256": "c004c630d08d2b4a4d816055bd6865467a4393798c8d0e4b763de5680f2b2b1e",
+      "lane": "F12-skills",
+      "originalSha256": "c004c630d08d2b4a4d816055bd6865467a4393798c8d0e4b763de5680f2b2b1e",
+      "integrationChange": null
+    },
+    "src/features/skills/use-hosted-skill.ts": {
+      "sha256": "49c6457a9b90e7b7805f8c72e4f4195d14faf45991bd11fbf8398e3ae48f08b7",
+      "lane": "F12-skills",
+      "originalSha256": "49c6457a9b90e7b7805f8c72e4f4195d14faf45991bd11fbf8398e3ae48f08b7",
+      "integrationChange": null
+    },
+    "src/features/skills/use-skill-view.ts": {
+      "sha256": "3c58761c0de3724b5bbe1994325d7704745cbcf206369c3fca3c2c2a9e6bf731",
+      "lane": "F12-skills",
+      "originalSha256": "3c58761c0de3724b5bbe1994325d7704745cbcf206369c3fca3c2c2a9e6bf731",
+      "integrationChange": null
+    },
+    "src/features/skills/use-skills.ts": {
+      "sha256": "149bc12c2e9eb0f7257847ce68cb238d903cc462493f928dabc0da5486e4e814",
+      "lane": "F12-skills",
+      "originalSha256": "149bc12c2e9eb0f7257847ce68cb238d903cc462493f928dabc0da5486e4e814",
+      "integrationChange": null
+    },
+    "src/features/whatsapp/whatsapp-settings.tsx": {
+      "sha256": "20c60ab139065b774b60fef88ea921edd055fe533d51471bd974c10163d548d3",
+      "lane": "F13",
+      "originalSha256": "20c60ab139065b774b60fef88ea921edd055fe533d51471bd974c10163d548d3",
+      "integrationChange": null
+    },
+    "tests/activity-controls-ui.test.ts": {
+      "sha256": "d0951f77b87360fa57c6880e513353cc0fcb9f9b310b0cc8086a298bedcb3830",
+      "lane": "F14",
+      "originalSha256": "d0951f77b87360fa57c6880e513353cc0fcb9f9b310b0cc8086a298bedcb3830",
+      "integrationChange": null
+    },
+    "tests/activity-query-owner.test.ts": {
+      "sha256": "81d0fc2fa66afe7b5d425ffeb816d89c81ae3ae3546ad7abd2a8d45541371d7f",
+      "lane": "F14",
+      "originalSha256": "81d0fc2fa66afe7b5d425ffeb816d89c81ae3ae3546ad7abd2a8d45541371d7f",
+      "integrationChange": null
+    },
+    "tests/agent-archive-machine.test.ts": {
+      "sha256": "63ee42a63c590d0750df653f8d700f09124fcef87b0698e22b9de163bea2f259",
+      "lane": "F10",
+      "originalSha256": "63ee42a63c590d0750df653f8d700f09124fcef87b0698e22b9de163bea2f259",
+      "integrationChange": null
+    },
+    "tests/agent-editor-machine.test.ts": {
+      "sha256": "6227c2db9f30a09361de9ca06ba4c22572aa79ff28e15d3ab9db96d96f14390c",
+      "lane": "F10",
+      "originalSha256": "6227c2db9f30a09361de9ca06ba4c22572aa79ff28e15d3ab9db96d96f14390c",
+      "integrationChange": null
+    },
+    "tests/agent-observation-lifetime.test.ts": {
+      "sha256": "1be4cc98228496b54eda4bf267922280cf33b4f897994e9c457b76d2ce30e9ae",
+      "lane": "F10",
+      "originalSha256": "1be4cc98228496b54eda4bf267922280cf33b4f897994e9c457b76d2ce30e9ae",
+      "integrationChange": null
+    },
+    "tests/agent-request-cleanup.test.ts": {
+      "sha256": "f47446ec8762463c680bc256e04c5d6f9e63e8136fcfc91e0f81961d2711726d",
+      "lane": "F10",
+      "originalSha256": "f47446ec8762463c680bc256e04c5d6f9e63e8136fcfc91e0f81961d2711726d",
+      "integrationChange": null
+    },
+    "tests/apps-ui-lifecycle.test.ts": {
+      "sha256": "2fbd08cce35f5c84e7d8a13e636b3bda17654179d9b9f6c1851c4bff54cbb558",
+      "lane": "F11",
+      "originalSha256": "2fbd08cce35f5c84e7d8a13e636b3bda17654179d9b9f6c1851c4bff54cbb558",
+      "integrationChange": null
+    },
+    "tests/browser/activity-controls-lifecycle.spec.ts": {
+      "sha256": "0deb047167630f7b92741cc742977e5464889b92a917e630842cd87f751b4595",
+      "lane": "F14",
+      "originalSha256": "0deb047167630f7b92741cc742977e5464889b92a917e630842cd87f751b4595",
+      "integrationChange": null
+    },
+    "tests/browser/activity-query.spec.ts": {
+      "sha256": "4800c4a81dafae6c82f29eab5b6246f71b5ba497d457a10872cafc6e662841a0",
+      "lane": "F14",
+      "originalSha256": "4800c4a81dafae6c82f29eab5b6246f71b5ba497d457a10872cafc6e662841a0",
+      "integrationChange": null
+    },
+    "tests/browser/agent-owner-lifecycle.spec.ts": {
+      "sha256": "943811159d5e522c0d218338b8d6bd95113e26fe7e33cd4bd99c3f25bca6dc82",
+      "lane": "F10",
+      "originalSha256": "943811159d5e522c0d218338b8d6bd95113e26fe7e33cd4bd99c3f25bca6dc82",
+      "integrationChange": null
+    },
+    "tests/browser/apps-mounted.spec.ts": {
+      "sha256": "0c43dfc5b8fc0ec84a48edfde5c0a40035825cec50a4415a374a39ea571b2bad",
+      "lane": "F11",
+      "originalSha256": "0c43dfc5b8fc0ec84a48edfde5c0a40035825cec50a4415a374a39ea571b2bad",
+      "integrationChange": null
+    },
+    "tests/browser/email.spec.ts": {
+      "sha256": "e47ef426ef41ce1ca63445083685a60f82dcebeb8f1c717b143c34260238f349",
+      "lane": "F13",
+      "originalSha256": "e47ef426ef41ce1ca63445083685a60f82dcebeb8f1c717b143c34260238f349",
+      "integrationChange": null
+    },
+    "tests/browser/family-ownership.spec.ts": {
+      "sha256": "6e6294d45170e23c5cf93b4150d1d8535775993cba4767af99402e95cef04de6",
+      "lane": "F09",
+      "originalSha256": "6e6294d45170e23c5cf93b4150d1d8535775993cba4767af99402e95cef04de6",
+      "integrationChange": null
+    },
+    "tests/browser/fixtures/activity-query.tsx": {
+      "sha256": "77d158e78c33de0886eef4d13307ee0bb40c148da6c82a5a0278bf73a1b19b2b",
+      "lane": "F14",
+      "originalSha256": "77d158e78c33de0886eef4d13307ee0bb40c148da6c82a5a0278bf73a1b19b2b",
+      "integrationChange": null
+    },
+    "tests/browser/fixtures/apps-lifecycle.tsx": {
+      "sha256": "b8437e21341b155f97447b201b60249ec8f835d7c2e2804ed03bb50a2aabd45c",
+      "lane": "F11",
+      "originalSha256": "b8437e21341b155f97447b201b60249ec8f835d7c2e2804ed03bb50a2aabd45c",
+      "integrationChange": null
+    },
+    "tests/browser/fixtures/workspace-controls/index.html": {
+      "sha256": "75a27c62f2a33649751fab1ba288a7a2c4d7ae9811a1875cbf16e8f3aeedeb4d",
+      "lane": "parent integration",
+      "originalSha256": null,
+      "integrationChange": null
+    },
+    "tests/browser/fixtures/workspace-controls/main.jsx": {
+      "sha256": "9f6cb2aed1642ff72bfbc8edccda449ca88350e7e450063ee94280c70bb64887",
+      "lane": "parent integration",
+      "originalSha256": null,
+      "integrationChange": null
+    },
+    "tests/browser/fixtures/workspace-controls/stubs.jsx": {
+      "sha256": "9dfe04f11f73bf1fbb3191b73bf820974bd105b6ee3a02d61f06a2f2858fa0f2",
+      "lane": "parent integration",
+      "originalSha256": null,
+      "integrationChange": null
+    },
+    "tests/browser/memory-query-lifecycle.mjs": {
+      "sha256": "0e84f82509938d9f02de4434f3b3b17ca9cb1f41fb938b22a703520bb8d5ad10",
+      "lane": "parent integration",
+      "originalSha256": null,
+      "integrationChange": null
+    },
+    "tests/browser/model-defaults-ownership.spec.ts": {
+      "sha256": "18ad6413a3b99634353508a93fa5465236bd4d01192312a9499eef15e4ea6441",
+      "lane": "model-default",
+      "originalSha256": "1339f89a9c9fb3d6815c8e3797f3e0d65bbe538e830ece950277d19c53212614",
+      "integrationChange": "Narrow the native button type before duplicate-click evaluation and observe enabled Save state."
+    },
+    "tests/browser/routines-ui-lifecycle.spec.ts": {
+      "sha256": "edee74bab5704af4c15767a9fcc45bf61daf8e03af0b3a1d90ec6b4f18796d9d",
+      "lane": "F12-routines",
+      "originalSha256": "edee74bab5704af4c15767a9fcc45bf61daf8e03af0b3a1d90ec6b4f18796d9d",
+      "integrationChange": null
+    },
+    "tests/browser/settings-import-lifecycle.spec.ts": {
+      "sha256": "21c0aacb66dc10dd93bb00bb1c7abe28a44cb62d68e8d4ce503963c791b80569",
+      "lane": "F13",
+      "originalSha256": "21c0aacb66dc10dd93bb00bb1c7abe28a44cb62d68e8d4ce503963c791b80569",
+      "integrationChange": null
+    },
+    "tests/browser/skills-lifecycle.mjs": {
+      "sha256": "9117400da3aa08f04d0252d01e9d1a12a1d3e0968c180bf22c496e51be46ce81",
+      "lane": "F12-skills",
+      "originalSha256": "9117400da3aa08f04d0252d01e9d1a12a1d3e0968c180bf22c496e51be46ce81",
+      "integrationChange": null
+    },
+    "tests/browser/workspace-controls-lifecycle.mjs": {
+      "sha256": "19f7daa5ef3dece600c4118698d3b75e57b0df66e2d2cfe18392eac6643608ef",
+      "lane": "parent integration",
+      "originalSha256": null,
+      "integrationChange": null
+    },
+    "tests/channel-settings-ui.test.ts": {
+      "sha256": "812d9b93a6414ccf89324588e6adf59aa6b01cec5f7b24646678af265c210c5d",
+      "lane": "F13",
+      "originalSha256": "812d9b93a6414ccf89324588e6adf59aa6b01cec5f7b24646678af265c210c5d",
+      "integrationChange": null
+    },
+    "tests/family-ui-lifecycle.test.ts": {
+      "sha256": "00f7cbc7980d7d0ebfd32a25a6b66f18b376fc99b17b0c2d79e4fc083d82bb77",
+      "lane": "F09",
+      "originalSha256": "00f7cbc7980d7d0ebfd32a25a6b66f18b376fc99b17b0c2d79e4fc083d82bb77",
+      "integrationChange": null
+    },
+    "tests/memory-import-ui.test.ts": {
+      "sha256": "96d6ad09658a7398986c202855ca5bdd39eda31213b1697baaca77623e7f6792",
+      "lane": "F13",
+      "originalSha256": "96d6ad09658a7398986c202855ca5bdd39eda31213b1697baaca77623e7f6792",
+      "integrationChange": null
+    },
+    "tests/memory-query-ui.test.ts": {
+      "sha256": "c7cb76ebd27f46100c01be58a4aa17da788a7ce2c444c3e3377a36e779c46799",
+      "lane": "memory-query",
+      "originalSha256": "c7cb76ebd27f46100c01be58a4aa17da788a7ce2c444c3e3377a36e779c46799",
+      "integrationChange": null
+    },
+    "tests/model-defaults-lifecycle.test.ts": {
+      "sha256": "0a91e22ebe0002da1a1835d5dd70ec0d7453d37c42810c74422c8cbe9135aff3",
+      "lane": "model-default",
+      "originalSha256": "0a91e22ebe0002da1a1835d5dd70ec0d7453d37c42810c74422c8cbe9135aff3",
+      "integrationChange": null
+    },
+    "tests/routines-ui-lifecycle.test.ts": {
+      "sha256": "39f5c28f3ba4e0ad51dab4a6b1058718c5cc5415490a5bc20bf574b82f377f71",
+      "lane": "F12-routines",
+      "originalSha256": "39f5c28f3ba4e0ad51dab4a6b1058718c5cc5415490a5bc20bf574b82f377f71",
+      "integrationChange": null
+    },
+    "tests/skills-ui-lifecycle.test.ts": {
+      "sha256": "32195cc538b7ac395930d0a6c00e5d298a80468145f8c6e7ca726c7257456d6c",
+      "lane": "F12-skills",
+      "originalSha256": "32195cc538b7ac395930d0a6c00e5d298a80468145f8c6e7ca726c7257456d6c",
+      "integrationChange": null
+    },
+    "tests/workspace-control-lifetimes.test.ts": {
+      "sha256": "20a10bdd249d10d9bfae7943ca482004fb638cdae7d043bbf5a096a90cea20e4",
+      "lane": "workspace-controls",
+      "originalSha256": "902bdc6af74d612efb810d89267703a0feeae1ff5545d27b0c3060106ac13060",
+      "integrationChange": "Add two failure-sensitive cross-attempt cleanup regressions."
+    },
+    "tests/workspace-lifetime-machine.test.ts": {
+      "sha256": "56eba3e3fdece333b63d9992a4bbccd6140ccd09137f49cac872a224a065799a",
+      "lane": "F10",
+      "originalSha256": "56eba3e3fdece333b63d9992a4bbccd6140ccd09137f49cac872a224a065799a",
+      "integrationChange": null
+    }
+  },
+  "removed": [
+    "src/features/agents/catalog-state.ts",
+    "src/http/poll.ts",
+    "tests/files-poll.test.ts"
+  ],
+  "authorExtractionManifest": "f09-f14-2026-10-24/composition/f09-f14-extraction-manifest.json.txt",
+  "compositionBackup": "/private/tmp/owned-stack-integration-5a7_9hr6/manifest.json",
+  "evidenceIndexSha256": "112e7d4844bfe283f61dcd2fd6cfa32931e143769be2c937e6492a6807e6946d",
+  "composedGateArtifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/README.md",
+      "sha256": "31cbb375d2ca287b7b7dc0bf594a9a10b5c12630410f6c2484fa492e6cb791f2",
+      "bytes": 1701
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/f09-f14-composed-browser.log.txt",
+      "sha256": "7ccc6c79a52d21a32683ed8a362dcc169d2052b4fbdb3ca241390b104b535481",
+      "bytes": 68823
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/f09-f14-composed-static-publication.log.txt",
+      "sha256": "fb2311e03c5480cc32c448f56371f680b0407e99ea8eede0416b6a60014fab02",
+      "bytes": 655
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/f09-f14-composed-unit-build-repaired.log.txt",
+      "sha256": "fc8eed46dea8cdc57ed3a6c8ec4288ea75f0da7f5f79140209d28b1b6856009d",
+      "bytes": 24382
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/f09-f14-composed-unit-build.log.txt",
+      "sha256": "dbdafe8cd117cb34a5ddfb03119b6faa5031f94ca5e8c10ff41f4402745ba072",
+      "bytes": 74606
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/f09-f14-final-unit-without-legacy-poll.log.txt",
+      "sha256": "dd422f0fbf312c4a02275ec653e0159bda34528014f77aee9f6d1c1cd4eda837",
+      "bytes": 458
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/f09-f14-mounted-components.log.txt",
+      "sha256": "3d9935911dbc721273496228ed72191d425877ea25cc115dc3e1a0129655e162",
+      "bytes": 3455
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/f14-integration-labels-final.log.txt",
+      "sha256": "7a0959d59fe6f8feafe4752f69e1b94dbbb0d315c4c298a189523813a2a7d73d",
+      "bytes": 234
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/workspace-retry-retention-after.log.txt",
+      "sha256": "d866b5f14d8ee37aa928a6e5dd6b3c1b7eab9e8d6697aa4c9faead2b17d2cf7a",
+      "bytes": 247
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f09-f14-composed-gates/workspace-retry-retention-before.log.txt",
+      "sha256": "c151f7c866ada8f978bd329b8d2cbffef7ecfe00a8c685b8ade939b0b811a3ce",
+      "bytes": 3123
+    }
+  ],
+  "hostedCI": "pending",
+  "mergeAndDeployment": "not authorized"
+}

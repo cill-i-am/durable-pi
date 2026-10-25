@@ -1,0 +1,122 @@
+{
+  "status": "Independent BackupRunner recheck clear within stated scope",
+  "createdUtc": "2026-10-23T15:39:37.609692+00:00",
+  "sourceHashes": {
+    "src/memory/adapters/backup-lifecycle.ts": "4717bcfea235454ce315f8c5c155407b199f085ea48d4f07f25ea8dc6ab34fa7",
+    "src/memory/backup-discovery.machine.ts": "73cfce0208ae20f06a631fba6fe5b009551aabfe53a4a7077989081bd4fac973",
+    "src/memory/backup-dispatch.machine.ts": "50384fed2383b9ae33c958024dacb373ebba51b57818f199446a21bd8b691d70",
+    "tests/memory-backup-runner.test.ts": "be62b0c3224def6340f9f0847f6356bb0de39170646da7e5daed6486cf63fda6"
+  },
+  "sourceHashesVerifiedBeforeAndAfter": true,
+  "byteUnchangedReproductionProbes": {
+    "probe.mts": true,
+    "cleanup-recovery.mts": true,
+    "retry-prearm.mts": true,
+    "cold-controller-read.mts": true
+  },
+  "probeExitCodes": {
+    "probe": 0,
+    "cleanup-recovery": 0,
+    "retry-prearm": 0,
+    "dispose-recheck": 0,
+    "cleanup-dispose": 0,
+    "cold-cleanup": 0,
+    "cold-controller-read": 0
+  },
+  "focusedSuite": {
+    "files": 1,
+    "tests": 23,
+    "exitCode": 0
+  },
+  "coldReadMarkerBeforeAfterExactlyEqual": true,
+  "artifacts": [
+    {
+      "path": "/private/tmp/b18-runner-independent/probe.mts",
+      "sha256": "a2d5bbed933448362147b50ec507b754e822156f1ee3895ffac3402fe8a2ea83",
+      "bytes": 3913
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/cleanup-recovery.mts",
+      "sha256": "232657cc9097e01fcdbecc09731be9e7e73f758c7d044e458e323a8862d07bfa",
+      "bytes": 3019
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/retry-prearm.mts",
+      "sha256": "1312fa3fa47dc2e8bfa89d18998e96d6f5cf3bd38dffbf53f24e437d615aea5c",
+      "bytes": 2611
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/dispose-recheck.mts",
+      "sha256": "9310112e58744d4087eb070d072450c833bf24576b72e8d6ea483bb1ae5a29ea",
+      "bytes": 2439
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/cleanup-dispose.mts",
+      "sha256": "ec0de7a6551a0a1acdc573eea90b17f4223df4ab98dc9aaa8b5f3c6cae1b3aa5",
+      "bytes": 2672
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/cold-cleanup.mts",
+      "sha256": "c2e54281d22e85f1e562ec78d8709981b1fcc54ac7cd7eaec780d3d38f4a3d7f",
+      "bytes": 3411
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/cold-controller-read.mts",
+      "sha256": "238c2eabc93846f695f54a67c9ab2066e4a35a94396b6c7900060ef8c243f50f",
+      "bytes": 3249
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-probe.log",
+      "sha256": "6722780215ffe5730940265146899d79ef54d3a82bd76e7e21de61a87397c1d4",
+      "bytes": 4865
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-cleanup-recovery.log",
+      "sha256": "e5add06ae4accfcca50b428170d5d855e01dbc465d5e66a1d2f359ac42e70a54",
+      "bytes": 3229
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-retry-prearm.log",
+      "sha256": "55a4bbfcb14f7475fe37ff8d7dd091ed87553eca111c2b3e0ede315984c730a6",
+      "bytes": 1213
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-dispose-recheck.log",
+      "sha256": "a54b092135c4b6738695db648c6079b2fa053c0e8f8eb88001dde1f19ad2859e",
+      "bytes": 100
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-cleanup-dispose.log",
+      "sha256": "771c3870cc50f761d3e3a278cbcdf5d610ff9e6b1d690501f95b35d103d21d12",
+      "bytes": 232
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-cold-cleanup.log",
+      "sha256": "e0353931d3e2d7f8522372d09f21fdc54a5aba89a0c63c4907a82e94399fbc85",
+      "bytes": 1683
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-cold-controller-read.log",
+      "sha256": "e6b3b98ddd34af8c78020925e0c2edff9336d110860648cfdd33264b0998be51",
+      "bytes": 2089
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/closed-runner-suite.log",
+      "sha256": "93bf369041ff5897c4d4781e39bb1950d16f2c55d02b4c2ee7aab14ffedb459d",
+      "bytes": 235
+    },
+    {
+      "path": "/private/tmp/b18-runner-independent/cloudflare-shim.mjs",
+      "sha256": "847f877fd8f63aece17b8191ff5e9979b54112494eacacb9b5b4453a593146a9",
+      "bytes": 246
+    }
+  ],
+  "disposeAdaptation": "Original preserved; separate dispose-recheck starts disposal concurrently, asserts pending while restore held, releases restore, awaits disposal, retains stepCalls=0 and startedAfterDispose=false assertions.",
+  "scope": "Unmodified installed agents Lifecycle queue, retries, running-marker and outcome code with Node SQLite; shimmed platform methods, empty side-effect cloudflare:workers module, synthetic host effects. Cold reconstruction closes/reopens SQLite and creates fresh SDK and runner with SQLite-persisted diagnostic KV. No process SIGKILL/workerd/physical cloud alarm/R2/provider or broad integration gate.",
+  "findingsCleared": [
+    "failed exact cleanup claim survives discovery/final-cleanup exhaustion and queue deletion",
+    "dispose joins admitted restoration and native cleanup, no new producer after shutdown",
+    "domain retry prearm cannot replace joined failed receipt or active cleanup",
+    "unavailable controller read cannot overwrite existing epoch/token/claim"
+  ]
+}

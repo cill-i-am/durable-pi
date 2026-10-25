@@ -105,12 +105,10 @@ export function WorkspaceSettings(props: SettingsProps) {
     props.agent
   )
   const [pending, setPending] = useState<Record<string, boolean>>({})
-  const [closing, setClosing] = useState(false)
-  const closingHref = useRef<string | null>(null)
-  const exitAction = useRef<(() => void) | null>(null)
   const locked = Object.values(pending).some(Boolean)
   const drawers = useSettingsDrawers(
-    closing || !props.category ? [] : location.settingsFrames
+    !props.category ? [] : location.settingsFrames,
+    { href: location.href, locked }
   )
   const reportPending = useCallback((id: string, value: boolean) => {
     setPending((current) =>
@@ -126,26 +124,8 @@ export function WorkspaceSettings(props: SettingsProps) {
     onPendingChange(locked)
     return () => onPendingChange(false)
   }, [locked, onPendingChange])
-  useEffect(() => {
-    if (closing && location.href !== closingHref.current) {
-      exitAction.current = null
-      setClosing(false)
-    }
-  }, [closing, location.href])
-  function exit(action?: () => void) {
-    if (locked || closing) return
-    closingHref.current = location.href
-    exitAction.current = action ?? location.closeSettings
-    setClosing(true)
-  }
-  function rootClosed(id: string) {
-    drawers.closed(id)
-    if (closing && location.href === closingHref.current) {
-      const action = exitAction.current
-      exitAction.current = null
-      action?.()
-    }
-  }
+  const exit = (action?: () => void) =>
+    drawers.exit(action ?? location.closeSettings)
   const root = drawers.frames[0]
   if (!root) return null
   const context = { props, location, locked, pending: reportPending, exit }
@@ -156,7 +136,7 @@ export function WorkspaceSettings(props: SettingsProps) {
       frames={drawers.frames}
       depth={drawers.depth}
       context={context}
-      onClosed={rootClosed}
+      onClosed={drawers.closed}
       onLayerClosed={drawers.closed}
     />
   )

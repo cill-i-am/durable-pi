@@ -42,7 +42,8 @@ it("never reopens terminal tasks through cancellation, duplicate results or exec
           incoming,
           revision,
           { status: "completed", text: "New execution" },
-          500
+          500,
+          "stale-owner"
         )
       ).toThrow("no longer owns")
       expect(task.outcome.text).toBe("Stored result")

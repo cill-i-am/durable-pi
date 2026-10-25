@@ -1,0 +1,76 @@
+{
+  "result": "cleared",
+  "exitCode": 0,
+  "originalProbeUnchanged": true,
+  "sourceUnchangedDuringRecheck": true,
+  "observed": {
+    "before": {
+      "schemaVersion": 1,
+      "workflowVersion": 1,
+      "phase": "exhausted",
+      "retiredToken": "06ea3834-bed5-49d0-aeb6-b5b8f7a62c02",
+      "recovery": {
+        "epoch": "f7b4a1a7-c34f-40fe-9995-1fbbcbfdc2ab",
+        "failedAt": 1792770341741,
+        "message": "Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry."
+      }
+    },
+    "after": {
+      "schemaVersion": 1,
+      "workflowVersion": 1,
+      "phase": "exhausted",
+      "retiredToken": "06ea3834-bed5-49d0-aeb6-b5b8f7a62c02",
+      "recovery": {
+        "epoch": "f7b4a1a7-c34f-40fe-9995-1fbbcbfdc2ab",
+        "failedAt": 1792770341741,
+        "message": "Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry."
+      }
+    },
+    "survivingJob": [
+      {
+        "id": "memory-compactor:discovery",
+        "capability": "memory-compactor",
+        "fn": "discover",
+        "time": 1792770341750,
+        "payload": "{\"schemaVersion\":1,\"workflowVersion\":1,\"armedUntil\":1792770401750,\"token\":\"38f1fdfa-c599-4fea-a9ee-69bf9af8d140\",\"recoveryEpoch\":\"f7b4a1a7-c34f-40fe-9995-1fbbcbfdc2ab\"}",
+        "retry_options": "{\"maxAttempts\":3,\"baseDelayMs\":100,\"maxDelayMs\":1000}",
+        "singleflight": 1,
+        "hung_timeout_seconds": null,
+        "exclusive": 0,
+        "recovery_loop": 1,
+        "running": 0,
+        "execution_started_at": null,
+        "created_at": 1792770341
+      }
+    ],
+    "failedReads": 4,
+    "writesDuringOutage": 0,
+    "scanCalls": 3,
+    "stepCalls": 0,
+    "oldRecoveryAccepted": false,
+    "jobs": []
+  },
+  "artifacts": {
+    "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/summary-lifecycle.ts": {
+      "sha256": "bd74db4752b40eb3a6350aec7f0f63939ed1901b8591bd59eaf7e09b62de33ed",
+      "bytes": 17708
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/summary-discovery.machine.ts": {
+      "sha256": "c07d00be6416b4b4aa88443dfbd394fa1221a4f67399fb296f056d77041dce35",
+      "bytes": 10070
+    },
+    "/private/tmp/b13-cold-controller-independent/cold-controller-read.mts": {
+      "sha256": "18ba1a9ba29b5f0cc8064baf085a9b8da9bee207510c388b3e9e4f100d9eb4ee",
+      "bytes": 3543
+    },
+    "/private/tmp/b13-cold-controller-independent/cold-controller-read-repaired.log": {
+      "sha256": "d503205eb60a5b420a70f96757bfe99d7d46a73e5fe82799aee498ea4072cfb0",
+      "bytes": 2000
+    },
+    "/private/tmp/b13-cold-controller-independent/summary-lifecycle-repaired.ts.txt": {
+      "sha256": "bd74db4752b40eb3a6350aec7f0f63939ed1901b8591bd59eaf7e09b62de33ed",
+      "bytes": 17708
+    }
+  },
+  "scope": "Actual installed Lifecycle queue/retries/outcome backed by Node SQLite, synthetic host Effects and platform shim. Closed/reopened SQLite and fresh SDK/runner instance. Not workerd, SIGKILL, physical alarm or provider proof."
+}

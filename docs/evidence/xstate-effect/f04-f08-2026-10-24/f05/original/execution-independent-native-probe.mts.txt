@@ -1,0 +1,60 @@
+import assert from 'node:assert/strict'
+import { Effect, Scope, Exit, Cause } from 'effect'
+import { send, waitFor } from '@xstate/effect'
+import { makeExecutionOwner, executionRequests } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/execution-owner.ts'
+const run=(id:string)=>({id,label:id,status:'interrupted',createdAt:1,finishedAt:2,input:{code:'return input',data:'1'},output:null})
+const view={agentId:'one',selected:'selected',visible:true}
+const originalFetch=globalThis.fetch
+const outputs:any[]=[]
+try {
+ let signal:AbortSignal|undefined,release!:(value:Response)=>void,entered!:()=>void
+ let observed=false
+ const enteredPromise=new Promise<void>(r=>entered=r), requests:string[]=[]
+ globalThis.fetch=((url:any,init:any)=>{requests.push(url);signal=init.signal;entered();return new Promise<Response>(r=>release=r)}) as any
+ const scope=await Effect.runPromise(Scope.make())
+ const actor=await Effect.runPromise(makeExecutionOwner(view,{...executionRequests('one'),select:()=>Effect.void}).pipe(Effect.provideService(Scope.Scope,scope)))
+ await enteredPromise
+ const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(exit=>{observed=true;return exit})
+ while(!signal?.aborted) await new Promise(r=>setTimeout(r,1))
+ assert.equal(observed,false)
+ release(Response.json({runs:[]}))
+ assert.ok(Exit.isSuccess(await closing))
+ assert.equal(requests.length,1,'aborted history observer must not continue to detail or cancel backend')
+ outputs.push({case:'dispose between history and detail',requests,aborted:signal.aborted})
+
+ const calls:any[]=[]; let reject!:(error:any)=>void,postEntered!:()=>void,postSignal:AbortSignal|undefined
+ const postPromise=new Promise<void>(r=>postEntered=r)
+ globalThis.fetch=((url:any,init:any)=>{calls.push({url,method:init.method,body:init.body});if(init.method==='POST'){postSignal=init.signal;postEntered();return new Promise<Response>((_,fail)=>reject=fail)}return Promise.resolve(Response.json({runs:[]}))}) as any
+ const scope2=await Effect.runPromise(Scope.make())
+ const actor2=await Effect.runPromise(makeExecutionOwner({...view,selected:null},{...executionRequests('one'),select:()=>Effect.void}).pipe(Effect.provideService(Scope.Scope,scope2)))
+ await Effect.runPromise(waitFor(actor2,s=>s.matches({resource:'waiting'})))
+ await Effect.runPromise(send(actor2,{type:'START',id:'same-run',code:'return input',data:'1'}))
+ await postPromise
+ let joined=false
+ const closing2=Effect.runPromiseExit(Scope.close(scope2,Exit.void)).then(exit=>{joined=true;return exit})
+ while(!postSignal?.aborted) await new Promise(r=>setTimeout(r,1))
+ assert.equal(joined,false)
+ const defect=new Error('independent late native defect')
+ reject(Cause.fromReasons([...Cause.fail('independent checked cleanup').reasons,...Cause.die(defect).reasons,...Cause.interrupt().reasons]))
+ const exit2=await closing2
+ assert.ok(Exit.isFailure(exit2))
+ if(Exit.isFailure(exit2)){assert.ok(exit2.cause.reasons.some(r=>r._tag==='Die'&&r.defect===defect));assert.ok(Cause.pretty(exit2.cause).includes('independent checked cleanup'))}
+ assert.equal(calls.filter(x=>x.method==='POST').length,1)
+ assert.ok(calls.every(x=>!x.url.includes('/cancel')))
+ outputs.push({case:'command observer disposal full Cause',calls,aborted:postSignal.aborted,cause:Exit.isFailure(exit2)?Cause.pretty(exit2.cause):null})
+
+ const posts:any[]=[]
+ globalThis.fetch=((url:any,init:any)=>{if(init.method==='POST'){const input=JSON.parse(init.body);posts.push(input);return posts.length===1?Promise.reject(new Error('independent lost acknowledgement')):Promise.resolve(Response.json(run(input.id)))}return Promise.resolve(Response.json({runs:[]}))}) as any
+ const scope3=await Effect.runPromise(Scope.make())
+ const actor3=await Effect.runPromise(makeExecutionOwner({...view,selected:null,visible:false},{...executionRequests('one'),select:()=>Effect.void}).pipe(Effect.provideService(Scope.Scope,scope3)))
+ await Effect.runPromise(send(actor3,{type:'START',id:'original',code:'return input',data:'1'}))
+ await Effect.runPromise(waitFor(actor3,s=>s.context.error==='independent lost acknowledgement'))
+ assert.deepEqual(actor3.getSnapshot().context.attempt,{id:'original',code:'return input',data:'1'})
+ await Effect.runPromise(send(actor3,{type:'START',id:'replacement',code:'different',data:'[]'}))
+ await Effect.runPromise(waitFor(actor3,s=>s.context.attempt===null&&s.matches({command:'ready'})))
+ assert.deepEqual(posts,[{id:'original',code:'return input',data:'1'},{id:'original',code:'return input',data:'1'}])
+ assert.equal(actor3.getSnapshot().context.detail?.status,'interrupted')
+ await Effect.runPromise(Scope.close(scope3,Exit.void))
+ outputs.push({case:'explicit retry immutable input and interrupted terminal state',posts})
+ console.log(JSON.stringify(outputs))
+} finally {globalThis.fetch=originalFetch}

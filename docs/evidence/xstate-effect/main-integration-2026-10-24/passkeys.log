@@ -1,0 +1,11 @@
+2026-10-24T21:54:07.462Z ERROR [Better Auth]: Failed to verify authentication Error: Unexpected authentication response origin "https://foreign.invalid", expected "http://localhost:64817"
+    at verifyAuthenticationResponse (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:52626:46)
+    at <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:53140:30)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:16525:11)
+    at async internalHandler (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:14694:20)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:26785:18)
+    at async processRequest (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:15460:11)
+    at async handler (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:15483:16)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/env-UX9C_4Yg.js:16292:13)
+    at async handle (/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/dist/server/assets/router-Braf8NjQ.js:1710:19)
+Built website passkeys passed: registration, password-free sign-in, device proof, origin, replay, freshness, rename, removal and private native auth.

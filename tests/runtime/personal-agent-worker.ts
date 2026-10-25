@@ -20,14 +20,19 @@ import {
   AgentSynchronizationError,
   homeAgentId,
 } from "../../src/agents/domain"
+import { FamilyAdmission } from "../../src/agents/family-admission"
+import { AppStorageError } from "../../src/apps/contracts"
+import { Communication } from "../../src/communication/communication"
+import { CommunicationError } from "../../src/communication/contracts"
 import { conversationEvents } from "../../src/conversations/adapters/events"
+import { CoordinationFailure } from "../../src/coordination/contracts"
 import { backgroundRemote } from "../../src/delegation/adapters/background-rpc"
 import { backgroundNative } from "../../src/delegation/adapters/interop"
 import { piDelegationLedger } from "../../src/delegation/adapters/pi"
 import { backgroundObjectName } from "../../src/delegation/background"
 import { DelegationFailure } from "../../src/delegation/contracts"
 import { parseEmail } from "../../src/email/adapters/incoming"
-import { EmailView } from "../../src/email/contracts"
+import { EmailView, EmailStorageError } from "../../src/email/contracts"
 import { executionWorkerRequest } from "../../src/execution/worker"
 import {
   ChatGPTSignIn,
@@ -57,12 +62,17 @@ import { piObjectLedger } from "../../src/objects/adapters/pi"
 import { WorkerTelemetry } from "../../src/observability/worker"
 import { piPlanLedger } from "../../src/planning/adapters/pi"
 import type { PlanUpdate } from "../../src/planning/contracts"
+import { RoutineStorageError } from "../../src/routines/persistence"
 import { nativeOperation } from "../../src/shared/interop"
 import { SkillStorageError } from "../../src/skills/contracts"
 import { localTaskControls } from "../../src/tasks/adapters/personal-agent"
 import { WebhookStorageError } from "../../src/webhooks/persistence"
 import { whatsappRpc } from "../../src/whatsapp/adapters/rpc"
-import { whatsappIdentity } from "../../src/whatsapp/contracts"
+import {
+  whatsappIdentity,
+  WhatsAppStorageError,
+} from "../../src/whatsapp/contracts"
+import { WorkspaceUnavailable } from "../../src/workspace/files"
 import { transcript } from "../audio-fixture"
 import type { BackgroundGroupProbe } from "./background-worker"
 import type { TerminalProbe } from "./terminal-worker"
@@ -584,6 +594,8 @@ export class PersonalAgentProbe extends PersonalAgent {
     return this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[]
   }
 
+  private runnerHoldEntered = false
+  private releaseRunner?: () => void
   private coordinationProbeEnabled = false
   protected override catalogProgram(): Effect.Effect<ModelCatalog> {
     return Effect.succeed({
@@ -1145,14 +1157,23 @@ export class PersonalAgentProbe extends PersonalAgent {
           operationId: "original-task",
           text: "Original queued task.",
         },
-        { pending: true, files: [], content: [] }
+        { pending: true, files: [], content: [] },
+        undefined,
+        undefined,
+        { discoveryDeadline: await this.runner.armDiscovery() }
       )
     )
     await this.actorRuntime.runPromise(
-      this.conversations.admit({
-        operationId: "newer-task",
-        text: "Newer queued task.",
-      })
+      this.conversations.admit(
+        {
+          operationId: "newer-task",
+          text: "Newer queued task.",
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: await this.runner.armDiscovery() }
+      )
     )
     const tasks = localTaskControls(this)
     const before = await this.actorRuntime.runPromise(tasks.list())
@@ -1221,6 +1242,8 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
     const action = new URL(request.url).pathname.split("/").at(-1)
     for (const probe of [
+      this.runnerCauseProbe,
+      this.heldRunnerProbe,
       this.coordinationProbe,
       this.taskControlProbe,
       this.nativeCommitProbe,
@@ -1988,7 +2011,8 @@ export class PersonalAgentProbe extends PersonalAgent {
             conversationId: Number(source.session_id),
             route: source.routing!,
             memory: "Synthetic",
-          }
+          },
+          Date.now() + 60_000
         )
       )
       const child = this.backgroundNamespace.getByName(
@@ -2006,7 +2030,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       if (action === "background-held-release") await child.releaseHeld()
       if (action === "background-held-cancel") {
         await this.actorRuntime.runPromise(
-          this.backgroundMailbox.cancel(910002)
+          this.backgroundMailbox.cancel(910002, undefined, Date.now() + 60_000)
         )
         this.fixtureRun("DELETE FROM model_credentials WHERE provider='openai'")
       }
@@ -2162,7 +2186,8 @@ export class PersonalAgentProbe extends PersonalAgent {
             },
             undefined,
             [],
-            route
+            route,
+            { discoveryDeadline: await this.runner.armDiscovery() }
           )
         )
       ).turn
@@ -2180,7 +2205,8 @@ export class PersonalAgentProbe extends PersonalAgent {
             conversationId: 1,
             route,
             memory: "Local reference",
-          }
+          },
+          Date.now() + 60_000
         )
       )
       await this.actorRuntime.runPromise(
@@ -2208,7 +2234,11 @@ export class PersonalAgentProbe extends PersonalAgent {
         transactionGroup: this.db,
         stop: (id: string) =>
           this.conversations.requestStop(id).pipe(Effect.asVoid),
-        admit: (h: typeof row.handoff, report: string) =>
+        admit: (
+          h: typeof row.handoff,
+          report: string,
+          discoveryDeadline: number
+        ) =>
           this.conversations
             .admit(
               {
@@ -2218,22 +2248,26 @@ export class PersonalAgentProbe extends PersonalAgent {
               },
               undefined,
               [],
-              h.route
+              h.route,
+              { discoveryDeadline }
             )
             .pipe(Effect.map((result) => result.turn.id)),
       }
       const failed = await this.actorRuntime.runPromiseExit(
-        this.backgroundMailbox.deliver({
-          ...admission,
-          admit: (h, report) =>
-            admission
-              .admit(h, report)
-              .pipe(
-                Effect.andThen(
-                  Effect.die(new Error("Synthetic report admission fault"))
-                )
-              ),
-        })
+        this.backgroundMailbox.deliver(
+          {
+            ...admission,
+            admit: (h, report, discoveryDeadline) =>
+              admission
+                .admit(h, report, discoveryDeadline)
+                .pipe(
+                  Effect.andThen(
+                    Effect.die(new Error("Synthetic report admission fault"))
+                  )
+                ),
+          },
+          await this.runner.armDiscovery()
+        )
       )
       const rolledBack =
         Exit.isFailure(failed) &&
@@ -2246,10 +2280,16 @@ export class PersonalAgentProbe extends PersonalAgent {
       if (!rolledBack)
         throw new Error("Native background transaction did not roll back")
       const delivered = await this.actorRuntime.runPromise(
-        this.backgroundMailbox.deliver(admission)
+        this.backgroundMailbox.deliver(
+          admission,
+          await this.runner.armDiscovery()
+        )
       )
       const replay = await this.actorRuntime.runPromise(
-        this.backgroundMailbox.deliver(admission)
+        this.backgroundMailbox.deliver(
+          admission,
+          await this.runner.armDiscovery()
+        )
       )
       const turn = (await this.actorRuntime.runPromise(
         this.conversations.get(row.handoff.reportId)
@@ -2380,10 +2420,16 @@ export class PersonalAgentProbe extends PersonalAgent {
     }
     if (action === "stop") {
       await this.actorRuntime.runPromise(
-        this.conversations.admit({
-          operationId: "00000000-0000-4000-8000-000000000004",
-          text: "Stop before dispatch.",
-        })
+        this.conversations.admit(
+          {
+            operationId: "00000000-0000-4000-8000-000000000004",
+            text: "Stop before dispatch.",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: await this.runner.armDiscovery() }
+        )
       )
       const stopped = await this.authenticatedFetch(
         new Request("https://internal/api/agent/cancel", {
@@ -2929,10 +2975,16 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "planning") {
       const turnId = "00000000-0000-4000-8000-000000000012"
       await this.actorRuntime.runPromise(
-        this.conversations.admit({
-          operationId: turnId,
-          text: "Inspect the synthetic checklist in a private plan.",
-        })
+        this.conversations.admit(
+          {
+            operationId: turnId,
+            text: "Inspect the synthetic checklist in a private plan.",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: await this.runner.armDiscovery() }
+        )
       )
       await this.actorRuntime.runPromise(this.conversations.prepare(turnId))
       const source = await this.actorRuntime.runPromise(this.planSource(turnId))
@@ -2995,28 +3047,38 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
       const reopened = await response.json()
       await this.actorRuntime.runPromise(this.plans.cancel(turnId))
-      await this.actorRuntime.runPromise(this.conversations.requestStop(turnId))
-      const root = (await this.actorRuntime.runPromise(
+      // Discovery may already have given the pump a live control owner. Use
+      // production Stop and observe its joined release instead of trying to
+      // complete that owner's row from this fixture request.
+      await this.actorRuntime.runPromise(this.stopConversation(turnId))
+      let stopped = await this.actorRuntime.runPromise(
         this.conversations.get(turnId)
-      ))!
-      if (
-        !(await this.actorRuntime.runPromise(
-          this.conversations.finish(
-            root,
-            (
-              await this.actorRuntime.runPromise(
-                this.conversations.members(turnId)
-              )
-            ).map((member) => ({
-              id: member.id,
-              delivery: "unanswered" as const,
-            })),
-            "",
-            null
-          )
-        ))
       )
-        throw new Error("Native fixture planning turn did not stop")
+      for (
+        let attempt = 0;
+        attempt < 200 &&
+        (stopped?.status !== "cancelled" ||
+          !stopped.control ||
+          stopped.control.owner !== null);
+        attempt++
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        stopped = await this.actorRuntime.runPromise(
+          this.conversations.get(turnId)
+        )
+      }
+      if (
+        stopped?.status !== "cancelled" ||
+        !stopped.control ||
+        stopped.control.owner !== null ||
+        stopped.control.unconfirmed !== null
+      )
+        throw new Error(
+          `Native fixture planning turn did not stop: ${JSON.stringify({
+            status: stopped?.status,
+            control: stopped?.control,
+          })}`
+        )
       return Response.json({
         first,
         replay,
@@ -3085,6 +3147,242 @@ export class PersonalAgentProbe extends PersonalAgent {
       })
     }
 
+    return undefined
+  }
+
+  private async runnerCauseProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
+    if (action !== "runner-causes") return undefined
+    const checked = new RoutineStorageError({
+        operation: "native runner failure probe",
+        cause: "synthetic storage unavailable",
+      }),
+      defect = new Error("native runner cleanup defect")
+    const cause = Cause.fromReasons([
+      Cause.makeFailReason(checked),
+      Cause.makeDieReason(defect),
+      Cause.makeInterruptReason(918),
+    ])
+    const app = await this.communication.runtime.runPromise(Communication)
+    const communication = app.pump
+    const mailboxFailure = new CommunicationError({
+      code: "storage",
+      message: "native mailbox failure probe",
+    })
+    const mailboxCause = Cause.fromReasons([
+      Cause.makeFailReason(mailboxFailure),
+      Cause.makeDieReason(defect),
+      Cause.makeInterruptReason(918),
+    ])
+    app.pump = () => Effect.failCause(mailboxCause)
+    const extract = this.workspaceService.extractNext
+    const workspaceFailure = new WorkspaceUnavailable({})
+    const workspaceCause = Cause.fromReasons([
+      Cause.makeFailReason(workspaceFailure),
+      Cause.makeDieReason(defect),
+      Cause.makeInterruptReason(918),
+    ])
+    this.workspaceService.extractNext = () => Effect.failCause(workspaceCause)
+    const coordinationFailure = new CoordinationFailure({
+      code: "unavailable",
+      message: "native coordination failure probe",
+    })
+    const appFailure = new AppStorageError({
+      operation: "native app failure probe",
+      cause: "storage unavailable",
+    })
+    const backgroundFailure = new DelegationFailure({
+      code: "unavailable",
+      message: "native background failure probe",
+    })
+    const emailFailure = new EmailStorageError({
+      operation: "native email failure probe",
+    })
+    const whatsappFailure = new WhatsAppStorageError({
+      operation: "native whatsapp failure probe",
+    })
+    const compound = <E>(error: E) =>
+      Cause.fromReasons([
+        Cause.makeFailReason(error),
+        Cause.makeDieReason(defect),
+        Cause.makeInterruptReason(918),
+      ])
+    const coordination = this.coordination.pump,
+      apps = this.appPump.run,
+      background = this.background.step,
+      email = this.emailStore.pending,
+      whatsapp = this.whatsappStore.pending
+    this.coordination.pump = () =>
+      Effect.failCause(compound(coordinationFailure))
+    this.appPump.run = () => Effect.failCause(compound(appFailure))
+    this.background.step = () => Effect.failCause(compound(backgroundFailure))
+    this.emailStore.pending = () => Effect.failCause(compound(emailFailure))
+    this.whatsappStore.pending = () =>
+      Effect.failCause(compound(whatsappFailure))
+    const admission = this.actorRuntime.runSync(FamilyAdmission),
+      admit = admission.admit
+    const expected = [
+      checked,
+      checked,
+      mailboxFailure,
+      workspaceFailure,
+      coordinationFailure,
+      appFailure,
+      backgroundFailure,
+      emailFailure,
+      whatsappFailure,
+      coordinationFailure,
+      coordinationFailure,
+      coordinationFailure,
+      coordinationFailure,
+    ]
+    const conversation = this.conversationPump.run,
+      routine = this.routinePump.run
+    this.conversationPump.run = () => Effect.failCause(cause)
+    this.routinePump.run = () => Effect.failCause(cause)
+    try {
+      const observed: PromiseSettledResult<unknown>[] =
+        await Promise.allSettled([
+          this.runner.host.step(() => {}),
+          this.routineRunner.host.step(() => {}),
+          this.communicationRunner.host.step(() => {}),
+          this.extraction.host.step(() => Effect.void),
+          this.coordinationRunner.host.step(),
+          this.appEvents.host.pump(),
+          this.backgroundRunner.host.step(),
+          this.emailRunner.host.pump(),
+          this.whatsappRunner.host.pump(),
+        ])
+      // Admission is shared by the callbacks; change it only after they settle.
+      admission.admit = Effect.failCause(compound(coordinationFailure))
+      observed.push(
+        ...(await Promise.allSettled([
+          this.familyAdmission(),
+          this.coordinationRunner.host.step(),
+          this.routineRunner.host.step(() => {}),
+          this.actorRuntime
+            .runPromise(Effect.exit(this.compactor.host.step()))
+            .then((exit) => {
+              if (Exit.isFailure(exit)) throw exit.cause
+              return undefined
+            }),
+        ]))
+      )
+      return Response.json(
+        observed.map((result, index) => {
+          if (result.status !== "rejected" || !Cause.isCause(result.reason))
+            return { complete: false }
+          const reasons = result.reason.reasons
+          return {
+            complete:
+              reasons.some(
+                (reason) =>
+                  reason._tag === "Fail" && reason.error === expected[index]
+              ) &&
+              reasons.some(
+                (reason) => reason._tag === "Die" && reason.defect === defect
+              ) &&
+              reasons.some(
+                (reason) =>
+                  reason._tag === "Interrupt" && reason.fiberId === 918
+              ),
+          }
+        })
+      )
+    } finally {
+      admission.admit = admit
+      this.coordination.pump = coordination
+      this.appPump.run = apps
+      this.background.step = background
+      this.emailStore.pending = email
+      this.whatsappStore.pending = whatsapp
+      this.workspaceService.extractNext = extract
+      app.pump = communication
+      this.conversationPump.run = conversation
+      this.routinePump.run = routine
+    }
+  }
+
+  private async heldRunnerProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
+    const kind = (
+      [
+        "coordination",
+        "apps",
+        "conversation",
+        "routines",
+        "communication",
+        "workspace",
+        "background",
+        "email",
+        "whatsapp",
+      ] as const
+    ).find((kind) => action?.startsWith(`${kind}-runner-held-`))
+    if (kind) {
+      const runner = {
+        coordination: this.coordinationRunner,
+        apps: this.appEvents,
+        conversation: this.runner,
+        routines: this.routineRunner,
+        communication: this.communicationRunner,
+        workspace: this.extraction,
+        background: this.backgroundRunner,
+        email: this.emailRunner,
+        whatsapp: this.whatsappRunner,
+      }[kind]
+      if (action === `${kind}-runner-held-start`) {
+        await this.lifecycle.start()
+        const held = new Promise<void>((resolve) => {
+          this.releaseRunner = resolve
+        })
+        const pump = async () => {
+          this.runnerHoldEntered = true
+          await held
+          // Accepted native callbacks still need their actual runtime and SQL.
+          if (kind === "communication")
+            await this.communication.runtime.runPromise(
+              this.communication.mailbox.nextWake()
+            )
+          await this.actorRuntime.runPromise(this.configurationService.read())
+          this.events.push(`${kind}.settled`)
+          return undefined
+        }
+        if ("pump" in runner.host) runner.host.pump = pump
+        else runner.host.step = pump
+        const dispose = runner.dispose.bind(runner)
+        runner.dispose = () => {
+          this.events.push(`${kind}.close`)
+          return dispose()
+        }
+        if ("armDiscovery" in runner) await runner.armDiscovery()
+        else if ("armReply" in runner)
+          await runner.armReply(Date.now() + 60_000)
+        else await runner.armBackground(Date.now() + 60_000)
+        if (
+          kind === "conversation" ||
+          kind === "routines" ||
+          kind === "communication" ||
+          kind === "workspace" ||
+          kind === "background" ||
+          kind === "email" ||
+          kind === "whatsapp"
+        )
+          await runner.wake()
+      }
+      if (action === `${kind}-runner-held-release`) this.releaseRunner?.()
+      if (action === `${kind}-runner-held-dispose`) {
+        await this.lifecycle.dispose()
+        this.events.push("host.dispose")
+      }
+      return Response.json({
+        entered: this.runnerHoldEntered,
+        events: this.events,
+      })
+    }
     return undefined
   }
 
@@ -3308,30 +3606,43 @@ export class PersonalAgentProbe extends PersonalAgent {
             (_, n) => `membership-main-${n}`
           )
           for (const [n, id] of ids.entries()) {
-            yield* this.conversations.admit({
-              operationId: id,
-              text: "Retained synthetic history",
-            })
+            yield* this.conversations.admit(
+              {
+                operationId: id,
+                text: "Retained synthetic history",
+              },
+              undefined,
+              undefined,
+              undefined,
+              {
+                discoveryDeadline: yield* Effect.promise(() =>
+                  this.runner.armDiscovery()
+                ),
+              }
+            )
             yield* this.conversations.saveSession(id, String(500000 + n))
             this.fixtureRun(
               "UPDATE chat_turns SET status='done' WHERE id=?",
               id
             )
           }
-          yield* this.coordination.store.accept({
-            id: "membership-message",
-            operationId: "membership-operation",
-            from: { sessionId: ids[0]!, agentId: "main" },
-            to: { sessionId: ids[24]!, agentId: "main" },
-            text: "Queued before membership changed",
-            provenance: {
-              author: { kind: "agent", id: "synthetic" },
-              conversationId: "synthetic",
-              recipients: [],
+          yield* this.coordination.store.accept(
+            {
+              id: "membership-message",
+              operationId: "membership-operation",
+              from: { sessionId: ids[0]!, agentId: "main" },
+              to: { sessionId: ids[24]!, agentId: "main" },
+              text: "Queued before membership changed",
+              provenance: {
+                author: { kind: "agent", id: "synthetic" },
+                conversationId: "synthetic",
+                recipients: [],
+              },
+              createdAt: Date.now(),
+              deadline: Date.now() + 600000,
             },
-            createdAt: Date.now(),
-            deadline: Date.now() + 600000,
-          })
+            yield* Effect.promise(() => this.coordinationRunner.armDiscovery())
+          )
           yield* this.coordination.store.closeAll()
           return {
             closed: yield* Effect.forEach(ids, (id) =>

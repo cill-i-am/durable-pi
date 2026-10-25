@@ -1,0 +1,80 @@
+{
+  "source": {
+    "src/features/routines/routine-work.ts": {
+      "expected": "c06c63b8047a1e6de908dd2c0304854582a3bee4af796e70f23bc33d0ba22424",
+      "actual": "c06c63b8047a1e6de908dd2c0304854582a3bee4af796e70f23bc33d0ba22424",
+      "matches": true
+    },
+    "src/features/routines/routines-owner.ts": {
+      "expected": "7c0a620bf8469ee30148becf4388f5eb7e19aafe60c8af700b47b074b1adbe55",
+      "actual": "7c0a620bf8469ee30148becf4388f5eb7e19aafe60c8af700b47b074b1adbe55",
+      "matches": true
+    },
+    "src/features/routines/routines-ui.machine.ts": {
+      "expected": "f8ba9df46613545d2d0386333ebe2ff5f9e9c32629051d7abb13906255b39f5b",
+      "actual": "f8ba9df46613545d2d0386333ebe2ff5f9e9c32629051d7abb13906255b39f5b",
+      "matches": true
+    },
+    "src/features/routines/routines-workbench.tsx": {
+      "expected": "2f683405d1039af436508c026cebb096e925ea7a168a601371c312376d61c27e",
+      "actual": "2f683405d1039af436508c026cebb096e925ea7a168a601371c312376d61c27e",
+      "matches": true
+    },
+    "src/features/routines/use-routines.ts": {
+      "expected": "18e8196affb264a5dfec41ccb59b4e3aa7483cccca1c4bf44672a85b25c3da64",
+      "actual": "18e8196affb264a5dfec41ccb59b4e3aa7483cccca1c4bf44672a85b25c3da64",
+      "matches": true
+    },
+    "src/features/routines/use-webhook.ts": {
+      "expected": "b5843ce35ceec4bb4d40042721e5a6a0f70b9eafd8585ce784ece280db1dbe96",
+      "actual": "b5843ce35ceec4bb4d40042721e5a6a0f70b9eafd8585ce784ece280db1dbe96",
+      "matches": true
+    },
+    "src/features/routines/webhook-owner.ts": {
+      "expected": "858a0fd9effdc7f4c6999af58c85f67427194ec2dea60f3b009e117587a57016",
+      "actual": "858a0fd9effdc7f4c6999af58c85f67427194ec2dea60f3b009e117587a57016",
+      "matches": true
+    },
+    "src/features/routines/webhook-panel.tsx": {
+      "expected": "d8909e7fb67c2f1fff1709f58e0f0cc43c3cb556257e38cebe05fcaa8036f709",
+      "actual": "d8909e7fb67c2f1fff1709f58e0f0cc43c3cb556257e38cebe05fcaa8036f709",
+      "matches": true
+    },
+    "src/features/routines/webhook-ui.machine.ts": {
+      "expected": "6af5a1a24e5690a5d536c319bfe8ec2e5cfa45d3581c1793bbe7a764848e56fc",
+      "actual": "6af5a1a24e5690a5d536c319bfe8ec2e5cfa45d3581c1793bbe7a764848e56fc",
+      "matches": true
+    },
+    "tests/routines-ui-lifecycle.test.ts": {
+      "expected": "39f5c28f3ba4e0ad51dab4a6b1058718c5cc5415490a5bc20bf574b82f377f71",
+      "actual": "39f5c28f3ba4e0ad51dab4a6b1058718c5cc5415490a5bc20bf574b82f377f71",
+      "matches": true
+    },
+    "tests/browser/routines-ui-lifecycle.spec.ts": {
+      "expected": "edee74bab5704af4c15767a9fcc45bf61daf8e03af0b3a1d90ec6b4f18796d9d",
+      "actual": "edee74bab5704af4c15767a9fcc45bf61daf8e03af0b3a1d90ec6b4f18796d9d",
+      "matches": true
+    },
+    "docs/xstate-effect-routines-skills-ui.md": {
+      "expected": "ac073f0676e1414c5a00da32afd1158e23056e75abad2aaa512ab1bce0e01def",
+      "actual": "ac073f0676e1414c5a00da32afd1158e23056e75abad2aaa512ab1bce0e01def",
+      "matches": true
+    },
+    "src/shared/interop.ts": {
+      "expected": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+      "actual": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+      "matches": true
+    },
+    "src/shared/effect.ts": {
+      "expected": "75587bface6c2ddf87156a108653d78c1b698ad6c3e0c34ecd559880cc6b65ba",
+      "actual": "75587bface6c2ddf87156a108653d78c1b698ad6c3e0c34ecd559880cc6b65ba",
+      "matches": true
+    },
+    "src/http/client.ts": {
+      "expected": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+      "actual": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+      "matches": true
+    }
+  },
+  "probeSha256": "f268080f96d18fba90d88bf4e2eadda06823484df628fd6aeaf5e0fcc31ff647"
+}

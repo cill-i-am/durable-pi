@@ -1,0 +1,330 @@
+import assert from "node:assert/strict"
+import { createServer } from "node:http"
+import { createRequire } from "node:module"
+import { fileURLToPath } from "node:url"
+const root = fileURLToPath(new URL("../..", import.meta.url))
+const req = createRequire(root + "/package.json")
+const { build } = createRequire(req.resolve("alchemy"))("esbuild")
+const { chromium } = req("@playwright/test")
+const built = await build({
+  stdin: {
+    contents: `import{useState}from'react';import{createRoot}from'react-dom/client';import{MemoryWorkbench}from'./src/features/memory/memory-panel';function App(){const[agent,setAgent]=useState('alpha'),[shown,setShown]=useState(true),[tab,setTab]=useState(new URLSearchParams(location.search).get('tab')||'tree'),[query,setQuery]=useState('');const state={memory:{messages:2,notes:[{path:'note',body:'A note',source_id:1}],issues:[]}};return <><button onClick={()=>setAgent('alpha')}>Alpha</button><button onClick={()=>setAgent('beta')}>Beta</button><button onClick={()=>setShown(false)}>Unmount</button><div data-agent={agent}>{shown&&<MemoryWorkbench agentId={agent} state={state} refresh={()=>{}} tab={tab} onTabChange={setTab} query={query} onQueryChange={setQuery}/>}</div></>}createRoot(document.getElementById('root')).render(<App/>);`,
+    resolveDir: root,
+    loader: "tsx",
+  },
+  bundle: true,
+  write: false,
+  platform: "browser",
+  format: "iife",
+  tsconfig: root + "/tsconfig.json",
+  loader: { ".css": "empty" },
+})
+const server = createServer((req, res) => {
+  res.setHeader(
+    "content-type",
+    req.url === "/bundle.js" ? "text/javascript" : "text/html"
+  )
+  res.end(
+    req.url === "/bundle.js"
+      ? built.outputFiles[0].text
+      : '<div id="root"></div><script src="/bundle.js"></script>'
+  )
+})
+await new Promise((r) => server.listen(0, "127.0.0.1", r))
+const address = "http://127.0.0.1:" + server.address().port
+const browser = await chromium.launch({ headless: true })
+const results = []
+async function page(tab = "tree") {
+  const p = await browser.newPage({ viewport: { width, height: 900 } })
+  await p.addInitScript(() => {
+    window.calls = []
+    window.fetch = (input, init) => {
+      const url = new URL(String(input), location.href)
+      const call = {
+        agent: url.searchParams.get("agent"),
+        path: url.pathname,
+        id: url.searchParams.get("id"),
+        query: url.searchParams.get("q"),
+        aborted: init?.signal?.aborted ?? false,
+      }
+      window.calls.push(call)
+      init?.signal?.addEventListener("abort", () => (call.aborted = true))
+      return new Promise((resolve, reject) => {
+        call.release = (value) => resolve(Response.json(value))
+        call.fail = () => reject(new Error("offline"))
+      })
+    }
+  })
+  await p.goto(address + "/?tab=" + tab)
+  return p
+}
+async function check(name, run) {
+  try {
+    await run()
+    results.push({ name, pass: true })
+  } catch (e) {
+    results.push({ name, pass: false, error: String(e) })
+  }
+}
+let width = 1280
+try {
+  for (width of [1280, 390]) {
+    await check(
+      `${width}: hidden history has no read; search abort/retry preserves query and fences late completion`,
+      async () => {
+        const p = await page("notes")
+        try {
+          await p
+            .getByRole("textbox", { name: "Search the archive" })
+            .fill("old")
+          assert.equal(await p.evaluate(() => window.calls.length), 0)
+          await p
+            .getByRole("button", { name: "Search memory", exact: true })
+            .click()
+          await p.waitForFunction(() => window.calls.length === 1)
+          await p
+            .getByRole("textbox", { name: "Search the archive" })
+            .fill("new")
+          await p.waitForFunction(() => window.calls.length === 2)
+          assert.equal(await p.evaluate(() => window.calls[0].aborted), true)
+          await p.evaluate(() => window.calls[1].fail())
+          await p.getByRole("button", { name: "Retry search" }).waitFor()
+          await p.evaluate(() => new Promise((r) => setTimeout(r, 50)))
+          assert.equal(await p.evaluate(() => window.calls.length), 2)
+          await p.getByRole("button", { name: "Retry search" }).click()
+          await p.waitForFunction(() => window.calls.length === 3)
+          assert.deepEqual(
+            await p.evaluate(() => window.calls.map((c) => c.query)),
+            ["old", "new", "new"]
+          )
+          await p.evaluate(() =>
+            window.calls[2].release([
+              { id: 3, text: "Current search", kind: "user", date: "today" },
+            ])
+          )
+          await p.getByText("Current search", { exact: true }).waitFor()
+          await p.evaluate(() =>
+            window.calls[0].release([
+              { id: 1, text: "Stale search", kind: "user", date: "today" },
+            ])
+          )
+          await p.evaluate(() => new Promise((r) => setTimeout(r, 30)))
+          assert.equal(
+            await p.getByText("Stale search", { exact: true }).count(),
+            0
+          )
+        } finally {
+          await p.close()
+        }
+      }
+    )
+    await check(
+      `${width}: agent ABA keeps latest root; tree failure preserves branch and Current view recovers`,
+      async () => {
+        const p = await page()
+        try {
+          await p.waitForFunction(() => window.calls.length === 1)
+          await p.getByRole("button", { name: "Beta", exact: true }).click()
+          await p.waitForFunction(() => window.calls.length === 2)
+          await p.getByRole("button", { name: "Alpha", exact: true }).click()
+          await p.waitForFunction(() => window.calls.length === 3)
+          await p.evaluate(() =>
+            window.calls[2].release([
+              { start: 10, count: 2, text: "Latest alpha" },
+            ])
+          )
+          await p.getByText("Latest alpha", { exact: true }).waitFor()
+          await p.evaluate(() => {
+            window.calls[0].release([{ start: 1, count: 2, text: "Old alpha" }])
+            window.calls[1].release([{ start: 2, count: 2, text: "Old beta" }])
+          })
+          await p.evaluate(() => new Promise((r) => setTimeout(r, 30)))
+          assert.equal(
+            await p.getByText("Old alpha", { exact: true }).count(),
+            0
+          )
+          assert.equal(
+            await p.getByText("Old beta", { exact: true }).count(),
+            0
+          )
+          await p
+            .getByRole("button", { name: "Open 10+2", exact: true })
+            .click()
+          await p.waitForFunction(() => window.calls.length === 4)
+          await p.evaluate(() =>
+            window.calls[3].release({
+              children: [{ start: 10, count: 1, text: "Child summary" }],
+              original: null,
+            })
+          )
+          await p.getByText("Child summary", { exact: true }).waitFor()
+          await p
+            .getByRole("button", { name: "Open 10+1", exact: true })
+            .click()
+          await p.waitForFunction(() => window.calls.length === 5)
+          await p.evaluate(() => window.calls[4].fail())
+          await p
+            .getByText(
+              "This part of memory is not ready yet. Try again shortly.",
+              { exact: true }
+            )
+            .waitFor()
+          assert.equal(
+            await p.getByText("Child summary", { exact: true }).count(),
+            1
+          )
+          await p
+            .getByRole("button", { name: "Current view", exact: true })
+            .click()
+          await p.waitForFunction(() => window.calls.length === 6)
+          await p.evaluate(() =>
+            window.calls[5].release([
+              { start: 20, count: 2, text: "Recovered root" },
+            ])
+          )
+          await p.getByText("Recovered root", { exact: true }).waitFor()
+          assert.equal(
+            await p.getByRole("button", { name: "Back", exact: true }).count(),
+            0
+          )
+        } finally {
+          await p.close()
+        }
+      }
+    )
+    await check(
+      `${width}: source error retries explicitly and closing the disclosure aborts a held retry`,
+      async () => {
+        const p = await page("notes")
+        try {
+          await p.getByRole("button", { name: "Source · message 1" }).click()
+          await p.waitForFunction(() => window.calls.length === 1)
+          await p.evaluate(() => window.calls[0].fail())
+          await p
+            .getByText("Could not load the source message.", { exact: true })
+            .waitFor()
+          await p
+            .getByRole("button", { name: "Retry source", exact: true })
+            .click()
+          await p.waitForFunction(() => window.calls.length === 2)
+          assert.deepEqual(
+            await p.evaluate(() => window.calls.map((c) => c.id)),
+            ["1", "1"]
+          )
+          await p.getByRole("button", { name: "Source · message 1" }).click()
+          await p.waitForFunction(() => window.calls[1].aborted)
+          await p.evaluate(() =>
+            window.calls[1].release({
+              children: [],
+              original: {
+                kind: "user",
+                text: "Late closed source",
+                date: "today",
+              },
+            })
+          )
+          assert.equal(
+            await p.getByText("Late closed source", { exact: true }).count(),
+            0
+          )
+        } finally {
+          await p.close()
+        }
+      }
+    )
+    await check(
+      "late old-agent root never replaces new-agent tree",
+      async () => {
+        const p = await page()
+        try {
+          await p.waitForFunction(() => window.calls.length === 1)
+          await p.getByRole("button", { name: "Beta", exact: true }).click()
+          await p.waitForFunction(() => window.calls.length === 2)
+          await p.evaluate(() =>
+            window.calls[1].release([
+              { start: 10, count: 2, text: "Beta tree" },
+            ])
+          )
+          await p.getByText("Beta tree", { exact: true }).waitFor()
+          await p.evaluate(() =>
+            window.calls[0].release([
+              { start: 1, count: 2, text: "Alpha obsolete tree" },
+            ])
+          )
+          await p.evaluate(() => new Promise((r) => setTimeout(r, 30)))
+          assert.equal(
+            await p.getByText("Alpha obsolete tree", { exact: true }).count(),
+            0
+          )
+        } finally {
+          await p.close()
+        }
+      }
+    )
+    await check("held branch request aborts on owner unmount", async () => {
+      const p = await page()
+      try {
+        await p.waitForFunction(() => window.calls.length === 1)
+        await p.evaluate(() =>
+          window.calls[0].release([
+            { start: 1, count: 2, text: "Initial tree" },
+          ])
+        )
+        await p.getByRole("button", { name: "Open 1+2", exact: true }).click()
+        await p.waitForFunction(() => window.calls.length === 2)
+        await p.getByRole("button", { name: "Unmount", exact: true }).click()
+        await p.evaluate(() => new Promise((r) => setTimeout(r, 30)))
+        assert.equal(await p.evaluate(() => window.calls[1].aborted), true)
+        await p.evaluate(() =>
+          window.calls[1].release({ children: [], original: null })
+        )
+      } finally {
+        await p.close()
+      }
+    })
+    await check(
+      "source content is hidden immediately when agent changes",
+      async () => {
+        const p = await page("notes")
+        try {
+          await p.getByRole("button", { name: "Source · message 1" }).click()
+          await p.waitForFunction(() => window.calls.length === 1)
+          await p.evaluate(() =>
+            window.calls[0].release({
+              children: [],
+              original: {
+                kind: "user",
+                text: "Alpha source",
+                date: "2026-10-23T12:00:00Z",
+              },
+            })
+          )
+          await p.getByText("Alpha source", { exact: true }).waitFor()
+          await p.getByRole("button", { name: "Beta", exact: true }).click()
+          await p.waitForFunction(() => window.calls.length === 2)
+          assert.equal(
+            await p.getByText("Alpha source", { exact: true }).count(),
+            0
+          )
+          await p.evaluate(() =>
+            window.calls[1].release({
+              children: [],
+              original: {
+                kind: "user",
+                text: "Beta source",
+                date: "2026-10-23T12:00:00Z",
+              },
+            })
+          )
+        } finally {
+          await p.close()
+        }
+      }
+    )
+  }
+  console.log(JSON.stringify({ results }))
+  if (results.some((r) => !r.pass)) process.exitCode = 1
+} finally {
+  await browser.close()
+  await new Promise((r) => server.close(r))
+}

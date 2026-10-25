@@ -1,118 +1,132 @@
-import { Schema } from "effect"
-import { useCallback, useRef, useState } from "react"
+import { send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
+
+import type { ConnectionInfo, NewConnection } from "@/access/connections"
 
 import {
-  ConnectionList,
-  ToolSelection,
-  type ConnectionInfo,
-  type NewConnection,
-} from "@/access/connections"
-import { agentApi } from "@/http/client"
+  connectionCommand,
+  connectionRequests,
+  makeConnectionsOwner,
+} from "./connections-owner"
+import {
+  connectionsMachine,
+  type ConnectionCommand,
+} from "./connections.machine"
 
+type Machine = ReturnType<typeof connectionsMachine>
 export function useConnections(
   agentId: string | undefined,
-  onSaved: () => void
+  onSaved: () => void,
+  open = true
 ) {
-  const [connections, setConnections] = useState<readonly ConnectionInfo[]>([])
-  const [selection, setSelection] = useState<ToolSelection>({
-    revision: 0,
-    tools: [],
-  })
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [ready, setReady] = useState(false)
-  const sequence = useRef(0),
-    locked = useRef(false)
-  const refresh = useCallback(async () => {
-    if (locked.current) return
-    const revision = ++sequence.current
-    setLoading(true)
-    try {
-      const [library, selected] = await Promise.all([
-        agentApi("home")("connections").then(
-          Schema.decodeUnknownSync(ConnectionList)
-        ),
-        agentId === undefined
-          ? Promise.resolve({ revision: 0, tools: [] })
-          : agentApi(agentId)("remote-tools").then(
-              Schema.decodeUnknownSync(ToolSelection)
-            ),
-      ])
-      if (revision !== sequence.current) return
-      setConnections(library.connections)
-      setSelection(selected)
-      setReady(true)
-      setError("")
-    } catch (cause) {
-      if (revision === sequence.current)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load connections."
+  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+  const saved = useRef(onSaved)
+  saved.current = onSaved
+  useEffect(() => {
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owned = yield* makeConnectionsOwner(
+          { agentId, open: false },
+          connectionRequests(agentId)
         )
-    } finally {
-      if (revision === sequence.current) setLoading(false)
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.subscribe((value) => {
+              if (mounted) setSnapshot(value)
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.on("settled", (event) => {
+              if (mounted && event.ok) saved.current()
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        if (mounted) {
+          setActor(owned)
+          setSnapshot(owned.getSnapshot())
+        }
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
+        )
+      )
     }
   }, [agentId])
-  async function mutate<T>(work: () => Promise<T>, apply: (value: T) => void) {
-    if (locked.current) return false
-    locked.current = true
-    sequence.current++
-    setLoading(false)
-    setBusy(true)
-    setError("")
-    try {
-      apply(await work())
-      onSaved()
-      return true
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not update connections. Reload to check the result."
-      )
-      return false
-    } finally {
-      locked.current = false
-      setBusy(false)
-    }
-  }
-  const change = (path: string, body: unknown) =>
-    agentId !== undefined
-      ? Promise.resolve(false)
-      : mutate(
-          () =>
-            agentApi("home")(`connections/${path}`, body).then(
-              Schema.decodeUnknownSync(ConnectionList)
-            ),
-          (value) => setConnections(value.connections)
+  useEffect(() => {
+    if (actor) Effect.runFork(send(actor, { type: "VIEW", open }))
+  }, [actor, open])
+  const owner =
+    actor?.getSnapshot().context.view.agentId === agentId ? actor : null
+  const current = snapshot?.context.view.agentId === agentId ? snapshot : null
+  const refresh = useCallback(
+    () =>
+      owner
+        ? Effect.runPromise(send(owner, { type: "REFRESH" }))
+        : Promise.resolve(),
+    [owner]
+  )
+  const command = (input: ConnectionCommand) =>
+    owner
+      ? Effect.runPromise(
+          connectionCommand(owner, {
+            requestId: crypto.randomUUID(),
+            agentId,
+            command: input,
+          })
         )
+      : Promise.resolve(false)
+  const selection = current?.context.catalog?.selection ?? {
+    revision: 0,
+    tools: [],
+  }
   return {
-    connections,
+    ...connectionProjection(current),
     selection,
-    error,
-    loading,
-    busy,
-    ready,
     refresh,
-    add: (input: NewConnection) => change("add", input),
+    add: (input: NewConnection) => command({ action: "add", body: input }),
     change: (
       connection: ConnectionInfo,
       action: "refresh" | "reconnect" | "disconnect"
     ) =>
-      change(action, {
-        id: connection.id,
-        expectedRevision: connection.revision,
+      command({
+        action,
+        body: { id: connection.id, expectedRevision: connection.revision },
       }),
     select: (names: readonly string[]) =>
-      agentId === undefined
-        ? Promise.resolve(false)
-        : mutate(
-            () =>
-              agentApi(agentId)("remote-tools", {
-                expectedRevision: selection.revision,
-                names,
-              }).then(Schema.decodeUnknownSync(ToolSelection)),
-            setSelection
-          ),
+      command({
+        action: "select",
+        body: { expectedRevision: selection.revision, names },
+      }),
+  }
+}
+
+function connectionProjection(current: SnapshotFrom<Machine> | null) {
+  return {
+    connections: current?.context.catalog?.library.connections ?? [],
+    error: current?.context.error ?? "",
+    loading: !current || current.matches("loading"),
+    busy: current?.matches("mutating") ?? false,
+    ready: !!current?.context.catalog,
+    uncertain: current?.matches("uncertain")
+      ? current.context.request?.command
+      : null,
   }
 }

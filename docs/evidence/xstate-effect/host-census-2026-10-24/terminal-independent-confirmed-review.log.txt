@@ -1,0 +1,29 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | ../../../../../../private/tmp/terminal-host-independent/review.test.ts > fatal native close with no command rows retains cleanup uncertainty until explicit recovery
+{"case":"fatal-cleanup-empty-ledger","state":{"networkPolicy":{"revision":0,"unrestricted":true},"runs":[],"savedAt":null,"busy":false,"cleanupError":null,"session":null},"network":"allowed","closes":1}
+
+ ❯ ../../../../../../private/tmp/terminal-host-independent/review.test.ts (2 tests | 1 failed) 143ms
+   × fatal native close with no command rows retains cleanup uncertainty until explicit recovery 64ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/terminal-host-independent/review.test.ts > fatal native close with no command rows retains cleanup uncertainty until explicit recovery
+AssertionError: expected null not to be null
+ ❯ ../../../../../../private/tmp/terminal-host-independent/review.test.ts:61:33
+     59|  try{f.terminal.configureNetwork({revision:0,unrestricted:false})}catc…
+     60|  console.log(JSON.stringify({case:"fatal-cleanup-empty-ledger",state,n…
+     61|  expect(state.cleanupError).not.toBeNull()
+       |                                 ^
+     62|  expect(network).toBe("blocked")
+     63| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  21:02:06
+   Duration  523ms (import 53%, tests 34%, transform 11%, setup 2%, worker 1%)
+

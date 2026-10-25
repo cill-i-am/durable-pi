@@ -2,22 +2,34 @@ import { Schema } from "effect"
 
 import {
   Envelope,
+  CommunicationError,
   Outcome,
-  Receipt,
   canonicalEnvelope,
   failure,
   isRequest,
   terminal,
-  LEASE_MS,
-  MAX_ATTEMPTS,
   MAX_OPEN_TASKS,
   MAX_RECORDS,
   MAX_TASK_MS,
   RESULT_WINDOW_MS,
-  type Delivery,
   type Identity,
-  type Task,
+  Task,
+  Delivery,
+  LegacyTask,
+  LegacyDelivery,
+  STOP_DEADLINE_MS,
+  type DiscoveryAdmission,
+  type ControlAttempt,
 } from "./contracts"
+import { advanceTask } from "./task.machine"
+export { newTask, claimTask, requireFinish } from "./task.machine"
+export {
+  newDelivery,
+  claimDelivery,
+  acknowledge,
+  deliveryFailed,
+  retryDelivery,
+} from "./outbox.machine"
 
 function decodeInput<T>(decode: () => T): T {
   try {
@@ -119,29 +131,6 @@ export function replayDelivery(
     throw failure("conflict", "Message identity already has different content.")
   return previous
 }
-export const newDelivery = (envelope: Envelope, now: number): Delivery => ({
-  envelope,
-  status: "pending",
-  attempts: 0,
-  attemptLimit: MAX_ATTEMPTS,
-  nextAt: now,
-  error: null,
-  receipt: null,
-})
-export const newTask = (
-  request: Envelope,
-  direction: Task["direction"]
-): Task => ({
-  id: request.taskId,
-  direction,
-  request,
-  status: direction === "incoming" ? "accepted" : "waiting",
-  outcome: null,
-  revision: 0,
-  leaseUntil: null,
-  resumed: false,
-  cancelRequested: false,
-})
 export function taskResult(task: Task, raw: Outcome, now: number) {
   const outcome = decodeInput(() => Schema.decodeUnknownSync(Outcome)(raw))
   const envelope: Envelope = {
@@ -154,31 +143,18 @@ export function taskResult(task: Task, raw: Outcome, now: number) {
     deadline: now + RESULT_WINDOW_MS,
     payload: { kind: "result", outcome },
   }
-  const finished: Task = {
-    ...task,
-    status: outcome.status,
-    outcome,
-    revision: task.revision + 1,
-    leaseUntil: null,
-  }
-  return { envelope, task: finished }
+  return { envelope }
 }
 export function receiveCancellation(
   task: Task,
-  envelope: Envelope
+  envelope: Envelope,
+  receivedAt: number
 ): Task | undefined {
   if (task.direction !== "incoming")
     throw failure("forbidden", "Only the requesting bot can cancel this task.")
   requireSameTask(envelope, task, false)
-  return terminal(task)
-    ? undefined
-    : {
-        ...task,
-        cancelRequested: true,
-        status: "cancelling",
-        revision: task.revision + 1,
-        leaseUntil: null,
-      }
+  const next = advanceTask(task, { type: "CANCEL", now: receivedAt })
+  return next.revision === task.revision ? undefined : next
 }
 export function receiveResult(
   task: Task,
@@ -189,98 +165,33 @@ export function receiveResult(
   requireSameTask(envelope, task, true)
   if (envelope.payload.kind !== "result")
     throw new Error("Result transition requires a result envelope")
-  return terminal(task)
-    ? undefined
-    : {
-        ...task,
-        status: envelope.payload.outcome.status,
-        outcome: envelope.payload.outcome,
-        revision: task.revision + 1,
-      }
+  const next = advanceTask(task, {
+    type: "RESULT",
+    outcome: envelope.payload.outcome,
+  })
+  return next.revision === task.revision ? undefined : next
 }
 export const resumable = (task: Task) =>
-  task.direction === "outgoing" && terminal(task) && !task.resumed
-export const consumeResult = (task: Task): Task => ({
-  ...task,
-  resumed: true,
-  revision: task.revision + 1,
-})
-export function claimDelivery(delivery: Delivery, now: number): Delivery {
-  if (
-    delivery.envelope.deadline <= now ||
-    delivery.attempts >= delivery.attemptLimit
-  )
-    return {
-      ...delivery,
-      status: delivery.envelope.deadline <= now ? "expired" : "failed",
-      nextAt: null,
-      error: "Delivery deadline or attempt budget exhausted.",
-    }
-  return {
-    ...delivery,
-    status: "delivering",
-    attempts: delivery.attempts + 1,
-    nextAt: now + LEASE_MS,
-  }
-}
-export function acknowledge(
-  delivery: Delivery,
-  attempt: number,
-  raw: Receipt
-): Delivery | undefined {
-  if (delivery.attempts !== attempt || delivery.status !== "delivering") return
-  const receipt = decodeInput(() => Schema.decodeUnknownSync(Receipt)(raw))
-  if (
-    receipt.id !== delivery.envelope.id ||
-    receipt.taskId !== delivery.envelope.taskId
-  )
-    throw failure("conflict", "Acknowledgment belongs to another message.")
-  return { ...delivery, status: "accepted", receipt, nextAt: null, error: null }
-}
-export function deliveryFailed(
-  delivery: Delivery,
-  attempt: number,
-  now: number,
-  delay: number,
-  permanent: boolean
-): Delivery | undefined {
-  if (delivery.attempts !== attempt || delivery.status !== "delivering") return
-  const expired = delivery.envelope.deadline <= now
-  const done = permanent || expired || attempt >= delivery.attemptLimit
-  return {
-    ...delivery,
-    status: expired ? "expired" : done ? "failed" : "pending",
-    nextAt: done ? null : Math.min(delivery.envelope.deadline, now + delay),
-    error: permanent
-      ? "Delivery was rejected. Inspect this message before retrying."
-      : "Delivery could not be confirmed; retries preserve its identity.",
-  }
-}
-export const claimTask = (task: Task, now: number): Task => ({
-  ...task,
-  status: task.cancelRequested ? "cancelling" : "running",
-  revision: task.revision + 1,
-  leaseUntil: now + LEASE_MS,
-})
-export function requireFinish(
+  task.direction === "outgoing" &&
+  terminal(task) &&
+  !task.resumed &&
+  !task.control.unconfirmed
+export function consumeResult(
   task: Task,
-  revision: number,
-  outcome: Outcome,
-  now: number
-) {
-  if (
-    task.direction !== "incoming" ||
-    task.revision !== revision ||
-    terminal(task)
-  )
-    throw failure("stale", "This execution no longer owns the task.")
-  if (task.cancelRequested && outcome.status !== "cancelled")
-    throw failure("stale", "Cancellation must be reconciled before completion.")
-  if (
-    now >= task.request.deadline &&
-    !["cancelled", "expired"].includes(outcome.status)
-  )
-    throw failure("expired", "The task deadline has passed.")
+  control?: ControlAttempt,
+  discard = false
+): Task {
+  const next = advanceTask(task, {
+    type: "CONSUME",
+    taskId: control?.taskId ?? task.id,
+    owner: control?.owner ?? null,
+    revision: control?.revision ?? task.revision,
+    discard,
+    phase: control?.phase ?? task.control.phase,
+  })
+  if (next.revision === task.revision)
+    throw failure("stale", "This continuation no longer owns the task.")
+  return next
 }
 export function cancelTask(task: Task, now: number) {
   if (task.direction !== "outgoing")
@@ -297,41 +208,142 @@ export function cancelTask(task: Task, now: number) {
       reason: "The owner or originating task requested cancellation.",
     },
   }
-  const cancelled: Task = {
-    ...task,
-    cancelRequested: true,
-    status: "cancelling",
-    revision: task.revision + 1,
-  }
+  const cancelled = advanceTask(task, { type: "CANCEL", now })
   return { envelope, task: cancelled }
-}
-export function retryDelivery(
-  delivery: Delivery,
-  now: number
-): Delivery | undefined {
-  if (["pending", "delivering", "accepted"].includes(delivery.status)) return
-  if (delivery.envelope.deadline <= now)
-    throw failure("expired", "Expired messages cannot be retried.")
-  return {
-    ...delivery,
-    status: "pending",
-    attemptLimit: delivery.attempts + MAX_ATTEMPTS,
-    nextAt: now,
-    error: null,
-  }
 }
 export function requireRetryableTask(task: Task) {
   if (task.cancelRequested || terminal(task))
     throw failure("stale", "Stopped or finished requests cannot be retried.")
 }
-export const expireTask = (task: Task): Task => ({
-  ...task,
-  status: "expired",
-  revision: task.revision + 1,
-  outcome: {
-    status: "expired",
-    text: task.cancelRequested
-      ? "Cancellation was requested; termination could not be confirmed before the deadline."
-      : "The result was not confirmed before the task deadline.",
-  },
-})
+export const expireTask = (task: Task, now = task.request.deadline): Task =>
+  advanceTask(task, { type: "EXPIRE", now })
+
+export function requireDiscovery(
+  options: DiscoveryAdmission | undefined,
+  now: number
+) {
+  if (
+    !options ||
+    !Number.isSafeInteger(options.discoveryDeadline) ||
+    options.discoveryDeadline <= now
+  )
+    throw failure(
+      "expired",
+      "Mailbox discovery expired before admission. Prepare the same request again."
+    )
+}
+
+function validControlFacts(task: Task) {
+  return !(
+    (task.control.owner !== null && task.control.deadline === null) ||
+    (task.direction === "outgoing" &&
+      task.control.owner !== null &&
+      (task.control.phase !== "continuation" || !terminal(task))) ||
+    (task.control.phase === "continuation" && task.direction !== "outgoing") ||
+    (task.control.owner === null && task.control.deadline !== null) ||
+    (task.stop.status === "pending" && task.stop.deadline === null)
+  )
+}
+function validateTaskFacts(task: Task) {
+  if (
+    task.id !== task.request.taskId ||
+    task.id !== task.request.id ||
+    !isRequest(task.request) ||
+    (task.direction === "outgoing" &&
+      ["accepted", "running"].includes(task.status)) ||
+    (task.direction === "incoming" && task.status === "waiting") ||
+    terminal(task) !== (task.outcome !== null) ||
+    (task.outcome !== null && task.status !== task.outcome.status) ||
+    !validControlFacts(task) ||
+    (task.status === "cancelling" && !task.cancelRequested)
+  )
+    throw new Error("Invalid task combinations")
+}
+
+/** Explicit compatible conversion, never recovery or ownership acquisition. */
+export function readTask(raw: unknown): Task {
+  try {
+    if (!raw || typeof raw !== "object") throw new Error("Invalid task")
+    const record = raw as Record<string, unknown>
+    if (
+      record.schemaVersion !== undefined ||
+      record.workflowVersion !== undefined
+    ) {
+      const task = Schema.decodeUnknownSync(Task)(raw)
+      validateTaskFacts(task)
+      return task
+    }
+    const legacy = Schema.decodeUnknownSync(LegacyTask)(raw)
+    const needsStop =
+      legacy.cancelRequested ||
+      legacy.status === "cancelled" ||
+      legacy.status === "cancelling"
+    return readTask({
+      ...legacy,
+      schemaVersion: 1,
+      workflowVersion: 1,
+      control: {
+        owner: null,
+        phase: needsStop
+          ? "stop"
+          : legacy.status === "running"
+            ? "observe"
+            : "submit",
+        deadline: null,
+        attempts: 0,
+        unconfirmed: false,
+      },
+      stop: {
+        status: needsStop
+          ? terminal(legacy as Task)
+            ? "unconfirmed"
+            : "pending"
+          : "none",
+        attempts: 0,
+        deadline: needsStop ? legacy.request.deadline + STOP_DEADLINE_MS : null,
+        nextAt: needsStop && !terminal(legacy as Task) ? 0 : null,
+      },
+    })
+  } catch (cause) {
+    if (Schema.is(CommunicationError)(cause)) throw cause
+    throw failure(
+      "incompatible",
+      "Incompatible communication task data. Retain the row and upgrade or repair its version before continuing."
+    )
+  }
+}
+export function readDelivery(raw: unknown): Delivery {
+  try {
+    if (!raw || typeof raw !== "object") throw new Error("Invalid delivery")
+    const record = raw as Record<string, unknown>
+    const delivery =
+      record.schemaVersion !== undefined || record.workflowVersion !== undefined
+        ? Schema.decodeUnknownSync(Delivery)(raw)
+        : Schema.decodeUnknownSync(Delivery)({
+            ...Schema.decodeUnknownSync(LegacyDelivery)(raw),
+            schemaVersion: 1,
+            workflowVersion: 1,
+          })
+    const scheduled =
+      delivery.status === "pending" || delivery.status === "delivering"
+    if (
+      delivery.attempts > delivery.attemptLimit ||
+      scheduled !== (delivery.nextAt !== null) ||
+      (delivery.status === "delivering" && delivery.attempts === 0) ||
+      (delivery.status === "accepted") !== (delivery.receipt !== null)
+    )
+      throw new Error("Invalid delivery combinations")
+    if (
+      delivery.receipt &&
+      (delivery.receipt.id !== delivery.envelope.id ||
+        delivery.receipt.taskId !== delivery.envelope.taskId)
+    )
+      throw new Error("Invalid delivery receipt")
+    return delivery
+  } catch {
+    throw failure(
+      "incompatible",
+      "Incompatible communication outbox data. Retain the row and upgrade or repair its version before continuing."
+    )
+  }
+}

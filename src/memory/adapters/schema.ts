@@ -17,6 +17,13 @@ export const memoryBackupStatus = sqliteTable(
     date: text("date"),
     watermark: text("watermark").notNull(),
     error: text("error"),
+    schemaVersion: integer("schema_version").notNull().default(0),
+    workflowVersion: integer("workflow_version").notNull().default(0),
+    phase: text("phase").notNull().default("idle"),
+    target: text("target").notNull().default(""),
+    attempts: integer("attempts").notNull().default(0),
+    attemptId: text("attempt_id"),
+    retryAt: integer("retry_at").notNull().default(0),
   },
   (t) => [check("memory_backup_status_id_singleton", sql`${t.id} = 1`)]
 )
@@ -171,11 +178,16 @@ export const memoryReady = sqliteTable(
   {
     start: integer("start").notNull(),
     count: integer("count").notNull(),
+    control: text("control"),
   },
   (t) => [
     primaryKey({ columns: [t.count, t.start] }),
     check("memory_ready_start_check", sql`${t.start} >= 0`),
     check("memory_ready_count_check", sql`${t.count} > 0`),
+    check(
+      "memory_ready_control_json",
+      sql`${t.control} is null or json_valid(${t.control})`
+    ),
   ]
 )
 

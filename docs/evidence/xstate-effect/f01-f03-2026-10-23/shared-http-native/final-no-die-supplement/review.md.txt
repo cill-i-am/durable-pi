@@ -1,0 +1,15 @@
+# Bounded F01–F08 native cleanup scan
+
+The shared nativeOperation correction (3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99) closes the reproduced no-Die compound failure loss for F03 and the targeted F04–F08 production-native owner paths. F02 already preserves this class through its raw Promise rejection observer. F01 retains three concrete local Interrupt-filter defects after the shared fix.
+
+Before proof: actual conversation stream and makeFilesOwner wait for held native settlement, then close Success when rejected after abort with annotated Fail plus native Interrupt and no Die. F02 recovery closes Failure with both native annotations retained. The unchanged three-owner probe after the shared fix shows F03 fully closed and F01 retaining Fail but discarding native Interrupt90101. Independent command probe confirms the same remaining loss in makeSubmission send and makeTurnCommand retry (sentinels90104/90105). Each production caller uses nativeOperation. The composer owner has the same textual filter, but its production storage write is synchronous Effect.try; this scan does not claim an independently reproduced late-native defect for that path.
+
+Additional after checks: F03 openVoiceCapture held permission acquisition and actual preview composition both join and preserve the annotated native Fail+Interrupt. F04 terminal, F05 browser/execution, F06 access/connections, F07 ObjectStore and F08 authOwner with securityMachine all join and preserve annotated native Fail+Interrupt after the common correction. These are actual owners with synthetic held transports or production-shaped nativeOperation capabilities. No native commands, live auth, provider or network requests occur. F04–F08 probes were first run after shared repair landed, so do not claim per-owner red/green proof there; the shared before class is directly demonstrated in F01/F03. No source files were edited by this scan.
+
+Commands (each from its source worktree, not composed copies):
+- /opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f01-f03-no-die/probe.mts
+- /opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f01-f03-no-die/commands-probe.mts
+- /opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f01-f03-no-die/media-probe.mts
+- /opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f04-f08-no-die/probe.mts
+
+Exact source/evidence hashes are in review-manifest.json. Historical freezes and prior probe bytes remain untouched. This is a bounded check of native cleanup propagation, not a fresh full UX or behavior review.

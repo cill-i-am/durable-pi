@@ -1,0 +1,52 @@
+$ pnpm generate-routes && pnpm test && pnpm build && node scripts/check-website-routes.mjs && pnpm build:workers
+$ tsr generate
+(node:59293) Warning: Accessing non-existent property 'replaceRouteChunk' of module exports inside circular dependency
+(Use `node --trace-warnings ...` to show where the warning was created)
+$ vitest run
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/conversation-resume.test.ts (4 tests | 1 failed) 5307ms
+   × unchanged heartbeat reconciliation does not reserialize the checkpoint 5005ms
+ ❯ tests/conversation-backpressure.test.ts (3 tests | 1 failed) 5106ms
+   × delivers the entire first-text batch when the consumer has paused before its initial cursor 5007ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-backpressure.test.ts > delivers the entire first-text batch when the consumer has paused before its initial cursor
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/conversation-backpressure.test.ts:12:1
+     10| afterEach(() => vi.useRealTimers())
+     11|
+     12| it("delivers the entire first-text batch when the consumer has paused …
+       | ^
+     13|   vi.useFakeTimers()
+     14|   const turn = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/conversation-resume.test.ts > unchanged heartbeat reconciliation does not reserialize the checkpoint
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/conversation-resume.test.ts:147:1
+    145| })
+    146|
+    147| it("unchanged heartbeat reconciliation does not reserialize the checkp…
+       | ^
+    148|   vi.useFakeTimers()
+    149|   const checkpoint = new ConversationCheckpoint()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 327 passed (329)
+      Tests  2 failed | 3698 passed (3700)
+   Start at  19:25:14
+   Duration  46.33s (tests 58%, import 38%, transform 3%, setup 1%)
+
+    Isolate  329 workers spawned · ~112ms startup each (spawn + environment, per file)
+             at least ~4.00s faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.
+[ELIFECYCLE] Command failed with exit code 1.

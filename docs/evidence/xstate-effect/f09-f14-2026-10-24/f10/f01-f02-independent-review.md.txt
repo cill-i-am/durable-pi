@@ -1,0 +1,23 @@
+# F01/F02 independent review — closed
+
+No remaining concrete findings in the reviewed frozen scope. All 31 source/test/doc hashes match the two author manifests recorded in `f01-f02-independent-review.json`. No production changes were made by this reviewer during the UI review.
+
+## Findings closed by unchanged probes
+
+- F01 actual TanStack SSE cleanup: a held native body cancellation previously allowed a replacement fetch. The response bridge now joins that exact cleanup before replacement or completion.
+- F01 Stop availability: a held Retry acknowledgement previously discarded Stop. Per-target cancellation now proceeds independently, deduplicates the exact held target, and joins all requests on closure.
+- F01 authorization-denial cleanup: the SDK wrapped a compound body-cancellation failure and retried a known denial. The outer owner now retains the original ApiError and cleanup reasons, without nesting a Cause as a Die. Actual 401/403/404 regressions require one fetch and all three original reasons.
+- F02 native version failure: a late compound failure after abort was swallowed. The owner now retains it through joined actor cleanup.
+- F02 reply settlement: concurrent fatal check failure could stop the actor before RELOAD handling, leaving its reply pending until unmount. The caller now observes terminal actor state and settles false.
+
+## Independent verification
+
+- Five original private probes pass unchanged: `/private/tmp/f01-f02-independent-closed.log`. Probe source: `/private/tmp/f01-f02-independent.test.ts`.
+- All 53 focused tests across seven files pass: `/private/tmp/f01-f02-independent-focused-closed.log`.
+- F01 final 22-file manifest: `/private/tmp/f01-auth-cleanup-freeze-manifest.json`. F02 final nine-file manifest: `/private/tmp/f02-update-manifest.txt`.
+- Earlier red proofs, final hashes and exact evidence paths are retained in `/private/tmp/f01-f02-independent-review.json`.
+- Reviewed draft unreadability/storage-failure zero-send guards; exact restored uncertainty; newer text and model selections during acknowledgement; five-failure stream/cursor behavior; per-target Stop; final reload authority and cleanup scopes. Author failure-sensitive controls and browser/two-build evidence were inspected.
+
+## Limits
+
+No live provider/deployment checks or duplicate broad browser run. Author browser results precede the last authorization-cleanup-only correction; its actual installed SDK path is covered by the final focused checks. Parent owns final integrated gates, shared tracking and publication.

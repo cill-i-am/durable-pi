@@ -1,0 +1,89 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/conversation-runner.test.ts (48 tests | 3 failed) 116ms
+   × joins held restore and preserves annotated native Causes (defect false) 7ms
+   × joins held restore and preserves annotated native Causes (defect true) 2ms
+   × coalesces failed restoration and retries only for a fresh caller 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-runner.test.ts > joins held restore and preserves annotated native Causes (defect false)
+ FAIL  tests/conversation-runner.test.ts > joins held restore and preserves annotated native Causes (defect true)
+AssertionError: expected Fail(Error: checked native failure) to deeply equal Fail(Error: checked native failure)
+
+Compared values serialize to the same structure.
+Printing internal object structure without calling `toJSON` instead.
+
+- Expected
++ Received
+
+@@ -1,9 +1,14 @@
+  Fail {
+    "_tag": "Fail",
+    "annotations": Map {
+      "ConversationPrearmReason" => "original",
++     "effect/Cause/StackTrace" => {
++       "name": "createEffectLogic",
++       "parent": undefined,
++       "stack": [Function anonymous],
++     },
+    },
+    "error": Error {
+      "message": "checked native failure",
+    },
+    "~effect/Cause/Reason": "~effect/Cause/Reason",
+
+ ❯ tests/conversation-runner.test.ts:841:28
+    839|             (candidate) => candidate._tag === reason._tag
+    840|           )
+    841|           expect(observed).toEqual(reason)
+       |                            ^
+    842|           if (reason._tag !== "Fail") expect(observed).toBe(reason)
+    843|           else if (observed?._tag === "Fail")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/conversation-runner.test.ts > coalesces failed restoration and retries only for a fresh caller
+AssertionError: expected [ Fail(Error: restore unavailable) ] to deeply equal [ Fail(Error: restore unavailable) ]
+
+Compared values serialize to the same structure.
+Printing internal object structure without calling `toJSON` instead.
+
+- Expected
++ Received
+
+@@ -1,9 +1,15 @@
+  [
+    Fail {
+      "_tag": "Fail",
+-     "annotations": Map {},
++     "annotations": Map {
++       "effect/Cause/StackTrace" => {
++         "name": "createEffectLogic",
++         "parent": undefined,
++         "stack": [Function anonymous],
++       },
++     },
+      "error": Error {
+        "message": "restore unavailable",
+      },
+      "~effect/Cause/Reason": "~effect/Cause/Reason",
+    },
+
+ ❯ tests/conversation-runner.test.ts:868:28
+    866|     expect(Cause.isCause(result)).toBe(true)
+    867|     if (!Cause.isCause(result)) throw new Error("Expected restoration …
+    868|     expect(result.reasons).toEqual(failure.reasons)
+       |                            ^
+    869|   }
+    870|   expect(f.restore).toHaveBeenCalledTimes(1)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 45 passed (48)
+   Start at  21:07:43
+   Duration  415ms (import 48%, tests 35%, transform 15%, setup 2%, worker 1%)
+

@@ -1,0 +1,31 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/agent-http.test.ts (30 tests | 1 failed) 1322ms
+   × bounds the upstream lease, fences unrelated releases and joins unused-channel cleanup 54ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-http.test.ts > bounds the upstream lease, fences unrelated releases and joins unused-channel cleanup
+TypeError: Cannot read properties of undefined (reading 'release')
+ ❯ PersonalAgent.releaseUpstream src/agent/worker.ts:2748:49
+    2746|   async releaseUpstream(id: string) {
+    2747|     const observer = await this.upstreamObservation
+    2748|     await this.actorRuntime.runPromise(observer.release(id))
+       |                                                 ^
+    2749|   }
+    2750|   readonly models = createAgentModels(this.credentials, {
+ ❯ tests/agent-http.test.ts:668:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 290 passed (291)
+      Tests  1 failed | 3310 passed (3311)
+   Start at  17:28:04
+   Duration  119.89s (tests 59%, import 39%, transform 1%, setup 1%)
+
+     Import  1171 modules were evaluated 2125 times · 83.56s total, 39% of tracked time
+             ~13.15s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+

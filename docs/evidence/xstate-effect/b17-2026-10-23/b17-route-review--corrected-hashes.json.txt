@@ -1,0 +1,19 @@
+{
+  "src/access/connection-service.ts": true,
+  "src/access/connection-domain.ts": true,
+  "src/access/connection-client.ts": true,
+  "src/access/connection.machine.ts": true,
+  "src/access/connection-host.machine.ts": true,
+  "src/access/connection-command.machine.ts": true,
+  "src/access/adapters/mcp.ts": true,
+  "src/access/adapters/connections.ts": true,
+  "src/access/adapters/connection-http.ts": true,
+  "src/agent/worker.ts": true,
+  "tests/connection-lifecycle.test.ts": true,
+  "tests/connection-fixture.ts": true,
+  "src/access/connection-ledger.ts": true,
+  "src/access/adapters/oauth.ts": true,
+  "src/agents/family-admission.ts": true,
+  "tests/mcp-oauth.test.ts": true,
+  "tests/family-admission-machine.test.ts": true
+}

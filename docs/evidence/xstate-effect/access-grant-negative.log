@@ -1,0 +1,55 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+stdout | tests/access-domain.test.ts > recoverable dispatch requires the original grant and an unexpired deadline
+[08:24:03.837] ERROR (#702): Error: Property falsified after 3 run(s) and 10 shrink(s)
+Shrunk input: [
+  1,
+  false,
+  "allow"
+]
+Failure: AssertionError: expected 'execute' to be an instance of AccessDenied
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2160:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+Replay: [0,"-8231601658232347",2,0,[1,0,0,0,0,0,0,0,0,0],"PropertyError"]
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/@effect+vitest@4.0.5_effect@4.0.5_vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+no_9fb6d95e6d6d02e4a7a8a5aaed1afcac/node_modules/@effect/vitest/dist/internal/internal.js:67:59 {
+  [cause]: undefined
+}
+
+ ❯ tests/access-domain.test.ts (2 tests | 1 failed) 42ms
+   × recoverable dispatch requires the original grant and an unexpired deadline 8ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  08:24:03
+   Duration  352ms (import 67%, tests 18%, transform 11%, setup 3%, worker 1%)
+
+$ vitest run tests/access-domain.test.ts
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/access-domain.test.ts > recoverable dispatch requires the original grant and an unexpired deadline
+Error: Property falsified after 3 run(s) and 10 shrink(s)
+Shrunk input: [
+  1,
+  false,
+  "allow"
+]
+Failure: AssertionError: expected 'execute' to be an instance of AccessDenied
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2160:15)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+Replay: [0,"-8231601658232347",2,0,[1,0,0,0,0,0,0,0,0,0],"PropertyError"]
+ ❯ ContImpl.andThenCont [as ~effect/Effect/successCont] node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1531:10
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5689:9
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5767:19
+ ❯ Module.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5786:5
+ ❯ fn node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1259:30
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+[ELIFECYCLE] Test failed. See above for more details.

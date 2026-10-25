@@ -1,0 +1,13 @@
+[WebServer] (node:8447) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:8484) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:282:1 › a late Always allow acknowledgement cannot overwrite a newer denied policy (2.4s)
+(node:8500) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:282:1 › a late Always allow acknowledgement cannot overwrite a newer denied policy (2.4s)
+
+  2 passed (9.1s)

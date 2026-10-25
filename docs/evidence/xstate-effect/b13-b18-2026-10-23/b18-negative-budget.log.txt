@@ -1,0 +1,54 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+stdout | tests/memory-backup-lifecycle.test.ts > three failures exhaust one watermark across status reconstruction; ordinary wakes cannot renew it
+[15:45:43.235] ERROR (#1): Error [AssertionError]: expected { date: null, watermark: '', …(8) } to match object { attempts: 3, phase: 'failed' }
+(8 matching properties omitted from actual)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2066:10)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-backup-lifecycle.test.ts:107:43 {
+  showDiff: true,
+  expected: { attempts: 3, phase: 'failed' },
+  actual: { phase: 'pending', attempts: 3 },
+  [cause]: undefined
+}
+
+ ❯ tests/memory-backup-lifecycle.test.ts (11 tests | 1 failed | 10 skipped) 100ms
+   × three failures exhaust one watermark across status reconstruction; ordinary wakes cannot renew it 100ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-backup-lifecycle.test.ts > three failures exhaust one watermark across status reconstruction; ordinary wakes cannot renew it
+AssertionError: expected { date: null, watermark: '', …(8) } to match object { attempts: 3, phase: 'failed' }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "attempts": 3,
+-   "phase": "failed",
++   "phase": "pending",
+  }
+
+ ❯ tests/memory-backup-lifecycle.test.ts:107:43
+    105|           Effect.provide(f.layer)
+    106|         )
+    107|         expect(yield* f.status.control()).toMatchObject({
+       |                                           ^
+    108|           attempts: attempt,
+    109|           phase: attempt === 3 ? "failed" : "pending",
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  15:45:42
+   Duration  477ms (import 57%, tests 28%, transform 13%, setup 2%, worker 1%)
+

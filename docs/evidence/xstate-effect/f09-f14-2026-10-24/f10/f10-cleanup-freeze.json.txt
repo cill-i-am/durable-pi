@@ -1,0 +1,5 @@
+{
+  "src/features/agents/agent-requests.ts": "33489df0e383e02cffdc2bab66d944e1b406f1c9082493f2a0cc3814432f384c",
+  "tests/agent-request-cleanup.test.ts": "f47446ec8762463c680bc256e04c5d6f9e63e8136fcfc91e0f81961d2711726d",
+  "src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99"
+}

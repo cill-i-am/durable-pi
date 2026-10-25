@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ ../../../../../../private/tmp/coordination-runner-local/ownership.negative.test.ts (7 tests | 1 failed | 6 skipped) 30ms
+   × retains failed callback ownership through SDK retry and rejects same-token replacement exhaustion 29ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/coordination-runner-local/ownership.negative.test.ts > retains failed callback ownership through SDK retry and rejects same-token replacement exhaustion
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ ../../../../../../private/tmp/coordination-runner-local/ownership.negative.test.ts:162:25
+    160|     new Error("replacement exhausted")
+    161|   )
+    162|   expect(f.calls.steps).toBe(1)
+       |                         ^
+    163|   expect(f.calls.exhausts).toBe(0)
+    164|   const result = await f.runner.onJob(context(original))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 skipped (7)
+   Start at  20:56:48
+   Duration  440ms (import 60%, transform 27%, tests 10%, setup 3%, worker 1%)
+

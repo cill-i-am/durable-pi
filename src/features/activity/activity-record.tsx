@@ -1,6 +1,5 @@
 import { Schema } from "effect"
 import { Brain, Wrench } from "lucide-react"
-import { useEffect, useState } from "react"
 
 import { ActivityConversation, type ActivityEntry } from "@/activity/contracts"
 import { CopyButton } from "@/components/copy-button"
@@ -34,10 +33,10 @@ import {
   TraceCollapsibleContent,
 } from "@/components/ui/trace"
 import type { RecoveryView } from "@/conversations/recovery"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
 
+import { activityJsonRequest } from "./query-owner"
 import { RunTimeline } from "./run-timeline"
+import { useActivityQuery } from "./use-activity-query"
 
 export function ActivityRecord({
   entry,
@@ -48,47 +47,24 @@ export function ActivityRecord({
   onClose: () => void
   onOpenBot: () => void
 }) {
-  const [record, setRecord] = useState<ActivityConversation | null>(null),
-    [error, setError] = useState("")
-  useEffect(() => {
-    setRecord(null)
-    setError("")
-    let current = true
-    const controller = new AbortController()
-    let settled = false
-    const stop = poll(
-      async () => {
-        if (settled || document.visibilityState !== "visible") return
-        try {
-          const value = await agentApi(entry.agent.id)(
-            `activity/conversations/${encodeURIComponent(entry.reference)}`,
-            undefined,
-            controller.signal
-          )
-          if (current) {
-            const next = Schema.decodeUnknownSync(ActivityConversation)(value)
-            setRecord(next)
-            setError("")
-            settled = ["done", "failed", "cancelled"].includes(next.status)
-          }
-        } catch (cause) {
-          if (current)
-            setError(
-              cause instanceof Error
-                ? cause.message
-                : "This conversation is unavailable."
-            )
-        }
-      },
-      3000,
-      true
-    )
-    return () => {
-      current = false
-      controller.abort()
-      stop()
-    }
-  }, [entry.agent.id, entry.reference])
+  const {
+    data: record,
+    error,
+    refresh,
+  } = useActivityQuery({
+    key: JSON.stringify(["record", entry.agent.id, entry.reference]),
+    interval: 3000,
+    read: async (signal) =>
+      Schema.decodeUnknownSync(ActivityConversation)(
+        await activityJsonRequest(
+          entry.agent.id,
+          `activity/conversations/${encodeURIComponent(entry.reference)}`,
+          signal
+        )
+      ),
+    terminal: (value) => ["done", "failed", "cancelled"].includes(value.status),
+    errorMessage: "This conversation is unavailable.",
+  })
   return (
     <Dialog
       open
@@ -106,7 +82,16 @@ export function ActivityRecord({
         </DialogHeader>
         {error && (
           <Alert>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void refresh()}
+              >
+                Reconnect
+              </Button>
+            </AlertDescription>
           </Alert>
         )}
         {!record && !error && <Skeleton className="h-32 w-full" />}

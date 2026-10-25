@@ -1,0 +1,13 @@
+
+Running 6 tests using 1 worker
+
+(node:58978) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/activity-query.spec.ts:56:1 › online refresh cannot overlap a held plan observation (376ms)
+  ✓  2 tests/browser/activity-query.spec.ts:73:1 › unmount revokes a held plan observation (328ms)
+  ✓  3 tests/browser/activity-query.spec.ts:79:1 › late run page cannot replace the newly selected run (515ms)
+  ✓  4 tests/browser/activity-query.spec.ts:98:1 › selected plan rejects a schema-valid response for a different identity (306ms)
+  ✓  5 tests/browser/activity-query.spec.ts:109:1 › initial plan detail rejects history entries belonging to another plan (291ms)
+  ✓  6 tests/browser/activity-query.spec.ts:120:1 › plan history pagination cannot import another plan's revisions (389ms)
+
+  6 passed (3.8s)

@@ -1,0 +1,91 @@
+{
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "head": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+  "at": "2026-10-23T20:08:53.995445+00:00",
+  "files": {
+    "src/features/activity/query.machine.ts": "ba2b951ec704c6f77cea29668aadc2b3908b124bfb670faa4fa3006a5ce2a4a4",
+    "src/features/activity/query-owner.ts": "2291e60e83d73f3940d6dded5b50e9cf029e5e98ba5f92750c332682da9b5801",
+    "src/features/activity/use-activity-query.ts": "4a4ff6ce15148d7a2167b33ec7ff82059010593bf3b26b9b498fde82c2aa57b3",
+    "src/features/activity/use-plans.ts": "8492a4b3951564046b3efa253abf9a719387baf9b0b941004c42f6c22a7c3ffd",
+    "src/features/activity/activity-timeline.tsx": "d37eb63262bf33a0312519b895cd2bf772421d3d17147ac1e5ac551b9b99af78",
+    "src/features/activity/activity-record.tsx": "3530a0a5f133bd2b7dc9f9c2236b3c468b55a50a594c08a8ee84d821bbb8905f",
+    "src/features/activity/run-timeline.tsx": "59209fb541a6da8dc0d7bb5070eca6717e2e5de9f09dbecd8be32437b0ba2f4a",
+    "src/features/activity/inference-runs.tsx": "625890327ddb2b38ad65b30af1cd62f35dadd0765329b1a680829ca77948dd10",
+    "src/features/activity/activity-workbench.tsx": "b25880b275a7bb0efc27c446e5ffadfa64afc5d25e980d6ad9dd888c61df6786",
+    "tests/activity-query-owner.test.ts": "81d0fc2fa66afe7b5d425ffeb816d89c81ae3ae3546ad7abd2a8d45541371d7f",
+    "tests/browser/activity-query.spec.ts": "4800c4a81dafae6c82f29eab5b6246f71b5ba497d457a10872cafc6e662841a0",
+    "tests/browser/fixtures/activity-query.tsx": "77d158e78c33de0886eef4d13307ee0bb40c148da6c82a5a0278bf73a1b19b2b",
+    "src/features/activity/background-actions.tsx": "53397e6698d64997ecc145ea636f317414926597c1296003fe138199dccf7624",
+    "src/features/activity/bot-tasks.tsx": "1970eab46a9b2e519edb26ea1b6751baf2d0352f2534b772e903f7654bf16800",
+    "src/features/activity/delegated-work.tsx": "9b5ca523872c1d1598f62ca954a16b3b73724b26e17d7db903275a3edd1e7003",
+    "src/features/activity/task-control.machine.ts": "812fdf5dab829c870ae6978b0c5ce275cef72cbd4b5fe2768fcfc8146cb832bf",
+    "src/features/activity/task-control-owner.ts": "4794e77c8103ecf03f92eb6e358533ba676bb5855b8299d770f8b900be133691",
+    "src/features/activity/use-task-control.ts": "6ef3e5e5ee52c2545371f4c3ffa0a4078cee98782bdb20ca17dd5783ea1cd4b9",
+    "src/features/activity/mailbox-control.machine.ts": "67e386bcdedbf995e6256a3c6d0e7ac53dfd9e4d5b5efa50be39573ffc82dc64",
+    "src/features/activity/mailbox-control-owner.ts": "9fdbb3ab718d6f4cee119a52938855059bccb7f94dfceb1de77cfe20c0313d7f",
+    "src/features/activity/use-mailbox-control.ts": "24e67fefe244e13c8a89dbdfdcdd8e5f37b7177bf98c2d1ddd567a5b01c5b571",
+    "tests/activity-controls-ui.test.ts": "d0951f77b87360fa57c6880e513353cc0fcb9f9b310b0cc8086a298bedcb3830",
+    "tests/browser/activity-controls-lifecycle.spec.ts": "0deb047167630f7b92741cc742977e5464889b92a917e630842cd87f751b4595",
+    "docs/xstate-effect-activity-ui.md": "fc02020f8daa6776be9020b0ab0102e6e7d8d64fbd8f80591911972297c261db"
+  },
+  "sourceManifests": [
+    "/private/tmp/f14-controls-source-freeze.json",
+    "/private/tmp/f14-query-freeze.json"
+  ],
+  "sourceChecks": {
+    "controls": {
+      "unit": "/private/tmp/f14-controls-unit-final.log (23/23, 3 files)",
+      "types": "/private/tmp/f14-controls-scoped-types.log (exit0, scoped)",
+      "lint": "/private/tmp/f14-controls-lint-final.log (exit0)",
+      "negative": "/private/tmp/f14-controls-negative.log (epoch fence mutation fails intended assertion)",
+      "mailboxCancelRed": "/private/tmp/f14-mailbox-cancel-red.log (wrong immutable request reused)",
+      "mailboxStaleRed": "/private/tmp/f14-mailbox-projection-red.log",
+      "originalBrowserRed": "/private/tmp/f14-characterization/before.log",
+      "browser": "/private/tmp/f14-controls-browser-final.log (14/14 desktop/mobile actual workbench cases)",
+      "build": "/private/tmp/f14-controls-browser-build-final.log (exit0 final source after query repairs)",
+      "format": "/private/tmp/f14-controls-format-final.log (exit0)",
+      "originalBrowserAfter": "/private/tmp/f14-characterization/after.log (1/1 byte-unchanged original probe)",
+      "originalProbeSha256": "90090671ec1a8fee36d0401b1d247731f7067c880e13bc66402671714dfe820e",
+      "restored": "/private/tmp/f14-controls-restored.log (13/13 unmutated after negative)",
+      "reviewedUnit": "/private/tmp/f14-controls-reviewed-unit.log (27/27,3files)",
+      "reviewedTypes": "/private/tmp/f14-controls-reviewed-types.log (scoped exit0)",
+      "reviewedLint": "/private/tmp/f14-controls-reviewed-lint.log (exit0)",
+      "reviewedFormat": "/private/tmp/f14-controls-reviewed-format.log (exit0)",
+      "naturalSettlementRed": "/private/tmp/f14-controls-natural-settlement-red.log (4 natural settlement regressions fail before repair)",
+      "independentCompoundAfter": [
+        "/private/tmp/f14-controls-independent/compound-settlement-after.log",
+        "/private/tmp/f14-controls-independent/compound-no-die-after.log"
+      ],
+      "independentReview": "/private/tmp/f14-controls-independent/review.md",
+      "independentReviewManifest": "/private/tmp/f14-controls-independent/review-manifest.json"
+    },
+    "queries": {
+      "unit": "/private/tmp/f14-query-focused-final.log (28/28,3 files)",
+      "restored": "/private/tmp/f14-query-restored.log (10/10)",
+      "browser": "/private/tmp/f14-query-browser-final-reviewed.log (6/6; original3 plus selected/main-history/paginated-history identity regressions)",
+      "baselinePlans": "/private/tmp/f14-query-before.log (overlap and unrevoked requests fail)",
+      "baselineRun": "/private/tmp/f14-query-run-before.log (stale run page fails)",
+      "compoundBefore": "/private/tmp/f14-query-interrupt-before.log (late Fail+Interrupt lost)",
+      "negative": "/private/tmp/f14-query-negative.log (bundle-only removal of retained compound fails same assertion)",
+      "scopedTypes": "/private/tmp/f14-query-scoped-types.log",
+      "lint": "/private/tmp/f14-query-lint-final.log",
+      "format": "/private/tmp/f14-query-format.log",
+      "independentReview": "/private/tmp/f14-independent/review.md + review-manifest.json; all12 hashes match; unchanged selected-plan/history probes pass; annotated compound cleanup passes; independent28/28 focused tests",
+      "reviewedLint": "/private/tmp/f14-query-reviewed-lint.log",
+      "reviewedFormat": "/private/tmp/f14-query-reviewed-format.log"
+    }
+  },
+  "sharedDependencyHashes": {
+    "src/http/client.ts": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66"
+  },
+  "limits": [
+    "No Git, live provider, worker or package edits.",
+    "No new whole-tree typecheck; integrated gates parent-owned.",
+    "Browser tests use built production components with synthetic read and command APIs, not live provider execution.",
+    "14 browser journeys and original unchanged probe passed before the final owner cleanup-only repair. No public command transitions, React projections or click payloads changed; repair is covered by exact independent default-request probes and27 focused tests.",
+    "Browser fixture mounts actual usePlans and RunTimeline with synthetic fetch; full-workbench browser belongs controls author.",
+    "No live provider, remote action, Git, package/config, schema or persistence changes.",
+    "Two redundant whole-tree TypeScript runs cancelled for shared-host contention; final whole-tree check parent-owned.",
+    "Query machine snapshots are volatile and never restored from persistence; business state remains existing domain DTO projections."
+  ]
+}

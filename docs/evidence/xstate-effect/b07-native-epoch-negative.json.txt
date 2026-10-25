@@ -1,0 +1,264 @@
+{
+  "syntheticProvider": true,
+  "negative": false,
+  "negativeRecovery": true,
+  "recoveryOnly": true,
+  "instrumentation": "Production runner.onJobError is joined before a fixture barrier returns to the installed SDK applyOutcome; only the surviving row hung_timeout_seconds is shortened to1 for the crash revisit. No SDK lifecycle/queue replacement.",
+  "sourceHashes": {
+    "src/communication/adapters/lifecycle.ts": "86a7bb285ead919f4a2729084594124d6bf5ccb6f5d7b447062a98ba5b1f6339",
+    "src/communication/recovery.machine.ts": "35c2cf7dabd4f92415dc8a737902932202c0e2ef791dbe2de722f01b48552115",
+    "tests/runtime/communication-control-worker.ts": "61bffbbbe60af6311a4bd5ddaa4da718afe3c060dc4fbe6a9ab762c20d55c1c7",
+    "scripts/test-communication-control-runtime.mjs": "c4fcef7fa3d64368f169f02f6ace59e3278727359cd3aa890c446734a8df2a41"
+  },
+  "snapshots": {
+    "exhaustedEpochBeforeCrash": {
+      "first": {
+        "tasks": [],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "recovery-outcome-held"
+          }
+        ],
+        "native": [],
+        "inbox": [],
+        "jobs": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792765137651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "64ac5ec4-8fa5-4e43-8c57-60db911d393b"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792765137
+          }
+        ],
+        "recoveryState": {
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "recovery": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "epoch": "64ac5ec4-8fa5-4e43-8c57-60db911d393b",
+            "failedAt": 1792765137854,
+            "discoveryToken": null,
+            "message": "Mailbox processing stopped after three failed attempts. Retry the mailbox to continue pending work."
+          },
+          "retiredEpoch": null
+        },
+        "sdkRows": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792765137651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "64ac5ec4-8fa5-4e43-8c57-60db911d393b"
+            },
+            "running": 1,
+            "execution_started_at": 1792765137655,
+            "hung_timeout_seconds": 600
+          }
+        ],
+        "physicalAlarm": 1792765167655,
+        "pins": [],
+        "held": "recovery-outcome",
+        "now": 1792765137877,
+        "deadline": 0
+      },
+      "armed": {
+        "tasks": [],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "recovery-outcome-held"
+          }
+        ],
+        "native": [],
+        "inbox": [],
+        "jobs": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792765137651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "64ac5ec4-8fa5-4e43-8c57-60db911d393b"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792765137
+          }
+        ],
+        "recoveryState": {
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "recovery": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "epoch": "64ac5ec4-8fa5-4e43-8c57-60db911d393b",
+            "failedAt": 1792765137854,
+            "discoveryToken": null,
+            "message": "Mailbox processing stopped after three failed attempts. Retry the mailbox to continue pending work."
+          },
+          "retiredEpoch": null
+        },
+        "sdkRows": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792765137651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "64ac5ec4-8fa5-4e43-8c57-60db911d393b"
+            },
+            "running": 1,
+            "execution_started_at": 1792765137655,
+            "hung_timeout_seconds": 1
+          }
+        ],
+        "physicalAlarm": 1792765138655,
+        "pins": [],
+        "held": "recovery-outcome",
+        "now": 1792765137879,
+        "deadline": 0
+      }
+    },
+    "exhaustedEpochAfterCrash": {
+      "noObjectRequestFrom": 1792765137884,
+      "observedAt": 1792765141023,
+      "cold": {
+        "tasks": [],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "recovery-outcome-held"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "unowned-pump-attempt"
+          },
+          {
+            "value": "recovery-outcome-held"
+          }
+        ],
+        "native": [],
+        "inbox": [],
+        "jobs": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792765137651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "64ac5ec4-8fa5-4e43-8c57-60db911d393b"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792765137
+          }
+        ],
+        "recoveryState": {
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "recovery": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "epoch": "64ac5ec4-8fa5-4e43-8c57-60db911d393b",
+            "failedAt": 1792765139067,
+            "discoveryToken": null,
+            "message": "Mailbox processing stopped after three failed attempts. Retry the mailbox to continue pending work."
+          },
+          "retiredEpoch": null
+        },
+        "sdkRows": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792765137651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "64ac5ec4-8fa5-4e43-8c57-60db911d393b"
+            },
+            "running": 1,
+            "execution_started_at": 1792765138677,
+            "hung_timeout_seconds": 1
+          }
+        ],
+        "physicalAlarm": 1792765168677,
+        "pins": [],
+        "held": "recovery-outcome",
+        "now": 1792765141022,
+        "deadline": 0
+      }
+    }
+  }
+}

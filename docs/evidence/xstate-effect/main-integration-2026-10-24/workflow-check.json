@@ -1,0 +1,8 @@
+{
+  "tool": "1.7.12\ninstalled by downloading from release page\nbuilt with go1.26.1 compiler for darwin/arm64",
+  "command": "actionlint .github/workflows/check.yml",
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": "",
+  "workflowSha256": "fc58359f4b27977347c5849b37ee6181abfc935184bf3f75d7cbaf18f4469693"
+}

@@ -1,0 +1,10 @@
+
+Running 3 tests using 1 worker
+
+(node:44725) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/activity-query.spec.ts:56:1 › online refresh cannot overlap a held plan observation (286ms)
+  ✓  2 tests/browser/activity-query.spec.ts:73:1 › unmount revokes a held plan observation (260ms)
+  ✓  3 tests/browser/activity-query.spec.ts:79:1 › late run page cannot replace the newly selected run (511ms)
+
+  3 passed (3.3s)

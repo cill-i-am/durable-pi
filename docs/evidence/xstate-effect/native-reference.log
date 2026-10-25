@@ -1,0 +1,3 @@
+{"name":"committed","state":"complete","calls":1,"dispatches":2,"receipt":8,"wake":null}
+{"name":"lost","state":"complete","calls":1,"dispatches":2,"receipt":8,"wake":null}
+PASS XState/Effect native intent, lost acknowledgement, alarm recovery and two SIGKILL/restarts; workerd 1.20261002.1.

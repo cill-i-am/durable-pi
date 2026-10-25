@@ -1,0 +1,22 @@
+{
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi",
+  "files": {
+    "src/inference/adapters/streams-pi.ts": "243c475e0b0325aab08e46edb62e1922aabea8d441f84a1b0ad442b884327705",
+    "src/inference/model-stream.machine.ts": "71dab655ade6e8f6d6addc7952872d5ee18034f4fc1820c3489bf8671b7a6d77",
+    "tests/inference-stream-ownership.test.ts": "a4a9383ce2634c0a2c51a9024f237f7dee002a57d384f83681d2e97d4c1c2727"
+  },
+  "finding": "Native owner shutdown joined cleanup but resolved an aborted SDK message instead of retaining execution interruption.",
+  "repair": "Host shutdown sends request-machine INTERRUPT, which retains interruption in its outcome through joined cleanup. Ordinary caller/iterator STOP behavior is unchanged.",
+  "evidence": {
+    "nativeBefore": "/private/tmp/b16-composed-communication-native.log",
+    "focusedBefore": "/private/tmp/b16-owner-shutdown-interruption-before.log",
+    "focusedAfter": "/private/tmp/b16-owner-shutdown-interruption-after.log",
+    "focused62": "/private/tmp/b16-owner-shutdown-focused.log",
+    "types": "/private/tmp/b16-owner-shutdown-types.log",
+    "lint": "/private/tmp/b16-owner-shutdown-lint.log",
+    "format": "/private/tmp/b16-owner-shutdown-format.log",
+    "negative": "/private/tmp/b16-owner-shutdown-negative.log"
+  },
+  "negative": "Bundle-only replacement request.interrupt() -> request.abort() fails both interruption assertions. Production source unchanged.",
+  "scope": "Only these three paths edited. No native fixture/script assertion changes. Parent owns full native rerun, shared docs and integrated gates."
+}

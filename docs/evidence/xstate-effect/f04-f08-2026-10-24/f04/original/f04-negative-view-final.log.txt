@@ -1,0 +1,47 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/terminal-ui-lifecycle.test.ts > an A to B to A navigation cycle rejects the old mutation selection
+[17:31:52.107] ERROR (#1): Error [AssertionError]: expected 'submitted' to be 'A' // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/terminal-ui-lifecycle.test.ts:473:52 {
+  actual: 'submitted',
+  expected: 'A',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/terminal-ui-lifecycle.test.ts (12 tests | 1 failed | 11 skipped) 28ms
+   × an A to B to A navigation cycle rejects the old mutation selection 28ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-ui-lifecycle.test.ts > an A to B to A navigation cycle rejects the old mutation selection
+AssertionError: expected 'submitted' to be 'A' // Object.is equality
+
+Expected: "A"
+Received: "submitted"
+
+ ❯ tests/terminal-ui-lifecycle.test.ts:473:52
+    471|       yield* Deferred.succeed(release, undefined)
+    472|       expect(yield* Fiber.join(request)).toBe(true)
+    473|       expect(actor.getSnapshot().context.selected).toBe("A")
+       |                                                    ^
+    474|       expect(selected).toEqual([])
+    475|     }).pipe(Effect.scoped)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  17:31:51
+   Duration  889ms (transform 50%, import 42%, tests 4%, setup 4%)
+

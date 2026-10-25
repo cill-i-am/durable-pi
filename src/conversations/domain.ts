@@ -8,12 +8,10 @@ import type { TurnOrigin } from "./contracts"
 import {
   ConversationConflict,
   ConversationFull,
-  isPending,
   type ModelSettings,
   type Submission,
   type Turn,
   type PreparedMessage,
-  type TurnOutcome,
 } from "./turns"
 
 export function submissionIdentity(
@@ -130,55 +128,3 @@ export function admissionContent(
     skill_context: parent ? "" : skillContext(skills),
   }
 }
-export function stopTransition(turn: Turn | undefined, root: Turn | undefined) {
-  if (!turn || !isPending(turn)) return
-  if (!root) throw new Error("A pending conversation member has no root turn")
-  return { rootId: root.id, change: isPending(root) }
-}
-export const stopRoot = (turn: Turn | undefined) =>
-  turn && isPending(turn) ? (turn.parent_id ?? turn.id) : undefined
-export const submittedDelivery = (turn: Turn) =>
-  turn.delivery === "queued" ? "accepted" : turn.delivery
-export function finishTransition(
-  root: Turn,
-  current: Turn,
-  members: readonly Turn[],
-  outcomes: readonly TurnOutcome[],
-  answer: string,
-  error: string | null
-) {
-  if (current.revision !== root.revision || !isPending(current)) return
-  if (
-    members.length !== outcomes.length ||
-    members.some(
-      (member) => !outcomes.some((outcome) => outcome.id === member.id)
-    )
-  )
-    return
-  const stopped = current.status === "stopping"
-  return {
-    members: outcomes.map(
-      (outcome): TurnOutcome & { status: Turn["status"] } => ({
-        ...outcome,
-        status:
-          outcome.id === root.id && stopped
-            ? "cancelled"
-            : outcome.delivery === "answered"
-              ? "done"
-              : stopped
-                ? "cancelled"
-                : "failed",
-      })
-    ),
-    answer,
-    error: stopped ? null : error,
-  }
-}
-export const canPrepare = (turn: Turn) => turn.status === "queued"
-export const canSavePrompt = (turn: Turn) => turn.prompt === null
-export const canSaveSession = (turn: Turn) => turn.session_id === null
-export const canSubmit = (turn: Turn) =>
-  !turn.files_pending &&
-  ["queued", "preparing", "running"].includes(turn.status)
-export const canConsume = (turn: Turn) =>
-  ["queued", "accepted"].includes(turn.delivery)

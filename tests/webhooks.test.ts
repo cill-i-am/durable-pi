@@ -165,7 +165,7 @@ describe("inbound webhook authority and durable receipts", () => {
       operationId: crypto.randomUUID(),
     })
     f.store.accept(f.id, f.hash, "event-2", f.payload, f.payloadHash)
-    f.routines.deliver(() => {})
+    f.routines.deliver(() => {}, Date.now() + 60_000)
     f.store.configure({
       ...f.change,
       expectedRevision: 3,
@@ -216,8 +216,16 @@ describe("inbound webhook authority and durable receipts", () => {
     expect(f.routines.inFlight()).toBeUndefined()
     f.db.run("DROP TRIGGER fail_event")
     f.store.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash)
-    f.routines.deliver((run) =>
-      conversations.admit({ operationId: run.turnId, text: run.prompt })
+    f.routines.deliver(
+      (run, discoveryDeadline) =>
+        conversations.admit(
+          { operationId: run.turnId, text: run.prompt },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline }
+        ),
+      Date.now() + 60_000
     )
     expect(Effect.runSync(conversations.recent())[0]?.text).toContain(
       "untrusted source material"
@@ -290,7 +298,9 @@ describe("webhook HTTP boundary", () => {
       const exit = await Effect.runPromiseExit(
         surface === "owner"
           ? webhookOwnerRequest(f.store.service, request, "webhooks/configure")
-          : webhookIncoming(f.store.service, request, () => Effect.void)
+          : webhookIncoming(f.store.service, request, () =>
+              Effect.succeed(Date.now() + 60_000)
+            )
       )
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit))
@@ -331,7 +341,7 @@ describe("webhook HTTP boundary", () => {
           entered.resolve()
           await closing.promise
         }
-      })
+      }).pipe(Effect.as(Date.now() + 60_000))
     let settled = false
     const observed = Effect.runPromiseExit(
       webhookIncoming(f.store.service, incoming(f), wake),
@@ -349,7 +359,9 @@ describe("webhook HTTP boundary", () => {
     const exit = await observed
     expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
     const replay = await Effect.runPromise(
-      webhookIncoming(f.store.service, incoming(f), () => Effect.void)
+      webhookIncoming(f.store.service, incoming(f), () =>
+        Effect.succeed(Date.now() + 60_000)
+      )
     )
     expect(replay.status).toBe(200)
     expect(f.store.info(f.id).accepted).toBe(1)
@@ -362,12 +374,16 @@ describe("webhook HTTP boundary", () => {
       .mockResolvedValueOnce()
       .mockRejectedValueOnce(new Error("provider secret must not surface"))
     const first = await Effect.runPromise(
-      webhookIncoming(f.store.service, incoming(f), () => webhookNative(wake))
+      webhookIncoming(f.store.service, incoming(f), () =>
+        webhookNative(wake).pipe(Effect.as(Date.now() + 60_000))
+      )
     )
     expect(first.status).toBe(503)
     expect(await first.text()).not.toContain("provider secret")
     const retried = await Effect.runPromise(
-      webhookIncoming(f.store.service, incoming(f), () => webhookNative(wake))
+      webhookIncoming(f.store.service, incoming(f), () =>
+        webhookNative(wake).pipe(Effect.as(Date.now() + 60_000))
+      )
     )
     expect(retried.status).toBe(200)
     expect(f.routines.runs()).toHaveLength(1)
@@ -375,7 +391,7 @@ describe("webhook HTTP boundary", () => {
       webhookIncoming(
         f.store.service,
         incoming(f, f.payload, f.key, "event-2"),
-        () => webhookNative(wake)
+        () => webhookNative(wake).pipe(Effect.as(Date.now() + 60_000))
       )
     )
     expect(busy.status).toBe(429)
@@ -392,10 +408,8 @@ describe("webhook HTTP boundary", () => {
       expect(
         (
           await Effect.runPromise(
-            webhookIncoming(
-              f.store.service,
-              incoming(f, body),
-              () => Effect.void
+            webhookIncoming(f.store.service, incoming(f, body), () =>
+              Effect.succeed(Date.now() + 60_000)
             )
           )
         ).status
@@ -409,7 +423,7 @@ describe("webhook HTTP boundary", () => {
             expectedRevision: 1,
             hash: null,
           })
-        })
+        }).pipe(Effect.as(Date.now() + 60_000))
       )
     )
     expect(revoked.status).toBe(401)
@@ -430,7 +444,7 @@ describe("webhook HTTP boundary", () => {
       webhookIncoming(
         f.store.service,
         incoming(f, JSON.stringify({ data: "y".repeat(16360) })),
-        () => Effect.void
+        () => Effect.succeed(Date.now() + 60_000)
       )
     )
     expect(result.status).toBe(202)
@@ -442,7 +456,9 @@ describe("webhook HTTP boundary", () => {
     const body = '{"values":[' + Array(3000).fill("1e20").join(",") + "]}"
     expect(body.length).toBeLessThan(16384)
     const result = await Effect.runPromise(
-      webhookIncoming(f.store.service, incoming(f, body), () => Effect.void)
+      webhookIncoming(f.store.service, incoming(f, body), () =>
+        Effect.succeed(Date.now() + 60_000)
+      )
     )
     expect(result.status).toBe(413)
     expect(f.routines.inFlight()).toBeUndefined()
@@ -456,7 +472,9 @@ describe("webhook HTTP boundary", () => {
       "CREATE TRIGGER fail_event BEFORE INSERT ON webhook_events BEGIN SELECT RAISE(ABORT,'private database detail'); END"
     )
     const result = await Effect.runPromise(
-      webhookIncoming(f.store.service, incoming(f), () => Effect.void)
+      webhookIncoming(f.store.service, incoming(f), () =>
+        Effect.succeed(Date.now() + 60_000)
+      )
     )
     expect(result.status).toBe(503)
     expect(await result.text()).not.toContain("private database detail")
@@ -466,7 +484,9 @@ describe("webhook HTTP boundary", () => {
     expect(
       (
         await Effect.runPromise(
-          webhookIncoming(f.store.service, incoming(f), () => Effect.void)
+          webhookIncoming(f.store.service, incoming(f), () =>
+            Effect.succeed(Date.now() + 60_000)
+          )
         )
       ).status
     ).toBe(202)

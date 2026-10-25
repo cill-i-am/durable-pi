@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeTerminalOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-owner.ts'
+import {makeBrowserOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-owner.ts'
+import {makeExecutionOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/execution-owner.ts'
+import {makeAccessOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access-owner.ts'
+import {makeConnectionsOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections-owner.ts'
+import {ObjectStore} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/store.ts'
+import {authOwner,authNative} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-owner.ts'
+import {securityMachine} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/security.machine.ts'
+import {nativeOperation} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/interop.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/package.json')
+const {Cause,Context,Effect,Exit,Scope}=await import(require.resolve('effect'))
+const {createEffectActor}=await import(require.resolve('@xstate/effect'))
+class NativeRequest extends Context.Service()('F04F08.NativeRequest'){}
+const results=[]
+for(const [index,name] of ['F04-terminal','F05-browser','F05-execution','F06-access','F06-connections','F07-objects','F08-auth'].entries()){
+ let enter!:()=>void,abort!:()=>void,reject!:(reason:unknown)=>void
+ const entered=new Promise<void>(r=>enter=r),aborted=new Promise<void>(r=>abort=r)
+ const scope=await Effect.runPromise(Scope.make())
+ const native=(signal:AbortSignal)=>{signal.addEventListener('abort',abort,{once:true});enter();return new Promise<never>((_,fail)=>reject=fail)}
+ const read=()=>nativeOperation(native,x=>x),forbidden=()=>Effect.sync(()=>assert.fail('no native commands'))
+ const work={read,command:forbidden,update:forbidden,select:()=>Effect.void}
+ const input={agentId:'review',visible:true,selected:null,open:true}
+ let creation:any,store:any
+ if(name==='F04-terminal')creation=makeTerminalOwner(input,work)
+ if(name==='F05-browser')creation=makeBrowserOwner(input,work)
+ if(name==='F05-execution')creation=makeExecutionOwner(input,work)
+ if(name==='F06-access')creation=makeAccessOwner(input,work)
+ if(name==='F06-connections')creation=makeConnectionsOwner(input,work)
+ if(name==='F07-objects'){store=new ObjectStore((_path,_body,signal)=>native(signal!),'review');void store.refresh()}
+ if(name==='F08-auth')creation=authOwner(observe=>createEffectActor(securityMachine({read:()=>observe(authNative(native,'request failed')),revoke:forbidden,signOut:forbidden,close:()=>Effect.void}),{input:{currentId:'review'}}))
+ if(creation)await Effect.runPromise(creation.pipe(Scope.provide(scope)))
+ await entered;let settled=false
+ const closing=(store?store.dispose().then(()=>Exit.void,(cause:any)=>Exit.failCause(cause)):Effect.runPromiseExit(Scope.close(scope,Exit.void))).then((x:any)=>{settled=true;return x})
+ await aborted;assert.equal(settled,false)
+ const annotations=Context.make(NativeRequest,name),sentinel=90400+index
+ reject(Cause.fromReasons([Cause.makeFailReason(`${name} native checked`).annotate(annotations),Cause.makeInterruptReason(sentinel).annotate(annotations)]))
+ const exit=await closing,reasons=Exit.isFailure(exit)?exit.cause.reasons:[]
+ const interrupt=reasons.find((r:any)=>r._tag==='Interrupt'&&r.fiberId===sentinel),checked=reasons.find((r:any)=>(r._tag==='Die'&&r.defect?._tag==='Fail')||r._tag==='Fail')
+ const result={owner:name,joined:true,scopeFailure:Exit.isFailure(exit),nativeInterrupt:!!interrupt,interruptAnnotation:interrupt?.annotations.get(NativeRequest.key),nativeChecked:!!checked,checkedAnnotation:checked?._tag==='Die'?checked.defect.annotations.get(NativeRequest.key):checked?.annotations.get(NativeRequest.key)}
+ results.push(result);console.log(JSON.stringify(result))
+}
+for(const r of results){assert.equal(r.scopeFailure,true,`${r.owner} lost compound failure`);assert.equal(r.nativeInterrupt,true);assert.equal(r.interruptAnnotation,r.owner);assert.equal(r.nativeChecked,true);assert.equal(r.checkedAnnotation,r.owner)}

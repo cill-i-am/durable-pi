@@ -1,0 +1,19 @@
+
+Running 10 tests using 1 worker
+
+(node:99840) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/files-lifecycle.spec.ts:180:1 › duplicate upload stays single and uncertain retry keeps the original reservation (383ms)
+  ✓   2 [desktop] › tests/browser/files-lifecycle.spec.ts:224:1 › late upload completion cannot replace the new agent's files or draft selection (212ms)
+  ✓   3 [desktop] › tests/browser/files-lifecycle.spec.ts:254:1 › a pre-upload list response cannot erase the published file while the fresh read is held (197ms)
+  ✓   4 [desktop] › tests/browser/files-lifecycle.spec.ts:292:1 › a restored pending reservation keeps its backend identity when the user chooses the file again (196ms)
+  ✓   5 [desktop] › tests/browser/files-lifecycle.spec.ts:323:1 › capacity rejection sends no upload and explicit refresh clears the shared error (184ms)
+(node:99878) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [mobile] › tests/browser/files-lifecycle.spec.ts:180:1 › duplicate upload stays single and uncertain retry keeps the original reservation (377ms)
+  ✓   7 [mobile] › tests/browser/files-lifecycle.spec.ts:224:1 › late upload completion cannot replace the new agent's files or draft selection (310ms)
+  ✓   8 [mobile] › tests/browser/files-lifecycle.spec.ts:254:1 › a pre-upload list response cannot erase the published file while the fresh read is held (287ms)
+  ✓   9 [mobile] › tests/browser/files-lifecycle.spec.ts:292:1 › a restored pending reservation keeps its backend identity when the user chooses the file again (244ms)
+  ✓  10 [mobile] › tests/browser/files-lifecycle.spec.ts:323:1 › capacity rejection sends no upload and explicit refresh clears the shared error (241ms)
+
+  10 passed (4.1s)

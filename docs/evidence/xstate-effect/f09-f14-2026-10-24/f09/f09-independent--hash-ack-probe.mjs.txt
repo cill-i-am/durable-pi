@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {createServer} from 'node:http'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi'
+const require=createRequire(root+'/package.json'),{build}=createRequire(require.resolve('alchemy'))('esbuild'),{chromium}=require('@playwright/test')
+const result=await build({stdin:{contents:`import {createRoot} from 'react-dom/client';import {JoinFamily} from './src/features/family/join';createRoot(document.getElementById('root')).render(<JoinFamily/>);`,resolveDir:root,loader:'tsx'},plugins:[{name:'synthetic-ports',setup(b){b.onLoad({filter:/\/auth\/client\.ts$/},()=>({contents:`const data={user:{id:'member',email:'member@example.invalid',emailVerified:true}};const refetch=()=>new Promise(resolve=>{window.releaseRefresh=resolve});export const authClient={useSession:()=>({data,isPending:false,refetch}),organization:{acceptInvitation:async()=>({data:{}})},signOut:async()=>({data:{}})};export const authFetch=(...args)=>fetch(...args);`,loader:'ts'}));b.onLoad({filter:/\/auth\/auth-frame\.tsx$/},()=>({contents:`export function AuthFrame({title,children}){return <main><h1>{title}</h1>{children}</main>}`,loader:'tsx'}))}}],bundle:true,write:false,platform:'browser',format:'iife',tsconfig:root+'/tsconfig.json',define:{__PI_BUILD_REVISION__:JSON.stringify('a'.repeat(40))}})
+const server=createServer((req,res)=>{res.setHeader('content-type',req.url==='/bundle.js'?'text/javascript':'text/html');res.end(req.url==='/bundle.js'?result.outputFiles[0].text:`<div id='root'></div><script src='/bundle.js'></script>`)})
+await new Promise(r=>server.listen(0,'127.0.0.1',r))
+const browser=await chromium.launch({headless:true}),page=await browser.newPage()
+try{
+ await page.addInitScript(()=>{window.previewIds=[];window.fetch=async(url,init)=>{window.previewIds.push(JSON.parse(init.body).invitation);return Response.json({email:'member@example.invalid',familyName:'Family',inviterName:'Owner',status:'pending'})}})
+ await page.goto(`http://127.0.0.1:${server.address().port}/join#invitation=old`)
+ await page.getByRole('button',{name:'Join family',exact:true}).click()
+ await page.waitForFunction(()=>!!window.releaseRefresh)
+ await page.evaluate(()=>{location.hash='invitation=new';window.releaseRefresh()})
+ await page.waitForTimeout(100)
+ const observed=await page.evaluate(()=>({hash:location.hash,title:document.querySelector('h1').textContent,previews:window.previewIds,stored:sessionStorage.getItem('pi:family-invitation:v1')}))
+ console.log(JSON.stringify(observed))
+ assert.equal(observed.hash,'#invitation=new','accepted old invitation must not erase URL updated before refresh acknowledgement')
+ assert.notEqual(observed.title,'Your space is ready')
+}finally{await browser.close();await new Promise(r=>server.close(r))}

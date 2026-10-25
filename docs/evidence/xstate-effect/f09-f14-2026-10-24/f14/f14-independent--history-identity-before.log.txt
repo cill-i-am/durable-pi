@@ -1,0 +1,22 @@
+{"source":"src/features/activity/activity-workbench.tsx","sha256":"499746a63a5dc7c79623105a048903dc3354085854d71ed4f9bda3885c807167","instrumentation":"export existing PlanInspector only"}
+{"foreign":1,"alert":[]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Another plan revision must not be admitted to this plan history
+
+1 !== 0
+
+    at file:///private/tmp/f14-independent/history-identity.mjs:12:542
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:541:9) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

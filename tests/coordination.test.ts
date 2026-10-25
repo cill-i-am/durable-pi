@@ -71,6 +71,7 @@ function fixture() {
         text: "Latest completed answer",
         createdAt: now,
       }),
+    prearm: () => Effect.succeed(now + 60000),
     deliver: (message) =>
       Effect.sync(() => {
         delivered.push(message)
@@ -289,10 +290,16 @@ it.effect(
     Effect.gen(function* () {
       const db = database(),
         turns = new ConversationStore(db, { model: "test", thinking: "off" })
-      const root = (yield* turns.admit({
-        operationId: "session-a",
-        text: "Original task",
-      })).turn
+      const root = (yield* turns.admit(
+        {
+          operationId: "session-a",
+          text: "Original task",
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )).turn
       yield* turns.saveSession(root.id, "42")
       db.run("UPDATE chat_turns SET status='done' WHERE id=?", root.id)
       const input = {
@@ -304,19 +311,28 @@ it.effect(
           messageId: "message-a",
         },
       }
-      const accepted = yield* turns.resumeMessage(input)
+      const accepted = yield* turns.resumeMessage(input, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
       expect(accepted.turn).toMatchObject({
         session_id: "42",
         mode: "followUp",
         parent_id: null,
       })
       yield* turns.submitted(accepted.turn.id, "42")
-      expect((yield* turns.resumeMessage(input)).accepted).toBe(false)
-      const next = yield* turns.resumeMessage({
-        ...input,
-        operationId: "message-b",
-        origin: { ...input.origin, messageId: "message-b" },
-      })
+      expect(
+        (yield* turns.resumeMessage(input, {
+          discoveryDeadline: Date.now() + 60_000,
+        })).accepted
+      ).toBe(false)
+      const next = yield* turns.resumeMessage(
+        {
+          ...input,
+          operationId: "message-b",
+          origin: { ...input.origin, messageId: "message-b" },
+        },
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
       expect(next.turn.parent_id).toBe(accepted.turn.id)
       expect((yield* turns.sessionForNative(42))?.id).toBe(root.id)
       expect((yield* turns.sessions()).map((s) => s.id)).toEqual([root.id])
@@ -324,11 +340,17 @@ it.effect(
         "UPDATE chat_turns SET status='failed' WHERE id=?",
         accepted.turn.id
       )
-      const retry = (yield* turns.admit({
-        operationId: "retry-message",
-        retryOf: accepted.turn.id,
-        text: input.text,
-      })).turn
+      const retry = (yield* turns.admit(
+        {
+          operationId: "retry-message",
+          retryOf: accepted.turn.id,
+          text: input.text,
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )).turn
       expect(retry.session_id).toBe("42")
       expect(retry.origin).toEqual(input.origin)
     })
@@ -344,7 +366,13 @@ it.effect(
         thinking: "off",
       })
       for (const id of ["a", "b"]) {
-        yield* turns.admit({ operationId: id, text: "Retained original" })
+        yield* turns.admit(
+          { operationId: id, text: "Retained original" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
         yield* turns.saveSession(id, id === "a" ? "1" : "4")
       }
       const receipt = yield* f.service.send(1, "before-revoke", {
@@ -433,5 +461,152 @@ it.effect(
         attempts: 7,
       })
       expect(yield* f.store.nextWake()).toBeUndefined()
+    })
+)
+
+it.effect(
+  "requires a live prearmed lease at message acceptance and retains a lost wake",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const send = () =>
+        f.service.send(1, "leased", {
+          to: { sessionId: "b", agentId: "main" },
+          text: "Retain discovery",
+        })
+      f.host.prearm = () =>
+        Effect.fail(fail("unavailable", "Prearm unavailable"))
+      expect(yield* Effect.flip(send())).toMatchObject({ code: "unavailable" })
+      expect(yield* f.store.operation("leased")).toBeUndefined()
+      f.host.prearm = () =>
+        Effect.sync(() => {
+          f.advance(60001)
+          return 61000
+        })
+      expect(yield* Effect.flip(send())).toMatchObject({ code: "unavailable" })
+      expect(yield* f.store.operation("leased")).toBeUndefined()
+      f.host.prearm = () => Effect.succeed(200000)
+      f.host.wake = () =>
+        Effect.fail(fail("unavailable", "Wake acknowledgement lost"))
+      expect(yield* Effect.flip(send())).toMatchObject({ code: "unavailable" })
+      const accepted = yield* f.store.operation("leased")
+      expect(accepted).toMatchObject({ phase: "pending", state: "accepted" })
+      yield* f.service.pump()
+      expect(yield* f.store.get(accepted!.id)).toMatchObject({
+        phase: "delivered",
+      })
+      expect(f.delivered).toHaveLength(1)
+    })
+)
+
+it.effect(
+  "rechecks source authority after prearm before accepting a new message",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      f.host.prearm = () =>
+        Effect.sync(() => {
+          f.archive()
+          return 61000
+        })
+      expect(
+        yield* Effect.flip(
+          f.service.send(1, "revoked-during-prearm", {
+            to: { sessionId: "b", agentId: "main" },
+            text: "Do not accept after revoke",
+          })
+        )
+      ).toMatchObject({ code: "closed" })
+      expect(yield* f.store.operation("revoked-during-prearm")).toBeUndefined()
+    })
+)
+
+it.effect(
+  "keeps warm dispatch ownership and restores only the cold original message",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const receipt = yield* f.service.send(1, "restore-original", {
+        to: { sessionId: "b", agentId: "main" },
+        text: "Same original text",
+      })
+      const row = (yield* f.store.get(receipt.id))!
+      const claim = yield* f.store.claim(
+        row.id,
+        row.revision,
+        1000,
+        "old-owner"
+      )
+      expect(claim).toMatchObject({
+        phase: "dispatching",
+        attempt_id: "old-owner",
+      })
+      f.advance(30000)
+      yield* f.service.pump()
+      expect(f.delivered).toEqual([])
+      expect(yield* f.store.nextWake()).toBeUndefined()
+      const reopened = new AgentCoordination(
+        new CoordinationStore(f.db),
+        f.host,
+        () => 31000
+      )
+      yield* reopened.restore()
+      expect(yield* f.store.get(receipt.id)).toMatchObject({
+        phase: "pending",
+        attempt_id: null,
+      })
+      yield* f.store.delivered(receipt.id, "old-owner")
+      expect(yield* f.store.get(receipt.id)).toMatchObject({ phase: "pending" })
+      yield* reopened.pump()
+      expect(f.delivered.map((message) => message.id)).toEqual([receipt.id])
+    })
+)
+
+it.effect(
+  "revokes an owned message without inventing native acknowledgement and fences exhaustion",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const receipt = yield* f.service.send(1, "stop-owned", {
+        to: { sessionId: "b", agentId: "main" },
+        text: "Uncertain at revoke",
+      })
+      const row = (yield* f.store.get(receipt.id))!
+      yield* f.store.claim(row.id, row.revision, 1000, "owned")
+      yield* f.store.exhaust(() => false)
+      expect(yield* f.store.get(row.id)).toMatchObject({ phase: "dispatching" })
+      yield* f.store.close("a")
+      yield* f.store.delivered(row.id, "owned")
+      expect(yield* f.store.get(row.id)).toMatchObject({
+        phase: "unconfirmed",
+        state: "failed",
+      })
+      yield* f.service.restore()
+      yield* f.service.pump()
+      expect(f.delivered).toEqual([])
+      expect(yield* f.store.nextWake()).toBeUndefined()
+    })
+)
+
+it.effect(
+  "rejects future and contradictory stored message lifecycle data",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const receipt = yield* f.service.send(1, "corrupt", {
+        to: { sessionId: "b", agentId: "main" },
+        text: "Retained original",
+      })
+      f.db.run(
+        "UPDATE agent_messages SET workflow_version=2 WHERE id=?",
+        receipt.id
+      )
+      expect((yield* Effect.exit(f.store.get(receipt.id)))._tag).toBe("Failure")
+      f.db.run(
+        "UPDATE agent_messages SET workflow_version=1, phase='dispatching' WHERE id=?",
+        receipt.id
+      )
+      expect((yield* Effect.exit(f.store.get(receipt.id)))._tag).toBe("Failure")
+      expect(f.delivered).toEqual([])
     })
 )

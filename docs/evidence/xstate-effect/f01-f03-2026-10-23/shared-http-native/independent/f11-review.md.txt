@@ -1,0 +1,21 @@
+# F11 independent review — both reproduced findings closed
+
+All 20 frozen source hashes match `/private/tmp/f11-source-freeze.json`. Read the application/detail/list/form/frame machines, owners, React integration, sandbox document generator and focused tests independently. No production edits or external requests.
+
+## P2: actual HTTP401 response body is released without cancellation
+
+`appRequests` delegates to shared `api`, which throws an ApiError for401 before consuming/cancelling the body. Closing `makeAppOwner` therefore completes while the unread native stream remains open. Actual `appRequests` + `makeAppOwner` + synthetic fetch Response with held body cancellation records cancel0 and scope closure already complete. The same path supplies Apps reads/mutations/cancel, and the shared helper also serves render/list. Probe firsttest, red `/private/tmp/f11-independent-before-final.log`.
+
+## P2: late native Fail+Interrupt Cause disappears during joined shutdown
+
+`appWorkFailures` only retains Exits containing Die; `nativeOperation` teardown similarly only reattaches late native Die. A held actual fetch rejecting after its abort with `Fail('native failed')` plus annotated native Interrupt81234 (without Die) is joined but scope closure returns Success. The original checked failure, native fiberId and annotation are lost. Probe secondtest demonstrates the actual production request boundary. Workspace_wave owns the scoped correction.
+
+## Other reviewed boundaries
+
+Actual frameWork bridge probe passes: forged origin, different source, stale channel, changed revision and disabled owner cannot invoke onAction; valid current frame invokes exactly once, listener is removed by scope closure. Source review confirms random channel per render, keyed frame identity, sandbox opaque origin, CSP constraints and final current-revision checks. Form editRevision includes every edit/reset/keep transition, guarding newer drafts including ABA. App uncertain attempt path/input/operationId is retained unchanged for explicit retry/cancel; in-flight duplicate commands are rejected; already-applied cancellation retains original identity until settling reload succeeds. Callers wait on ticket or terminal actor notifications.
+
+No other concrete finding from this bounded review. Repository8 lifecycle tests and mounted10browser evidence were inspected, not broadly rerun. Independent test result2fail/1pass reflects the two findings above. Existing worktree source remains frozen until owner correction, followed by unchanged-probe recheck.
+
+## Correction recheck
+
+Final refreshed24-path freeze `/private/tmp/f11-source-freeze.json` matches every source hash. Re-read shared client/native helper and appWorkFailures correction. Exact original3probes pass unchanged in `/private/tmp/f11-independent-after.log`: unread401 body cancellation is joined; annotated native Fail+Interrupt without Die survives joined shutdown; frame authorization and listener cleanup remain correct. Shared files are parent-approved single-owner changes by workspace_wave: client49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66; interop3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99. API errors retain status/message/code; malformed ordinary JSON keeps fallback; structured body Cause survives; unread unlocked bodies cancel before returning. No remaining concrete finding in this bounded review. Native provider or auth effects were not exercised.

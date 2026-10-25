@@ -1,0 +1,7 @@
+{
+  "/private/tmp/model-defaults-independent/probe.mjs": "4343443e1fb36577f6cee5b54503e87db044ed1f03729cb3b194b1d9f1161f63",
+  "/private/tmp/model-defaults-independent/before-results.json": "fe5d2ad2eabe68921d069bbe17bba9d0cb2ef5c3d51b4a542eb1e286eba77144",
+  "/private/tmp/model-defaults-independent/before.log": "54140ecc67338c5b67d9b359d109dd99e348d9f7a1bc29281fc36f5f61034ffe",
+  "/private/tmp/model-defaults-independent/before-source/use-model-catalog.ts": "9e3aa4ff080e3e93b4180c87b5dd152ba72832c68fa30eb55d339f6be16fe303",
+  "/private/tmp/model-defaults-independent/before-source/model-defaults.tsx": "c93f7e4c15e072f9419ddfa45262cb96f8932388ab78f4420869bea6fe3c4efa"
+}

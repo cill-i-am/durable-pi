@@ -24,7 +24,7 @@ class Socket extends EventTarget {
     this.dispatchEvent(new MessageEvent("message", { data }))
   }
 }
-function fixture() {
+async function fixture() {
   vi.stubGlobal("WebSocket", Socket)
   const listeners: Record<string, (value: never) => void> = {}
   const disposed = vi.fn()
@@ -48,6 +48,7 @@ function fixture() {
   )
   addon.activate(terminal as unknown as Terminal)
   addon.connect()
+  await vi.waitFor(() => expect(Socket.sockets).toHaveLength(1))
   return {
     addon,
     terminal,
@@ -63,11 +64,12 @@ afterEach(() => {
   vi.useRealTimers()
   Socket.sockets = []
 })
-it("waits for readiness, sends UTF-8 in bounded frames, and renders binary output", () => {
-  const { addon, socket, listeners, write, changed } = fixture()
+it("waits for readiness, sends UTF-8 in bounded frames, and renders binary output", async () => {
+  const { addon, socket, listeners, write, changed } = await fixture()
   listeners.data!("café 🧭" as never)
   expect(socket.sent).toEqual([])
   socket.message('{"type":"ready"}')
+  await vi.waitFor(() => expect(socket.sent).toHaveLength(2))
   expect(JSON.parse(socket.sent[0] as string)).toEqual({
     type: "resize",
     cols: 240,
@@ -75,32 +77,36 @@ it("waits for readiness, sends UTF-8 in bounded frames, and renders binary outpu
   })
   expect(new TextDecoder().decode(socket.sent[1] as Uint8Array)).toBe("café 🧭")
   listeners.data!("x".repeat(40000) as never)
+  await vi.waitFor(() => expect(socket.sent).toHaveLength(5))
   expect(socket.sent.slice(2).map((x) => x.length)).toEqual([
     16384, 16384, 7232,
   ])
   const output = new TextEncoder().encode("output")
   socket.message(output.buffer)
-  expect(write).toHaveBeenCalledWith(output)
+  await vi.waitFor(() => expect(write).toHaveBeenCalledWith(output))
   expect(changed).toHaveBeenLastCalledWith("connected")
   addon.dispose()
+  await addon.settled
 })
-it("reconnects after close, ignores stale callbacks, and disposes timers and listeners", () => {
+it("reconnects after close, ignores stale callbacks, and disposes timers and listeners", async () => {
   vi.useFakeTimers()
-  const { addon, socket, disposed, write } = fixture()
+  const { addon, socket, disposed, write } = await fixture()
   socket.close()
-  vi.advanceTimersByTime(1000)
+  await vi.advanceTimersByTimeAsync(1001)
   expect(Socket.sockets).toHaveLength(2)
   socket.message(new TextEncoder().encode("stale").buffer)
   expect(write).not.toHaveBeenCalled()
   addon.dispose()
-  vi.advanceTimersByTime(10000)
+  await vi.advanceTimersByTimeAsync(10000)
+  await addon.settled
   expect(Socket.sockets).toHaveLength(2)
   expect(disposed).toHaveBeenCalledTimes(3)
 })
-it("disconnects when queued input exceeds the bound", () => {
-  const { addon, socket, listeners } = fixture()
+it("disconnects when queued input exceeds the bound", async () => {
+  const { addon, socket, listeners } = await fixture()
   listeners.data!("x".repeat(65537) as never)
-  expect(socket.readyState).toBe(3)
+  await vi.waitFor(() => expect(socket.readyState).toBe(3))
   expect(socket.sent).toEqual([])
   addon.dispose()
+  await addon.settled
 })

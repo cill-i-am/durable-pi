@@ -1,5 +1,14 @@
 import { expect, it } from "@effect/vitest"
-import { Clock, Context, Effect, Layer } from "effect"
+import {
+  Cause,
+  Clock,
+  Context,
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+} from "effect"
 
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import { homeAgentId } from "../src/agents/domain"
@@ -15,6 +24,7 @@ import { workspaceLayer } from "../src/workspace/adapters/storage"
 import { WorkspaceAdmission } from "../src/workspace/admission"
 import { prepareAttachments } from "../src/workspace/attachments"
 import { DocumentUnreadable } from "../src/workspace/documents"
+import { FileRejected } from "../src/workspace/files"
 import { Workspace } from "../src/workspace/workspace"
 import { conversationFixture } from "./conversation-fixture"
 import { catalog } from "./inference-fixture"
@@ -56,6 +66,10 @@ const fixture = Effect.gen(function* () {
       "attachments",
       () => Effect.succeed(true),
       {
+        // Store-only preparation probes advance extraction explicitly; this
+        // finite lease does not prove native alarm delivery.
+        arm: () =>
+          Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
         document: () =>
           Effect.gen(function* () {
             state.calls++
@@ -89,6 +103,7 @@ const fixture = Effect.gen(function* () {
       connected: () => Effect.succeed(true),
       archived: () =>
         configuration.read().pipe(Effect.map((c) => c?.status === "archived")),
+      prearm: () => Effect.sync(() => Date.now() + 60_000),
       catalog: () => Effect.succeed(catalog),
       wake: () => Effect.void,
       notify: () => Effect.void,
@@ -377,5 +392,101 @@ it.effect(
         error: expect.stringContaining("password protected"),
       })
       expect(f.events.filter((e) => e === "submit")).toHaveLength(1)
+    })
+)
+
+it.effect(
+  "prepared files cannot be materialized by a different live root owner",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        file = yield* f.pdf(),
+        id = crypto.randomUUID()
+      yield* f.admit({ operationId: id, text: "Read", files: [file.id] })
+      yield* f.workspace.extractNext()
+      const turn = (yield* f.store.get(id))!
+      expect(
+        yield* f.store.claimControl(
+          id,
+          "current-owner",
+          (yield* Clock.currentTimeMillis) + 60_000
+        )
+      ).toBeDefined()
+      expect(yield* f.resume(turn, "stale-owner")).toEqual({ ready: false })
+      expect(yield* f.store.get(id)).toMatchObject({
+        files_pending: true,
+        input: [],
+      })
+      expect(yield* f.resume(turn, "current-owner")).toEqual({ ready: true })
+      expect(yield* f.store.get(id)).toMatchObject({ files_pending: false })
+    })
+)
+
+it.effect(
+  "attachment rejection with a defect cannot become an ordinary readiness error",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        file = yield* f.pdf(),
+        id = crypto.randomUUID()
+      yield* f.admit({ operationId: id, text: "Read", files: [file.id] })
+      yield* f.workspace.extractNext()
+      f.workspace.attach = () =>
+        Effect.failCause(
+          Cause.combine(
+            Cause.fail(new FileRejected({ message: "ordinary rejection" })),
+            Cause.die("attachment cleanup defect")
+          )
+        )
+      const exit = yield* f.resume((yield* f.store.get(id))!).pipe(Effect.exit)
+      expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+      expect(Exit.isFailure(exit) && Cause.pretty(exit.cause)).toContain(
+        "attachment cleanup defect"
+      )
+      expect(Exit.isFailure(exit) && Cause.pretty(exit.cause)).toContain(
+        "ordinary rejection"
+      )
+      expect(yield* f.store.get(id)).toMatchObject({ files_pending: true })
+    })
+)
+
+it.effect(
+  "interrupted attachment preparation joins and retains late cleanup failure",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        file = yield* f.pdf(),
+        id = crypto.randomUUID(),
+        entered = yield* Deferred.make<void>(),
+        cleaning = yield* Deferred.make<void>(),
+        release = yield* Deferred.make<void>()
+      yield* f.admit({ operationId: id, text: "Read", files: [file.id] })
+      yield* f.workspace.extractNext()
+      f.workspace.attach = () =>
+        Deferred.succeed(entered, undefined).pipe(
+          Effect.andThen(Effect.never),
+          Effect.ensuring(
+            Deferred.succeed(cleaning, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.andThen(Effect.die("attachment cleanup failure"))
+            )
+          )
+        )
+      const pending = yield* f
+        .resume((yield* f.store.get(id))!)
+        .pipe(Effect.forkChild)
+      yield* Deferred.await(entered)
+      const interruption = yield* Fiber.interrupt(pending).pipe(
+        Effect.forkChild
+      )
+      yield* Deferred.await(cleaning)
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(interruption)
+      const exit = yield* Fiber.await(pending)
+      expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+      expect(Exit.isFailure(exit) && Cause.pretty(exit.cause)).toContain(
+        "attachment cleanup failure"
+      )
+      expect(yield* f.store.get(id)).toMatchObject({ files_pending: true })
     })
 )

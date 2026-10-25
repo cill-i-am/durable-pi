@@ -1,0 +1,27 @@
+# F02 independent update/safe-reload owner handoff
+
+Worktree: /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi. Parent owns Git/publication; no Git mutations, package/shared tracking/schema edits, live provider calls, or external messages were made. Source freeze: /private/tmp/f02-update-manifest.txt (9 paths, including new docs/f02-update-recovery.md).
+
+## Implementation
+
+Official scoped recovery machine owns independent version occupancy and explicit navigation admission. Version is idle/checking(waiting|expired), polls every five idle minutes, aborts after five seconds and retains actual fetch/body occupancy through joined settlement. Late responses after abort/unmount do not publish. No within-check retries. Navigation is idle/attempting/reloaded, checks current facts at admission and again immediately at native dispatch, replies via Deferred to asynchronous actor decisions, rejects repeated reloads, returns to idle on native reload throw. Synchronous guard registrations are external feature-resource facts for beforeunload and final authority; machine projects them for UI. Owner scope removes subscriptions/listeners, immediately revokes authority, aborts/joins native requests, and resolves discarded reload waiters false. Non-OK response bodies cancel/join through version-request helper. No browser data representation/key changes and no submission capability.
+
+Draft/send owner is /root/mailbox_independent_review/session_socket; its useReloadGuard API remains unchanged. Recording/upload owner is communication_native_proof. Their existing guards flow through this owner. Only existing-test change outside updates tests is stale-tab.spec.ts synchronous navigations assertion -> await expect.poll, because official actor send is asynchronous and proof must observe actual navigation.
+
+## Characterization and evidence
+
+- Original source final-fence defect reproduced before edits: subscriber registers unsaved draft when reloading snapshot becomes visible; original code navigates anyway. /private/tmp/f02-recovery-before.log red; original source/probe preserved /private/tmp/f02-recovery-control. New regression exercises late draft and offline facts at the equivalent actor admission point, both pass.
+- 11 focused tests / 2 files pass: /private/tmp/f02-recovery-tests.log. Includes held version work + unmount join/listener cleanup/late publication fence, timer expiry retaining occupancy, malformed fact event, distinct guard retention, repeated reload denial and held non-OK response cancellation.
+- 12 browser tests desktop/mobile pass: /private/tmp/f02-browser.log, artifacts /private/tmp/f02-browser-results. Existing five stale-tab cases plus offline explicit reload; zero accidental sends, retained draft/files/uncertain identity.
+- Final real two-build retired-asset proof passes: /private/tmp/f02-client-upgrade.log. Evidence /private/tmp/f02-client-upgrade/{result.json,before.png,retired-asset.png,after.png,trace.zip}; owned browser/server/builds cleaned up. Final helper source included in those builds.
+- Scoped lint passes /private/tmp/f02-lint.log. Last full types /private/tmp/f02-types.log only concurrent F01 conversation-connection-machine.test.ts:212 enum shape error, no updates errors. Final full shared-tree type result belongs to parent/F01 owner.
+
+## Boundaries
+
+No new persistent format. Correctness assumes native fetch eventually acknowledges cancellation or settles; timeout revokes/aborts but does not claim a native promise has joined before it actually has. Local fixture evidence does not assert deployment/live-provider delivery. Independent reviewer /root/mailbox_independent_review is reviewing frozen sources. No further production/test edits planned pending that review.
+
+## Independent review repair
+
+Reviewer found structured native rejection arriving after abort was normalized to advisory null and lost during invocation cleanup. Corrected recovery.ts to retain the complete fatal/compound/interruption Cause, join the native promise, then report retained failure from the owner finalizer after actor cleanup. Ordinary network errors remain advisory. Reload calls reject admission if the actor is no longer active. Exact unchanged reviewer probe is green in /private/tmp/f02-independent-after.log; original red /private/tmp/f01-f02-independent-direct.log. New repository regression asserts both original Die and checked-Fail payload survive. Focused final tests now 12 / 2 files green; scoped repair lint clean /private/tmp/f02-lint-repair.log. Manifest refreshed. Browser/two-build proofs precede this error-preservation-only correction; UI/machine/request helper sources are unchanged. Independent reviewer recheck requested.
+
+Follow-on terminal-mailbox repair: reload now races its Deferred reply against actor termination, settling false if a fatal version result terminates the actor before the queued RELOAD is consumed. Exact original reviewer race and Cause probes both pass in /private/tmp/f02-independent-after.log; repository coverage adds the same-turn fatal native rejection/reload race. Focused final count 13 tests / 2 files; repair lint clean. Source manifest refreshed again; no UI/machine/version-request/browser source edits.

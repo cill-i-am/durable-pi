@@ -1,0 +1,129 @@
+{
+  "syntheticProvider": true,
+  "negative": true,
+  "snapshots": {
+    "earlyBeforeRestart": {
+      "rows": [
+        {
+          "sequence": 1,
+          "id": "synthetic-root",
+          "text": "Synthetic synthetic-root",
+          "status": "queued",
+          "answer": "",
+          "error": null,
+          "created_at": "2026-10-23T11:54:14.394Z",
+          "session_id": null,
+          "prompt": null,
+          "parent_id": null,
+          "started_at": null,
+          "finished_at": null,
+          "stopped_at": null,
+          "recovery": null,
+          "mode": "followUp",
+          "delivery": "queued",
+          "model": "faux-conversation",
+          "routing": "{\"model\":\"faux-conversation\",\"thinking\":\"off\",\"job\":\"conversation\",\"profile\":\"auto\",\"policyVersion\":\"jobs-v1\",\"reason\":\"agent setting\"}",
+          "origin": null,
+          "thinking": "off",
+          "revision": 0,
+          "creation": "{\"text\":\"Synthetic synthetic-root\",\"mode\":\"followUp\",\"retryOf\":null}",
+          "attachments": "[]",
+          "input": "[]",
+          "skills": "[]",
+          "skill_context": "",
+          "files_pending": 0,
+          "provenance": null,
+          "schema_version": 1,
+          "workflow_version": 1,
+          "control": {
+            "attempts": 0,
+            "owner": null,
+            "deadline": null,
+            "unconfirmed": null
+          }
+        }
+      ],
+      "native": [],
+      "jobs": [],
+      "metrics": {
+        "calls": 0,
+        "submitCalls": 0,
+        "abortCalls": 0,
+        "configureCalls": 0,
+        "automatic": 0,
+        "steps": 0
+      },
+      "state": {
+        "holdEntered": false,
+        "settled": false
+      },
+      "now": 1792756454395,
+      "deadline": 1792756514338,
+      "physicalAlarm": null
+    },
+    "earlyAfterRestart": {
+      "rows": [
+        {
+          "sequence": 1,
+          "id": "synthetic-root",
+          "text": "Synthetic synthetic-root",
+          "status": "queued",
+          "answer": "",
+          "error": null,
+          "created_at": "2026-10-23T11:54:14.394Z",
+          "session_id": null,
+          "prompt": null,
+          "parent_id": null,
+          "started_at": null,
+          "finished_at": null,
+          "stopped_at": null,
+          "recovery": null,
+          "mode": "followUp",
+          "delivery": "queued",
+          "model": "faux-conversation",
+          "routing": "{\"model\":\"faux-conversation\",\"thinking\":\"off\",\"job\":\"conversation\",\"profile\":\"auto\",\"policyVersion\":\"jobs-v1\",\"reason\":\"agent setting\"}",
+          "origin": null,
+          "thinking": "off",
+          "revision": 0,
+          "creation": "{\"text\":\"Synthetic synthetic-root\",\"mode\":\"followUp\",\"retryOf\":null}",
+          "attachments": "[]",
+          "input": "[]",
+          "skills": "[]",
+          "skill_context": "",
+          "files_pending": 0,
+          "provenance": null,
+          "schema_version": 1,
+          "workflow_version": 1,
+          "control": {
+            "attempts": 0,
+            "owner": null,
+            "deadline": null,
+            "unconfirmed": null
+          }
+        }
+      ],
+      "native": [],
+      "jobs": [],
+      "metrics": {
+        "calls": 0,
+        "submitCalls": 0,
+        "abortCalls": 0,
+        "configureCalls": 0,
+        "automatic": 0,
+        "steps": 0
+      },
+      "state": {
+        "holdEntered": false,
+        "settled": false
+      },
+      "now": 1792756522360,
+      "deadline": 1792756514338,
+      "physicalAlarm": null
+    }
+  },
+  "noPoke": {
+    "start": 1792756454399,
+    "end": 1792756522340,
+    "discoveryDeadline": 1792756514338
+  }
+}

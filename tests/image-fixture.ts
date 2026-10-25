@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 
 import { r2WorkspaceAssets } from "../src/workspace/adapters/r2"
 import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
@@ -47,6 +47,8 @@ export function imageWorkspace(processing: Partial<WorkspaceProcessing> = {}) {
     assets,
     () => Effect.succeed(state.writable),
     {
+      arm: () =>
+        Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
       document: () => Effect.fail(new WorkspaceUnavailable()),
       video: () => Effect.fail(new WorkspaceUnavailable()),
       image: () =>

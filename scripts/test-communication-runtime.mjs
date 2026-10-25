@@ -21,6 +21,10 @@ const port = address.port
 await new Promise((resolve) => server.close(resolve))
 const origin = `http://127.0.0.1:${port}`
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+// Terminal domain state can precede joined native cleanup. Capture complete
+// rows for restart comparisons only after the owning pump releases control.
+const conversationReleased = (turn) =>
+  turn?.control?.owner === null && turn.control.deadline === null
 const stop = async () => {
   if (!process || process.exitCode !== null || process.signalCode !== null)
     return
@@ -125,6 +129,61 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  assert.deepEqual(
+    await call("personal-runner-causes/runner-causes", {}),
+    Array.from({ length: 13 }, () => ({ complete: true }))
+  )
+  console.log(
+    "PASS nine native callback bindings and four family-admission paths preserve checked failures, cleanup defects and interruption together."
+  )
+  for (const kind of [
+    "coordination",
+    "apps",
+    "conversation",
+    "routines",
+    "communication",
+    "workspace",
+    "background",
+    "email",
+    "whatsapp",
+  ]) {
+    const heldRunner = (action) =>
+      call(`personal-${kind}-disposal/${kind}-runner-held-${action}`, {})
+    const waitRunner = async (predicate) => {
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const state = await heldRunner("inspect")
+        if (predicate(state)) return state
+        await sleep(25)
+      }
+      throw new Error(`Native ${kind} shutdown did not progress`)
+    }
+    await heldRunner("start")
+    await waitRunner((state) => state.entered)
+    const disposal = heldRunner("dispose")
+    void disposal.catch(() => {})
+    const closing = await waitRunner((state) =>
+      state.events.includes(`${kind}.close`)
+    )
+    assert(
+      !closing.events.includes("actor.connections.close"),
+      `Actor resources closed before accepted ${kind} work joined`
+    )
+    assert(!closing.events.includes("host.dispose"))
+    await heldRunner("release")
+    const closed = await disposal
+    assert(closed.events.indexOf(`${kind}.settled`) >= 0)
+    assert(
+      closed.events.indexOf(`${kind}.settled`) <
+        closed.events.indexOf("actor.connections.close")
+    )
+    assert(
+      closed.events.indexOf("actor.connections.close") <
+        closed.events.indexOf("host.dispose")
+    )
+    console.log(
+      `PASS native ${kind} callback joins before actor runtime and SQL disposal.`
+    )
+  }
   const maintenanceState = () => call("maintenance/inspect", {})
   const waitMaintenance = async (predicate) => {
     for (let attempt = 0; attempt < 100; attempt++) {
@@ -1536,9 +1595,22 @@ const config :Workerd.Config = (
   let nativeBackgroundWorkflow
   for (let n = 0; n < 200; n++) {
     nativeBackgroundWorkflow = await call("personal/background-read", a)
-    if (nativeBackgroundWorkflow.report?.status === "done") break
+    if (
+      nativeBackgroundWorkflow.parent?.status === "done" &&
+      nativeBackgroundWorkflow.report?.status === "done" &&
+      conversationReleased(nativeBackgroundWorkflow.parent) &&
+      conversationReleased(nativeBackgroundWorkflow.report)
+    )
+      break
     await sleep(50)
   }
+  assert.equal(nativeBackgroundWorkflow.parent?.status, "done")
+  assert.equal(nativeBackgroundWorkflow.report?.status, "done")
+  assert(
+    conversationReleased(nativeBackgroundWorkflow.parent) &&
+      conversationReleased(nativeBackgroundWorkflow.report),
+    JSON.stringify(nativeBackgroundWorkflow) + output.slice(-4000)
+  )
   assert.equal(
     nativeBackgroundWorkflow.parent?.answer,
     "Native background accepted",
@@ -1590,7 +1662,24 @@ const config :Workerd.Config = (
       (entry) => entry.agent.id === "home" && entry.key.startsWith("home:")
     )
   )
-  const nativeBackground = await call("personal/background-mailbox", a)
+  let nativeBackground = await call("personal/background-mailbox", a)
+  for (
+    let n = 0;
+    n < 100 &&
+    (nativeBackground.turn?.status !== "done" ||
+      !conversationReleased(nativeBackground.turn));
+    n++
+  ) {
+    await sleep(25)
+    nativeBackground = {
+      ...nativeBackground,
+      ...(await call("personal/background-mailbox-read", a)),
+    }
+  }
+  assert(
+    conversationReleased(nativeBackground.turn),
+    JSON.stringify(nativeBackground) + output.slice(-4000)
+  )
   assert.equal(nativeBackground.rolledBack, true)
   assert.equal(nativeBackground.delivered, true)
   assert.equal(nativeBackground.replay, false)
@@ -1642,11 +1731,20 @@ const config :Workerd.Config = (
   let piCommand
   for (let n = 0; n < 120; n++) {
     piCommand = await call("personal/command-read", a)
-    if (piCommand.command?.status === "done") break
+    if (
+      piCommand.command?.status === "done" &&
+      conversationReleased(piCommand.command)
+    )
+      break
     if (piCommand.command?.status === "failed")
       throw new Error(JSON.stringify(piCommand) + output.slice(-4000))
     await sleep(50)
   }
+  assert.equal(piCommand.command?.status, "done")
+  assert(
+    conversationReleased(piCommand.command),
+    JSON.stringify(piCommand) + output.slice(-4000)
+  )
   assert.equal(
     piCommand.command.answer,
     "Native Pi command complete",
@@ -1728,10 +1826,18 @@ const config :Workerd.Config = (
   if ("error" in stoppedCommand) throw stoppedCommand.error
   for (let n = 0; n < 100; n++) {
     heldCommand = await call("personal/command-read", a)
-    if (heldCommand.stopped?.status === "cancelled") break
+    if (
+      heldCommand.stopped?.status === "cancelled" &&
+      conversationReleased(heldCommand.stopped)
+    )
+      break
     await sleep(25)
   }
   assert.equal(heldCommand.stopped.status, "cancelled")
+  assert(
+    conversationReleased(heldCommand.stopped),
+    JSON.stringify(heldCommand) + output.slice(-4000)
+  )
   assert.deepEqual(heldCommand.terminal.commands, piCommand.terminal.commands)
   console.log(
     "PASS native Pi run_command completion/Stop fencing and BackgroundGroup active provider shutdown joins held reader cleanup before runtime disposal."

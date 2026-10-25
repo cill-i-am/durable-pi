@@ -1,0 +1,28 @@
+[WebServer] (node:619) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 10 tests using 1 worker
+
+(node:639) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.3s)
+  ✓   2 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.8s)
+  ✓   3 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.8s)
+  ✓   4 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (3.1s)
+  ✓   5 [desktop] › tests/browser/access.spec.ts:5:1 › refresh tool access before the next conversation and persist an override (5.0s)
+(node:768) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.1s)
+  ✓   7 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.5s)
+  ✓   8 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.6s)
+  ✓   9 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (3.0s)
+  ✓  10 [mobile] › tests/browser/access.spec.ts:5:1 › refresh tool access before the next conversation and persist an override (5.0s)
+
+  10 passed (34.6s)

@@ -1,0 +1,29 @@
+loaded duplicate {
+  text: 'Models & connections\n' +
+    'Model connection\n' +
+    'ChatGPTConnected\n' +
+    '\n' +
+    'Uses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n' +
+    '\n' +
+    'Refresh connection\n' +
+    'Defaults for this agent\n' +
+    '\n' +
+    'Used by Auto for new jobs. Running jobs keep their model.\n' +
+    '\n' +
+    'JobEveryday conversation\n' +
+    'ModelSol\n' +
+    'Reasoning effortmedium\n' +
+    'Save default',
+  gets: [ 'alpha' ]
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.waitForFunction: Timeout 8000ms exceeded.
+    at /private/tmp/model-defaults-parent-review/probe.mjs:20:13 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v24.21.0

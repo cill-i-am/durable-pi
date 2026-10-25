@@ -1,0 +1,16 @@
+{
+  "status": "closed",
+  "finding": "Held native restore Cause was squashed at host.run and Deferred restore reply boundaries; explicit Exit materialization now retains all original annotated reasons for callback and disposer.",
+  "sourceHashes": {
+    "src/coordination/adapters/lifecycle.ts": "836f8858d6205db20350fc784915182243ac876fc3cf6e76e1135d2200c51851",
+    "src/coordination/runner.machine.ts": "3c3fc44a8b3ad7796816d34bde828c6023d7936537f17c482fa6482e64bed134",
+    "tests/coordination-runner-lifecycle.test.ts": "288463b0a8e756dacac8e1d9052ceca32e7d1ee3273ea697e9b0ed8ac6149b6b"
+  },
+  "evidence": {
+    "/private/tmp/coordination-independent-before-3.log": "a7681c44f11b07d4b5f65b2f187a596a75f552efb35ea3a4ac9d7e0909f8decf",
+    "/private/tmp/coordination-independent-after.log": "e64ca37efb7c5d28d0fc944d3b995156f0f914e50583677f9d21da823ef89bd0",
+    "/private/tmp/coordination-independent-restore.test.ts": "bfdc7f309baf2679fa815386a8f977454b4734ad675ea0e9540654d042a6665c",
+    "/private/tmp/coordination-independent.config.mjs": "929bedd1975db3b7aa96f8b2c5132c1948b9e2adee254e3ff1b0b7b42d5cf4a0"
+  },
+  "limits": "Seven unchanged lifecycle tests and one independent held restore probe. Earlier private setup attempts used mismatched external dependencies and then omitted platform stubs; those are probe setup diagnostics only, not application findings. Native composed runtime gate remains required."
+}

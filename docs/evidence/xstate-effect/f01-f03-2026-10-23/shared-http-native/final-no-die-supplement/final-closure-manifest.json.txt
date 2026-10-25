@@ -1,0 +1,43 @@
+{
+  "priorReviewManifest": "/private/tmp/f01-f08-no-die-scan/review-manifest.json",
+  "F01_final_sources": {
+    "src/features/conversation/connection-owner.ts": "ba24e41817a27ef2e307578f27731f76732889b9610cfcd52132e46587b8aba5",
+    "src/features/conversation/submission-owner.ts": "889c6248bec9c8e29ed92fc3cfca22dd6284fd73d4bee5160f2f0d16775d32ee",
+    "src/features/conversation/turn-command-owner.ts": "c7e48cdc4107ba7fe149d788473c830aff2afe432e42c177ea68ec36cb4caecb",
+    "tests/conversation-connection-machine.test.ts": "9f6f5da4ea4296e46607f3c1857f85a6a07759ddc40af96218e522b6732aa36d",
+    "tests/conversation-submission-machine.test.ts": "f22435110e65c192d30b98e7299230fe10481c22e79f394267c0952230a43816",
+    "src/features/conversation/connection.ts": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228",
+    "src/features/conversation/connection.machine.ts": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3",
+    "src/features/conversation/composer-draft.ts": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190",
+    "src/features/conversation/composer-draft.machine.ts": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe",
+    "src/features/conversation/composer-draft-owner.ts": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999",
+    "src/features/conversation/draft.ts": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534",
+    "src/features/conversation/use-composer-draft.ts": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03",
+    "src/features/conversation/submission.machine.ts": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116",
+    "src/features/conversation/turn-command.machine.ts": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704",
+    "src/features/conversation/use-conversation-commands.ts": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc",
+    "src/features/conversation/use-conversation.ts": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2",
+    "src/features/conversation/conversation.tsx": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f",
+    "tests/composer-draft.test.ts": "96c4e3787bf79241d3c7fb5e30587293cffbebe5098fa522067dade2c66b2d0d",
+    "tests/composer-draft-machine.test.ts": "f0a63ce93eb34a72fce1674af1bb7fea451c61f0fb78ac35008e5a037f486230",
+    "tests/conversation-connection-composition.test.ts": "40d104fae4c825de71497c08ca755baa9feba159482d32683476f3fddf85e1d6",
+    "tests/browser/conversation-owner-lifecycle.spec.ts": "9c7753a972235b629b7aaad1ad7eee951d078bd62fc6702757b6c80fde5f7225",
+    "src/features/conversation/connection-response.ts": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015"
+  },
+  "shared": {
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99"
+  },
+  "evidence": {
+    "/private/tmp/f01-f03-no-die/after-local.log": "ec79976d900c8992fab744dae1453e7b36aef14747fae82f168149a04b710198",
+    "/private/tmp/f01-f03-no-die/media-probe.mts": "4bf0fbcf4e6f01cc95b998fc25fddd9d49c2242fed27bb348781fe3f6871e4b7",
+    "/private/tmp/f01-f03-no-die/commands-before-local.log": "d540eda85a6f55c7f4fd249275ae97776f05bf463fd30bfaa7dbb5deab15cea3",
+    "/private/tmp/f01-f03-no-die/probe.mts": "7b97d51c119895def9ad5030cbde75068938389ba7d33f8b99e9b6b5316d22c9",
+    "/private/tmp/f01-f03-no-die/commands-after-local.log": "c9246adf1790d8781b2047a85c3968ca03daa1437551b56e8740774d5b938c72",
+    "/private/tmp/f01-f03-no-die/before.log": "e129cceb7d32ea2f56e5a58f4cf5750346a62053058c8eba1774eae8e058f56f",
+    "/private/tmp/f01-f03-no-die/after-shared.log": "729f0e4c33982d5cdd7d4ed8d6d6fbcb96f24a90a454bdd686aa8567b2769fb9",
+    "/private/tmp/f01-f03-no-die/commands-probe.mts": "fc7f133c18ebd5f937d8138cc97598b44c3571fd7f29c92d48496a4d98b27775",
+    "/private/tmp/f01-f03-no-die/media-after-shared.log": "8741c8004778028dc4bbf03e0f60b9ff6712aa5fe5d4be25f5dfc3c8f7fdd5f5",
+    "/private/tmp/f04-f08-no-die/probe.mts": "771bf5356f3c478de38d1e365133935fae29130c467f757e107e3d13f4c26430",
+    "/private/tmp/f04-f08-no-die/after-shared.log": "85622fe0afed3b3a1c874bc2a86455ea96e10acdd9a933c9995eb790041b7fe2"
+  }
+}

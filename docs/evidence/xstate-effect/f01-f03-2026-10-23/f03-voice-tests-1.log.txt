@@ -1,0 +1,62 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+ ❯ tests/voice-recorder-machine.test.ts (6 tests | 3 failed) 760ms
+   × keeps cancelled permission acquisition occupied until its late stream is released 168ms
+   × owner closure joins late permission and never starts the recorder 66ms
+   × owner closure joins native stop before releasing listeners and tracks 55ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/voice-recorder-machine.test.ts > keeps cancelled permission acquisition occupied until its late stream is released
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ tests/voice-recorder-machine.test.ts:57:18
+     55|   f.permission.resolve(f.stream)
+     56|   await f.state("idle")
+     57|   expect(f.stop).toHaveBeenCalledTimes(1)
+       |                  ^
+     58|   expect(f.platform.recorder).not.toHaveBeenCalled()
+     59|   expect(f.uploads).toEqual([])
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/voice-recorder-machine.test.ts > owner closure joins late permission and never starts the recorder
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ tests/voice-recorder-machine.test.ts:84:18
+     82|   await new Promise((done) => setTimeout(done, 10)); expect(closed).to…
+     83|   f.permission.resolve(f.stream); await close
+     84|   expect(f.stop).toHaveBeenCalledTimes(1); expect(f.platform.recorder)…
+       |                  ^
+     85| })
+     86| it("owner closure joins native stop before releasing listeners and tra…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/voice-recorder-machine.test.ts > owner closure joins native stop before releasing listeners and tracks
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+ ❯ tests/voice-recorder-machine.test.ts:93:50
+     91|   const close = f.close().then(() => { closed = true })
+     92|   await vi.waitFor(() => expect(f.recorder.stop).toHaveBeenCalledTimes…
+     93|   expect(closed).toBe(false); expect(f.stop).not.toHaveBeenCalled()
+       |                                                  ^
+     94|   f.recorder.stopped(); await close
+     95|   expect(f.stop).toHaveBeenCalledTimes(1); expect(f.uploads).toEqual([…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 3 passed (6)
+   Start at  17:10:16
+   Duration  1.10s (tests 75%, import 19%, transform 5%, setup 1%)
+

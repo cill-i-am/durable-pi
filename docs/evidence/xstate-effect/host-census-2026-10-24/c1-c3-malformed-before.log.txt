@@ -1,0 +1,56 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/census-lifecycle-validation.test.ts (2 tests | 1 failed) 19ms
+   × rejects malformed auth requests before launching native work 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/census-lifecycle-validation.test.ts > rejects malformed auth requests before launching native work
+AssertionError: expected { reads: [ { …(2) } ], …(4) } to deeply equal { reads: [], waiting: [], …(3) }
+
+- Expected
++ Received
+
+  {
+    "active": null,
+    "limitedUntil": 0,
+    "mutations": [],
+-   "reads": [],
++   "reads": [
++     {
++       "request": {
++         "reply": {
++           "effect": undefined,
++           "resumes": undefined,
++         },
++       },
++       "subscribers": [
++         {
++           "reply": {
++             "effect": undefined,
++             "resumes": undefined,
++           },
++         },
++       ],
++     },
++   ],
+    "waiting": [],
+  }
+
+ ❯ tests/census-lifecycle-validation.test.ts:13:24
+     11|   const [state] = initialTransition(machine)
+     12|   const [next, effects] = transition(machine, state, { type: "READ", r…
+     13|   expect(next.context).toEqual(state.context)
+       |                        ^
+     14|   expect(effects).toEqual(expect.arrayContaining([expect.objectContain…
+     15| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  18:45:32
+   Duration  369ms (import 75%, transform 14%, tests 7%, setup 2%, worker 1%)
+

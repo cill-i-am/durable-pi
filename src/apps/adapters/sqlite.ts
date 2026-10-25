@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import { Clock, Effect, Schema } from "effect"
 
 import {
   mapSqliteError,
@@ -11,14 +11,19 @@ import {
   AppConflict,
   AppStorageError,
   AppDocument,
-  AppVersion,
   AppEvent,
+  AppVersion,
   SaveApp,
   PublishApp,
   ArchiveApp,
   InteractApp,
   WebResult,
 } from "../contracts"
+import {
+  advanceAppDelivery,
+  restoreAppDelivery,
+  type AppDeliveryRecord,
+} from "../delivery.machine"
 import type { AppAdmission, AppLedger } from "../repository"
 import {
   generatedApps,
@@ -116,6 +121,7 @@ export class AppStore implements AppLedger {
   detail(id: string) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        yield* this.exhaustDelivery(() => true, true)
         const app = yield* this.get(id)
         if (!app)
           return yield* new AppConflict({
@@ -142,7 +148,9 @@ export class AppStore implements AppLedger {
             Schema.decodeUnknownSync(AppVersion)(JSON.parse(row.record))
           ),
           events: events.map((row) =>
-            Schema.decodeUnknownSync(AppEvent)(JSON.parse(row.record))
+            Schema.decodeUnknownSync(AppEvent)(
+              restoreAppDelivery(JSON.parse(row.record))
+            )
           ),
         }
       })
@@ -320,7 +328,11 @@ export class AppStore implements AppLedger {
       })
     )
   }
-  interact(raw: InteractApp, webResult?: WebResult) {
+  interact(
+    raw: InteractApp,
+    webResult?: WebResult,
+    discoveryDeadline?: number
+  ) {
     return Effect.suspend(() => {
       const input = Schema.decodeUnknownSync(InteractApp)(raw)
       return this.operation(
@@ -328,6 +340,14 @@ export class AppStore implements AppLedger {
         { type: "interact", ...input },
         () =>
           Effect.gen({ self: this }, function* () {
+            if (
+              discoveryDeadline !== undefined &&
+              discoveryDeadline <= (yield* Clock.currentTimeMillis)
+            )
+              return yield* new AppConflict({
+                message:
+                  "App admission discovery expired. Retry the same interaction.",
+              })
             const current = yield* this.interactionSnapshot(input),
               version = yield* this.version(input.id, input.version),
               pending = yield* this.pending()
@@ -349,7 +369,7 @@ export class AppStore implements AppLedger {
               orm.insert(generatedAppEvents).values({
                 id: change.event.id,
                 app_id: change.event.appId,
-                record: JSON.stringify(change.event),
+                record: JSON.stringify(restoreAppDelivery(change.event)),
                 queued: 0,
               })
             )
@@ -359,18 +379,9 @@ export class AppStore implements AppLedger {
     })
   }
   pending() {
-    return this.query((orm) =>
-      orm
-        .select({ record: generatedAppEvents.record })
-        .from(generatedAppEvents)
-        .where(eq(generatedAppEvents.queued, 0))
-        .orderBy(asc(generatedAppEvents.sequence))
-        .limit(20)
-    ).pipe(
-      Effect.map((rows) =>
-        rows.map((row) =>
-          Schema.decodeUnknownSync(AppEvent)(JSON.parse(row.record))
-        )
+    return this.atomic(() =>
+      this.exhaustDelivery(() => true, true).pipe(
+        Effect.andThen(this.deliveryRecords())
       )
     )
   }
@@ -397,27 +408,175 @@ export class AppStore implements AppLedger {
       })
     )
   }
-  deliverNext(admission: AppAdmission) {
+  renderSnapshot(id: string, version: number) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.available()
+        const app = yield* this.get(id)
+        if (!app || app.archived)
+          return yield* new AppConflict({
+            message: "Restore this app before rendering it.",
+          })
+        // Draft previews remain supported; interactions always require published authority.
+        yield* this.version(id, version)
+        return app
+      })
+    )
+  }
+  private writeDelivery(record: AppDeliveryRecord) {
+    return this.query((orm) =>
+      orm
+        .update(generatedAppEvents)
+        .set({
+          queued: record.lifecycle.state === "pending" ? 0 : 1,
+          record: JSON.stringify(record),
+        })
+        .where(eq(generatedAppEvents.id, record.id))
+    ).pipe(Effect.asVoid)
+  }
+  private deliveryRecords() {
+    return this.query((orm) =>
+      orm
+        .select({
+          record: generatedAppEvents.record,
+          queued: generatedAppEvents.queued,
+        })
+        .from(generatedAppEvents)
+        .where(eq(generatedAppEvents.queued, 0))
+        .orderBy(asc(generatedAppEvents.sequence))
+        .limit(20)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) => {
+          const record = restoreAppDelivery(JSON.parse(row.record))
+          if (record.lifecycle.state !== "pending")
+            throw new Error(
+              "App delivery index disagrees with its machine state"
+            )
+          return record
+        })
+      )
+    )
+  }
+  exhaustDelivery(eligible: () => boolean, expiredOnly: boolean) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const now = yield* Clock.currentTimeMillis
+        const records = yield* this.deliveryRecords()
+        if (!eligible()) return
+        for (const record of records) {
+          if (expiredOnly && record.lifecycle.deadline > now) continue
+          yield* this.writeDelivery(
+            advanceAppDelivery(record, {
+              type: "EXHAUST",
+              revision: record.lifecycle.revision,
+              message:
+                "Conversation admission could not be confirmed within the bounded recovery budget. Saved app state and its interaction receipt are retained. Resolve the model or storage failure, then send a new interaction to notify the bot.",
+            })
+          )
+        }
+      })
+    )
+  }
+  nextDelivery() {
+    return this.pending().pipe(
+      Effect.map((records) =>
+        records.length
+          ? Math.min(
+              records[0]!.lifecycle.nextAt,
+              records[0]!.lifecycle.deadline
+            )
+          : undefined
+      )
+    )
+  }
+  deferDelivery(
+    id: string,
+    reason: "model" | "capacity" | "storage",
+    now: number
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const record = (yield* this.deliveryRecords()).find(
+          (value) => value.id === id
+        )
+        if (record)
+          yield* this.writeDelivery(
+            advanceAppDelivery(record, {
+              type: "DEFER",
+              revision: record.lifecycle.revision,
+              reason,
+              now,
+            })
+          )
+      })
+    )
+  }
+  cancelPending(message: string) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (yield* this.active()) return
+        for (const record of yield* this.deliveryRecords())
+          yield* this.writeDelivery(
+            advanceAppDelivery(record, {
+              type: "CANCEL",
+              revision: record.lifecycle.revision,
+              message,
+            })
+          )
+      })
+    )
+  }
+  /** Called only for an accepted bot archive in the configuration transaction.
+   * Reuse app revisions to revoke prepared work without changing saved values
+   * or the immutable operation receipts that an exact replay must return. */
+  revokeBotAuthority(message: string) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (yield* this.active()) return
+        yield* this.cancelPending(message)
+        for (const app of yield* this.list())
+          yield* this.put({ ...app, revision: app.revision + 1 })
+      })
+    )
+  }
+  deliverNext(admission: AppAdmission, discoveryDeadline: number) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         if (admission.transactionGroup !== this.transactionGroup)
           throw new Error(
             "App admission must share its storage transaction group."
           )
-        if (!(yield* this.active())) return false
-        const event = (yield* this.pending())[0]
-        if (!event) return false
-        if ((yield* admission.admit(event)) !== event.turnId)
-          throw new Error("App admission returned a different turn identity.")
-        yield* this.query((orm) =>
-          orm
-            .update(generatedAppEvents)
-            .set({
-              queued: 1,
-              record: JSON.stringify({ ...event, delivery: "queued" }),
+        if (!(yield* this.active())) {
+          yield* this.cancelPending(
+            "This bot was archived before conversation admission. Saved app state is retained."
+          )
+          return false
+        }
+        yield* this.exhaustDelivery(() => true, true)
+        const now = yield* Clock.currentTimeMillis
+        const event = (yield* this.deliveryRecords())[0]
+        if (!event || event.lifecycle.nextAt > now) return false
+        const app = yield* this.get(event.appId)
+        if (!app || app.archived || app.publishedVersion !== event.version) {
+          yield* this.writeDelivery(
+            advanceAppDelivery(event, {
+              type: "CANCEL",
+              revision: event.lifecycle.revision,
+              message:
+                "The app was archived or its published version changed before conversation admission. Saved state and the interaction receipt are retained.",
             })
-            .where(eq(generatedAppEvents.id, event.id))
-        )
+          )
+          return false
+        }
+        const next = advanceAppDelivery(event, {
+          type: "ADMIT",
+          revision: event.lifecycle.revision,
+        })
+        if (next.lifecycle.state !== "admitted") return false
+        if ((yield* admission.admit(event, discoveryDeadline)) !== event.turnId)
+          throw new Error("App admission returned a different turn identity.")
+        yield* this.writeDelivery(next)
         return true
       })
     )

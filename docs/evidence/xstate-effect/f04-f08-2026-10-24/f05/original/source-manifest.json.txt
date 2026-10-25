@@ -1,0 +1,189 @@
+{
+  "capturedAt": "2026-10-23T16:11:06.994006+00:00",
+  "base": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+  "node": "v24.21.0",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "sourceHashes": {
+    "src/features/browser/browser.machine.ts": "838c60bcad7187948431a06e3f485aadf7e64decfdc17cbfa476b6662341f310",
+    "src/features/browser/browser-owner.ts": "d36bfc11c78055beaae20d0ac0657ba6eb058be258ef3ee372ecc026ed843afd",
+    "src/features/browser/use-browser.ts": "ba4049df214346e0e7d7ff5bfef0604f6d7edc3d5b4077d3b55caeb186f2fb01",
+    "src/features/browser/browser-preview.machine.ts": "1e415623fe4e7f8bb4894ea5d75744580f8dd133443fe5220e4472323b0bc33f",
+    "src/features/browser/browser-preview.tsx": "fe180d275ff4fdf5fce0bcfae9d1d8897aff960105a9976c2c0fe66104c10a92",
+    "src/features/browser/browser-controls.tsx": "95b6b0bb3a18e03930909e6f42f5aa5ac73f9310fe2db7e99435df4a0160a0bc",
+    "src/features/browser/browser-workbench.tsx": "717be833b1f7bab4959e50200748d42d1837d9adc7902da8d3b311d6621f1f4b",
+    "tests/browser-ui-lifecycle.test.ts": "49c2718deb811f34ab46e2cb25ac97f5423e52005c4428488ef20ae60b4f8902",
+    "tests/browser/browser-tools.spec.ts": "bf4e894fa6fabf79f26d933d78f6a80ea6ad5a7454e053b410b7e2806a41fcf2",
+    "src/features/execution/execution.machine.ts": "d9167c3489c7ecd9245dc0127569bd485b7f2767ee30fc320b4e76c0dd804b09",
+    "src/features/execution/execution-owner.ts": "3b826692627acb31ba4121937183239c32c134bef05dee1028b41a2516e6eac9",
+    "src/features/execution/use-execution.ts": "355eaf2ca586eb467e9be4f427d89ce7dc6c2b30adf3e07cbdd9647d5f9df3a0",
+    "tests/execution-ui-lifecycle.test.ts": "af71204208197e742a678b7fb1beea06d7513135d98e6c7630a9d748b5043fd1",
+    "tests/browser/execution-tools.spec.ts": "0585b82602ecf70494e1335347bf4412d05be91415784477c26ff308853c6b4d",
+    "docs/xstate-effect-tools-ui.md": "315195601636eb184cf385ebda14615a6393a3740dde3a48025042613404bbdb"
+  },
+  "checks": {
+    "focusedTests": {
+      "files": 2,
+      "passed": 16,
+      "exitCode": 0
+    },
+    "scopedTypes": {
+      "exitCode": 0,
+      "config": "/private/tmp/f05-tools-ui/tsconfig-all.json"
+    },
+    "scopedLint": {
+      "exitCode": 0
+    },
+    "scopedFormat": {
+      "exitCode": 0
+    },
+    "productionBuild": {
+      "exitCode": 0
+    },
+    "focusedBrowser": {
+      "passed": 8,
+      "projects": [
+        "desktop",
+        "mobile"
+      ],
+      "retries": 0,
+      "workers": 1,
+      "port": 4455,
+      "exitCode": 0,
+      "note": "Existing performance server separately built its browser fixture before serving."
+    },
+    "unchangedMountedProbes": {
+      "oldSource": "both failed",
+      "finalSource": "both passed"
+    },
+    "negativeControls": {
+      "executionSelection": "expected exit1 stale detail",
+      "browserPreview": "expected exit1 readiness",
+      "browserClose": "expected exit1 stale generation"
+    },
+    "review": {
+      "parentFocusedTests": 16,
+      "independentExecutionTests": 9,
+      "scope": "scoped clear; mounted ABA/native HTTP owner probes passed; no source changes during review"
+    }
+  },
+  "generatedRoute": "preserved in /private/tmp/f05-tools-ui/routeTree.generated.ts then restored exact HEAD",
+  "limits": "Scoped UI synthetic/intercepted transport proof. No external provider, model, code runner, workerd, production deployment or Git mutation. Broad repository and hosted CI gates remain parent-owned.",
+  "artifacts": {
+    "README.md": {
+      "sha256": "d3e94a0399e28db8a71f85d42391293392ab732c412c811b38a8af8e39330dea",
+      "bytes": 1696
+    },
+    "browser-close-negative.config.mjs.txt": {
+      "sha256": "ba52f231758f5cbe94f168148d48fe7e560f07c0f333b7255696fcccf67bb4bc",
+      "bytes": 609
+    },
+    "browser-close-negative.log.txt": {
+      "sha256": "dc3f313a515294ca5afd9b42e1965bae05845c228e1edb1e7e46f3b95eccd96a",
+      "bytes": 3140
+    },
+    "browser-lane-manifest.json.txt": {
+      "sha256": "92b61bfe0a65f50fdeae94800137c13afbcf62e2919a71e80f09b112e8c0fb63",
+      "bytes": 5489
+    },
+    "browser-mounted-green.log.txt": {
+      "sha256": "929c5b74d55968672a53b69dd9f57c4b4126828462a74bb4b310915acefb7880",
+      "bytes": 307
+    },
+    "browser-mounted-probe.mjs.txt": {
+      "sha256": "9d507e9e1ae923afcb00b0a87859ec87c68782fc8e5481bf2122c5a8006403cf",
+      "bytes": 3808
+    },
+    "browser-original-red.log.txt": {
+      "sha256": "adbca4c0411b82226f5979a9b92957e209f7d9a825987aeb9f3826867c6eecfa",
+      "bytes": 711
+    },
+    "browser-preview-negative.log.txt": {
+      "sha256": "575c50c3fd8100554e1034fba3eb8557b93b91a62f26f9faf3a13856b7340cda",
+      "bytes": 717
+    },
+    "execution-independent-aba-probe.mjs.txt": {
+      "sha256": "7501c4aee16a16892c9a45bb5bd8a290c32aa12302464b47de5787c31a937d45",
+      "bytes": 4945
+    },
+    "execution-independent-aba.log.txt": {
+      "sha256": "ed1fd372cfcf1dd4f124ea7c74be3e1a29f04f6c2aff4980349d07b5e166fb11",
+      "bytes": 856
+    },
+    "execution-independent-focused.log.txt": {
+      "sha256": "ddba4deaef46fdaddf89da513f065b7ec24ecbeb0b3d316a74ea320f7060271f",
+      "bytes": 243
+    },
+    "execution-independent-handoff.md.txt": {
+      "sha256": "d76721427550b83d5e331fb48de86e28a76302be7da6e16deefacbbc0452570b",
+      "bytes": 1473
+    },
+    "execution-independent-manifest.json.txt": {
+      "sha256": "37de16f64fef8d1f065cb973bf04cf756a74b0d6997b7a88b39d7308c5b31b0f",
+      "bytes": 2354
+    },
+    "execution-independent-native-probe.mts.txt": {
+      "sha256": "9808469e588cdc79a563590d97531fa7a8e0662f28e19f26b308ed031fe1a3ab",
+      "bytes": 4878
+    },
+    "execution-independent-native.log.txt": {
+      "sha256": "46bc06617bdbb89ff661755035859745d0ac5c25f43a382eb4c6c5fc4806d73d",
+      "bytes": 786
+    },
+    "execution-mounted-final-green.log.txt": {
+      "sha256": "92158f81a68c011de94a7b8235fc1043ef31b0529e2bee3bccdb38606a11eba3",
+      "bytes": 120
+    },
+    "execution-mounted-green.log.txt": {
+      "sha256": "92158f81a68c011de94a7b8235fc1043ef31b0529e2bee3bccdb38606a11eba3",
+      "bytes": 120
+    },
+    "execution-mounted-probe.mjs.txt": {
+      "sha256": "1ab4890ff87aa1de3ba41175819d36bbe6ef8b7e985cdd7d9b5f6147ca158623",
+      "bytes": 2789
+    },
+    "execution-original-red.log.txt": {
+      "sha256": "73c30006179922db111ec1b4a8343ccc24cd402724c3b08f4a7e542c2336effc",
+      "bytes": 831
+    },
+    "execution-selection-negative.config.mjs.txt": {
+      "sha256": "041b4cc364e82038512bf57c7a71a2dab1d0cd0d757790b23fbe77d68d743aff",
+      "bytes": 550
+    },
+    "execution-selection-negative.log.txt": {
+      "sha256": "768f0b11a76bf668d6833199157d85300b3730f4b10b59adfc0f89233b350393",
+      "bytes": 2364
+    },
+    "focused-browser.log.txt": {
+      "sha256": "a4b0ee42d08f341e512d6c65e9b8549815c17c54b5a903184028c1f9c1c4a1ec",
+      "bytes": 2478
+    },
+    "focused-unit.log.txt": {
+      "sha256": "4bf83843ad06cf552fbacb4ddf89b4c4b567c250d79207f745da9a9f657ce278",
+      "bytes": 245
+    },
+    "parent-review-tests.log.txt": {
+      "sha256": "d9a0fb58df0fbdc7804347a8f55ab80b2ecdf0a1a50292b68e0a3e528689ab4c",
+      "bytes": 246
+    },
+    "playwright.config.mjs.txt": {
+      "sha256": "3861545868fe0083c19ccd8629da0b60f5444b768cd162f1af18fa036cbb72f0",
+      "bytes": 563
+    },
+    "production-build.log.txt": {
+      "sha256": "03ef20051e03013f5cfe309a86e23d1bccce7f275cba68c0e4ebd521edf6fa5b",
+      "bytes": 23739
+    },
+    "scoped-format.log.txt": {
+      "sha256": "9e2ed853101a5aa9a9df8fde73837734ca77f1e6e46efce36dd010ed4a3360be",
+      "bytes": 114
+    },
+    "scoped-lint.log.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "scoped-types.log.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  }
+}

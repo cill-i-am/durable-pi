@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {createServer} from 'node:http'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi',require=createRequire(root+'/package.json'),{build}=createRequire(require.resolve('alchemy'))('esbuild'),{chromium}=require('@playwright/test')
+const source=`import React,{useState}from'react';import{createRoot}from'react-dom/client';import{useTaskControl}from'${root}/src/features/activity/use-task-control.ts';function App(){const[agent,setAgent]=useState('one'),controls=useTaskControl({agentId:agent,groupId:17,childId:19,prefix:'background',active:['stop','steer']});window.controls=controls;window.switchAgent=setAgent;return <div data-agent={agent} data-ready={!controls.busy}><p>{controls.error}</p><button disabled={controls.blocked('stop')} onClick={()=>controls.submit('stop')}>Stop</button></div>}createRoot(document.getElementById('root')).render(<App/>);`
+const bundle=await build({stdin:{contents:source,resolveDir:root,loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',tsconfig:root+'/tsconfig.json'})
+const server=createServer((req,res)=>{res.setHeader('content-type',req.url==='/app.js'?'text/javascript; charset=utf-8':'text/html; charset=utf-8');res.end(req.url==='/app.js'?bundle.outputFiles[0].text:'<div id="root"></div><script src="/app.js"></script>')});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const browser=await chromium.launch(),page=await browser.newPage()
+try{
+ await page.addInitScript(()=>{window.posts=[];window.fetch=(url,init)=>new Promise(resolve=>{window.posts.push({url,body:JSON.parse(init.body),signal:init.signal,resolve:status=>resolve(Response.json(status===200?{ok:true}:{error:'Old agent response'},{status}))})})})
+ await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction(()=>window.controls&&!window.controls.busy)
+ await page.getByRole('button',{name:'Stop',exact:true}).click();await page.waitForFunction(()=>window.posts.length===1)
+ await page.evaluate(()=>window.switchAgent('two'));await page.waitForFunction(()=>document.querySelector('[data-agent="two"][data-ready="true"]')&&window.posts[0].signal.aborted)
+ await page.getByRole('button',{name:'Stop',exact:true}).click();await page.waitForFunction(()=>window.posts.length===2)
+ await page.evaluate(()=>window.posts[0].resolve(503));await page.waitForTimeout(30)
+ assert.equal(await page.locator('p').textContent(),'','Retired old-agent failure cannot publish into new owner')
+ await page.evaluate(()=>window.posts[1].resolve(200));await page.waitForFunction(()=>!window.controls.busy)
+ const result=await page.evaluate(()=>({posts:window.posts.map(p=>({url:p.url,body:p.body,aborted:p.signal.aborted})),old:sessionStorage.getItem('background:delegation-control:one:17:19:stop'),current:sessionStorage.getItem('background:delegation-control:two:17:19:stop'),error:window.controls.error}))
+ console.log(JSON.stringify(result));assert.equal(result.posts.length,2);assert(result.posts[0].url.endsWith('agent=one'));assert(result.posts[1].url.endsWith('agent=two'));assert.notEqual(result.posts[0].body.operationId,result.posts[1].body.operationId);assert(result.old?.includes(result.posts[0].body.operationId));assert.equal(result.current,null);assert.equal(result.error,'')
+}finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T19:34:31.372657+00:00",
+  "baseCommit": "d82998d160beb3cd8f721afe7037ef938a3f5787",
+  "sources": {
+    "src/access/adapters/pi.ts": "f2881d58d3d88be80be857cf6868c1ce18a8950056012f69b54889c6527af00f",
+    "src/access/callback.machine.ts": "3fa5830e37d8d46765600d0d0907c84bd68275eb20f04a641a96104db45fe617",
+    "src/access/gate.ts": "f8e535e4b09fb1ff8f21cc2c4ff65a85688ca59ec3356d89d393aa1b8e59988d",
+    "src/agent/adapters/upstream.ts": "f814b40715025f33e708022e6c36ad8f7d035b641456f329416f86d03ec43ed2",
+    "src/agent/upstream.machine.ts": "67e85ddfacd1845740a2f4a0dddb9e9840144f15c40148fe0fb8e92575186837",
+    "src/agent/worker.ts": "2a46838d8ae57356b44958cb67f7822d9a8718a2d2af6bd66ca819440472b298",
+    "src/auth/adapters/agent-proxy.ts": "7e75c61eb083fa316ba53cc47aa7ed5404781bcebe4c29ed108159aaebcdf57d",
+    "src/auth/adapters/session-socket.ts": "c45c119c918fbf66738a484b880f2ce7275139cd97529044cc6160285e359f1a",
+    "src/auth/session-socket.machine.ts": "6961c38ec8a7746e0f0a0d35d1bcdac69faec66f5b4717ed67ef1a1c2bda0023",
+    "src/inference/adapters/streams-pi.ts": "243c475e0b0325aab08e46edb62e1922aabea8d441f84a1b0ad442b884327705",
+    "src/inference/adapters/upstream-worker.ts": "24685909753f94c7394b01ae968dd5d427473c295a30a17e60c5f1007dc9e4ce",
+    "src/inference/adapters/upstream.ts": "591d668a453b2ebf6b76fa5eb36756527e0c3d6dccfb97de280d591f6db28420",
+    "src/inference/model-stream.machine.ts": "71dab655ade6e8f6d6addc7952872d5ee18034f4fc1820c3489bf8671b7a6d77",
+    "src/inference/upstream-cleanup.ts": "4f58275673a3abe283dc8f247c1ba96a356bb7ea17467dc84a3374cfe602157f",
+    "src/inference/upstream.machine.ts": "095b7dcdfbbb92665d3d67183011cb151294d67b6da892ed24bb6647b1bd9d77",
+    "src/terminal/adapters/native-worker.ts": "793952d40339504d18ace54df8072753a2b76535bf8d5e59eead096d1524e09c",
+    "src/terminal/host.machine.ts": "60cff4b6dcb4fbdeaa2169ef2b14064e57e5d3b4c024559c535593e9749a7560",
+    "src/terminal/host.ts": "d3664a1be0ee0c39da5d5fdec46f292d238325eead2a36fb114ea56ade123f9f",
+    "src/terminal/native-host.machine.ts": "57bb12da61493284a05ca0c18d826407e372f3ba1f5560df32330a8aaae411ba",
+    "src/terminal/native-host.ts": "cfbe999d46c7fb2cf1c4a10762e82ddf8a954d1cc6b5dd1250fc32863429538e",
+    "src/terminal/worker.ts": "8874c69e0ff104d64d4cbc23a37ee85364fc665e6d54b2f1c6853d0d0afb9893",
+    "tests/access-callback-machine.test.ts": "3fdb8836c45c86ab935e42b0eb5065e3d550ed6499b4324e91e2b84d41389ceb",
+    "tests/access-callback.test.ts": "6410cc4fe43208b2f5bcfbb3b4543eeb19b36c16bb44193590f4eaa0b38d942e",
+    "tests/agent-http.test.ts": "e42bb9906fa18d039958a63d574b1e829996d80f3727d98cfbe670191edfc110",
+    "tests/agent-proxy.test.ts": "e896147fb9a6228e3c05b561370844aab7bc0de843e156259f447a44425a445d",
+    "tests/inference-stream-ownership.test.ts": "a4a9383ce2634c0a2c51a9024f237f7dee002a57d384f83681d2e97d4c1c2727",
+    "tests/session-socket.test.ts": "10ce3a189f297f6e034a0229fb0c07c1c1c6d45d39bf79420cff71e041293ef7",
+    "tests/terminal-host.test.ts": "8930c9efd4d7fa2a618b252b93f85234905b1ae763dbcd52f0d093fbc55bd552",
+    "tests/terminal-native-host.test.ts": "5d84e2fd645951376d15ea4b2f9dfac00a9ae59b85be111ce115abc848baa4a6",
+    "tests/upstream-lease.test.ts": "88b7f4d3387f0d68e60a1b8c43281765987b4df9923c43aa0f615aec8fe42716",
+    "tests/upstream-lifecycle.test.ts": "f55cb2e274b72193871a3f54fc00d66c163a7b6eb13d7895b0ded06e1cb11a5a",
+    "tests/upstream-observer.test.ts": "6a9c2832ee31e7d9e6f690dcbdafbf1875cf6862077c6e1b541db722355d5d46"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b16-composed-static-2.log.txt",
+      "original": "/private/tmp/b16-composed-static-2.log",
+      "sha256": "f5057235db7c12e99a2f11a24f3ad7738d59512b626e5109fc7ebf57072bc7b9",
+      "bytes": 654,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-composed-unit-2.log.txt",
+      "original": "/private/tmp/b16-composed-unit-2.log",
+      "sha256": "65427c7c8f680569f112cb43be53edaee79822222c2d1c49529ee9dfb578e47d",
+      "bytes": 1302,
+      "recordedExitCode": 1
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-memory-latency-recheck.log.txt",
+      "original": "/private/tmp/b16-memory-latency-recheck.log",
+      "sha256": "54ecc73f92392607b8373b8768c0f1ac80d30567e2384ab8e92d66d33ab9875e",
+      "bytes": 214,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-composed-unit-3.log.txt",
+      "original": "/private/tmp/b16-composed-unit-3.log",
+      "sha256": "b0769cee061552572736d4d383d6ad80cca29961a211138e9bc335dcd608ff56",
+      "bytes": 535,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-composed-build-1.log.txt",
+      "original": "/private/tmp/b16-composed-build-1.log",
+      "sha256": "42a16246b5c04c8c49cdeac521a0885b6ebc2aa929d54a4904b276b0bdf6160e",
+      "bytes": 24467,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-composed-communication-native-2.log.txt",
+      "original": "/private/tmp/b16-composed-communication-native-2.log",
+      "sha256": "694079f5526bb475f5a87f6f2f55077e25c09d36c92cbd27f0a018b4fac6f4b8",
+      "bytes": 5496,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-composed-upstream-native.log.txt",
+      "original": "/private/tmp/b16-composed-upstream-native.log",
+      "sha256": "09412f9479e0b1e797624547411424c0f31e21b35b657666604456307f2d5532",
+      "bytes": 6418,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-composed-final-types.log.txt",
+      "original": "/private/tmp/b16-composed-final-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15,
+      "recordedExitCode": 0
+    }
+  ],
+  "historicalArtifactManifests": [
+    "docs/evidence/xstate-effect/b16-2026-10-23/manifest.json",
+    "docs/evidence/xstate-effect/b16-repair/manifest.json"
+  ],
+  "composedChanges": [
+    "PersonalAgent combines published Memory maintenance drains with concurrent model, credential and upstream host drains.",
+    "Existing HTTP fixture supplies the actual scoped upstream observer; assertions preserved.",
+    "Native shutdown regression corrected by request-machine INTERRUPT; ordinary caller STOP preserved. Actual SDK tests and unchanged native suite cover the distinction."
+  ],
+  "limits": [
+    "Composed full static,3313 tests/291 files,all website/Worker builds,Communication/PersonalAgent and upstream native suites pass. Final full unit run used two local workers after an unchanged memory materialization fixture timed out under parallel load; isolated unchanged recheck passed and no test timeout was changed.",
+    "Synthetic local providers and native workerd/SDK transports. No live provider, credential, hosted container, merge or deployment claim. Exact-commit hosted CI remains required."
+  ]
+}

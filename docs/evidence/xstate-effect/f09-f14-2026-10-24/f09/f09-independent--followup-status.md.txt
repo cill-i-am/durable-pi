@@ -1,0 +1,7 @@
+# F09 shared HTTP follow-up
+
+The prior 19-owned-file bounded review remains preserved at `review.md` and `manifest.json`. Final closure is pending shared HTTP repair and the author's application browser evidence.
+
+Confirmed additional actual-consumer defect: `src/http/client.ts` SHA256 `947e09dde1faa6f4d4c69233d25c99faaf90cc83de139a0d0ab2c61398b41f2a` catches every non401 `response.json()` rejection and substitutes a normal error body. An annotated native Fail + Die + Interrupt(89235) therefore disappears before `makeFamilyRequests` can retain it. `body-cause-probe.mts` runs the production `makeModelSignIn` with the production `agentApi` and a synthetic503 response. The actor returns idle with the ordinary restore error and scope closes Success. `body-cause-before.log` captures the expected failing assertion. Probe SHA256 `5384cec8c86c9b0536d55df30c302583d28888d476d24bfa1fd9a5c6dec5867c`.
+
+Root assigned shared `src/http/client.ts` repair solely to workspace_wave; reproduction sent directly. F09 owner separately reproduced unread401-body cleanup. No feature-local duplicate wrapper or production edit by this reviewer.

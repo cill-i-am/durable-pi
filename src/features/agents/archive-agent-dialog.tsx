@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useRef } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -17,40 +17,22 @@ export function ArchiveAgentDialog({
   agent,
   onConfirm,
   onClose,
+  pending,
+  error,
 }: {
   agent: AgentProfile
-  onConfirm: () => Promise<void>
+  onConfirm: () => void
   onClose: () => void
+  pending: boolean
+  error: string
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
-  const submitting = useRef(false)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState("")
-
-  async function confirm() {
-    if (submitting.current) return
-    submitting.current = true
-    setPending(true)
-    setError("")
-    try {
-      await onConfirm()
-      onClose()
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not archive this agent."
-      )
-    } finally {
-      submitting.current = false
-      setPending(false)
-    }
-  }
-
   return (
     <AlertDialog
       open
       dismissible={!pending}
       onOpenChange={(open) => {
-        if (!open && !submitting.current) onClose()
+        if (!open && !pending) onClose()
       }}
     >
       <AlertDialogContent
@@ -76,7 +58,7 @@ export function ArchiveAgentDialog({
           <AlertDialogCancel ref={cancel} disabled={pending}>
             Cancel
           </AlertDialogCancel>
-          <AlertDialogAction disabled={pending} onClick={() => void confirm()}>
+          <AlertDialogAction disabled={pending} onClick={onConfirm}>
             {pending ? "Archiving…" : "Archive agent"}
           </AlertDialogAction>
         </AlertDialogFooter>

@@ -1,0 +1,107 @@
+{
+  "base": "7a6ad90ced1a082b5665791a89a8adb62dc65ef8",
+  "artifacts": [
+    {
+      "file": "runner-boundaries-before.log.txt",
+      "sha256": "ecd92bc89098d1e21d281595ca70b877b17f456a20d5c7451d1e2b16604eb3e5",
+      "source": "/private/tmp/runner-boundaries-before.log"
+    },
+    {
+      "file": "runner-boundaries-admission-control.log.txt",
+      "sha256": "d34f2e9d57d095ce98c8341b0a0c4a7e3c7ba018482f3e9da03a538ba7388311",
+      "source": "/private/tmp/runner-boundaries-admission-control.log"
+    },
+    {
+      "file": "runner-boundaries-native-binding-before.log.txt",
+      "sha256": "4c510b87bbf045ce9ca637e6c8a540977b8966f3bb270618573f906e5a8e7705",
+      "source": "/private/tmp/runner-boundaries-native-binding-before.log"
+    },
+    {
+      "file": "runner-boundaries-native-join-before.log.txt",
+      "sha256": "b11d09cb42a7b372872b856f89e8776d87f8c20d38e95f12980b0aad711aab3f",
+      "source": "/private/tmp/runner-boundaries-native-join-before.log"
+    },
+    {
+      "file": "runner-boundaries-focused-complete.log.txt",
+      "sha256": "3b4ab5f21274d775375fceec970c694e6ae46baa229f9c69e8781b986a63ef57",
+      "source": "/private/tmp/runner-boundaries-focused-complete.log"
+    },
+    {
+      "file": "runner-boundaries-unit.log.txt",
+      "sha256": "504a89a269665541681c222b8457b71c2844b4784d945b666ace06b749d4f5fc",
+      "source": "/private/tmp/runner-boundaries-unit.log"
+    },
+    {
+      "file": "runner-boundaries-unit-final.log.txt",
+      "sha256": "804bb630db2d389bbc465af9092fd2e5e8f7190604f85e9f8656a609518c4c54",
+      "source": "/private/tmp/runner-boundaries-unit-final.log"
+    },
+    {
+      "file": "runner-boundaries-static-complete.log.txt",
+      "sha256": "b9e1fe62ae318461e488ac5c5c3640a3ffd4dd49d2b3318f8f9b502a854d104b",
+      "source": "/private/tmp/runner-boundaries-static-complete.log"
+    },
+    {
+      "file": "runner-boundaries-native-personal.log.txt",
+      "sha256": "9e3efedaff83720d8e6a022a8d7dd0c057ed58f04faa7f9232a18e7910b8ed44",
+      "source": "/private/tmp/runner-boundaries-native-personal.log"
+    },
+    {
+      "file": "runner-boundaries-native-personal-final.log.txt",
+      "sha256": "bcc19c9ab75504c230defb9ae4caae421cb95881892fe3f14cea81452babd40b",
+      "source": "/private/tmp/runner-boundaries-native-personal-final.log"
+    },
+    {
+      "file": "runner-boundaries-native-background.log.txt",
+      "sha256": "59f5b05d6ad809f72dbd8fc6bb8c91543a38ad1055ecdc781a1206fe7cb8a521",
+      "source": "/private/tmp/runner-boundaries-native-background.log"
+    },
+    {
+      "file": "runner-boundaries-native-whatsapp.log.txt",
+      "sha256": "d857d0f5aa964a1e4741fbbacc46c7284051ae14f3e22a8485f3a310fbc1935e",
+      "source": "/private/tmp/runner-boundaries-native-whatsapp.log"
+    },
+    {
+      "file": "runner-boundaries-native-summary.log.txt",
+      "sha256": "12acb14d44cf3a59e315a90b7f82d36fed0ac88978600a78507a1495599f0411",
+      "source": "/private/tmp/runner-boundaries-native-summary.log"
+    },
+    {
+      "file": "runner-boundaries-build.log.txt",
+      "sha256": "06dacdd16c0c6cd034c6e343e401d90b0f1e4c3efa67356383746c1c76ebf409",
+      "source": "/private/tmp/runner-boundaries-build.log"
+    },
+    {
+      "file": "runner-boundaries-routes.log.txt",
+      "sha256": "edebec8cc7248284085929ddd5f2692df82a0b52f4db20193bc692934e162393",
+      "source": "/private/tmp/runner-boundaries-routes.log"
+    },
+    {
+      "file": "runner-boundaries-workers.log.txt",
+      "sha256": "766aab06ded42088c6e503a4bc2963d71f48f938c4abadf9a92cc2d09e2779ce",
+      "source": "/private/tmp/runner-boundaries-workers.log"
+    },
+    {
+      "file": "runner-boundaries-secrets.log.txt",
+      "sha256": "2dd77b727bf05edeeee9d4dc13c06bc2a37a59a9836a6600ffa5a43735532372",
+      "source": "/private/tmp/runner-boundaries-secrets.log"
+    }
+  ],
+  "sources": {
+    "scripts/test-communication-runtime.mjs": "f1a643b7c99f86073ea1bafb1ad020791430c8e87dadb540cdf8c2023e547d60",
+    "src/agent/worker.ts": "d0270093fae0e59b83f46aafd64eaed63b717c741a7cd1c6c1c41407eb0afc2f",
+    "src/apps/adapters/lifecycle.ts": "43e36e1d149fcb2995030b00638adac2af3e907471eccba57379bdba4c6509a0",
+    "src/coordination/adapters/lifecycle.ts": "abddf06f6b812e73202d6c5853c89cf09b21fd86651e95071f65a36ee35a57bc",
+    "src/coordination/runner.machine.ts": "4ef33d5b665f7b482e90f65a49547834c34451c57c128f7b5174748ab727acff",
+    "src/delegation/adapters/background-lifecycle.ts": "2fe1d2c40e6fb08d548bfdbedffbb4b7dfb1518b0697bfd185607ebd5bc22641",
+    "src/delegation/background-runner.machine.ts": "3c62243ef5c1fa1f8688d2bc3dfa161ce2f0f49cdfeed51c078961ede8851de2",
+    "src/replies/adapters/lifecycle.ts": "702da62cd4f7d7e681e8620bb92492b80e7ba641a8b94c2854e52ec88427fdf5",
+    "src/replies/reply-runner.machine.ts": "c3127d5f5e98b42401ba8d17f348a202b7b16a4a39158fb5498734cd28acf5c9",
+    "tests/app-lifecycle.test.ts": "9b094b091c6a288a040221078e9febcda25601b771c4c7f40a6bb4346d47b0de",
+    "tests/coordination-recovery-machine.test.ts": "143bb839a5578b2b4b1d947ab64aa3974d8fb655d15909c060d1400d06a1b8ae",
+    "tests/reply-runner.test.ts": "472f34625a3e194534adcfe68df39b53d805f221fe8cc782089dc4f43d7d653e",
+    "tests/runner-boundaries.test.ts": "ced402058cd9faf0b3b978313acd664674c4f53abf88aea7cb234a776eb1e30c",
+    "tests/runtime/communication-worker.ts": "ec7558ec99a14a3c20195a468e1b9a12778a98033a3dc1d016e12673743a5930",
+    "tests/runtime/personal-agent-worker.ts": "b7920f242f9242524a6b801d17dd0ccd07751746abdcb0759fb90fd110f26cb7"
+  }
+}

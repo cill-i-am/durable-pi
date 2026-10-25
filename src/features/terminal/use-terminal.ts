@@ -1,37 +1,120 @@
-import { Schema } from "effect"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { send } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber, Schema } from "effect"
+import { useEffect, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
-import {
-  CommandRun,
-  CommandInput,
-  TerminalState,
-  type TerminalNetworkPolicy,
-  type CommandSummary,
-  type InteractiveState,
-} from "@/terminal/contracts"
+import { CommandInput, type TerminalNetworkPolicy } from "@/terminal/contracts"
 
 import { maintainSessionLease, type LeaseState } from "./session-lease"
+import {
+  makeTerminalOwner,
+  terminalCommand,
+  terminalRequests,
+  type TerminalActor,
+} from "./terminal-owner"
+import type { terminalUiMachine, TerminalIntent } from "./terminal-ui.machine"
 
-export function useTerminal(
+type Snapshot = SnapshotFrom<ReturnType<typeof terminalUiMachine>>
+function useTerminalOwner(
   agentId: string,
   selected: string | null,
   setSelected: (id: string | null) => void
 ) {
-  const [networkPolicy, setNetworkPolicy] = useState<
-    TerminalNetworkPolicy | null | undefined
-  >(undefined)
-  const [session, setSession] = useState<typeof InteractiveState.Type | null>(
-    null
-  )
-  const [lease, setLease] = useState<LeaseState>({ ended: false, error: "" })
+  const latest = useRef({ selected, setSelected })
+  useEffect(() => {
+    latest.current = { selected, setSelected }
+  })
+  const [actor, setActor] = useState<TerminalActor | null>(null)
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
+  useEffect(() => {
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owned = yield* makeTerminalOwner(
+          {
+            agentId,
+            selected: latest.current.selected,
+            visible: document.visibilityState === "visible",
+          },
+          terminalRequests(agentId)
+        )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.subscribe((value) => {
+              if (mounted) setSnapshot(value)
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.on("selected", ({ id }) => {
+              if (mounted) latest.current.setSelected(id)
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        const visibility = () =>
+          Effect.runFork(
+            send(owned, {
+              type: "VISIBILITY",
+              visible: document.visibilityState === "visible",
+            })
+          )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            document.addEventListener("visibilitychange", visibility)
+          ),
+          () =>
+            Effect.sync(() =>
+              document.removeEventListener("visibilitychange", visibility)
+            )
+        )
+        if (mounted) {
+          setActor(owned)
+          setSnapshot(owned.getSnapshot())
+        }
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
+        )
+      )
+    }
+  }, [agentId])
+  const owner = actor?.getSnapshot().context.agentId === agentId ? actor : null
+  useEffect(() => {
+    if (owner) Effect.runFork(send(owner, { type: "SELECT", selected }))
+  }, [owner, selected])
+  const current =
+    snapshot?.context.agentId === agentId ? snapshot.context : null
+  return { owner, current }
+}
+
+function useTerminalLease(
+  agentId: string,
+  session: NonNullable<Snapshot["context"]["history"]>["session"]
+) {
+  const [leaseState, setLease] = useState<{
+    agentId: string
+    sessionId: string
+    state: LeaseState
+  } | null>(null)
   const expiry = useRef(0)
   expiry.current = session?.expiresAt ?? 0
-  const sessionId = session?.id
-  const sessionPhase = session?.phase
+  const sessionId = session?.id,
+    sessionPhase = session?.phase
   useEffect(() => {
-    setLease({ ended: false, error: "" })
     if (!sessionId || sessionPhase !== "ready") return
     return maintainSessionLease(
       expiry.current,
@@ -41,257 +124,99 @@ export function useTerminal(
           {},
           signal
         ),
-      setLease
+      (state) => setLease({ agentId, sessionId, state })
     )
   }, [agentId, sessionId, sessionPhase])
-  const [transferAttempt, setTransferAttempt] = useState<
-    | { kind: "import"; input: { id: string; fileId: string } }
-    | { kind: "export"; input: { id: string; path: string } }
-    | null
-  >(null)
-  const [sessionAttempt, setSessionAttempt] = useState<string | null>(null)
-  const [runs, setRuns] = useState<CommandSummary[]>([])
-  const [cleanupError, setCleanupError] = useState<string | null>(null)
-  const [runtimeBusy, setRuntimeBusy] = useState(false)
-  const [savedAt, setSavedAt] = useState<number | null>(null)
-  const [detail, setDetail] = useState<CommandRun | null>(null)
-  const [error, setError] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [attempt, setAttempt] = useState<CommandInput | null>(null)
-  const sequence = useRef(0),
-    lock = useRef(false)
-  const refresh = useCallback(async () => {
-    if (lock.current) return
-    const generation = ++sequence.current
-    try {
-      const history = Schema.decodeUnknownSync(TerminalState)(
-        await agentApi(agentId)("terminal")
-      )
-      const run = selected
-        ? Schema.decodeUnknownSync(CommandRun)(
-            await agentApi(agentId)(`terminal/${encodeURIComponent(selected)}`)
-          )
-        : null
-      if (generation === sequence.current) {
-        setRuns([...history.runs])
-        setRuntimeBusy(history.busy)
-        setCleanupError(history.cleanupError)
-        setSavedAt(history.savedAt)
-        setSession(history.session)
-        setNetworkPolicy(history.networkPolicy ?? null)
-        setDetail(run)
-      }
-    } catch (cause) {
-      if (generation === sequence.current)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load runs."
-        )
-    }
-  }, [agentId, selected])
-  useEffect(() => {
-    setDetail(null)
-    setError("")
-    const stop = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      2500,
-      true
-    )
-    return () => {
-      stop()
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      sequence.current++
-    }
-  }, [refresh])
-  async function command(path: string, input: unknown) {
-    if (lock.current) return null
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    setError("")
-    try {
-      const run = Schema.decodeUnknownSync(CommandRun)(
-        await agentApi(agentId)(path, input)
-      )
-      setRuntimeBusy(true)
-      setSelected(run.id)
-      setDetail(run)
-      setRuns((values) =>
-        [
-          { ...run, label: run.command.slice(0, 100) },
-          ...values.filter((value) => value.id !== run.id),
-        ].slice(0, 20)
-      )
-      return run
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The request failed. Retry the same run."
-      )
-      return null
-    } finally {
-      lock.current = false
-      setBusy(false)
-    }
-  }
-  async function start(commandText: string) {
-    const input = attempt ?? { id: crypto.randomUUID(), command: commandText }
-    try {
-      Schema.decodeUnknownSync(CommandInput)(input)
-    } catch {
-      setError("Enter a command up to 16,000 characters.")
-      return
-    }
-    setAttempt(input)
-    if (await command("terminal/run", input)) setAttempt(null)
-  }
-  async function transfer(next: NonNullable<typeof transferAttempt>) {
-    const pending = transferAttempt ?? next
-    setTransferAttempt(pending)
-    const result = await command(
-      pending.kind === "import" ? "terminal/files/import" : "terminal/export",
-      pending.input
-    )
-    if (result) setTransferAttempt(null)
-  }
-  async function openSession() {
-    const id = sessionAttempt ?? crypto.randomUUID()
-    setSessionAttempt(id)
-    if (await command("terminal/session", { id })) {
-      setSessionAttempt(null)
-      await refresh()
-    }
-  }
-  async function cancelTransfer() {
-    if (!transferAttempt || lock.current) return
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    try {
-      await agentApi(agentId)(
-        `terminal/${encodeURIComponent(transferAttempt.input.id)}/cancel`,
-        {}
-      )
-      setTransferAttempt(null)
-      setError("")
-    } catch {
-      setError(
-        "Cancellation is unconfirmed. Retry cancellation or the same transfer."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-      await refresh()
-    }
-  }
-  async function saveSession() {
-    if (!session || lock.current) return
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    setError("")
-    try {
-      await agentApi(agentId)(
-        `terminal/session/${encodeURIComponent(session.id)}/save`,
-        {}
-      )
-    } catch {
-      setError(
-        "Save could not be confirmed. Check the saved command status before starting again."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-      await refresh()
-    }
-  }
+  return leaseState?.agentId === agentId && leaseState.sessionId === sessionId
+    ? leaseState.state
+    : { ended: false, error: "" }
+}
+
+function historyProjection(
+  current: Snapshot["context"] | null,
+  selected: string | null
+) {
+  const history = current?.history
   return {
-    cancelPending: async () => {
-      const id = attempt?.id ?? sessionAttempt ?? transferAttempt?.input.id
-      if (!id || lock.current) return
-      lock.current = true
-      sequence.current++
-      setBusy(true)
-      try {
-        await agentApi(agentId)(`terminal/${encodeURIComponent(id)}/cancel`, {})
-        setAttempt((current) => (current?.id === id ? null : current))
-        setSessionAttempt((current) => (current === id ? null : current))
-        setTransferAttempt((current) =>
-          current?.input.id === id ? null : current
-        )
-        setError("")
-      } catch {
-        setError("Cancellation is unconfirmed. Retry cancelling this request.")
-      } finally {
-        lock.current = false
-        setBusy(false)
-        await refresh()
-      }
-    },
-    networkPolicy,
-    configureNetwork: async (input: TerminalNetworkPolicy) => {
-      if (lock.current) return false
-      lock.current = true
-      sequence.current++
-      setBusy(true)
-      setError("")
-      try {
-        const state = Schema.decodeUnknownSync(TerminalState)(
-          await agentApi(agentId)("terminal/network", input)
-        )
-        setNetworkPolicy(state.networkPolicy ?? null)
-        return true
-      } catch (cause) {
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Could not save internet settings. Reload and try again."
-        )
-        return false
-      } finally {
-        lock.current = false
-        setBusy(false)
-        await refresh()
-      }
-    },
-    runs,
-    transferAttempt,
-    importFile: (fileId: string) =>
-      transfer({ kind: "import", input: { id: crypto.randomUUID(), fileId } }),
-    exportFile: (path: string) =>
-      transfer({ kind: "export", input: { id: crypto.randomUUID(), path } }),
-    retryTransfer: () =>
-      transferAttempt ? transfer(transferAttempt) : Promise.resolve(),
-    cancelTransfer,
-    session,
-    lease,
-    sessionAttempt,
-    openSession,
-    saveSession,
-    runtimeBusy,
-    cleanupError,
-    cleanup: async () => {
-      try {
-        await agentApi(agentId)("terminal/cleanup", {})
-        await refresh()
-      } catch {
-        setError("Could not request cleanup. Try again.")
-      }
-    },
-    savedAt,
-    detail: detail?.id === selected ? detail : null,
+    networkPolicy: history ? (history.networkPolicy ?? null) : undefined,
+    runs: history?.runs ?? [],
+    session: history?.session ?? null,
+    runtimeBusy: history?.busy ?? false,
+    cleanupError: history?.cleanupError ?? null,
+    savedAt: history?.savedAt ?? null,
+    detail: current?.detail?.id === selected ? current.detail : null,
     selected,
-    busy,
-    error,
-    attempt,
-    refresh: () => {
-      setError("")
-      return refresh()
+    busy: !current || !!current.request,
+    error: current?.error ?? "",
+  }
+}
+function attemptProjection(
+  pending: Snapshot["context"]["pending"] | undefined
+) {
+  return {
+    transferAttempt:
+      pending?.kind === "import" || pending?.kind === "export" ? pending : null,
+    sessionAttempt: pending?.kind === "session" ? pending.input.id : null,
+    attempt: pending?.kind === "command" ? pending.input : null,
+  }
+}
+
+export function useTerminal(
+  agentId: string,
+  selected: string | null,
+  setSelected: (id: string | null) => void
+) {
+  const { owner, current } = useTerminalOwner(agentId, selected, setSelected)
+  const view = historyProjection(current, selected)
+  const lease = useTerminalLease(agentId, view.session)
+  const command = (intent: TerminalIntent) =>
+    owner
+      ? Effect.runPromise(terminalCommand(owner, intent))
+      : Promise.resolve(false)
+  return {
+    ...view,
+    ...attemptProjection(current?.pending),
+    lease,
+    configureNetwork: (policy: TerminalNetworkPolicy) =>
+      command({ type: "network", policy }),
+    importFile: (fileId: string) =>
+      command({
+        type: "start",
+        attempt: { kind: "import", input: { id: crypto.randomUUID(), fileId } },
+      }),
+    exportFile: (path: string) =>
+      command({
+        type: "start",
+        attempt: { kind: "export", input: { id: crypto.randomUUID(), path } },
+      }),
+    retryTransfer: () => command({ type: "retry" }),
+    cancelTransfer: () => command({ type: "cancelPending" }),
+    cancelPending: () => command({ type: "cancelPending" }),
+    openSession: () =>
+      command({
+        type: "start",
+        attempt: { kind: "session", input: { id: crypto.randomUUID() } },
+      }),
+    saveSession: () => command({ type: "save" }),
+    cleanup: () => command({ type: "cleanup" }),
+    refresh: () =>
+      owner
+        ? Effect.runPromise(send(owner, { type: "REFRESH" }))
+        : Promise.resolve(),
+    start: (text: string) => {
+      const input = { id: crypto.randomUUID(), command: text }
+      if (!Schema.is(CommandInput)(input)) {
+        if (owner)
+          Effect.runFork(
+            send(owner, {
+              type: "INVALID",
+              message: "Enter a command up to 16,000 characters.",
+            })
+          )
+        return Promise.resolve(false)
+      }
+      return command({ type: "start", attempt: { kind: "command", input } })
     },
-    start,
-    cancel: (id: string) =>
-      command(`terminal/${encodeURIComponent(id)}/cancel`, {}),
+    cancel: (id: string) => command({ type: "cancel", id }),
   }
 }

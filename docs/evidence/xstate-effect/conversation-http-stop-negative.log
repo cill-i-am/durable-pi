@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/agent-http.test.ts (26 tests | 1 failed | 25 skipped) 119ms
+   × records HTTP Stop and revokes access while joined owner release persistence fails 118ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-http.test.ts > records HTTP Stop and revokes access while joined owner release persistence fails
+AssertionError: expected 400 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 400
+
+ ❯ tests/agent-http.test.ts:223:27
+    221|     })
+    222|   )
+    223|   expect(response.status).toBe(202)
+       |                           ^
+    224|   expect(await response.json()).toEqual({ ok: true })
+    225|   const stopped = (await Effect.runPromise(f.pump.store.get(id)))!
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 25 skipped (26)
+   Start at  13:26:51
+   Duration  3.26s (import 74%, transform 20%, tests 4%, setup 2%)
+

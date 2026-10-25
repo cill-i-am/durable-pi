@@ -1,0 +1,311 @@
+import { Schema } from "effect"
+import { Check, RefreshCw } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select"
+import { ModelSelection, type ModelSettings } from "@/conversations/turns"
+import { useFamily } from "@/features/family/context"
+import { agentApi } from "@/http/client"
+import { resolveRoute, type JobType } from "@/inference/policy"
+
+import { useModelCatalog } from "./use-model-catalog"
+
+const settingsJobs = {
+  conversation: "Everyday conversation",
+  implementation: "Implementation",
+  planning: "Deep planning",
+  review: "Critical review",
+  labels: "Titles and labels",
+  extraction: "Structured extraction",
+  memory: "Memory summaries",
+} as const
+export function ModelDefaults({
+  agentId,
+  selection,
+  onSaved,
+  onPendingChange,
+}: {
+  agentId: string
+  selection: ModelSelection
+  onSaved: () => void
+  onPendingChange: (pending: boolean) => void
+}) {
+  const labels = useId()
+  const { family } = useFamily()
+  const { model, thinking } = selection
+  const [error, setError] = useState("")
+  const { catalog, catalogError, refresh, unavailable, setCatalog, cancel } =
+    useModelCatalog(agentId, selection.settingsRevision)
+  const [settingsJob, setSettingsJob] = useState<JobType>("conversation")
+  const [draft, setDraft] = useState<ModelSettings>(selection)
+  const [dirty, setDirty] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  useEffect(() => {
+    if (!dirty && !saving)
+      setDraft(
+        catalog?.assignments[settingsJob] ??
+          (settingsJob === "conversation"
+            ? { model, thinking }
+            : resolveRoute(settingsJob))
+      )
+  }, [catalog, settingsJob, model, thinking, dirty, saving])
+  useEffect(() => {
+    onPendingChange(dirty || saving)
+  }, [dirty, saving, onPendingChange])
+  async function save() {
+    if (saving || unavailable(draft)) return
+    setSaving(true)
+    setError("")
+    await cancel()
+    try {
+      const confirmed = Schema.decodeUnknownSync(ModelSelection)(
+        await agentApi(agentId)("settings", { ...draft, job: settingsJob })
+      )
+      await cancel()
+      setCatalog((current) =>
+        current &&
+        current.selection.settingsRevision > confirmed.settingsRevision
+          ? current
+          : current
+            ? {
+                ...current,
+                selection: confirmed,
+                assignments: {
+                  ...current.assignments,
+                  [settingsJob]: resolveRoute(settingsJob, draft),
+                },
+              }
+            : current
+      )
+      await refresh()
+      onSaved()
+      setDirty(false)
+      setSaved(true)
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not save model settings."
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <section className="settings-section" aria-label="Models">
+      <header className="settings-section-heading">
+        <h2>Models & connections</h2>
+      </header>
+      <div className="settings-section-body">
+        <h3 className="settings-eyebrow">Model connection</h3>
+        <div className="settings-provider">
+          <div className="flex items-center justify-between gap-3">
+            <strong>ChatGPT</strong>
+            <Badge variant="secondary">
+              {catalog?.checkedAt && !catalog.error
+                ? "Connected"
+                : catalogError
+                  ? "Needs attention"
+                  : "Checking…"}
+            </Badge>
+          </div>
+          <p>
+            Uses the family’s ChatGPT connection, provided by{" "}
+            {{ owner: "you", member: family.ownerName }[family.role]}. Your
+            model choices stay personal.
+          </p>
+          {family.role === "owner" && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={saving}
+              onClick={() => {
+                setError("")
+                void refresh()
+              }}
+            >
+              <RefreshCw />
+              Refresh connection
+            </Button>
+          )}
+        </div>
+        {(error || catalogError) && (
+          <Alert>
+            <AlertDescription>{error || catalogError}</AlertDescription>
+          </Alert>
+        )}
+        <div className="settings-rule" />
+        <div>
+          <h3>Defaults for this agent</h3>
+          <p className="settings-description">
+            Used by Auto for new jobs. Running jobs keep their model.
+          </p>
+        </div>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor={`${labels}-job`}>Job</FieldLabel>
+            <Select
+              value={settingsJob}
+              disabled={saving || dirty || !catalog}
+              onValueChange={(value) => {
+                if (value) {
+                  setSettingsJob(value)
+                  setDraft(catalog?.assignments[value] ?? resolveRoute(value))
+                }
+              }}
+            >
+              <SelectTrigger id={`${labels}-job`} className="w-full">
+                <SelectValue>{settingsJobs[settingsJob]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {Object.entries(settingsJobs).map(([value, name]) => (
+                    <SelectItem key={value} value={value}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+          <ModelChoices
+            labels={labels}
+            catalog={catalog}
+            draft={draft}
+            saving={saving}
+            onChange={(next) => {
+              setDirty(true)
+              setSaved(false)
+              setDraft(next)
+            }}
+          />
+        </FieldGroup>
+
+        {unavailable(draft) && (
+          <p role="status" className="settings-description">
+            {unavailable(draft)}
+          </p>
+        )}
+        <div className="settings-save-row">
+          <span role="status" className="settings-save-status">
+            {saved && (
+              <>
+                <Check /> Saved
+              </>
+            )}
+          </span>
+          {dirty && (
+            <Button
+              variant="ghost"
+              disabled={saving}
+              onClick={() => {
+                setDirty(false)
+                setSaved(false)
+                setError("")
+              }}
+            >
+              Cancel changes
+            </Button>
+          )}
+          <Button
+            disabled={saving || !dirty || !!unavailable(draft)}
+            onClick={() => void save()}
+          >
+            {saving ? "Saving…" : "Save default"}
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ModelChoices({
+  labels,
+  catalog,
+  draft,
+  saving,
+  onChange,
+}: {
+  labels: string
+  catalog: ReturnType<typeof useModelCatalog>["catalog"]
+  draft: ModelSettings
+  saving: boolean
+  onChange: (value: ModelSettings) => void
+}) {
+  const model = catalog?.models.find((m) => m.id === draft.model)
+  return (
+    <>
+      {" "}
+      <Field>
+        <FieldLabel htmlFor={`${labels}-model`}>Model</FieldLabel>
+        <Select
+          value={draft.model}
+          disabled={saving || !catalog}
+          onValueChange={(value) => {
+            if (value) {
+              onChange({ ...draft, model: value })
+            }
+          }}
+        >
+          <SelectTrigger id={`${labels}-model`} className="w-full">
+            <SelectValue>{model?.name ?? draft.model}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {catalog?.models.map((value) => (
+                <SelectItem
+                  key={value.id}
+                  value={value.id}
+                  disabled={!!value.unavailable}
+                >
+                  {value.name}
+                  {value.unavailable ? " · unavailable" : ""}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor={`${labels}-effort`}>Reasoning effort</FieldLabel>
+        <Select
+          value={draft.thinking}
+          disabled={saving || !catalog}
+          onValueChange={(value) => {
+            if (value) {
+              onChange({
+                ...draft,
+                thinking: value,
+              })
+            }
+          }}
+        >
+          <SelectTrigger id={`${labels}-effort`} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {model?.thinking.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </Field>
+    </>
+  )
+}

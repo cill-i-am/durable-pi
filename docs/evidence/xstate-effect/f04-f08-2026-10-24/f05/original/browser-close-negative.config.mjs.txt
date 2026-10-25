@@ -1,0 +1,3 @@
+import {defineConfig} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/vitest/dist/config.js'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'
+export default defineConfig({resolve:{alias:{'@':root+'/src'}},plugins:[{name:'break-close-generation',enforce:'pre',transform(code,id){if(id.endsWith('/src/features/browser/browser-owner.ts')) return code.replace('input.path === "close" && input.interrupt','false')}}],test:{setupFiles:[root+'/tests/agents-platform-stubs.ts'],include:[root+'/tests/browser-ui-lifecycle.test.ts']}})

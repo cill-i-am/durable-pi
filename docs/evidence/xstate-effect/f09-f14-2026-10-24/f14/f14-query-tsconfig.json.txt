@@ -1,0 +1,21 @@
+{
+  "extends": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tsconfig.json",
+  "include": [
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/query.machine.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/query-owner.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/use-activity-query.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/use-plans.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/activity-timeline.tsx",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/activity-record.tsx",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/run-timeline.tsx",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/activity/inference-runs.tsx",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/activity-query-owner.test.ts"
+  ],
+  "compilerOptions": {
+    "types": [
+      "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/vite/client",
+      "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/@cloudflare/workers-types",
+      "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/@types/node"
+    ]
+  }
+}

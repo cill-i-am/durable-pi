@@ -1,0 +1,22 @@
+{"source":"src/features/activity/use-plans.ts","sha256":"becfc793661554584cbb0f51718f5c10d08a044d646318bdfba809a7149c1682"}
+{"id":"00000000-0000-0000-0000-000000000002","error":""}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: A response for another plan cannot populate the selected plan
++ actual - expected
+
++ '00000000-0000-0000-0000-000000000002'
+- null
+
+    at file:///private/tmp/f14-independent/plan-identity.mjs:14:278 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '00000000-0000-0000-0000-000000000002',
+  expected: null,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

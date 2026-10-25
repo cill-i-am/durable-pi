@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+ ❯ tests/chatgpt-sign-in.test.ts (15 tests | 1 failed | 14 skipped) 85ms
+   × an accepted sign-in exchange belongs to the account after its browser leaves 61ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/chatgpt-sign-in.test.ts > an accepted sign-in exchange belongs to the account after its browser leaves
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/chatgpt-sign-in.test.ts:389:61
+    387|   try {
+    388|     browser.abort()
+    389|     expect(f.transport.mock.calls[0]?.[1]?.signal?.aborted).toBe(false)
+       |                                                             ^
+    390|     release()
+    391|     await result
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 skipped (15)
+   Start at  16:18:34
+   Duration  498ms (import 65%, tests 21%, transform 12%, setup 2%, worker 1%)
+

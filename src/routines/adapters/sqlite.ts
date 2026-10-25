@@ -1,18 +1,45 @@
 import { and, asc, count, desc, eq, inArray, notInArray } from "drizzle-orm"
-import { Effect, Layer, Schema } from "effect"
+import { Effect, Layer } from "effect"
 
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
-import { Routine, RoutineRun } from "../contracts"
 import {
   RoutinePersistence,
   RoutineStorageError,
   type OperationReceipt,
 } from "../persistence"
+import {
+  readRoutineRecord,
+  type RoutineRecord as Routine,
+} from "../routine.machine"
+import {
+  readRoutineRunRecord,
+  type RoutineRunRecord as RoutineRun,
+} from "../run.machine"
 import { routines, routineRuns, routineOperations } from "./schema"
+
+function indexedRun(row: {
+  record: string
+  status: string
+  id: string
+  turn_id: string
+  routine_id: string
+}) {
+  const run = readRoutineRunRecord(JSON.parse(row.record))
+  if (
+    run.status !== row.status ||
+    run.id !== row.id ||
+    run.turnId !== row.turn_id ||
+    run.routineId !== row.routine_id
+  )
+    throw new Error(
+      "Routine run projection conflicts with its durable record; restore compatible data."
+    )
+  return run
+}
 
 type Records = RoutinePersistence["Service"]
 export class SqliteRoutinePersistence implements Records {
@@ -46,9 +73,7 @@ export class SqliteRoutinePersistence implements Records {
         .orderBy(desc(routines.sequence))
     ).pipe(
       Effect.map((rows) =>
-        rows.map((row) =>
-          Schema.decodeUnknownSync(Routine)(JSON.parse(row.record))
-        )
+        rows.map((row) => readRoutineRecord(JSON.parse(row.record)))
       )
     )
   }
@@ -60,42 +85,35 @@ export class SqliteRoutinePersistence implements Records {
         .where(eq(routines.id, id))
     ).pipe(
       Effect.map((rows) =>
-        rows[0]
-          ? Schema.decodeUnknownSync(Routine)(JSON.parse(rows[0].record))
-          : undefined
+        rows[0] ? readRoutineRecord(JSON.parse(rows[0].record)) : undefined
       )
     )
   }
   runs() {
     return this.query((orm) =>
       orm
-        .select({ record: routineRuns.record })
+        .select()
         .from(routineRuns)
         .orderBy(desc(routineRuns.sequence))
         .limit(200)
-    ).pipe(
-      Effect.map((rows) =>
-        rows.map((row) =>
-          Schema.decodeUnknownSync(RoutineRun)(JSON.parse(row.record))
-        )
-      )
-    )
+    ).pipe(Effect.map((rows) => rows.map(indexedRun)))
   }
   inFlight() {
     return this.query((orm) =>
       orm
-        .select({ record: routineRuns.record })
+        .select()
         .from(routineRuns)
-        .where(inArray(routineRuns.status, ["pending", "queued"]))
+        .where(
+          inArray(routineRuns.status, [
+            "pending",
+            "queued",
+            "stopping",
+            "unconfirmed",
+          ])
+        )
         .orderBy(asc(routineRuns.sequence))
         .limit(1)
-    ).pipe(
-      Effect.map((rows) =>
-        rows[0]
-          ? Schema.decodeUnknownSync(RoutineRun)(JSON.parse(rows[0].record))
-          : undefined
-      )
-    )
+    ).pipe(Effect.map((rows) => (rows[0] ? indexedRun(rows[0]) : undefined)))
   }
   put(routine: Routine) {
     const record = JSON.stringify(routine)
@@ -108,7 +126,7 @@ export class SqliteRoutinePersistence implements Records {
   }
   putRun(raw: RoutineRun) {
     return Effect.suspend(() => {
-      const run = Schema.decodeUnknownSync(RoutineRun)(raw),
+      const run = readRoutineRunRecord(raw),
         record = JSON.stringify(run)
       return this.query((orm) =>
         orm
@@ -154,7 +172,12 @@ export class SqliteRoutinePersistence implements Records {
         .delete(routineRuns)
         .where(
           and(
-            notInArray(routineRuns.status, ["pending", "queued"]),
+            notInArray(routineRuns.status, [
+              "pending",
+              "queued",
+              "stopping",
+              "unconfirmed",
+            ]),
             notInArray(
               routineRuns.id,
               orm

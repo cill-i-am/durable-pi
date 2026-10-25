@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-10-23T15:32:39.988374+00:00",
+  "review": "B18 independent publication repair recheck",
+  "source": {
+    "src/memory/backup.ts": "d2707798c5b888a137a9621236a48bbd5888076ffa583c9492d0115b4c547dfe",
+    "src/memory/application.ts": "df6dd25e914a069d9608ec40c636408c11af6ae52b5f5dc91b9f4656a43a7251",
+    "src/memory/backup-status.ts": "3c470d7ef52f232189e0ec0c7fd63d5da297c7480fbcff7c31c83cb128bdd428",
+    "src/memory/backup.machine.ts": "cbf7528a7b2643184cda13e4a7c4641f180ac7ac58890478a41d91d96f90c589",
+    "src/memory/backup-publication.machine.ts": "b075099514b8a6387671fa6caabe54558ae2308771a1d6c5bb9cc09862f7d099",
+    "src/memory/adapters/backup-status.ts": "18a8b887c977734560c4f20159989e3dad7190395c4f4dcf5fdb6377d69e09f0",
+    "tests/memory-backup-lifecycle.test.ts": "cd4a46898eb5750fc7f76f363b20194036019958e462f9ee87994c45a9db5dd6",
+    "tests/memory-application.test.ts": "afe07d6de863be7af05953768f67b5777fc927ed6f3fea740d7353aab26d1298",
+    "tests/memory-resource-ownership.test.ts": "2b654d90ca97d8cbfbff45d22790dbef763c8d093f68ef0899275b4693db3741",
+    "tests/memory.test.ts": "2491ce10edd5c5fbd0e9d506f882b0a62beec9bd36ca3a6b3a9d7468863dcca4"
+  },
+  "artifacts": {
+    "latest-skew.mts": "629c35af14f6b336772038f9ccc9d461871fe15c6e4d193999bd4213f870d1a4",
+    "latest-skew.log": "1ca495ba9f5e00f44011d0db85c302ad6d50e5688f1e2139ffbd90a17c5e92d5",
+    "latest-skew-fixed.log": "080f5c89ff983bba83aa23a0cd2e178feacd90a04d3463f745d4279d5ccb40f9",
+    "domain-focused.log": "b3017b80a9942509d07591bce81032ea1ee38e53dad2e47f8c76a78be25f2825",
+    "domain-focused-fixed.log": "b8dca7cf19333f271a429e913bb7a0b945d01c5d8a24cac20d89609296d3bee2",
+    "before-fix-manifest.json": "9f4e95d172d4a3cc0d5396ac8d492125e62a8d512d57fb624c60468b84dad960"
+  },
+  "result": {
+    "originalProbeUnchanged": true,
+    "latestSkewExitCode": 0,
+    "latestBeforeOldSettlement": 2,
+    "latestAfterOldSettlement": 2,
+    "progress": 2,
+    "readBackup": 2,
+    "oldStatus": "failed",
+    "staleLatestWrite": false,
+    "focusedFiles": 4,
+    "focusedTests": 60,
+    "focusedExitCode": 0
+  },
+  "scope": "Two real Node SQLite transaction groups; production repository/status/backup/bucket adapters; synthetic local ETag-enforcing bucket. No hosted R2/workerd/provider execution. Runner recheck separately pending."
+}

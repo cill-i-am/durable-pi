@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T14:30:28.478284+00:00",
+  "baseCommit": "0cf6861ab5a89686d3956e0f85f480446c1f9bf8",
+  "sourceCaptureNote": "Hashes identify the uncommitted publication candidate. The base commit alone does not identify these edits. Raw evidence is copied without normalization; .txt suffixes prevent formatter rewrites. Earlier lifecycle proof is not exact-final-source evidence.",
+  "sources": {
+    "src/communication/adapters/http.ts": "694ec5b64d2615e91b10d0fb831472ad302aecb2aa6be652ddeb19b04871e057",
+    "src/communication/adapters/identity.ts": "2cabfe1bd8ad4d69e059f0a172e16c9defd21074f1633f4abb6c5b45be02205c",
+    "src/communication/adapters/input.ts": "3aedc0cb38d6d16cfa16f9f1496986bd515f08ba37c5525334a61767dd140aad",
+    "src/communication/adapters/interop.ts": "c11827946c0fff5445c4706da2fc6bb7c1b2a1452907e6df3b1b70e1a8b4ff85",
+    "src/communication/adapters/lifecycle.ts": "86a7bb285ead919f4a2729084594124d6bf5ccb6f5d7b447062a98ba5b1f6339",
+    "src/communication/adapters/personal-agent.ts": "13493976e45f52cba69ef125e6e43c322f67d63fcdcdb68bf5e7e288767d7c55",
+    "src/communication/adapters/pi.ts": "0aa6d104397690e3ebe0c67ffc613293a9ca5a0a2b501fde2da7701b6fa39f85",
+    "src/communication/adapters/protocol.ts": "06feda98a9e98c185f71cb072a915c4994c374a26e0ce04d61ba20a6fceebf85",
+    "src/communication/adapters/rpc.ts": "da24411ef82d24886fb12356bf5f5d898b2a39eeea6ae5966d09e6537df9bfa1",
+    "src/communication/adapters/schema.ts": "96bf839e436c5c1b4d56af8e248b562a5d445adc945c3eab3780fd000cc29574",
+    "src/communication/adapters/sqlite.ts": "9a5b1680ebec6403d427f028e15f0fefc03bf69ae885fa041d871a19e6fbb01f",
+    "src/communication/adapters/tools.ts": "47e548a8eb4a9e6340c5a0ff082576d6209939d0ea4f88645fd65458937d5eae",
+    "src/communication/admission.machine.ts": "f00982af3bb90499bcaaf8253618d128ef6fd8b3573bb9f3247b511501aa9b8a",
+    "src/communication/command.machine.ts": "5288f11d5d5c9105794ca02d4ddec53926c57644f02183fb5d1ec0fe5e436789",
+    "src/communication/communication.ts": "103858f78369e92f71f03ddaf3a282776fcde9d33398ba093d4b8d49d139b0a3",
+    "src/communication/contracts.ts": "ea84e9488e904e2e3c21ce91d83ec4d32df7b5b695db6620616fb1fd99822a76",
+    "src/communication/delivery.machine.ts": "65ac37e061a40d85c4e6114fed705bd58e011d63b2b84ce5080ada1b04976c76",
+    "src/communication/delivery.ts": "402591018fae360e71cd8b4e49efd829e780908cc38f51d75cd023c9da9904a8",
+    "src/communication/domain.ts": "5b13c2d9e800d4993c79c9f59f2943100878436846ea8ff4844c877003430e2e",
+    "src/communication/execution.machine.ts": "dbd5054f76f6e40bb0c5481e20e7c047304a14e99caa14c49dcc3341d8654108",
+    "src/communication/execution.ts": "7758919ac633faba00de21bca91e20c52c30608c2198975581ad4c28e7daae5a",
+    "src/communication/identity.ts": "96c77ca719a2e67885065c5c6ce7eb9155ae151df46756b02ea0ccc294ede0a2",
+    "src/communication/incoming.machine.ts": "53f48934f775ff5d4b4da4ad8510a9658965499a7e5383fda8b120cdde4869f5",
+    "src/communication/mailbox.ts": "ccea27721a7a759b564a3f3b8ca0ed0312b71c928816f59c2b4fd7a7a6a412b5",
+    "src/communication/model-request.machine.ts": "0c867254362bab6827df8b6c131018041d1823346f34e9ee6126b082598c38ad",
+    "src/communication/outbox.machine.ts": "1aac99792b720c131a356079d44843f030523f3d3a66b1a1e29bb263e0c1ac7a",
+    "src/communication/pump.machine.ts": "7322bcb74859230db1297342f473cabef6c84131f52678b7e35c80ef94924d9f",
+    "src/communication/recovery.machine.ts": "35c2cf7dabd4f92415dc8a737902932202c0e2ef791dbe2de722f01b48552115",
+    "src/communication/task.machine.ts": "9b8d9d6983a7b133978c0e62bd61594db7c0d33bb3747e565a6ba3e6eac19536",
+    "tests/communication-application.test.ts": "5a17038ec890d6ab24868698761064788abe9e38dfe8d872166bece62bb486d5",
+    "tests/communication-delivery.test.ts": "646103e6c8a6c30872dc99bd7425b0217e9aa21b2d6c17c68555899e11a7ba5a",
+    "tests/communication-domain.test.ts": "e95a13db2987ab3aac35e3237dcaa7e211383adda24ae972dddd082067e1d368",
+    "tests/communication-interop.test.ts": "9f6ec03fe83726b4b9654eae899629be92c0fbe40c6970f4c0561b81224dc410",
+    "tests/communication-lifetime.test.ts": "82a5c8a19d44f242bc34eaa61fded6171868d4eb96536151a5c0305ceeea5659",
+    "tests/communication-native-barriers.test.ts": "7e6c046b56adca806aa6b1b4b5062c225564476eac54419c70d3f5f684d0df44",
+    "tests/communication-native.test.ts": "9a484d64ff01405e59c3a5414f765cd8b2bf72f30b22a45aaf13982ca813424b",
+    "tests/communication-outbox-state.test.ts": "54a8273788a140faba10142631f5a045a7853a0916fe7234bc84556756f6d889",
+    "tests/communication-request-machine.test.ts": "ffc0bb4977229ebe556a1156b8d0012b6bb83ca4a996b2f2491b7b225c30302a",
+    "tests/communication-runner.test.ts": "9c0746c275d9db54ef7d1fd7ed925dd58254c82e8628ed38f1dca45d700b8b88",
+    "tests/communication-state.test.ts": "ca3b87a78c6aa5bdf403f0ea5b29d230ff6a8c995815623a8a96a5563a576cd9",
+    "tests/communication.test.ts": "f2ce0d745de7619128b265af25b6599562b93e489fd79b99fdbb9b130c496cdc",
+    "tests/runtime/communication-control-worker.ts": "61bffbbbe60af6311a4bd5ddaa4da718afe3c060dc4fbe6a9ab762c20d55c1c7",
+    "scripts/test-communication-control-runtime.mjs": "c4fcef7fa3d64368f169f02f6ace59e3278727359cd3aa890c446734a8df2a41",
+    "src/agent/worker.ts": "6fffc5c377065d1f929bb908f356699be947c3bea91eff09eb237b56eb6aedcd",
+    "tests/browser/communication-recovery.spec.ts": "5f1dd564ce259043e90db86159021aa76c96bbc439d954271ac9f5e9e6ab9e62"
+  },
+  "nativeEpochEmbeddedSources": {
+    "positive": {
+      "src/communication/adapters/lifecycle.ts": "86a7bb285ead919f4a2729084594124d6bf5ccb6f5d7b447062a98ba5b1f6339",
+      "src/communication/recovery.machine.ts": "35c2cf7dabd4f92415dc8a737902932202c0e2ef791dbe2de722f01b48552115",
+      "tests/runtime/communication-control-worker.ts": "61bffbbbe60af6311a4bd5ddaa4da718afe3c060dc4fbe6a9ab762c20d55c1c7",
+      "scripts/test-communication-control-runtime.mjs": "c4fcef7fa3d64368f169f02f6ace59e3278727359cd3aa890c446734a8df2a41"
+    },
+    "negative": {
+      "src/communication/adapters/lifecycle.ts": "86a7bb285ead919f4a2729084594124d6bf5ccb6f5d7b447062a98ba5b1f6339",
+      "src/communication/recovery.machine.ts": "35c2cf7dabd4f92415dc8a737902932202c0e2ef791dbe2de722f01b48552115",
+      "tests/runtime/communication-control-worker.ts": "61bffbbbe60af6311a4bd5ddaa4da718afe3c060dc4fbe6a9ab762c20d55c1c7",
+      "scripts/test-communication-control-runtime.mjs": "c4fcef7fa3d64368f169f02f6ace59e3278727359cd3aa890c446734a8df2a41"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-epoch-positive.log.txt",
+      "original": "/private/tmp/b07-native-epoch-positive.log",
+      "bytes": 284,
+      "sha256": "41e5f58920cd312e5da5d82ee0add4df206e6e21be092ad3da34b8931e182715",
+      "provenance": "Final recovery-epoch native checkpoint; embedded four-file source hashes verified against captured source."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-epoch-positive.json.txt",
+      "original": "/private/tmp/b07-native-epoch-positive-evidence.json",
+      "bytes": 28892,
+      "sha256": "c0a9dc177ce0d94469e716d44dd9bf08cd84a7da7f68a1f56f88178a0fbe82bb",
+      "provenance": "Final recovery-epoch native checkpoint; embedded four-file source hashes verified against captured source."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-epoch-positive-workerd.log.txt",
+      "original": "/private/tmp/b07-native-epoch-positive-workerd.log",
+      "bytes": 1061,
+      "sha256": "a60b76f60b624ff99bcb3be0029c83534d433399f1f8b505efbd402e12514b5e",
+      "provenance": "Final recovery-epoch native checkpoint; embedded four-file source hashes verified against captured source."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-epoch-negative.log.txt",
+      "original": "/private/tmp/b07-native-epoch-negative.log",
+      "bytes": 1630,
+      "sha256": "54d324708027b7ab341e1c740bc8ccaca5bfd67536e839fdd0f4b12f2602b07d",
+      "provenance": "Final recovery-epoch native checkpoint; embedded four-file source hashes verified against captured source."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-epoch-negative.json.txt",
+      "original": "/private/tmp/b07-native-epoch-negative-evidence.json",
+      "bytes": 8000,
+      "sha256": "f8c5762f68c64b6b05c8585c302a4788dc4e3e5145673ffff473e880e62a53ba",
+      "provenance": "Final recovery-epoch native checkpoint; embedded four-file source hashes verified against captured source."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-epoch-negative-workerd.log.txt",
+      "original": "/private/tmp/b07-native-epoch-negative-workerd.log",
+      "bytes": 914,
+      "sha256": "6a387ca52574d65aa209defa15772bebcb68f1b9cb8c6616c924e770cc582560",
+      "provenance": "Final recovery-epoch native checkpoint; embedded four-file source hashes verified against captured source."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-lifecycle-positive.log.txt",
+      "original": "/private/tmp/b07-communication-native-positive.log",
+      "bytes": 1009,
+      "sha256": "ebc8572db0626335d3ac793c90e3ade41ae3022ddae9162b1482ec98f14444fa",
+      "provenance": "Earlier native lifecycle checkpoint before final incoming, continuation and generic recovery repairs; original evidence has no embedded source hashes."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-lifecycle-positive.json.txt",
+      "original": "/private/tmp/b07-communication-native-positive-evidence.json",
+      "bytes": 108888,
+      "sha256": "0e8fa719475864d76826cc65a56bb0dd4d7049f87734e6fafb47b5b577bbc7db",
+      "provenance": "Earlier native lifecycle checkpoint before final incoming, continuation and generic recovery repairs; original evidence has no embedded source hashes."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-lifecycle-positive-workerd.log.txt",
+      "original": "/private/tmp/b07-communication-native-positive-workerd.log",
+      "bytes": 685,
+      "sha256": "c56f07395715e0a5ec3415983fee172dcbc29403f16143833174a76dfbf6695c",
+      "provenance": "Earlier native lifecycle checkpoint before final incoming, continuation and generic recovery repairs; original evidence has no embedded source hashes."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-lifecycle-negative.log.txt",
+      "original": "/private/tmp/b07-communication-native-negative.log",
+      "bytes": 1018,
+      "sha256": "a510c1dd6a73745d0de357e1cfcc1cb08f1dfa09358cefa9fa9e7e054d46a037",
+      "provenance": "Earlier native lifecycle checkpoint before final incoming, continuation and generic recovery repairs; original evidence has no embedded source hashes."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-lifecycle-negative.json.txt",
+      "original": "/private/tmp/b07-communication-native-negative-evidence.json",
+      "bytes": 5646,
+      "sha256": "b4d369ae2e7e8cfb203b8536845912affd945e6d9675e4e90a2f131b80385bc1",
+      "provenance": "Earlier native lifecycle checkpoint before final incoming, continuation and generic recovery repairs; original evidence has no embedded source hashes."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-native-lifecycle-negative-workerd.log.txt",
+      "original": "/private/tmp/b07-communication-native-negative-workerd.log",
+      "bytes": 264,
+      "sha256": "7d7adcdb6b08845f1fb80ead8cd8945a662cb26b545e57164614e6d51d65e89d",
+      "provenance": "Earlier native lifecycle checkpoint before final incoming, continuation and generic recovery repairs; original evidence has no embedded source hashes."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-focused-unit.log.txt",
+      "original": "/private/tmp/b07-communication-review/final-unit.txt",
+      "bytes": 234,
+      "sha256": "defdc02315c2305e1fb461a196f763623cfc0a2a722ca5fc066c078854f44eed",
+      "provenance": "183 tests in 12 Communication files. Precedes the final await-entered test synchronization edit; full integrated unit run includes that edit."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-full-static.log.txt",
+      "original": "/private/tmp/b07-b08-final-static-5.log",
+      "bytes": 655,
+      "sha256": "a19084c680b00e6fc94f9e9df39cadaed0bd2211f328800dc80c14e0fb601cab",
+      "provenance": "Parent-confirmed final integrated static gate, including final core and native fixture; predates these publication documents."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-full-unit-build.log.txt",
+      "original": "/private/tmp/b07-b08-final-unit-build-1.log",
+      "bytes": 25109,
+      "sha256": "e8448a66e33439f6d620b17a2b0278c01fbbd3df8daebfd7a7ad831b2239a8b3",
+      "provenance": "Parent-confirmed final integrated run: 2909 tests in 259 files, maxWorkers=2; website, site routing and all seven Worker builds."
+    }
+  ]
+}

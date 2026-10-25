@@ -1,0 +1,11 @@
+# B18 BackupRunner independent closure
+
+Clear within the reviewed runner scope. Final adapter SHA-256 `4717bcfea235454ce315f8c5c155407b199f085ea48d4f07f25ea8dc6ab34fa7`; controller `73cfce0208ae20f06a631fba6fe5b009551aabfe53a4a7077989081bd4fac973`. Both were verified before and after the final executions.
+
+All seven independent probes exit 0. Both original cleanup-loss reproductions, retry-prearm reproduction and cold-controller-read reproduction are byte-identical to their failing versions. The held-restore disposal probe changes scheduling only: begin disposal concurrently, prove it remains pending, release restore, then retain the original assertion that no new producer starts. Additional probes prove joined native cleanup retains its complete checked failure/defect/interruption and that fresh SDK/runner instances reconstruct exact cleanup from reopened SQLite queue and diagnostic storage. The cold read outage now preserves the entire prior epoch/token/claim record exactly.
+
+Independently rerun focused runner suite: **23 tests / 1 file passed**. All reported runner findings are cleared: exact claim handoff, joined shutdown, premature domain-retry prearm, and controller overwrite after an unavailable read. No remaining concrete counterexample in the requested scope.
+
+`closed-manifest.json` records source/script/log hashes, unchanged-probe checks, commands, exit codes and limits. Earlier failing logs and snapshots remain available; final logs use `closed-*.log`. Production/Git were not edited by the reviewer.
+
+Scope: actual installed Lifecycle SDK queue/retry/outcome code backed by Node SQLite, with shimmed platform methods and synthetic host Effects. Cold reconstruction closes/reopens SQLite and creates fresh SDK/runner instances; it is not SIGKILL or workerd. No physical cloud alarm, R2/provider or broad repository/integration claim follows. The owner's native proof remains separate.

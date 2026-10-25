@@ -1,0 +1,11 @@
+2026-10-24T18:10:01.936Z ERROR [Better Auth]: Failed to verify authentication Error: Unexpected authentication response origin "https://foreign.invalid", expected "http://localhost:58619"
+    at verifyAuthenticationResponse (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:52603:46)
+    at <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:53117:30)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:16502:11)
+    at async internalHandler (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:14671:20)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:26762:18)
+    at async processRequest (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:15437:11)
+    at async handler (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:15460:16)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:16269:13)
+    at async handle (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/router-C6w4Oiho.js:1884:19)
+Built website passkeys passed: registration, password-free sign-in, device proof, origin, replay, freshness, rename, removal and private native auth.

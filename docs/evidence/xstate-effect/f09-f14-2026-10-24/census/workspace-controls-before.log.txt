@@ -1,0 +1,21 @@
+9:09:05 PM [vite] (client) dependencies optimized: @base-ui/react/avatar, @base-ui/react/button, @base-ui/react/drawer, @base-ui/react/input, @base-ui/react/menu, @base-ui/react/use-render, class-variance-authority, cmdk, cn, lucide-react
+9:09:05 PM [vite] (client) optimized dependencies changed. reloading
+{"calls":1,"resets":1}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: late invalidation must not reset a retired route error owner
+
+1 !== 0
+
+    at file:///private/tmp/workspace-controls-browser/run.mjs:8:512 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

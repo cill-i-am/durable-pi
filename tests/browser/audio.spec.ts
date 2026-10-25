@@ -183,5 +183,14 @@ test("an update reload waits until a pending microphone request is cancelled", a
     .click()
   await expect(
     page.getByRole("button", { name: "Reload", exact: true })
+  ).toBeDisabled()
+  await page.evaluate(() =>
+    (Reflect.get(window, "releaseVoicePermission") as () => void)()
+  )
+  await expect
+    .poll(() => page.evaluate(() => Reflect.get(window, "voiceTrackStops")))
+    .toBe(1)
+  await expect(
+    page.getByRole("button", { name: "Reload", exact: true })
   ).toBeEnabled()
 })

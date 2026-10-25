@@ -19,8 +19,16 @@ describe("durable reply admission", () => {
   it("reuses member query shapes while reading fresh bindings and transaction state", () => {
     const db = database()
     const store = new ConversationStore(db, defaults)
-    const root = Effect.runSync(store.admit(input("first root"))).turn
-    const other = Effect.runSync(store.admit(input("second root"))).turn
+    const root = Effect.runSync(
+      store.admit(input("first root"), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    ).turn
+    const other = Effect.runSync(
+      store.admit(input("second root"), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    ).turn
     db.run(
       "UPDATE chat_turns SET prompt = ?, skill_context = ? WHERE id = ?",
       "private prompt",
@@ -40,7 +48,15 @@ describe("durable reply admission", () => {
       prompt: "private prompt",
       skill_context: "private skills",
     })
-    const steer = Effect.runSync(store.admit(input("new steer", "steer"))).turn
+    const steer = Effect.runSync(
+      store.admit(
+        input("new steer", "steer"),
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
+    ).turn
     expect(
       Effect.runSync(store.members(root.id, false)).map((row) => row.id)
     ).toEqual([root.id, steer.id])
@@ -58,7 +74,13 @@ describe("durable reply admission", () => {
       Effect.exit(
         db.transaction(() =>
           Effect.gen(function* () {
-            yield* store.admit(input("rolled back steer", "steer"))
+            yield* store.admit(
+              input("rolled back steer", "steer"),
+              undefined,
+              undefined,
+              undefined,
+              { discoveryDeadline: Date.now() + 60_000 }
+            )
             expect(yield* store.members(root.id, false)).toHaveLength(3)
             return yield* Effect.fail("rollback")
           })
@@ -78,11 +100,25 @@ describe("durable reply admission", () => {
     Effect.runSync(migrateSqlite(db))
     const store = new ConversationStore(db, defaults)
     expect(Effect.runSync(store.recent())[0]?.text).toBe("existing")
-    const root = Effect.runSync(store.admit(input())).turn
-    const steer = Effect.runSync(
-      store.admit(input("actually, use the other file", "steer"))
+    const root = Effect.runSync(
+      store.admit(input(), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
     ).turn
-    const queued = Effect.runSync(store.admit(input("next task"))).turn
+    const steer = Effect.runSync(
+      store.admit(
+        input("actually, use the other file", "steer"),
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
+    ).turn
+    const queued = Effect.runSync(
+      store.admit(input("next task"), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    ).turn
     expect(steer.parent_id).toBe(root.id)
     expect(queued.parent_id).toBeNull()
     expect(Effect.runSync(store.active())?.id).toBe(root.id)
@@ -98,14 +134,42 @@ describe("durable reply admission", () => {
   it("deduplicates retries and rejects operation-key reuse with different semantics", () => {
     const store = new ConversationStore(database(), defaults)
     const command = input()
-    expect(Effect.runSync(store.admit(command)).accepted).toBe(true)
+    expect(
+      Effect.runSync(
+        store.admit(command, undefined, undefined, undefined, {
+          discoveryDeadline: Date.now() + 60_000,
+        })
+      ).accepted
+    ).toBe(true)
     Effect.runSync(store.setSettings({ model: "another", thinking: "low" }))
-    expect(Effect.runSync(store.admit(command)).accepted).toBe(false)
+    expect(
+      Effect.runSync(
+        store.admit(command, undefined, undefined, undefined, {
+          discoveryDeadline: Date.now() + 60_000,
+        })
+      ).accepted
+    ).toBe(false)
     expect(() =>
-      Effect.runSync(store.admit({ ...command, mode: "steer" }))
+      Effect.runSync(
+        store.admit(
+          { ...command, mode: "steer" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
+      )
     ).toThrow(ConversationConflict)
     expect(() =>
-      Effect.runSync(store.admit({ ...command, text: "different" }))
+      Effect.runSync(
+        store.admit(
+          { ...command, text: "different" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
+      )
     ).toThrow(ConversationConflict)
     expect(Effect.runSync(store.get(command.operationId))?.model).toBe(
       "test-model"
@@ -113,12 +177,22 @@ describe("durable reply admission", () => {
   })
   it("does not lose a steer admitted while completion was awaiting Pi", () => {
     const store = new ConversationStore(database(), defaults)
-    const root = Effect.runSync(store.admit(input())).turn
+    const root = Effect.runSync(
+      store.admit(input(), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    ).turn
     Effect.runSync(store.prepare(root.id))
     Effect.runSync(store.submitted(root.id, "session"))
     const completing = Effect.runSync(store.get(root.id))!
     const steer = Effect.runSync(
-      store.admit(input("one more detail", "steer"))
+      store.admit(
+        input("one more detail", "steer"),
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     expect(
       Effect.runSync(
@@ -147,18 +221,36 @@ describe("durable reply admission", () => {
       )
     ).toBe(true)
     const late = Effect.runSync(
-      store.admit(input("arrives after close", "steer"))
+      store.admit(
+        input("arrives after close", "steer"),
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     expect(late.parent_id).toBeNull()
   })
   it("keeps stop durable across restart and does not let submission overwrite it", () => {
     const db = database()
     const store = new ConversationStore(db, defaults)
-    const root = Effect.runSync(store.admit(input())).turn
-    const child = Effect.runSync(
-      store.admit(input("additional input", "steer"))
+    const root = Effect.runSync(
+      store.admit(input(), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
     ).turn
-    Effect.runSync(store.requestStop(child.id))
+    const child = Effect.runSync(
+      store.admit(
+        input("additional input", "steer"),
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
+    ).turn
+    Effect.runSync(
+      store.requestStop(child.id, { discoveryDeadline: Date.now() + 60_000 })
+    )
     Effect.runSync(store.submitted(root.id, "session"))
     const restored = new ConversationStore(db, defaults)
     expect(Effect.runSync(restored.active())?.status).toBe("stopping")
@@ -181,32 +273,84 @@ describe("durable reply admission", () => {
   })
   it("caps pending work and rejects retrying a still-running reply", () => {
     const store = new ConversationStore(database(), defaults)
-    const root = Effect.runSync(store.admit(input())).turn
+    const root = Effect.runSync(
+      store.admit(input(), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    ).turn
     expect(() =>
-      Effect.runSync(store.admit({ ...input(), retryOf: root.id }))
+      Effect.runSync(
+        store.admit(
+          { ...input(), retryOf: root.id },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
+      )
     ).toThrow(ConversationConflict)
     for (let i = 0; i < 9; i++)
-      Effect.runSync(store.admit(input(String(i), "steer")))
-    expect(() => Effect.runSync(store.admit(input()))).toThrow(ConversationFull)
+      Effect.runSync(
+        store.admit(
+          input(String(i), "steer"),
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
+      )
+    expect(() =>
+      Effect.runSync(
+        store.admit(input(), undefined, undefined, undefined, {
+          discoveryDeadline: Date.now() + 60_000,
+        })
+      )
+    ).toThrow(ConversationFull)
   })
   it("never silently queues steering when stop wins admission, including after restart", () => {
     const db = database()
     const store = new ConversationStore(db, defaults)
-    const root = Effect.runSync(store.admit(input())).turn
+    const root = Effect.runSync(
+      store.admit(input(), undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    ).turn
     const acceptedInput = input("earlier correction", "steer")
-    const accepted = Effect.runSync(store.admit(acceptedInput)).turn
-    Effect.runSync(store.requestStop(root.id))
+    const accepted = Effect.runSync(
+      store.admit(acceptedInput, undefined, undefined, undefined, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
+    ).turn
+    Effect.runSync(
+      store.requestStop(root.id, { discoveryDeadline: Date.now() + 60_000 })
+    )
     const restored = new ConversationStore(db, defaults)
-    expect(Effect.runSync(restored.admit(acceptedInput))).toMatchObject({
+    expect(
+      Effect.runSync(
+        restored.admit(acceptedInput, undefined, undefined, undefined, {
+          discoveryDeadline: Date.now() + 60_000,
+        })
+      )
+    ).toMatchObject({
       accepted: false,
     })
     const next = input("new correction", "steer")
-    expect(() => Effect.runSync(restored.admit(next))).toThrow(
-      "This reply is stopping"
-    )
+    expect(() =>
+      Effect.runSync(
+        restored.admit(next, undefined, undefined, undefined, {
+          discoveryDeadline: Date.now() + 60_000,
+        })
+      )
+    ).toThrow("This reply is stopping")
     expect(Effect.runSync(restored.get(next.operationId))).toBeUndefined()
     const queued = Effect.runSync(
-      restored.admit(input("next task", "followUp"))
+      restored.admit(
+        input("next task", "followUp"),
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     expect(queued.parent_id).toBeNull()
     Effect.runSync(
@@ -220,6 +364,12 @@ describe("durable reply admission", () => {
         null
       )
     )
-    expect(Effect.runSync(restored.admit(next)).turn.parent_id).toBe(queued.id)
+    expect(
+      Effect.runSync(
+        restored.admit(next, undefined, undefined, undefined, {
+          discoveryDeadline: Date.now() + 60_000,
+        })
+      ).turn.parent_id
+    ).toBe(queued.id)
   })
 })

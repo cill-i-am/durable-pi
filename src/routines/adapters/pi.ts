@@ -1,10 +1,14 @@
 import { Type } from "@earendil-works/pi-ai"
 import { defineTool } from "@earendil-works/pi-durable"
-import { Schema, type Effect } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Schema, Effect } from "effect"
 
-import type { Routine } from "../contracts"
+import { nativeOperation } from "../../shared/interop"
+import { routineCommandMachine } from "../command.machine"
+import type { Routine, RoutineChange } from "../contracts"
 import { SaveRoutine } from "../contracts"
-import type { Routines } from "../service"
+import { RoutineStorageError } from "../persistence"
+import type { Routines, RoutineError } from "../service"
 
 async function operationId(task: string) {
   const hash = Array.from(
@@ -26,12 +30,44 @@ const result = (value: unknown) => ({
 })
 export function routineTools(
   store: Routines["Service"],
-  wake: () => Promise<void>,
+  wake: () => Promise<number>,
   run: <TResult, TError>(
     operation: Effect.Effect<TResult, TError>,
     signal?: AbortSignal
   ) => Promise<TResult>
 ) {
+  const schedule = nativeOperation(
+    wake,
+    (cause) =>
+      new RoutineStorageError({ operation: "arm routine discovery", cause })
+  )
+  const apply = (
+    operation: string,
+    enabling: boolean,
+    execute: (deadline: number) => Effect.Effect<RoutineChange, RoutineError>
+  ) =>
+    Effect.gen(function* () {
+      const actor = yield* createEffectActor(
+        routineCommandMachine({
+          needsDiscovery: enabling
+            ? store
+                .operationExists(operation)
+                .pipe(Effect.map((exists) => !exists))
+            : Effect.succeed(false),
+          arm: schedule,
+          execute,
+          acknowledge: schedule,
+        })
+      )
+      const done = yield* waitFor(
+        actor,
+        (state) => state.status === "done"
+      ).pipe(Effect.orDie)
+      const result = yield* done.output!
+      if (!("routine" in result))
+        throw new Error("Routine tool returned another command's receipt")
+      return result
+    }).pipe(Effect.scoped)
   return [
     defineTool({
       name: "list_routines",
@@ -73,20 +109,19 @@ export function routineTools(
       replay: "safe",
       execute: async (args, api, execution) => {
         const operation = await operationId(String(api.taskId))
-        await wake()
         execution.abortSignal?.throwIfAborted()
+        const input = Schema.decodeUnknownSync(SaveRoutine)({
+          ...args,
+          id: args.id ?? operation,
+          operationId: operation,
+          schedule: JSON.parse(args.schedule) as unknown,
+        })
         const change = await run(
-          store.save(
-            Schema.decodeUnknownSync(SaveRoutine)({
-              ...args,
-              id: args.id ?? operation,
-              operationId: operation,
-              schedule: JSON.parse(args.schedule) as unknown,
-            })
+          apply(operation, input.status === "active", (deadline) =>
+            store.save(input, deadline)
           ),
           execution.abortSignal
         )
-        await wake()
         return result(summary(change.routine))
       },
     }),
@@ -106,13 +141,13 @@ export function routineTools(
       replay: "safe",
       execute: async (args, api, execution) => {
         const operation = await operationId(String(api.taskId))
-        await wake()
         execution.abortSignal?.throwIfAborted()
         const change = await run(
-          store.setStatus({ ...args, operationId: operation }),
+          apply(operation, args.status === "active", (deadline) =>
+            store.setStatus({ ...args, operationId: operation }, deadline)
+          ),
           execution.abortSignal
         )
-        await wake()
         return result(summary(change.routine))
       },
     }),

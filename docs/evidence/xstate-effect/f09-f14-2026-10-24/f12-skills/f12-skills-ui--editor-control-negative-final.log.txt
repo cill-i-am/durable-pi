@@ -1,0 +1,31 @@
+{"broken":true,"transformed":1}
+{"broken":true,"view":"library","generation":3}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: old save completion must not close replacement editor
++ actual - expected
+
++ 'library'
+- 'editing'
+
+    at file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:30954:10
+    at Generator.next (<anonymous>)
+    at ~effect/Effect/successCont (file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:3931:28)
+    at ~effect/Effect/evaluate (file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:1214:30)
+    at FiberImpl.runLoop (file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:3456:99)
+    at FiberImpl.evaluate (file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:3408:24)
+    at AsyncResource.runInAsyncScope (node:async_hooks:227:14)
+    at FiberImpl.evaluate (file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:3402:27)
+    at Array.<anonymous> (file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:3767:18)
+    at doneUnsafe (file:///private/tmp/f12-skills-ui/editor-control-broken.mjs?1792785199085:6190:17) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'library',
+  expected: 'editing',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

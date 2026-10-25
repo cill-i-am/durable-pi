@@ -1,0 +1,418 @@
+import { AsyncLocalStorage } from "node:async_hooks"
+
+import type { LifecycleJob } from "agents/lifecycle"
+import { Cause, Context, Effect } from "effect"
+import { expect, it, vi } from "vitest"
+import { initialTransition, transition } from "xstate"
+
+import { CoordinationRunner } from "../src/coordination/adapters/lifecycle"
+import { coordinationRunnerMachine } from "../src/coordination/runner.machine"
+
+vi.mock("agents/lifecycle", () => ({ LifecycleCapability: class {} }))
+function barrier<A>() {
+  let resolve!: (value: A) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<A>((yes, no) => {
+    resolve = yes
+    reject = no
+  })
+  return { promise, resolve, reject }
+}
+function fixture(
+  options: {
+    restore?: () => Effect.Effect<void, unknown>
+    step?: () => Promise<number | undefined>
+    exhaust?: (current: () => boolean) => Effect.Effect<void, unknown>
+  } = {}
+) {
+  const jobs = new Map<string, LifecycleJob>()
+  const calls = {
+    restores: 0,
+    steps: 0,
+    exhausts: 0,
+    reads: 0,
+    pushes: 0,
+    rearms: 0,
+  }
+  const runner = new CoordinationRunner({
+    run: Effect.runPromise,
+    restore: () =>
+      Effect.suspend(() => {
+        calls.restores++
+        return options.restore?.() ?? Effect.void
+      }),
+    step: async () => {
+      calls.steps++
+      return options.step?.()
+    },
+    exhaust: (current) =>
+      Effect.suspend(() => {
+        calls.exhausts++
+        return options.exhaust?.(current) ?? Effect.void
+      }),
+    nextWake: () => Effect.succeed(undefined),
+  })
+  Object.assign(runner, {
+    lifecycle: {
+      jobs: {
+        get: (id: string) => {
+          calls.reads++
+          return jobs.get(id)
+        },
+        push: async (job: LifecycleJob) => {
+          calls.pushes++
+          jobs.set(job.id, job)
+        },
+        rearm: async () => {
+          calls.rearms++
+        },
+      },
+    },
+  })
+  return {
+    runner,
+    jobs,
+    calls,
+    job: () => jobs.get("agent-coordination:pump")!,
+  }
+}
+const context = (job: LifecycleJob) =>
+  ({ job }) as Parameters<CoordinationRunner<unknown>["onJob"]>[0]
+
+it("joins one restoration across callers, shares its failure, and lets only the next SDK callback retry", async () => {
+  const entered = barrier<void>(),
+    release = barrier<void>()
+  let first = true
+  const f = fixture({
+    restore: () =>
+      Effect.promise(() => {
+        entered.resolve()
+        if (first) {
+          first = false
+          return release.promise
+        }
+        return Promise.resolve()
+      }),
+  })
+  await f.runner.armDiscovery()
+  const callback = f.runner.onJob(context(f.job()))
+  const reconcile = f.runner.reconcile()
+  const both = Promise.allSettled([callback, reconcile])
+  await entered.promise
+  expect(f.calls.restores).toBe(1)
+  expect(f.calls.steps).toBe(0)
+  // This actor acknowledgement follows both queued RESTORE requests.
+  await f.runner.wake()
+  release.reject(new Error("cold restore failed"))
+  expect((await both).map((result) => result.status)).toEqual([
+    "rejected",
+    "rejected",
+  ])
+  expect(f.calls.restores).toBe(1)
+  await f.runner.onJob(context(f.job()))
+  expect(f.calls.restores).toBe(2)
+  expect(f.calls.steps).toBe(1)
+  await f.runner.dispose()
+})
+
+it("coalesces wakes during the exact running callback and does not admit overlapping same-object callbacks", async () => {
+  const entered = barrier<void>(),
+    release = barrier<number | undefined>()
+  const f = fixture({
+    step: () => {
+      entered.resolve()
+      return release.promise
+    },
+  })
+  await f.runner.armDiscovery()
+  const job = f.job(),
+    first = f.runner.onJob(context(job))
+  await entered.promise
+  const duplicate = await f.runner.onJob(context(job))
+  expect(duplicate).toMatchObject({ rescheduleAt: expect.any(Number) })
+  expect(f.calls.steps).toBe(1)
+  await Promise.all([f.runner.wake(), f.runner.wake(), f.runner.wake()])
+  expect(f.calls.pushes).toBe(1)
+  expect(f.calls.rearms).toBe(3)
+  release.resolve(Date.now() + 120_000)
+  const result = await first
+  expect(result).toMatchObject({ rescheduleAt: expect.any(Number) })
+  expect(typeof result === "object" && result.rescheduleAt).toBeLessThanOrEqual(
+    Date.now()
+  )
+  await f.runner.dispose()
+})
+
+it("retains failed callback ownership through SDK retry and rejects same-token replacement exhaustion", async () => {
+  let attempt = 0
+  const f = fixture({
+    step: async () => {
+      if (++attempt === 1) throw new Error("retryable step failure")
+      return Date.now() + 120_000
+    },
+  })
+  await f.runner.armDiscovery()
+  const original = f.job()
+  await expect(f.runner.onJob(context(original))).rejects.toBeDefined()
+  await f.runner.wake()
+  const replacement = { ...original }
+  await f.runner.onJob(context(replacement))
+  await f.runner.onJobError(
+    context(replacement),
+    new Error("replacement exhausted")
+  )
+  expect(f.calls.steps).toBe(1)
+  expect(f.calls.exhausts).toBe(0)
+  const result = await f.runner.onJob(context(original))
+  expect(typeof result === "object" && result.rescheduleAt).toBeLessThanOrEqual(
+    Date.now()
+  )
+  expect(f.calls.steps).toBe(2)
+  await f.runner.dispose()
+})
+
+it("disposal joins held restoration, prevents a late producer, and stops all later storage access", async () => {
+  const entered = barrier<void>(),
+    release = barrier<void>()
+  const f = fixture({
+    restore: () =>
+      Effect.promise(() => {
+        entered.resolve()
+        return release.promise
+      }),
+  })
+  await f.runner.armDiscovery()
+  const job = f.job(),
+    callback = f.runner.onJob(context(job))
+  await entered.promise
+  let disposed = false
+  const closing = f.runner.dispose().then(() => {
+    disposed = true
+  })
+  // A second public operation observes the ordered CLOSE decision.
+  await f.runner.wake()
+  expect(disposed).toBe(false)
+  release.resolve()
+  await Promise.all([callback, closing])
+  expect(f.calls.steps).toBe(0)
+  const finalCalls = { ...f.calls }
+  await f.runner.onJob(context(job))
+  await f.runner.onJobError(context(job), new Error("late callback"))
+  await f.runner.reconcile()
+  await f.runner.wake()
+  await expect(f.runner.armDiscovery()).rejects.toThrow("disposed")
+  expect(f.calls).toEqual(finalCalls)
+})
+
+class NativeTrace extends Context.Service<NativeTrace, string>()(
+  "CoordinationRunnerNativeTrace"
+) {}
+it("disposal joins a held native step and retains its full late compound Cause", async () => {
+  const entered = barrier<void>(),
+    release = barrier<number | undefined>()
+  const f = fixture({
+    step: () => {
+      entered.resolve()
+      return release.promise
+    },
+  })
+  await f.runner.armDiscovery()
+  const callback = f.runner.onJob(context(f.job())).then(
+    () => undefined,
+    (error: unknown) => error
+  )
+  await entered.promise
+  let disposed = false
+  const closing = f.runner.dispose().then(
+    () => {
+      disposed = true
+      return undefined
+    },
+    (error: unknown) => {
+      disposed = true
+      return error
+    }
+  )
+  await f.runner.wake()
+  expect(disposed).toBe(false)
+  const defect = new Error("native cleanup")
+  release.reject(
+    Cause.fromReasons([
+      Cause.makeFailReason("checked native failure"),
+      Cause.makeDieReason(defect).annotate(
+        Context.make(NativeTrace, "original")
+      ),
+      Cause.makeInterruptReason(88235),
+    ])
+  )
+  for (const result of await Promise.all([callback, closing])) {
+    expect(Cause.isCause(result)).toBe(true)
+    if (!Cause.isCause(result)) throw new Error("Expected full native Cause")
+    expect(
+      result.reasons.some(
+        (reason) =>
+          reason._tag === "Fail" && reason.error === "checked native failure"
+      )
+    ).toBe(true)
+    expect(
+      result.reasons.some(
+        (reason) =>
+          reason._tag === "Die" &&
+          reason.defect === defect &&
+          reason.annotations.get(NativeTrace.key) === "original"
+      )
+    ).toBe(true)
+    expect(
+      result.reasons.some(
+        (reason) => reason._tag === "Interrupt" && reason.fiberId === 88235
+      )
+    ).toBe(true)
+  }
+  expect(f.calls.steps).toBe(1)
+})
+
+it("joins terminal cleanup during disposal while a newer wake keeps its own discovery token", async () => {
+  const entered = barrier<void>(),
+    release = barrier<void>()
+  const f = fixture({
+    exhaust: (current) =>
+      Effect.promise(async () => {
+        expect(current()).toBe(true)
+        entered.resolve()
+        await release.promise
+      }),
+  })
+  await f.runner.armDiscovery()
+  const job = f.job(),
+    cleanup = f.runner.onJobError(
+      context(job),
+      new Error("failed before claim")
+    )
+  await entered.promise
+  await f.runner.wake()
+  expect(f.job()).not.toBe(job)
+  let disposed = false
+  const closing = f.runner.dispose().then(() => {
+    disposed = true
+  })
+  await f.runner.onJob(context(f.job()))
+  expect(disposed).toBe(false)
+  expect(f.calls.steps).toBe(0)
+  release.resolve()
+  await Promise.all([cleanup, closing])
+  expect(f.calls.exhausts).toBe(1)
+})
+
+it("uses official runtime validation to reject malformed callback observations", () => {
+  const machine = coordinationRunnerMachine({ restore: () => Effect.void })
+  const [state] = initialTransition(machine)
+  const [next, effects] = transition(machine, state, {
+    type: "ADMIT",
+    job: null,
+    current: "yes",
+    reply: null,
+  } as never)
+  expect(next.value).toEqual(state.value)
+  expect(
+    effects.some(
+      (effect) =>
+        effect.kind === "builtin" &&
+        effect.type === "@xstate.deadLetter" &&
+        effect.reason === "invalidEvent"
+    )
+  ).toBe(true)
+})
+
+it("joins a held restoration and preserves every annotated Cause reason at both native boundaries", async () => {
+  const entered = barrier<void>(),
+    release = barrier<void>()
+  const annotations = Context.make(NativeTrace, "original restoration")
+  const failure = Cause.fromReasons([
+    Cause.makeFailReason("restore checked").annotate(annotations),
+    Cause.makeDieReason("restore defect").annotate(annotations),
+    Cause.makeInterruptReason(94001).annotate(annotations),
+  ])
+  const f = fixture({
+    restore: () =>
+      Effect.promise(() => {
+        entered.resolve()
+        return release.promise
+      }).pipe(Effect.andThen(Effect.failCause(failure))),
+  })
+  await f.runner.armDiscovery()
+  const callback = f.runner.onJob(context(f.job())).then(
+    () => undefined,
+    (error: unknown) => error
+  )
+  await entered.promise
+  let disposed = false
+  const closing = f.runner.dispose().then(
+    () => {
+      disposed = true
+      return undefined
+    },
+    (error: unknown) => {
+      disposed = true
+      return error
+    }
+  )
+  await f.runner.wake()
+  expect(disposed).toBe(false)
+  release.resolve()
+  for (const result of await Promise.all([callback, closing])) {
+    expect(Cause.isCause(result)).toBe(true)
+    if (!Cause.isCause(result))
+      throw new Error("Expected original restoration Cause")
+    expect(result.reasons).toHaveLength(3)
+    expect(
+      result.reasons.some(
+        (reason) => reason._tag === "Fail" && reason.error === "restore checked"
+      )
+    ).toBe(true)
+    expect(
+      result.reasons.some(
+        (reason) => reason._tag === "Die" && reason.defect === "restore defect"
+      )
+    ).toBe(true)
+    expect(
+      result.reasons.some(
+        (reason) => reason._tag === "Interrupt" && reason.fiberId === 94001
+      )
+    ).toBe(true)
+    expect(
+      result.reasons.every(
+        (reason) =>
+          reason.annotations.get(NativeTrace.key) === "original restoration"
+      )
+    ).toBe(true)
+  }
+  expect(f.calls.steps).toBe(0)
+})
+
+it("creates the restoration owner in the native startup caller context", async () => {
+  const startup = new AsyncLocalStorage<string>()
+  let observed: string | undefined
+  const f = fixture({
+    restore: () =>
+      Effect.sync(() => {
+        observed = startup.getStore()
+      }),
+  })
+  try {
+    await startup.run("startup-owner", () => f.runner.reconcile())
+    expect(observed).toBe("startup-owner")
+  } finally {
+    await f.runner.dispose()
+  }
+})
+
+it("acknowledges a stale SDK callback while dispatch is idle", async () => {
+  const f = fixture()
+  await f.runner.reconcile()
+  await f.runner.armDiscovery()
+  const old = f.job()
+  f.jobs.clear()
+  await expect(f.runner.onJob(context(old))).resolves.toBeUndefined()
+  expect(f.calls.steps).toBe(0)
+  await f.runner.dispose()
+})

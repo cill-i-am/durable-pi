@@ -1,0 +1,45 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect false)
+[21:18:14.921] ERROR (#708): Routine job exhausted { job: 'routines:pump' } failed
+
+stdout | tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect true)
+[21:18:14.925] ERROR (#774): Routine job exhausted { job: 'routines:pump' } failed
+
+ ❯ tests/routine-runner.test.ts (20 tests | 4 failed) 63ms
+   × closing a second facade joins held storage with original Causes (defect false) 5ms
+   × closing a second facade joins held storage with original Causes (defect true) 2ms
+   × closing a second facade joins held exhaust with original Causes (defect false) 2ms
+   × closing a second facade joins held exhaust with original Causes (defect true) 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held storage with original Causes (defect false)
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held storage with original Causes (defect true)
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect false)
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/routine-runner.test.ts:336:39
+    334|       held.resolve()
+    335|       for (const result of await Promise.all([observed, closing])) {
+    336|         expect(Cause.isCause(result)).toBe(true)
+       |                                       ^
+    337|         if (!Cause.isCause(result))
+    338|           throw new Error("Expected original native Cause")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 16 passed (20)
+   Start at  21:18:14
+   Duration  364ms (import 57%, tests 22%, transform 17%, setup 2%, worker 1%)
+

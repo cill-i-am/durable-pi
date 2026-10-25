@@ -22,17 +22,34 @@ export class Routines extends Context.Service<
     get: (id: string) => Effect.Effect<Routine | undefined, RoutineError>
     runs: () => Effect.Effect<RoutineRun[], RoutineError>
     inFlight: () => Effect.Effect<RoutineRun | undefined, RoutineError>
-    save: (input: SaveRoutine) => Effect.Effect<RoutineChange, RoutineError>
-    setStatus: (
-      input: SetRoutineStatus
+    save: (
+      input: SaveRoutine,
+      discoveryDeadline?: number
     ) => Effect.Effect<RoutineChange, RoutineError>
-    runNow: (input: RunRoutineNow) => Effect.Effect<RoutineChange, RoutineError>
+    setStatus: (
+      input: SetRoutineStatus,
+      discoveryDeadline?: number
+    ) => Effect.Effect<RoutineChange, RoutineError>
+    runNow: (
+      input: RunRoutineNow,
+      discoveryDeadline: number
+    ) => Effect.Effect<RoutineChange, RoutineError>
+    operationExists: (id: string) => Effect.Effect<boolean, RoutineError>
     cancelOperation: (
       id: string
     ) => Effect.Effect<{ applied: boolean }, RoutineError>
+    requestStopRun: (
+      id: string
+    ) => Effect.Effect<RoutineRun | undefined, RoutineError>
+    exhaust: (
+      attempt: { id: string; controlRevision: number },
+      eligible: () => boolean
+    ) => Effect.Effect<boolean, RoutineError>
+    reconcile: () => Effect.Effect<RoutineRun | undefined, RoutineError>
     claimDue: () => Effect.Effect<RoutineRun | undefined, RoutineError>
     deliver: (
-      admission: RoutineAdmission
+      admission: RoutineAdmission,
+      discoveryDeadline: number
     ) => Effect.Effect<
       RoutineRun | undefined,
       RoutineError | ConversationFailure
@@ -54,7 +71,8 @@ export class Routines extends Context.Service<
 export interface RoutineAdmission {
   readonly transactionGroup: object
   readonly admit: (
-    run: RoutineRun
+    run: RoutineRun,
+    discoveryDeadline: number
   ) => Effect.Effect<string, ConversationFailure>
 }
 
@@ -78,7 +96,8 @@ export class RoutineAdmissionState extends Context.Service<
     readonly inFlight: () => Effect.Effect<RoutineRun | undefined, RoutineError>
     readonly acceptWebhook: (
       id: string,
-      payload: string
+      payload: string,
+      discoveryDeadline: number
     ) => Effect.Effect<RoutineRun, RoutineError>
     readonly cancelPendingRun: (
       id: string
@@ -98,34 +117,51 @@ export function makeRoutineApplication(
     get: Effect.fn("Routines.get")((id: string) => tx.get(id)),
     runs: Effect.fn("Routines.runs")(() => tx.runs()),
     inFlight: Effect.fn("Routines.inFlight")(() => tx.inFlight()),
-    save: Effect.fn("Routines.save")((input: SaveRoutine) => tx.save(input)),
-    setStatus: Effect.fn("Routines.setStatus")((input: SetRoutineStatus) =>
-      tx.setStatus(input)
+    save: Effect.fn("Routines.save")((input: SaveRoutine, deadline?: number) =>
+      tx.save(input, deadline)
     ),
-    runNow: Effect.fn("Routines.runNow")((input: RunRoutineNow) =>
-      tx.runNow(input)
+    setStatus: Effect.fn("Routines.setStatus")(
+      (input: SetRoutineStatus, deadline?: number) =>
+        tx.setStatus(input, deadline)
+    ),
+    runNow: Effect.fn("Routines.runNow")(
+      (input: RunRoutineNow, deadline: number) => tx.runNow(input, deadline)
+    ),
+    operationExists: Effect.fn("Routines.operationExists")((id: string) =>
+      records.operation(id).pipe(Effect.map((receipt) => receipt !== undefined))
     ),
     cancelOperation: Effect.fn("Routines.cancelOperation")((id: string) =>
       tx.cancelOperation(id)
     ),
+    requestStopRun: Effect.fn("Routines.requestStopRun")((id: string) =>
+      tx.requestStopRun(id)
+    ),
+    exhaust: Effect.fn("Routines.exhaust")(
+      (
+        attempt: { id: string; controlRevision: number },
+        eligible: () => boolean
+      ) => tx.exhaust(attempt, eligible)
+    ),
+    reconcile: Effect.fn("Routines.reconcile")(() => tx.reconcile()),
     claimDue: Effect.fn("Routines.claimDue")(() => tx.claimDue()),
-    deliver: Effect.fn("Routines.deliver")((admission: RoutineAdmission) =>
-      Effect.suspend(() => {
-        if (admission.transactionGroup !== records.transactionGroup)
-          throw new Error(
-            "Routine admission must share its storage transaction group."
+    deliver: Effect.fn("Routines.deliver")(
+      (admission: RoutineAdmission, discoveryDeadline: number) =>
+        Effect.suspend(() => {
+          if (admission.transactionGroup !== records.transactionGroup)
+            throw new Error(
+              "Routine admission must share its storage transaction group."
+            )
+          return tx.deliver((run) =>
+            admission.admit(run, discoveryDeadline).pipe(
+              Effect.map((id) => {
+                if (id !== run.turnId)
+                  throw new Error(
+                    "Routine admission returned a different turn identity."
+                  )
+              })
+            )
           )
-        return tx.deliver((run) =>
-          admission.admit(run).pipe(
-            Effect.map((id) => {
-              if (id !== run.turnId)
-                throw new Error(
-                  "Routine admission returned a different turn identity."
-                )
-            })
-          )
-        )
-      })
+        })
     ),
     finish: Effect.fn("Routines.finish")(
       (
@@ -149,7 +185,8 @@ export function makeRoutineApplication(
       transactionGroup: records.transactionGroup,
       get: (id) => tx.get(id),
       inFlight: () => tx.inFlight(),
-      acceptWebhook: (id, payload) => tx.acceptWebhook(id, payload),
+      acceptWebhook: (id, payload, deadline) =>
+        tx.acceptWebhook(id, payload, deadline),
       cancelPendingRun: (id) => tx.cancelPendingRun(id),
     })
   )

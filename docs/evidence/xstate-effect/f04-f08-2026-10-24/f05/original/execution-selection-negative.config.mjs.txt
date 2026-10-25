@@ -1,0 +1,11 @@
+import base from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/vitest.config.ts'
+export default {
+  ...base,
+  plugins: [{name:'f05-negative-selection-fence',enforce:'pre',transform(code,id){
+    if(id.endsWith('/src/features/execution/execution.machine.ts')){
+      const before='const current = context.revision === context.requestRevision'
+      if(!code.includes(before))throw new Error('Expected selection guard was not found')
+      return {code:code.replace(before,'const current = true'),map:null}
+    }
+  }}],
+}

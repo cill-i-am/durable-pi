@@ -1,0 +1,26 @@
+{"source":"src/features/activity/query-owner.ts","sha256":"2291e60e83d73f3940d6dded5b50e9cf029e5e98ba5f92750c332682da9b5801"}
+{"closed":true,"hasChecked":true,"hasInterrupt":false,"reasons":[{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":12,"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Die","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]],"defect":{"_tag":"Fail","error":"checked-native","annotations":[["native-annotation","preserved-81234"]]}},{"_tag":"Interrupt","fiberId":81234,"annotations":[["native-annotation","preserved-81234"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":12,"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":12,"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]}]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: original annotated native interruption must survive
+    at <anonymous> (/private/tmp/f14-independent/annotated-cleanup.mts:24:66)
+    at Generator.next (<anonymous>)
+    at IteratorImpl.~effect/Effect/successCont (/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28)
+    at ExitPrimitive.~effect/Effect/evaluate (/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30)
+    at FiberImpl.runLoop (/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41)
+    at FiberImpl.evaluate (/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23)
+    at AsyncResource.runInAsyncScope (node:async_hooks:227:14)
+    at FiberImpl.evaluate (/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27)
+    at Array.<anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17)
+    at FiberImpl.evaluate (/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

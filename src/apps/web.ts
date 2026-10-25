@@ -1,165 +1,265 @@
-import { Effect, Schema } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Cause, Clock, Effect, Equal, Exit, Schema, Semaphore } from "effect"
 
 import { CodeInput, type CodeOutput } from "../execution/contracts"
-import { preserveFatal } from "../shared/effect"
+import { observeCleanup, preserveFatal } from "../shared/effect"
 import {
   AppConflict,
   WebResult,
-  type AppBlock,
+  WebPreview,
+  AppDocument,
+  type AppStorageError,
   type InteractApp,
   type RenderWebApp,
 } from "./contracts"
 import { appHtml } from "./html"
+import { appRenderMachine, type AppRenderPrepared } from "./render.machine"
 import type { WebAppRepository } from "./repository"
 
 export type WebExecutor = (
   input: CodeInput,
   signal: AbortSignal
 ) => Effect.Effect<CodeOutput, AppConflict>
+type Prepared = AppRenderPrepared
+type WebError = AppConflict | AppStorageError
 export class WebApps {
-  private running = false
-  private generation = 0
-  private controller: AbortController | null = null
+  private readonly lease = Semaphore.makeUnsafe(1)
+  private readonly cancellations = new Set<AbortController>()
   invalidate() {
-    this.generation++
-    this.controller?.abort()
+    for (const controller of this.cancellations)
+      controller.abort(
+        new AppConflict({
+          message: "This app action was cancelled when its bot was archived.",
+        })
+      )
   }
   constructor(
     private readonly store: WebAppRepository,
-    private readonly execute: WebExecutor
+    private readonly execute: WebExecutor,
+    private readonly timeoutMs = 15_000
   ) {}
-  private run(
-    block: Extract<AppBlock, { type: "web" }>,
-    state: string,
-    action: InteractApp["action"] | null,
+  private request(
+    prepare: Effect.Effect<
+      { prepared: Prepared } | { replay: AppDocument | WebPreview },
+      WebError
+    >,
+    commit: (
+      prepared: Prepared,
+      result: WebResult
+    ) => Effect.Effect<AppDocument | WebPreview, WebError>,
     signal: AbortSignal
   ) {
-    return Effect.yieldNow.pipe(
-      Effect.andThen(
-        Effect.acquireUseRelease(
-          Effect.gen({ self: this }, function* () {
-            if (signal.aborted) return yield* Effect.interrupt
-            if (this.running)
-              return yield* new AppConflict({
-                message: "This bot is rendering another app. Retry shortly.",
-              })
-            const controller = new AbortController()
-            const cancellation = AbortSignal.any([signal, controller.signal])
-            this.running = true
-            this.controller = controller
-            return {
-              generation: this.generation,
-              controller,
-              signal: cancellation,
-            }
-          }),
-          (lease) =>
-            Effect.gen({ self: this }, function* () {
-              // Stored state was decoded by the owning repository. Corruption is a defect.
-              const data = JSON.stringify({
-                mode: action ? "action" : "render",
-                state: JSON.parse(state) as unknown,
-                action,
-              })
-              const input = yield* Schema.decodeUnknownEffect(CodeInput)({
-                code: block.code,
-                data,
-              }).pipe(preserveFatal, Effect.mapError(renderRejected))
-              const result = yield* this.execute(input, lease.signal)
-              yield* this.current(lease.generation, signal)
-              if (result.error)
-                return yield* new AppConflict({
-                  message: `App code failed: ${result.error}`,
-                })
-              return yield* Schema.decodeUnknownEffect(
-                Schema.fromJsonString(WebResult)
-              )(result.result).pipe(
-                preserveFatal,
-                Effect.mapError(renderRejected)
-              )
-            }),
-          (lease) =>
-            Effect.sync(() => {
-              lease.controller.abort()
-              this.running = false
-              this.controller = null
-            })
-        )
-      ),
-      Effect.withSpan("Apps.execute")
-    )
-  }
-  private current(generation: number, signal: AbortSignal) {
-    return Effect.gen({ self: this }, function* () {
-      if (signal.aborted) return yield* Effect.interrupt
-      if (generation !== this.generation)
-        return yield* new AppConflict({
-          message: "This app action was cancelled when its bot was archived.",
-        })
-    })
-  }
-
-  render(input: typeof RenderWebApp.Type, signal: AbortSignal) {
     return Effect.gen({ self: this }, function* () {
       yield* Effect.yieldNow
       if (signal.aborted) return yield* Effect.interrupt
-      const generation = this.generation
-      const app = (yield* this.store.detail(input.id)).app
-      const version = yield* this.store.version(input.id, input.version)
-      const block = version.definition.blocks[0]
-      if (block?.type !== "web")
-        return yield* new AppConflict({
-          message: "This version is not a web app.",
-        })
-      const result = yield* this.run(
-        block,
-        app.publishedVersion === input.version
-          ? (app.state.web?.[block.id] ?? block.initialState)
-          : block.initialState,
-        null,
-        signal
+      return yield* Effect.acquireUseRelease(
+        Effect.gen({ self: this }, function* () {
+          if (!(yield* this.lease.takeIfAvailable(1)))
+            return yield* new AppConflict({
+              message: "This bot is rendering another app. Retry shortly.",
+            })
+          const controller = new AbortController()
+          this.cancellations.add(controller)
+          return controller
+        }),
+        (controller) =>
+          Effect.gen({ self: this }, function* () {
+            const deadline = (yield* Clock.currentTimeMillis) + this.timeoutMs
+            let failure: Cause.Cause<WebError> | undefined
+            const bounded = <T>(work: Effect.Effect<T, WebError>) =>
+              Effect.gen(function* () {
+                const remaining = deadline - (yield* Clock.currentTimeMillis)
+                if (remaining <= 0) return yield* renderRejected()
+                return yield* observeCleanup(work, (observed) =>
+                  Effect.raceFirst(
+                    observed,
+                    Effect.sleep(remaining).pipe(
+                      Effect.andThen(
+                        Effect.sync(() => controller.abort(renderRejected()))
+                      ),
+                      Effect.andThen(Effect.fail(renderRejected()))
+                    )
+                  )
+                )
+              }).pipe(
+                Effect.onExit((exit) =>
+                  Effect.sync(() => {
+                    if (Exit.isFailure(exit)) failure = exit.cause
+                  })
+                )
+              )
+            return yield* Effect.gen({ self: this }, function* () {
+              const actor = yield* createEffectActor(
+                appRenderMachine({
+                  prepare: bounded(prepare),
+                  execute: (prepared: Prepared) =>
+                    bounded(this.run(prepared, controller.signal)),
+                  commit: (prepared: Prepared, result) =>
+                    bounded(
+                      Effect.suspend(() =>
+                        controller.signal.aborted
+                          ? Effect.interrupt
+                          : commit(prepared, result)
+                      )
+                    ),
+                })
+              )
+              const cancel = () =>
+                actor.send({
+                  type: "CANCEL",
+                  outcome: Schema.is(AppConflict)(controller.signal.reason)
+                    ? Exit.fail(controller.signal.reason)
+                    : Exit.interrupt(),
+                })
+              const abort = () => controller.abort()
+              signal.addEventListener("abort", abort, { once: true })
+              controller.signal.addEventListener("abort", cancel, {
+                once: true,
+              })
+              yield* Effect.addFinalizer(() =>
+                Effect.sync(() => {
+                  signal.removeEventListener("abort", abort)
+                  controller.signal.removeEventListener("abort", cancel)
+                  controller.abort()
+                })
+              )
+              if (signal.aborted) abort()
+              if (controller.signal.aborted) cancel()
+              const done = yield* waitFor(
+                actor,
+                (snapshot) => snapshot.status === "done"
+              ).pipe(Effect.orDie)
+              return yield* done.output!
+            }).pipe(
+              Effect.scoped,
+              Effect.onExit((exit) => {
+                if (!failure || !Cause.hasDies(failure)) return Effect.void
+                const retained = Exit.isFailure(exit) ? exit.cause.reasons : []
+                const missing = failure.reasons.filter(
+                  (reason) =>
+                    reason._tag !== "Interrupt" &&
+                    !retained.some((present) => Equal.equals(present, reason))
+                )
+                return missing.length
+                  ? Effect.failCause(Cause.fromReasons(missing))
+                  : Effect.void
+              })
+            )
+          }),
+        (controller) =>
+          Effect.sync(() => {
+            this.cancellations.delete(controller)
+            controller.abort()
+          }).pipe(Effect.andThen(this.lease.release(1)))
       )
-      const html = yield* markup(result.html)
-      yield* this.current(generation, signal)
-      return {
-        id: app.id,
-        version: version.version,
-        revision: app.revision,
-        html,
-        css: result.css,
-      }
-    }).pipe(
+    }).pipe(Effect.withSpan("Apps.execute"))
+  }
+  private run(prepared: Prepared, signal: AbortSignal) {
+    return Effect.gen({ self: this }, function* () {
+      const data = JSON.stringify({
+        mode: prepared.action ? "action" : "render",
+        state: JSON.parse(prepared.state) as unknown,
+        action: prepared.action,
+      })
+      const input = yield* Schema.decodeUnknownEffect(CodeInput)({
+        code: prepared.block.code,
+        data,
+      }).pipe(preserveFatal, Effect.mapError(renderRejected))
+      if (signal.aborted) return yield* Effect.interrupt
+      const result = yield* this.execute(input, signal)
+      if (signal.aborted) return yield* Effect.interrupt
+      if (result.error)
+        return yield* new AppConflict({
+          message: `App code failed: ${result.error}`,
+        })
+      return yield* Schema.decodeUnknownEffect(
+        Schema.fromJsonString(WebResult)
+      )(result.result).pipe(preserveFatal, Effect.mapError(renderRejected))
+    })
+  }
+  render(input: typeof RenderWebApp.Type, signal: AbortSignal) {
+    return this.request(
+      Effect.gen({ self: this }, function* () {
+        const app = yield* this.store.renderSnapshot(input.id, input.version)
+        const version = yield* this.store.version(input.id, input.version)
+        const block = version.definition.blocks[0]
+        if (block?.type !== "web")
+          return yield* new AppConflict({
+            message: "This version is not a web app.",
+          })
+        return {
+          prepared: {
+            app,
+            block,
+            state:
+              app.publishedVersion === input.version
+                ? (app.state.web?.[block.id] ?? block.initialState)
+                : block.initialState,
+            action: null,
+          },
+        }
+      }),
+      (prepared, result) =>
+        Effect.gen({ self: this }, function* () {
+          const html = yield* markup(result.html)
+          const current = yield* this.store.renderSnapshot(
+            input.id,
+            input.version
+          )
+          if (current.revision !== prepared.app.revision)
+            return yield* new AppConflict({
+              message: "This app changed while rendering. Reload the preview.",
+            })
+          return {
+            id: prepared.app.id,
+            version: input.version,
+            revision: prepared.app.revision,
+            html,
+            css: result.css,
+          }
+        }),
+      signal
+    ).pipe(
+      Effect.map(Schema.decodeUnknownSync(WebPreview)),
       Effect.withSpan("Apps.render", {
         attributes: { "app.id": input.id, "app.version": input.version },
       })
     )
   }
-  interact(input: InteractApp, signal: AbortSignal) {
-    return Effect.gen({ self: this }, function* () {
-      yield* Effect.yieldNow
-      if (signal.aborted) return yield* Effect.interrupt
-      const generation = this.generation
-      const replay = yield* this.store.interactionReceipt(input)
-      if (replay) return replay
-      const app = yield* this.store.interactionSnapshot(input)
-      const block = (yield* this.store.version(
-        input.id,
-        input.version
-      )).definition.blocks.find((value) => value.id === input.action.blockId)
-      if (block?.type !== "web" || input.action.type !== "web")
-        return yield* new AppConflict({
-          message: "This action is not available.",
-        })
-      const result = yield* this.run(
-        block,
-        app.state.web?.[block.id] ?? block.initialState,
-        input.action,
-        signal
-      )
-      yield* markup(result.html)
-      yield* this.current(generation, signal)
-      return yield* this.store.interact(input, result)
-    }).pipe(
+  interact(
+    input: InteractApp,
+    signal: AbortSignal,
+    discoveryDeadline?: number
+  ) {
+    return this.request(
+      Effect.gen({ self: this }, function* () {
+        const replay = yield* this.store.interactionReceipt(input)
+        if (replay) return { replay }
+        const app = yield* this.store.interactionSnapshot(input)
+        const block = (yield* this.store.version(
+          input.id,
+          input.version
+        )).definition.blocks.find((value) => value.id === input.action.blockId)
+        if (block?.type !== "web" || input.action.type !== "web")
+          return yield* new AppConflict({
+            message: "This action is not available.",
+          })
+        return {
+          prepared: {
+            app,
+            block,
+            state: app.state.web?.[block.id] ?? block.initialState,
+            action: input.action,
+          },
+        }
+      }),
+      (_, result) =>
+        markup(result.html).pipe(
+          Effect.andThen(this.store.interact(input, result, discoveryDeadline))
+        ),
+      signal
+    ).pipe(
+      Effect.map(Schema.decodeUnknownSync(AppDocument)),
       Effect.withSpan("Apps.interact", {
         attributes: {
           "app.id": input.id,

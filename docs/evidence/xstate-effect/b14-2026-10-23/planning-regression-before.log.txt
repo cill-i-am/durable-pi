@@ -1,0 +1,95 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ tests/planning-lifecycle.test.ts (18 tests | 9 failed) 167ms
+   × rejects a future workflow version of plans.task without committing partial legacy upgrades 11ms
+   × rejects a future native version of plans.task without committing partial legacy upgrades 10ms
+   × rejects a future workflow version of plans.turn without committing partial legacy upgrades 7ms
+   × rejects a future native version of plans.turn without committing partial legacy upgrades 7ms
+   × rejects a future workflow version of plans.operation without committing partial legacy upgrades 11ms
+   × rejects a future native version of plans.operation without committing partial legacy upgrades 12ms
+   × keeps legacy completion-projection corruption fatal through native migration without committing any document 6ms
+   × keeps legacy completed-step corruption fatal through native migration without committing any document 5ms
+   × keeps legacy receipt-consistency corruption fatal through native migration without committing any document 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/planning-lifecycle.test.ts > rejects a future workflow version of plans.task without committing partial legacy upgrades
+ FAIL  tests/planning-lifecycle.test.ts > rejects a future workflow version of plans.turn without committing partial legacy upgrades
+ FAIL  tests/planning-lifecycle.test.ts > rejects a future workflow version of plans.operation without committing partial legacy upgrades
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/planning-lifecycle.test.ts:331:45
+    329|           expect(Cause.hasFails(exit.cause)).toBe(false)
+    330|         } else {
+    331|           expect(Cause.hasDies(exit.cause)).toBe(false)
+       |                                             ^
+    332|           expect(exit.cause.reasons).toEqual([
+    333|             expect.objectContaining({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  tests/planning-lifecycle.test.ts > rejects a future native version of plans.task without committing partial legacy upgrades
+ FAIL  tests/planning-lifecycle.test.ts > rejects a future native version of plans.turn without committing partial legacy upgrades
+ FAIL  tests/planning-lifecycle.test.ts > rejects a future native version of plans.operation without committing partial legacy upgrades
+AssertionError: expected [ …(1) ] to deeply equal [ ObjectContaining{…} ]
+
+- Expected
++ Received
+
+  [
+    {
+      "_tag": "Fail",
+-     "error": ObjectContaining {
++     "error": PlanFailure {
++       "message": "The saved plan could not be confirmed. Retry the same update.",
++       "_tag": "PlanFailure",
+        "code": "unavailable",
+-       "message": StringContaining "compatible application version",
+      },
+    },
+  ]
+
+ ❯ tests/planning-lifecycle.test.ts:332:38
+    330|         } else {
+    331|           expect(Cause.hasDies(exit.cause)).toBe(false)
+    332|           expect(exit.cause.reasons).toEqual([
+       |                                      ^
+    333|             expect.objectContaining({
+    334|               _tag: "Fail",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  tests/planning-lifecycle.test.ts > keeps legacy completion-projection corruption fatal through native migration without committing any document
+ FAIL  tests/planning-lifecycle.test.ts > keeps legacy completed-step corruption fatal through native migration without committing any document
+ FAIL  tests/planning-lifecycle.test.ts > keeps legacy receipt-consistency corruption fatal through native migration without committing any document
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/planning-lifecycle.test.ts:617:41
+    615|     expect(Exit.isFailure(exit)).toBe(true)
+    616|     if (Exit.isFailure(exit)) {
+    617|       expect(Cause.hasDies(exit.cause)).toBe(true)
+       |                                         ^
+    618|       expect(Cause.hasFails(exit.cause)).toBe(false)
+    619|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 9 passed (18)
+   Start at  16:03:16
+   Duration  611ms (import 58%, tests 32%, transform 8%, setup 1%, worker 1%)
+

@@ -1,0 +1,1 @@
+{"backup": "/private/tmp/owned-stack-integration-vi8mrzmx", "applied": true, "changed": 1101, "dirty": 34, "overlaps": ["src/http/client.ts", "src/shared/interop.ts", "tests/http-client-lifetime.test.ts", "tests/native-operation-lifetime.test.ts"], "conflicts": []}

@@ -1,0 +1,409 @@
+$ pnpm build && pnpm test:browser && node --import tsx scripts/check-passkeys.mjs && pnpm test:client-upgrade
+$ vite build
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 4075 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/assets/geist-mono-symbols2-wght-normal-CO5SzqOn.woff2                5.81 kB
+dist/client/assets/geist-mono-cyrillic-ext-wght-normal-X_5orZeX.woff2            6.17 kB
+dist/client/assets/geist-mono-vietnamese-wght-normal-DadHysG0.woff2              7.69 kB
+dist/client/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2                  10.25 kB
+dist/client/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2                   11.23 kB
+dist/client/assets/geist-mono-cyrillic-wght-normal-DiZS0aHC.woff2               12.94 kB
+dist/client/assets/geist-mono-latin-ext-wght-normal-Bwz-egvJ.woff2              14.69 kB
+dist/client/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2                    18.74 kB
+dist/client/assets/inter-greek-wght-normal-CkhJZR-_.woff2                       18.99 kB
+dist/client/assets/geist-mono-latin-wght-normal-XN7g48iV.woff2                  23.12 kB
+dist/client/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2                25.96 kB
+dist/client/assets/inter-latin-wght-normal-Dx4kXJAl.woff2                       48.25 kB
+dist/client/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2                   85.06 kB
+dist/client/assets/maplibre-gl-worker-DxGNRm0a.mjs                             508.31 kB
+dist/client/assets/terminal-BrP-ENHg.css                                         3.93 kB │ gzip:   1.01 kB
+dist/client/assets/rich-result-DBE96hFo.css                                     82.93 kB │ gzip:  10.72 kB
+dist/client/assets/styles-8q-ZJOzs.css                                         230.89 kB │ gzip:  37.45 kB
+dist/client/assets/_workspace.agents._agentId._panel._itemId-DJ7LAi8J.js         0.03 kB │ gzip:   0.05 kB │ map:     1.15 kB
+dist/client/assets/_workspace.agents._agentId._panel.index-DJ7LAi8J.js           0.03 kB │ gzip:   0.05 kB │ map:     1.07 kB
+dist/client/assets/_workspace.agents._agentId.edit-DJ7LAi8J.js                   0.03 kB │ gzip:   0.05 kB │ map:     0.71 kB
+dist/client/assets/_workspace.agents._agentId.index-DJ7LAi8J.js                  0.03 kB │ gzip:   0.05 kB │ map:     0.76 kB
+dist/client/assets/_workspace.agents._agentId.settings._section-DJ7LAi8J.js      0.03 kB │ gzip:   0.05 kB │ map:     1.06 kB
+dist/client/assets/_workspace.agents.archived-DJ7LAi8J.js                        0.03 kB │ gzip:   0.05 kB │ map:     0.68 kB
+dist/client/assets/_workspace.agents.index-DJ7LAi8J.js                           0.03 kB │ gzip:   0.05 kB │ map:     0.66 kB
+dist/client/assets/_workspace.agents.new-DJ7LAi8J.js                             0.03 kB │ gzip:   0.05 kB │ map:     0.57 kB
+dist/client/assets/_workspace.index-DJ7LAi8J.js                                  0.03 kB │ gzip:   0.05 kB │ map:     0.58 kB
+dist/client/assets/css-DUjzNfgv.js                                               0.05 kB │ gzip:   0.07 kB
+dist/client/assets/javascript-Yelw-5ZN.js                                        0.06 kB │ gzip:   0.08 kB
+dist/client/assets/forgot-password-44zMCB5C.js                                   0.07 kB │ gzip:   0.08 kB │ map:     0.73 kB
+dist/client/assets/reset-password-DFq59WAo.js                                    0.07 kB │ gzip:   0.08 kB │ map:     0.73 kB
+dist/client/assets/two-factor-DeJsoPrF.js                                        0.07 kB │ gzip:   0.08 kB │ map:     0.73 kB
+dist/client/assets/files-panel-DZQjslkU.js                                       0.07 kB │ gzip:   0.08 kB
+dist/client/assets/_workspace-DWolqiMR.js                                        0.07 kB │ gzip:   0.09 kB │ map:     1.05 kB
+dist/client/assets/x-Dy6fsNsR.js                                                 0.19 kB │ gzip:   0.17 kB │ map:     1.02 kB
+dist/client/assets/arrow-left-ZPwH93D5.js                                        0.20 kB │ gzip:   0.18 kB │ map:     1.08 kB
+dist/client/assets/play-qQsMM8Bm.js                                              0.23 kB │ gzip:   0.20 kB │ map:     1.05 kB
+dist/client/assets/code-xml-AfOog1ox.js                                          0.26 kB │ gzip:   0.21 kB │ map:     1.22 kB
+dist/client/assets/download-Dlnh9BX1.js                                          0.27 kB │ gzip:   0.22 kB │ map:     1.20 kB
+dist/client/assets/skeleton-B0gzB5by.js                                          0.28 kB │ gzip:   0.22 kB │ map:     0.70 kB
+dist/client/assets/external-link-Cmdv4l7f.js                                     0.29 kB │ gzip:   0.22 kB │ map:     1.25 kB
+dist/client/assets/lock-keyhole-BONha9L8.js                                      0.29 kB │ gzip:   0.24 kB │ map:     1.33 kB
+dist/client/assets/refresh-cw-PGozRlae.js                                        0.36 kB │ gzip:   0.25 kB │ map:     1.37 kB
+dist/client/assets/key-round-CCjVVqkm.js                                         0.39 kB │ gzip:   0.28 kB │ map:     1.35 kB
+dist/client/assets/FloatingPortalLite-CaFWDwHM.js                                0.41 kB │ gzip:   0.30 kB │ map:     2.04 kB
+dist/client/assets/password-input-YxenTNkT.js                                    0.59 kB │ gzip:   0.38 kB │ map:     2.20 kB
+dist/client/assets/contracts-D4NDSUs9.js                                         0.68 kB │ gzip:   0.39 kB │ map:     3.33 kB
+dist/client/assets/eye-CIlP19VZ.js                                               0.69 kB │ gzip:   0.37 kB │ map:     2.64 kB
+dist/client/assets/useMatch-CeKn4q0r.js                                          0.79 kB │ gzip:   0.48 kB │ map:     5.37 kB
+dist/client/assets/searchParams-D1mfA4_9.js                                      0.92 kB │ gzip:   0.51 kB │ map:     7.21 kB
+dist/client/assets/addon-fit-DIOBYJe3.js                                         1.20 kB │ gzip:   0.49 kB │ map:     3.44 kB
+dist/client/assets/badge-D7SRXxTQ.js                                             1.39 kB │ gzip:   0.65 kB │ map:     2.59 kB
+dist/client/assets/empty-B48iZRLI.js                                             1.50 kB │ gzip:   0.64 kB │ map:     4.51 kB
+dist/client/assets/reason-parts-iZCguKoX.js                                      1.87 kB │ gzip:   1.00 kB │ map:    11.22 kB
+dist/client/assets/diff-woXpYk--.js                                              2.56 kB │ gzip:   0.68 kB │ map:     3.86 kB
+dist/client/assets/json-qhed-kSA.js                                              2.81 kB │ gzip:   0.77 kB │ map:     4.32 kB
+dist/client/assets/login-Bp8L927k.js                                             2.87 kB │ gzip:   1.29 kB │ map:     8.39 kB
+dist/client/assets/apps-workbench-S89vHXKR.js                                    2.89 kB │ gzip:   1.29 kB │ map:     9.66 kB
+dist/client/assets/passkey-errors-Ct2-JASI.js                                    3.61 kB │ gzip:   1.72 kB │ map:    12.76 kB
+dist/client/assets/native-terminal-addon-Dszn_z4G.js                             4.64 kB │ gzip:   1.80 kB │ map:    19.07 kB
+dist/client/assets/browser-C9ajkMt3.js                                           4.88 kB │ gzip:   2.19 kB │ map:    14.67 kB
+dist/client/assets/toggle-group-B696hZnM.js                                      4.99 kB │ gzip:   1.92 kB │ map:    18.88 kB
+dist/client/assets/passkey-sign-in-DNEH85_F.js                                   5.20 kB │ gzip:   2.32 kB │ map:    18.72 kB
+dist/client/assets/auth-vUTvzeoe.js                                              6.04 kB │ gzip:   2.33 kB │ map:    17.70 kB
+dist/client/assets/checkbox-CqYYgRY8.js                                          6.11 kB │ gzip:   2.87 kB │ map:    33.85 kB
+dist/client/assets/workbench-DJ5nI7XC.js                                         6.21 kB │ gzip:   2.44 kB │ map:    22.78 kB
+dist/client/assets/join-C_LqOcbe.js                                              8.88 kB │ gzip:   3.32 kB │ map:    27.19 kB
+dist/client/assets/jsx-runtime-CXCudH8Z.js                                       8.90 kB │ gzip:   3.38 kB │ map:    33.01 kB
+dist/client/assets/useSwipeDismiss-CqHlkZOM.js                                   9.95 kB │ gzip:   4.00 kB │ map:    59.33 kB
+dist/client/assets/yaml-rwi0_p6S.js                                             10.49 kB │ gzip:   2.26 kB │ map:    14.90 kB
+dist/client/assets/github-light-EUqPIrTm.js                                     11.18 kB │ gzip:   2.49 kB │ map:    15.43 kB
+dist/client/assets/github-dark-C-LZuMrd.js                                      11.40 kB │ gzip:   2.53 kB │ map:    15.70 kB
+dist/client/assets/input-group-DCNjc_vH.js                                      11.58 kB │ gzip:   4.27 kB │ map:    40.64 kB
+dist/client/assets/execution-GpaYpxhf.js                                        12.32 kB │ gzip:   4.45 kB │ map:    42.37 kB
+dist/client/assets/gallery-7W1b9F17.js                                          14.38 kB │ gzip:   6.00 kB │ map:    40.83 kB
+dist/client/assets/memory-DAfApA15.js                                           18.45 kB │ gzip:   5.80 kB │ map:    69.84 kB
+dist/client/assets/browser-CIw_ZIRH.js                                          18.50 kB │ gzip:   6.36 kB │ map:    65.10 kB
+dist/client/assets/FloatingPortal-CE3sBiMu.js                                   20.71 kB │ gzip:   7.83 kB │ map:   129.92 kB
+dist/client/assets/routines-BnZLJjw1.js                                         22.27 kB │ gzip:   7.07 kB │ map:    72.82 kB
+dist/client/assets/sql-CEbI0hMM.js                                              23.66 kB │ gzip:   7.51 kB │ map:    28.28 kB
+dist/client/assets/index.es-DJBkBa33.js                                         25.57 kB │ gzip:  10.52 kB │ map:    99.75 kB
+dist/client/assets/update-recovery-DkWJ9MLz.js                                  31.06 kB │ gzip:  11.07 kB │ map:   138.14 kB
+dist/client/assets/terminal-Bc-vs4ao.js                                         32.68 kB │ gzip:  10.53 kB │ map:   113.46 kB
+dist/client/assets/select-CjcbrLEo.js                                           33.14 kB │ gzip:  11.49 kB │ map:   166.37 kB
+dist/client/assets/shellscript-CLZ0U2zV.js                                      41.47 kB │ gzip:   6.07 kB │ map:    56.53 kB
+dist/client/assets/createLucideIcon-CIqrZc-Y.js                                 43.85 kB │ gzip:  17.51 kB │ map:   176.48 kB
+dist/client/assets/activity-oSWerfM6.js                                         51.80 kB │ gzip:  14.20 kB │ map:   179.20 kB
+dist/client/assets/css-BGIxQoYs.js                                              53.35 kB │ gzip:  12.47 kB │ map:    66.43 kB
+dist/client/assets/html-BHZv6uqE.js                                             57.24 kB │ gzip:  11.74 kB │ map:    73.04 kB
+dist/client/assets/markdown-BYOwaDjH.js                                         59.32 kB │ gzip:   5.66 kB │ map:    82.33 kB
+dist/client/assets/account-security-Caj1hvpZ.js                                 59.59 kB │ gzip:  18.89 kB │ map:   204.21 kB
+dist/client/assets/link-DPiMVJiN.js                                             62.74 kB │ gzip:  22.49 kB │ map:   295.71 kB
+dist/client/assets/auth-frame-BRRGX2Rk.js                                       65.17 kB │ gzip:  22.33 kB │ map:   260.16 kB
+dist/client/assets/python-gzcpVVnB.js                                           69.94 kB │ gzip:   9.09 kB │ map:    95.24 kB
+dist/client/assets/workspace-settings-Ag7rSlQz.js                               77.12 kB │ gzip:  22.25 kB │ map:   272.08 kB
+dist/client/assets/activity-border-effect-BD10aWva.js                           83.05 kB │ gzip:  12.82 kB │ map:   163.88 kB
+dist/client/assets/xstate-validation.esm-Byz6JbD4.js                           121.28 kB │ gzip:  38.31 kB │ map:   797.27 kB
+dist/client/assets/effect-UfrGR1sK.js                                          137.91 kB │ gzip:  45.56 kB │ map: 2,401.20 kB
+dist/client/assets/highlighter-DdGhCIj2.js                                     145.64 kB │ gzip:  48.06 kB │ map:   580.08 kB
+dist/client/assets/javascript-BzbQS41l.js                                      174.81 kB │ gzip:  16.62 kB │ map:   236.06 kB
+dist/client/assets/tsx-udAQXfEw.js                                             175.52 kB │ gzip:  16.62 kB │ map:   236.73 kB
+dist/client/assets/jsx-Bz0zcwM4.js                                             177.78 kB │ gzip:  16.71 kB │ map:   238.98 kB
+dist/client/assets/typescript-bsJCZSQ-.js                                      181.07 kB │ gzip:  16.23 kB │ map:   244.40 kB
+dist/client/assets/field-B7mgExQR.js                                           190.44 kB │ gzip:  62.56 kB │ map: 1,079.88 kB
+dist/client/assets/rich-result-BUASU58L.js                                     271.35 kB │ gzip:  78.91 kB │ map: 1,241.27 kB
+dist/client/assets/index-B2fXRw1P.js                                           295.10 kB │ gzip:  93.66 kB │ map: 1,516.61 kB
+dist/client/assets/xterm-ScmBfeDI.js                                           331.17 kB │ gzip:  83.03 kB │ map:   691.82 kB
+dist/client/assets/_workspace-Bl7-MaJw.js                                      819.75 kB │ gzip: 241.90 kB │ map: 4,468.54 kB
+dist/client/assets/maplibre-gl-CBCtZY5w.js                                   1,075.21 kB │ gzip: 289.65 kB │ map: 2,202.30 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+
+✓ built in 1.74s
+vite v8.3.4 building ssr environment for production...
+transforming...
+✓ 1469 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/server/assets/files-panel-CIB-vCbb.js                                       0.09 kB │ gzip:   0.09 kB
+dist/server/assets/kysely-adapter-vTJagY0O.js                                    0.12 kB │ gzip:   0.10 kB
+dist/server/assets/_workspace.index-_qTcB7fi.js                                  0.14 kB │ gzip:   0.13 kB │ map:     0.56 kB
+dist/server/assets/_workspace.agents.new-DcXHVvc0.js                             0.15 kB │ gzip:   0.13 kB │ map:     0.55 kB
+dist/server/assets/_workspace.agents.index-0gY8OLJj.js                           0.15 kB │ gzip:   0.13 kB │ map:     0.64 kB
+dist/server/assets/_workspace.agents.archived-CoZOFeDN.js                        0.15 kB │ gzip:   0.13 kB │ map:     0.67 kB
+dist/server/assets/_workspace.agents._agentId.edit-wxt1DCMX.js                   0.16 kB │ gzip:   0.14 kB │ map:     0.70 kB
+dist/server/assets/_workspace.agents._agentId.index-DYVuMt95.js                  0.16 kB │ gzip:   0.14 kB │ map:     0.75 kB
+dist/server/assets/_workspace.agents._agentId._panel.index-CuZu4FwQ.js           0.17 kB │ gzip:   0.14 kB │ map:     1.05 kB
+dist/server/assets/_workspace.agents._agentId._panel._itemId-BvQ3MEh6.js         0.17 kB │ gzip:   0.15 kB │ map:     1.14 kB
+dist/server/assets/_workspace.agents._agentId.settings._section-BZ3e4wWi.js      0.17 kB │ gzip:   0.15 kB │ map:     1.04 kB
+dist/server/assets/reset-password-Cfcu6wAC.js                                    0.20 kB │ gzip:   0.15 kB │ map:     0.70 kB
+dist/server/assets/forgot-password-DUn0nJ2U.js                                   0.20 kB │ gzip:   0.15 kB │ map:     0.70 kB
+dist/server/assets/two-factor-C_ytKid3.js                                        0.21 kB │ gzip:   0.16 kB │ map:     0.70 kB
+dist/server/assets/_workspace-AvkjlcMY.js                                        0.23 kB │ gzip:   0.16 kB │ map:     1.01 kB
+dist/server/assets/core-RrmWoKne.js                                              0.25 kB │ gzip:   0.18 kB │ map:     0.35 kB
+dist/server/assets/empty-plugin-adapters-BlvAN4ro.js                             0.28 kB │ gzip:   0.18 kB │ map:     0.55 kB
+dist/server/assets/skeleton-Dawvt_sp.js                                          0.36 kB │ gzip:   0.25 kB │ map:     0.60 kB
+dist/server/assets/rolldown-runtime-EAsCxrDo.js                                  0.49 kB │ gzip:   0.31 kB
+dist/server/assets/collapsible-BJWsiuIc.js                                       0.67 kB │ gzip:   0.27 kB │ map:     1.16 kB
+dist/server/assets/effect-ZklUjy1g.js                                            0.85 kB │ gzip:   0.44 kB │ map:     3.42 kB
+dist/server/assets/activity-border-effect-BoL7lv-q.js                            0.86 kB │ gzip:   0.51 kB │ map:     1.27 kB
+dist/server/assets/password-input-CX_cJ7UR.js                                    1.14 kB │ gzip:   0.54 kB │ map:     1.81 kB
+dist/server/assets/start-CHU4VKX6.js                                             1.39 kB │ gzip:   0.60 kB │ map:     2.51 kB
+dist/server/assets/checkbox-CIWCUErC.js                                          1.49 kB │ gzip:   0.63 kB │ map:     1.94 kB
+dist/server/assets/badge-DLK0acy_.js                                             1.68 kB │ gzip:   0.74 kB │ map:     2.50 kB
+dist/server/assets/empty-BSHQTVrO.js                                             1.82 kB │ gzip:   0.65 kB │ map:     3.38 kB
+dist/server/assets/highlighter-s8bIuYpC.js                                       2.44 kB │ gzip:   0.93 kB │ map:     5.21 kB
+dist/server/assets/bun-sqlite-dialect-DoOVo4ja-CMxqPjLE.js                       3.23 kB │ gzip:   1.15 kB │ map:     5.62 kB
+dist/server/assets/node-sqlite-dialect-BDPvo0iK.js                               3.23 kB │ gzip:   1.14 kB │ map:     5.63 kB
+dist/server/assets/tabs-DUAgjqwq.js                                              3.25 kB │ gzip:   1.06 kB │ map:     4.50 kB
+dist/server/assets/login-Ddc5dKOJ.js                                             4.71 kB │ gzip:   1.64 kB │ map:     7.54 kB
+dist/server/assets/apps-workbench-D-WNnk05.js                                    4.72 kB │ gzip:   1.67 kB │ map:     8.41 kB
+dist/server/assets/alert-DcsD_LJr.js                                             5.14 kB │ gzip:   1.57 kB │ map:     7.51 kB
+dist/server/assets/d1-sqlite-dialect-m0f01-4z-7gNfYZYh.js                        5.31 kB │ gzip:   1.80 kB │ map:     9.21 kB
+dist/server/assets/passkey-errors-BrOh91xe.js                                    6.25 kB │ gzip:   2.47 kB │ map:    11.34 kB
+dist/server/assets/select-B9SDvTAQ.js                                            6.92 kB │ gzip:   2.12 kB │ map:    11.98 kB
+dist/server/assets/env-impl-CY1fsHKD.js                                          7.14 kB │ gzip:   2.66 kB │ map:    12.00 kB
+dist/server/assets/_tanstack-start-manifest_v-iag_Ejbo.js                        7.23 kB │ gzip:   1.40 kB
+dist/server/assets/browser-IP-mtv5m.js                                           7.66 kB │ gzip:   2.79 kB │ map:    13.96 kB
+dist/server/assets/native-terminal-addon-CEe1v9ea.js                             8.50 kB │ gzip:   2.55 kB │ map:    18.09 kB
+dist/server/assets/passkey-sign-in-DIDc92GP.js                                   8.95 kB │ gzip:   3.01 kB │ map:    17.25 kB
+dist/server/assets/auth-DHRV9l99.js                                              9.49 kB │ gzip:   2.79 kB │ map:    16.14 kB
+dist/server/assets/workbench-C34l6a6F.js                                        11.19 kB │ gzip:   3.29 kB │ map:    20.75 kB
+dist/server/assets/markdown-BtRmWCYK.js                                         12.48 kB │ gzip:   3.94 kB │ map:    24.29 kB
+dist/server/assets/join-CutNpws6.js                                             14.21 kB │ gzip:   4.18 kB │ map:    24.80 kB
+dist/server/assets/dist-D5GlT1Sy.js                                             14.93 kB │ gzip:   4.15 kB │ map:    25.08 kB
+dist/server/assets/input-group-Cq70Xh4e.js                                      16.73 kB │ gzip:   4.82 kB │ map:    32.67 kB
+dist/server/assets/execution-f3KmfdeO.js                                        21.02 kB │ gzip:   5.84 kB │ map:    39.03 kB
+dist/server/assets/gallery-CtTcppC-.js                                          21.05 kB │ gzip:   7.01 kB │ map:    39.47 kB
+dist/server/assets/update-recovery-DM3d4qgg.js                                  21.74 kB │ gzip:   6.51 kB │ map:    38.89 kB
+dist/server/assets/contracts-CYvZI2yh.js                                        25.18 kB │ gzip:   6.38 kB │ map:    78.12 kB
+dist/server/assets/browser-C0vUsoUE.js                                          31.27 kB │ gzip:   8.20 kB │ map:    60.08 kB
+dist/server/assets/memory-B8q51DR8.js                                           33.37 kB │ gzip:   7.77 kB │ map:    63.38 kB
+dist/server/assets/routines-BcNflkOn.js                                         34.18 kB │ gzip:   8.17 kB │ map:    59.86 kB
+dist/server/assets/field-CX49o06W.js                                            34.71 kB │ gzip:   8.49 kB │ map:    62.75 kB
+dist/server/assets/account-security-wDwfTUYS.js                                 55.41 kB │ gzip:  12.34 kB │ map:   104.82 kB
+dist/server/assets/terminal-BHgj79_t.js                                         55.93 kB │ gzip:  13.63 kB │ map:   107.33 kB
+dist/server/assets/auth-frame-DdtBo4c-.js                                       78.50 kB │ gzip:  20.12 kB │ map:   143.15 kB
+dist/server/assets/router-B-4ZmOMY.js                                           82.32 kB │ gzip:  20.65 kB │ map:   210.31 kB
+dist/server/assets/activity-5xZx7RLo.js                                         86.82 kB │ gzip:  18.51 kB │ map:   160.01 kB
+dist/server/assets/rich-result-5tTswEa0.js                                      95.74 kB │ gzip:  23.99 kB │ map:   177.14 kB
+dist/server/assets/workspace-settings-Cq-6hbYI.js                              134.56 kB │ gzip:  29.95 kB │ map:   247.66 kB
+dist/server/server.js                                                          252.84 kB │ gzip:  58.96 kB │ map:   586.19 kB
+dist/server/assets/sqlite-introspector-DSCAP82F-C1p406dy.js                    287.70 kB │ gzip:  47.71 kB │ map:   540.84 kB
+dist/server/assets/_workspace-7ds1HUmD.js                                      419.96 kB │ gzip:  98.89 kB │ map:   857.93 kB
+dist/server/assets/env-x9btRkoh.js                                           1,967.69 kB │ gzip: 407.28 kB │ map: 3,818.77 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+
+✓ built in 665ms
+$ playwright test
+[WebServer] (node:36977) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 176 tests using 1 worker
+
+(node:36988) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.4s)
+  ✓    2 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.6s)
+  ✓    3 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.6s)
+  ✓    4 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (3.1s)
+  ✓    5 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:282:1 › a late Always allow acknowledgement cannot overwrite a newer denied policy (2.2s)
+  ✓    6 [desktop] › tests/browser/access.spec.ts:5:1 › refresh tool access before the next conversation and persist an override (5.0s)
+  ✓    7 [desktop] › tests/browser/agent-slugs.spec.ts:3:1 › ID links become canonical slug URLs and preserve the selected view (6.8s)
+  ✓    8 [desktop] › tests/browser/audio.spec.ts:80:1 › record a voice note, receive text and retain original playback after reload (3.5s)
+  ✓    9 [desktop] › tests/browser/audio.spec.ts:131:1 › cancelling a pending microphone prompt closes a late stream without uploading (2.3s)
+  ✓   10 [desktop] › tests/browser/audio.spec.ts:160:1 › an update reload waits until a pending microphone request is cancelled (2.2s)
+  ✓   11 [desktop] › tests/browser/browser-tools.spec.ts:40:1 › browser controls require the loaded preview and never replay an uncertain action (9.5s)
+  ✓   12 [desktop] › tests/browser/browser-tools.spec.ts:85:1 › Close interrupts a pending browser request using newly observed generation (3.7s)
+  ✓   13 [desktop] › tests/browser/client-errors.spec.ts:6:1 › a real render exception records one private report with component and cause locations (359ms)
+  ✓   14 [desktop] › tests/browser/client-errors.spec.ts:48:1 › unavailable logging leaves error recovery usable without a false reference (343ms)
+  ✓   15 [desktop] › tests/browser/communication-recovery.spec.ts:142:1 › Retry result retains the saved outcome and disables mailbox controls while pending (2.6s)
+  ✓   16 [desktop] › tests/browser/communication-recovery.spec.ts:215:1 › result recovery errors retain the original task identity and saved output (2.6s)
+  ✓   17 [desktop] › tests/browser/communication-recovery.spec.ts:266:1 › Retry result appears only for outgoing terminal results with unconfirmed continuation (2.6s)
+  ✓   18 [desktop] › tests/browser/communication-recovery.spec.ts:294:1 › Retry mailbox uses the displayed failed epoch and preserves a newer exhaustion after a stale response (5.5s)
+  ✓   19 [desktop] › tests/browser/conversation-owner-lifecycle.spec.ts:31:1 › unreadable saved data survives restoration and blocks update reload without submitting (3.0s)
+  ✓   20 [desktop] › tests/browser/conversation-owner-lifecycle.spec.ts:83:1 › failed persistence cannot dispatch a message (2.2s)
+  ✓   21 [desktop] › tests/browser/conversation-owner-lifecycle.spec.ts:113:1 › a held acknowledgement clears only its own attempt and preserves newer text (2.3s)
+  ✓   22 [desktop] › tests/browser/conversation-owner-lifecycle.spec.ts:148:1 › Stop remains available after a retry starts while its HTTP acknowledgement is held (2.5s)
+  ✓   23 [desktop] › tests/browser/conversation-queue.spec.ts:6:1 › an idle reply starts immediately in the UI and only later messages are queued (3.9s)
+  ✓   24 [desktop] › tests/browser/conversation-recovery.spec.ts:117:1 › Check keeps the original identity, coalesces held clicks, and waits for a newer snapshot after acknowledgement (2.9s)
+  ✓   25 [desktop] › tests/browser/conversation-recovery.spec.ts:169:1 › owned cleanup disables recovery and only explicit Try Stop again requests cancellation (2.8s)
+  ✓   26 [desktop] › tests/browser/conversation-recovery.spec.ts:235:1 › a known access denial after recovery refresh clears the saved reply and its controls (2.2s)
+  ✓   27 [desktop] › tests/browser/conversation-window.spec.ts:6:1 › new replies stay in view when the recent history window rolls forward (2.7s)
+  ✓   28 [desktop] › tests/browser/email.spec.ts:10:1 › enable and revoke an address; uncertain replies require an explicit resend (4.5s)
+  ✓   29 [desktop] › tests/browser/execution-tools.spec.ts:33:1 › uncertain code retry preserves the saved request and never replays an interrupted result (6.4s)
+  ✓   30 [desktop] › tests/browser/execution-tools.spec.ts:80:1 › cancelling an unconfirmed code request uses its original run identity (3.6s)
+  ✓   31 [desktop] › tests/browser/family.spec.ts:52:1 › admin can invite and remove with safe focus and retained private data copy (4.3s)
+  ✓   32 [desktop] › tests/browser/family.spec.ts:111:1 › member family screen is read only, and a shared model outage preserves an editable draft (3.6s)
+  ✓   33 [desktop] › tests/browser/family.spec.ts:165:1 › invitation creates an account, verifies email, then opens a private welcome (830ms)
+  ✓   34 [desktop] › tests/browser/family.spec.ts:243:1 › expired verification can be resent without losing a valid family invitation (751ms)
+  ✓   35 [desktop] › tests/browser/family.spec.ts:304:1 › admin reconnects ChatGPT in Settings with a private return-address field and recovery (5.5s)
+  ✓   36 [desktop] › tests/browser/family.spec.ts:472:1 › model access recovers automatically after a transient catalog polling failure (3.5s)
+  ✓   37 [desktop] › tests/browser/file-media-lifecycle.spec.ts:238:1 › cancelled acquisition prevents restart until the late stream is released (738ms)
+  ✓   38 [desktop] › tests/browser/file-media-lifecycle.spec.ts:277:1 › finish waits for native final data before releasing and uploading once (601ms)
+  ✓   39 [desktop] › tests/browser/file-media-lifecycle.spec.ts:313:1 › unmount joins late permission without recording or uploading (543ms)
+  ✓   40 [desktop] › tests/browser/file-media-lifecycle.spec.ts:334:1 › denied microphone retains an enabled explicit retry (528ms)
+  ✓   41 [desktop] › tests/browser/file-media-lifecycle.spec.ts:348:1 › transcript and text previews fence late results across the same file ID on another agent (830ms)
+  ✓   42 [desktop] › tests/browser/file-media-lifecycle.spec.ts:393:1 › video preview clears prior frames and aborts pending resources on unmount (686ms)
+  ✓   43 [desktop] › tests/browser/file-media-lifecycle.spec.ts:436:1 › switching agents waits for the previous microphone owner before a new acquisition (677ms)
+  ✓   44 [desktop] › tests/browser/file-media-lifecycle.spec.ts:473:1 › rename owns one immutable command, retains rejected edits and fences a former agent (760ms)
+  ✓   45 [desktop] › tests/browser/files-lifecycle.spec.ts:180:1 › duplicate upload stays single and uncertain retry keeps the original reservation (277ms)
+  ✓   46 [desktop] › tests/browser/files-lifecycle.spec.ts:224:1 › late upload completion cannot replace the new agent's files or draft selection (292ms)
+  ✓   47 [desktop] › tests/browser/files-lifecycle.spec.ts:254:1 › a pre-upload list response cannot erase the published file while the fresh read is held (276ms)
+  ✓   48 [desktop] › tests/browser/files-lifecycle.spec.ts:292:1 › a restored pending reservation keeps its backend identity when the user chooses the file again (274ms)
+  ✓   49 [desktop] › tests/browser/files-lifecycle.spec.ts:323:1 › capacity rejection sends no upload and explicit refresh clears the shared error (275ms)
+  ✓   50 [desktop] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (3.8s)
+  ✓   51 [desktop] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.6s)
+  ✓   52 [desktop] › tests/browser/invitation-recovery.spec.ts:10:1 › an invitation preview recovers from one temporary failure without reloading (612ms)
+  ✓   53 [desktop] › tests/browser/invitation-recovery.spec.ts:38:1 › an unavailable preview can be retried in place without replaying email verification (764ms)
+  ✓   54 [desktop] › tests/browser/invitation-recovery.spec.ts:74:1 › a cancelled invitation stays unavailable without retrying it (349ms)
+  ✓   55 [desktop] › tests/browser/invitation-recovery.spec.ts:101:1 › opening an email link in an existing join tab clears the previous error while it loads (365ms)
+  ✓   56 [desktop] › tests/browser/invitation-recovery.spec.ts:134:1 › failed animation downloads preserve the composer and its draft (829ms)
+  ✓   57 [desktop] › tests/browser/invitation-recovery.spec.ts:175:1 › a workspace load error retries the same page without a document reload (1.1s)
+  ✓   58 [desktop] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine stopping retains occupancy and stops only the selected existing run (4.1s)
+  ✓   59 [desktop] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine unconfirmed retains occupancy and stops only the selected existing run (4.5s)
+  ✓   60 [desktop] › tests/browser/lifecycle-recovery.spec.ts:189:1 › cancelled and exhausted app updates retain saved content without claiming delivery or replaying (4.5s)
+  ✓   61 [desktop] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 200 response cannot clear a newer failure (3.4s)
+  ✓   62 [desktop] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 409 response cannot clear a newer failure (3.3s)
+  ✓   63 [desktop] › tests/browser/memory-recovery.spec.ts:226:1 › paused summaries preserve their operation ID after an uncertain response and reload until explicit retry succeeds (3.5s)
+  ✓   64 [desktop] › tests/browser/memory-recovery.spec.ts:287:1 › backup retry keeps the failed receipt and last complete backup until authoritative status changes (3.1s)
+  ✓   65 [desktop] › tests/browser/memory-recovery.spec.ts:376:1 › backup scheduler exhaustion offers exact epoch recovery without starting a backup attempt (3.1s)
+  ✓   66 [desktop] › tests/browser/objects-lifecycle.spec.ts:61:1 › uncertain creation survives reload and retries the identical mutation (5.2s)
+  ✓   67 [desktop] › tests/browser/objects-lifecycle.spec.ts:121:1 › conflict draft survives reload and only explicit reapply changes operation identity (5.1s)
+  ✓   68 [desktop] › tests/browser/objects-lifecycle.spec.ts:180:1 › cancel after uncertain edit uses its original operation and waits for a valid acknowledgement (3.6s)
+  ✓   69 [desktop] › tests/browser/profile-photo.spec.ts:3:1 › upload, reload, replace and remove a profile photo (8.9s)
+  ✓   70 [desktop] › tests/browser/rich-results.spec.ts:32:1 › a shopping shortlist survives workspace expansion and questions append to an unsent draft (3.8s)
+  ✓   71 [desktop] › tests/browser/rich-results.spec.ts:103:1 › table search and sorting survive expansion and govern the exported CSV (2.9s)
+  ✓   72 [desktop] › tests/browser/rich-results.spec.ts:146:1 › weather adapts from a dated weekend comparison to a detailed day and a compact week (2.5s)
+  ✓   73 [desktop] › tests/browser/rich-results.spec.ts:219:1 › map leases survive selection, theme replacement and route teardown without stale canvases (3.4s)
+  ✓   74 [desktop] › tests/browser/rich-results.spec.ts:270:1 › closing a map during a held style request releases it and leaves the next map usable (3.1s)
+  ✓   75 [desktop] › tests/browser/rich-results.spec.ts:312:1 › loaded syntax highlighting preserves code text and unsupported-language fallback (2.5s)
+  ✓   76 [desktop] › tests/browser/rich-results.spec.ts:367:1 › failed map loading keeps accessible addresses and a selected-place fallback (2.8s)
+  ✓   77 [desktop] › tests/browser/stale-tab.spec.ts:50:1 › an explicit update reload preserves unsent text and original file references without sending (3.3s)
+  ✓   78 [desktop] › tests/browser/stale-tab.spec.ts:103:1 › a retired settings chunk keeps chat intact and offers full reload instead of repeating navigation (4.3s)
+  ✓   79 [desktop] › tests/browser/stale-tab.spec.ts:148:1 › an unconfirmed send restores its original identity and never submits on reload (5.6s)
+  ✓   80 [desktop] › tests/browser/stale-tab.spec.ts:188:1 › the update waits for a file upload to settle (2.2s)
+  ✓   81 [desktop] › tests/browser/stale-tab.spec.ts:226:1 › failed tab storage blocks reload until the draft can be preserved (3.1s)
+  ✓   82 [desktop] › tests/browser/terminal-ui.spec.ts:50:1 › uncertain terminal transfer retries its original ID and immutable path (3.9s)
+  ✓   83 [desktop] › tests/browser/terminal-ui.spec.ts:94:1 › unmount during export download never begins a later Files upload (4.3s)
+  ✓   84 [desktop] › tests/browser/terminal-ui.spec.ts:139:1 › lease revocation disconnects the actual terminal socket and blocks save (3.5s)
+  ✓   85 [desktop] › tests/browser/terminal-ui.spec.ts:193:1 › unconfirmed session opening retries the same session ID (3.6s)
+  ✓   86 [desktop] › tests/browser/update-recovery-owner.spec.ts:3:1 › offline update recovery retains the draft and only navigates after an explicit online reload (3.9s)
+  ✓   87 [desktop] › tests/browser/workspace.spec.ts:7:1 › sign in, open an agent, receive a fixture reply and reload it (3.3s)
+  ✓   88 [desktop] › tests/browser/workspace.spec.ts:92:1 › send a PDF while extraction is pending and keep its durable preparing state after reload (3.2s)
+(node:38647) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   89 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.1s)
+  ✓   90 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.6s)
+  ✓   91 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.6s)
+  ✓   92 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (3.1s)
+  ✓   93 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:282:1 › a late Always allow acknowledgement cannot overwrite a newer denied policy (2.1s)
+  ✓   94 [mobile] › tests/browser/access.spec.ts:5:1 › refresh tool access before the next conversation and persist an override (4.9s)
+  ✓   95 [mobile] › tests/browser/agent-slugs.spec.ts:3:1 › ID links become canonical slug URLs and preserve the selected view (7.6s)
+  ✓   96 [mobile] › tests/browser/audio.spec.ts:80:1 › record a voice note, receive text and retain original playback after reload (3.4s)
+  ✓   97 [mobile] › tests/browser/audio.spec.ts:131:1 › cancelling a pending microphone prompt closes a late stream without uploading (2.2s)
+  ✓   98 [mobile] › tests/browser/audio.spec.ts:160:1 › an update reload waits until a pending microphone request is cancelled (2.2s)
+  ✓   99 [mobile] › tests/browser/browser-tools.spec.ts:40:1 › browser controls require the loaded preview and never replay an uncertain action (9.5s)
+  ✓  100 [mobile] › tests/browser/browser-tools.spec.ts:85:1 › Close interrupts a pending browser request using newly observed generation (3.6s)
+  ✓  101 [mobile] › tests/browser/client-errors.spec.ts:6:1 › a real render exception records one private report with component and cause locations (337ms)
+  ✓  102 [mobile] › tests/browser/client-errors.spec.ts:48:1 › unavailable logging leaves error recovery usable without a false reference (336ms)
+  ✓  103 [mobile] › tests/browser/communication-recovery.spec.ts:142:1 › Retry result retains the saved outcome and disables mailbox controls while pending (2.5s)
+  ✓  104 [mobile] › tests/browser/communication-recovery.spec.ts:215:1 › result recovery errors retain the original task identity and saved output (2.5s)
+  ✓  105 [mobile] › tests/browser/communication-recovery.spec.ts:266:1 › Retry result appears only for outgoing terminal results with unconfirmed continuation (2.5s)
+  ✓  106 [mobile] › tests/browser/communication-recovery.spec.ts:294:1 › Retry mailbox uses the displayed failed epoch and preserves a newer exhaustion after a stale response (5.4s)
+  ✓  107 [mobile] › tests/browser/conversation-owner-lifecycle.spec.ts:31:1 › unreadable saved data survives restoration and blocks update reload without submitting (3.0s)
+  ✓  108 [mobile] › tests/browser/conversation-owner-lifecycle.spec.ts:83:1 › failed persistence cannot dispatch a message (2.1s)
+  ✓  109 [mobile] › tests/browser/conversation-owner-lifecycle.spec.ts:113:1 › a held acknowledgement clears only its own attempt and preserves newer text (2.3s)
+  ✓  110 [mobile] › tests/browser/conversation-owner-lifecycle.spec.ts:148:1 › Stop remains available after a retry starts while its HTTP acknowledgement is held (2.4s)
+  ✓  111 [mobile] › tests/browser/conversation-queue.spec.ts:6:1 › an idle reply starts immediately in the UI and only later messages are queued (3.9s)
+  ✓  112 [mobile] › tests/browser/conversation-recovery.spec.ts:117:1 › Check keeps the original identity, coalesces held clicks, and waits for a newer snapshot after acknowledgement (2.8s)
+  ✓  113 [mobile] › tests/browser/conversation-recovery.spec.ts:169:1 › owned cleanup disables recovery and only explicit Try Stop again requests cancellation (2.8s)
+  ✓  114 [mobile] › tests/browser/conversation-recovery.spec.ts:235:1 › a known access denial after recovery refresh clears the saved reply and its controls (2.2s)
+  ✓  115 [mobile] › tests/browser/conversation-window.spec.ts:6:1 › new replies stay in view when the recent history window rolls forward (2.6s)
+  ✓  116 [mobile] › tests/browser/email.spec.ts:10:1 › enable and revoke an address; uncertain replies require an explicit resend (4.9s)
+  ✓  117 [mobile] › tests/browser/execution-tools.spec.ts:33:1 › uncertain code retry preserves the saved request and never replays an interrupted result (6.4s)
+  ✓  118 [mobile] › tests/browser/execution-tools.spec.ts:80:1 › cancelling an unconfirmed code request uses its original run identity (3.5s)
+  ✓  119 [mobile] › tests/browser/family.spec.ts:52:1 › admin can invite and remove with safe focus and retained private data copy (6.0s)
+  ✓  120 [mobile] › tests/browser/family.spec.ts:111:1 › member family screen is read only, and a shared model outage preserves an editable draft (3.5s)
+  ✓  121 [mobile] › tests/browser/family.spec.ts:165:1 › invitation creates an account, verifies email, then opens a private welcome (798ms)
+  ✓  122 [mobile] › tests/browser/family.spec.ts:243:1 › expired verification can be resent without losing a valid family invitation (738ms)
+  ✓  123 [mobile] › tests/browser/family.spec.ts:304:1 › admin reconnects ChatGPT in Settings with a private return-address field and recovery (5.3s)
+  ✓  124 [mobile] › tests/browser/family.spec.ts:472:1 › model access recovers automatically after a transient catalog polling failure (3.5s)
+  ✓  125 [mobile] › tests/browser/file-media-lifecycle.spec.ts:238:1 › cancelled acquisition prevents restart until the late stream is released (705ms)
+  ✓  126 [mobile] › tests/browser/file-media-lifecycle.spec.ts:277:1 › finish waits for native final data before releasing and uploading once (571ms)
+  ✓  127 [mobile] › tests/browser/file-media-lifecycle.spec.ts:313:1 › unmount joins late permission without recording or uploading (536ms)
+  ✓  128 [mobile] › tests/browser/file-media-lifecycle.spec.ts:334:1 › denied microphone retains an enabled explicit retry (504ms)
+  ✓  129 [mobile] › tests/browser/file-media-lifecycle.spec.ts:348:1 › transcript and text previews fence late results across the same file ID on another agent (820ms)
+  ✓  130 [mobile] › tests/browser/file-media-lifecycle.spec.ts:393:1 › video preview clears prior frames and aborts pending resources on unmount (802ms)
+  ✓  131 [mobile] › tests/browser/file-media-lifecycle.spec.ts:436:1 › switching agents waits for the previous microphone owner before a new acquisition (760ms)
+  ✓  132 [mobile] › tests/browser/file-media-lifecycle.spec.ts:473:1 › rename owns one immutable command, retains rejected edits and fences a former agent (926ms)
+  ✓  133 [mobile] › tests/browser/files-lifecycle.spec.ts:180:1 › duplicate upload stays single and uncertain retry keeps the original reservation (332ms)
+  ✓  134 [mobile] › tests/browser/files-lifecycle.spec.ts:224:1 › late upload completion cannot replace the new agent's files or draft selection (334ms)
+  ✓  135 [mobile] › tests/browser/files-lifecycle.spec.ts:254:1 › a pre-upload list response cannot erase the published file while the fresh read is held (352ms)
+  ✓  136 [mobile] › tests/browser/files-lifecycle.spec.ts:292:1 › a restored pending reservation keeps its backend identity when the user chooses the file again (310ms)
+  ✓  137 [mobile] › tests/browser/files-lifecycle.spec.ts:323:1 › capacity rejection sends no upload and explicit refresh clears the shared error (316ms)
+  ✓  138 [mobile] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (4.0s)
+  ✓  139 [mobile] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.4s)
+  ✓  140 [mobile] › tests/browser/invitation-recovery.spec.ts:10:1 › an invitation preview recovers from one temporary failure without reloading (661ms)
+  ✓  141 [mobile] › tests/browser/invitation-recovery.spec.ts:38:1 › an unavailable preview can be retried in place without replaying email verification (765ms)
+  ✓  142 [mobile] › tests/browser/invitation-recovery.spec.ts:74:1 › a cancelled invitation stays unavailable without retrying it (374ms)
+  ✓  143 [mobile] › tests/browser/invitation-recovery.spec.ts:101:1 › opening an email link in an existing join tab clears the previous error while it loads (407ms)
+  ✓  144 [mobile] › tests/browser/invitation-recovery.spec.ts:134:1 › failed animation downloads preserve the composer and its draft (1.0s)
+  ✓  145 [mobile] › tests/browser/invitation-recovery.spec.ts:175:1 › a workspace load error retries the same page without a document reload (1.3s)
+  ✓  146 [mobile] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine stopping retains occupancy and stops only the selected existing run (4.3s)
+  ✓  147 [mobile] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine unconfirmed retains occupancy and stops only the selected existing run (4.2s)
+  ✓  148 [mobile] › tests/browser/lifecycle-recovery.spec.ts:189:1 › cancelled and exhausted app updates retain saved content without claiming delivery or replaying (4.5s)
+  ✓  149 [mobile] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 200 response cannot clear a newer failure (3.4s)
+  ✓  150 [mobile] › tests/browser/memory-recovery.spec.ts:133:3 › scheduler recovery uses the exact epoch and a stale 409 response cannot clear a newer failure (3.5s)
+  ✓  151 [mobile] › tests/browser/memory-recovery.spec.ts:226:1 › paused summaries preserve their operation ID after an uncertain response and reload until explicit retry succeeds (3.8s)
+  ✓  152 [mobile] › tests/browser/memory-recovery.spec.ts:287:1 › backup retry keeps the failed receipt and last complete backup until authoritative status changes (3.1s)
+  ✓  153 [mobile] › tests/browser/memory-recovery.spec.ts:376:1 › backup scheduler exhaustion offers exact epoch recovery without starting a backup attempt (3.2s)
+  ✓  154 [mobile] › tests/browser/objects-lifecycle.spec.ts:61:1 › uncertain creation survives reload and retries the identical mutation (5.5s)
+  ✓  155 [mobile] › tests/browser/objects-lifecycle.spec.ts:121:1 › conflict draft survives reload and only explicit reapply changes operation identity (5.3s)
+  ✓  156 [mobile] › tests/browser/objects-lifecycle.spec.ts:180:1 › cancel after uncertain edit uses its original operation and waits for a valid acknowledgement (4.0s)
+  ✓  157 [mobile] › tests/browser/profile-photo.spec.ts:3:1 › upload, reload, replace and remove a profile photo (9.6s)
+  ✓  158 [mobile] › tests/browser/rich-results.spec.ts:32:1 › a shopping shortlist survives workspace expansion and questions append to an unsent draft (5.1s)
+  ✓  159 [mobile] › tests/browser/rich-results.spec.ts:103:1 › table search and sorting survive expansion and govern the exported CSV (3.2s)
+  ✓  160 [mobile] › tests/browser/rich-results.spec.ts:146:1 › weather adapts from a dated weekend comparison to a detailed day and a compact week (2.5s)
+  ✓  161 [mobile] › tests/browser/rich-results.spec.ts:219:1 › map leases survive selection, theme replacement and route teardown without stale canvases (3.2s)
+  ✓  162 [mobile] › tests/browser/rich-results.spec.ts:270:1 › closing a map during a held style request releases it and leaves the next map usable (3.6s)
+  ✓  163 [mobile] › tests/browser/rich-results.spec.ts:312:1 › loaded syntax highlighting preserves code text and unsupported-language fallback (2.6s)
+  ✓  164 [mobile] › tests/browser/rich-results.spec.ts:367:1 › failed map loading keeps accessible addresses and a selected-place fallback (3.5s)
+  ✓  165 [mobile] › tests/browser/stale-tab.spec.ts:50:1 › an explicit update reload preserves unsent text and original file references without sending (4.4s)
+  ✓  166 [mobile] › tests/browser/stale-tab.spec.ts:103:1 › a retired settings chunk keeps chat intact and offers full reload instead of repeating navigation (4.8s)
+  ✓  167 [mobile] › tests/browser/stale-tab.spec.ts:148:1 › an unconfirmed send restores its original identity and never submits on reload (5.4s)
+  ✓  168 [mobile] › tests/browser/stale-tab.spec.ts:188:1 › the update waits for a file upload to settle (2.0s)
+  ✓  169 [mobile] › tests/browser/stale-tab.spec.ts:226:1 › failed tab storage blocks reload until the draft can be preserved (2.9s)
+  ✓  170 [mobile] › tests/browser/terminal-ui.spec.ts:50:1 › uncertain terminal transfer retries its original ID and immutable path (3.6s)
+  ✓  171 [mobile] › tests/browser/terminal-ui.spec.ts:94:1 › unmount during export download never begins a later Files upload (4.5s)
+  ✓  172 [mobile] › tests/browser/terminal-ui.spec.ts:139:1 › lease revocation disconnects the actual terminal socket and blocks save (3.4s)
+  ✓  173 [mobile] › tests/browser/terminal-ui.spec.ts:193:1 › unconfirmed session opening retries the same session ID (3.6s)
+  ✓  174 [mobile] › tests/browser/update-recovery-owner.spec.ts:3:1 › offline update recovery retains the draft and only navigates after an explicit online reload (3.9s)
+  ✓  175 [mobile] › tests/browser/workspace.spec.ts:7:1 › sign in, open an agent, receive a fixture reply and reload it (3.3s)
+  ✓  176 [mobile] › tests/browser/workspace.spec.ts:92:1 › send a PDF while extraction is pending and keep its durable preparing state after reload (3.1s)
+
+  176 passed (8.6m)
+2026-10-24T17:30:51.703Z ERROR [Better Auth]: Failed to verify authentication Error: Unexpected authentication response origin "https://foreign.invalid", expected "http://localhost:49525"
+    at verifyAuthenticationResponse (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:52603:46)
+    at <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:53117:30)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:16502:11)
+    at async internalHandler (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:14671:20)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:26762:18)
+    at async processRequest (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:15437:11)
+    at async handler (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:15460:16)
+    at async <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/env-x9btRkoh.js:16269:13)
+    at async handle (/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/dist/server/assets/router-B-4ZmOMY.js:1884:19)
+Built website passkeys passed: registration, password-free sign-in, device proof, origin, replay, freshness, rename, removal and private native auth.
+$ node scripts/check-client-upgrade.mjs
+Two real frontend builds: retired asset recovery, draft/file preservation, and zero submissions passed.
+Owned server/browser/builds cleaned up; evidence retained at /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/test-results/client-upgrade

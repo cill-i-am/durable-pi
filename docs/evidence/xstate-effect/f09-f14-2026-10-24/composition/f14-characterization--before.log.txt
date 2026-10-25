@@ -1,0 +1,43 @@
+[WebServer] (node:17270) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:17299) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"posts":[{"path":"/api/agent/background/retry","body":{"groupId":17,"operationId":"237e56af-8ae7-4f4f-92a3-40d64ae9f1e7"}},{"path":"/api/agent/background/retry","body":{"groupId":17,"operationId":"fa1b8da4-3e61-4992-b75c-cc5835d57650"}}],"saved":{"background-command:home:17:retry":"{\"groupId\":17,\"operationId\":\"fa1b8da4-3e61-4992-b75c-cc5835d57650\",\"action\":\"retry\"}","pi:composer-owner":"benchmark-owner"}}
+  ✘  1 [desktop] › ../../../../../../private/tmp/f14-characterization/probe.spec.ts:4:5 › background command rapid admission preserves one original operation (2.8s)
+
+
+  1) [desktop] › ../../../../../../private/tmp/f14-characterization/probe.spec.ts:4:5 › background command rapid admission preserves one original operation 
+
+    Error: expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"body": {"groupId": 17, "operationId": "237e56af-8ae7-4f4f-92a3-40d64ae9f1e7"}, "path": "/api/agent/background/retry"}, {"body": {"groupId": 17, "operationId": "fa1b8da4-3e61-4992-b75c-cc5835d57650"}, "path": "/api/agent/background/retry"}]
+
+      27 |  console.log(JSON.stringify({posts,saved}))
+      28 |  for(const release of releases)release()
+    > 29 |  expect(posts).toHaveLength(1)
+         |                ^
+      30 | })
+      31 |
+        at /private/tmp/f14-characterization/probe.spec.ts:29:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f14-characterization/results/probe-background-command-r-8f5fc-rves-one-original-operation-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f14-characterization/results/probe-background-command-r-8f5fc-rves-one-original-operation-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f14-characterization/results/probe-background-command-r-8f5fc-rves-one-original-operation-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../private/tmp/f14-characterization/results/probe-background-command-r-8f5fc-rves-one-original-operation-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [desktop] › ../../../../../../private/tmp/f14-characterization/probe.spec.ts:4:5 › background command rapid admission preserves one original operation 

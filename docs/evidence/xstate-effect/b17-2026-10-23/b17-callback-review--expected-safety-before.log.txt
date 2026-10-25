@@ -1,0 +1,54 @@
+
+ RUN  v5.0.5 /private/tmp/b17-callback-review
+
+stderr | expected-safety.test.ts > reproduces stale callback arriving after clean reconnect triggering a new init after discovery failure
+[MCPClientManager] Ignoring stale OAuth callback with invalid state for server "mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": State not found or already used
+
+ ❯ expected-safety.test.ts (4 tests | 2 failed) 267ms
+   × reproduces stale callback arriving after clean reconnect triggering a new init after discovery failure 58ms
+   × reproduces cleanup failure leaving an old callback able to exchange into the new revision 55ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  expected-safety.test.ts > reproduces stale callback arriving after clean reconnect triggering a new init after discovery failure
+AssertionError: expected "vi.fn()" to be called 2 times, but got 3 times
+ ❯ expected-safety.test.ts:97:19
+     95|    const before=f.init.mock.calls.length, discoveries=f.discovery.mock…
+     96|    await Effect.runPromiseExit(f.service.callback(f.request))
+     97|    expect(f.init).toHaveBeenCalledTimes(before);expect(f.discovery).to…
+       |                   ^
+     98|  }finally {await f.runtime.dispose()}
+     99| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  expected-safety.test.ts > reproduces cleanup failure leaving an old callback able to exchange into the new revision
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "synthetic-old-verifier",
+    ]
+
+
+Number of calls: 1
+
+ ❯ expected-safety.test.ts:104:27
+    102|  try {
+    103|    await Effect.runPromiseExit(f.service.callback(f.request))
+    104|    expect(f.exchange).not.toHaveBeenCalled();expect(f.establish).not.t…
+       |                           ^
+    105|    expect(await f.currentProvider.tokens()).toBeUndefined()
+    106|  }finally {await f.runtime.dispose();warn.mockRestore()}
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 passed (4)
+   Start at  16:40:37
+   Duration  745ms (import 44%, tests 41%, transform 14%, setup 1%)
+

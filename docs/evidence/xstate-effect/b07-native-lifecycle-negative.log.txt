@@ -1,0 +1,25 @@
+WAIT native Communication SIGKILL recovery: health-only startup, no object request until the actual sixty-second discovery lease expires.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: accepted sender intent remained undelivered after retained discovery and SIGKILL
++ actual - expected
+
++ 'pending'
+- 'accepted'
+
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/scripts/test-communication-control-runtime.mjs:355:10
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'pending',
+  expected: 'accepted',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

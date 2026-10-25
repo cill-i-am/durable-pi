@@ -1,139 +1,103 @@
-import { Schema } from "effect"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { send } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { useEffect, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
-import { AppDetail, AppDocument } from "@/apps/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+import {
+  appCommand,
+  appRequests,
+  makeAppOwner,
+  type AppActor,
+} from "./app-owner"
+import type { appUiMachine, AppCommand } from "./app-ui.machine"
 
+type Snapshot = SnapshotFrom<ReturnType<typeof appUiMachine>>
 export function useApp(agentId: string, id: string) {
-  const [detail, setDetail] = useState<AppDetail | null>(null)
-  const [failure, setFailure] = useState<{
-    kind: "load" | "mutation"
-    message: string
+  const [owned, setOwned] = useState<{
+    actor: AppActor
+    snapshot: Snapshot
   } | null>(null)
-  const setError = (message: string) =>
-    setFailure(message ? { kind: "mutation", message } : null)
-  const [busy, setBusy] = useState(false)
-  const [attempt, setAttempt] = useState<{
-    path: string
-    input: Record<string, unknown> & { operationId: string }
-  } | null>(null)
-  const lock = useRef(false),
-    sequence = useRef(0)
-  const refresh = useCallback(
-    async (force = false) => {
-      if (lock.current && !force) return
-      const generation = ++sequence.current
-      try {
-        const value = Schema.decodeUnknownSync(AppDetail)(
-          await agentApi(agentId)(`apps/${id}`)
-        )
-        if (generation === sequence.current) {
-          setDetail(value)
-          setFailure((current) => (current?.kind === "load" ? null : current))
-        }
-        return true
-      } catch (cause) {
-        if (generation === sequence.current)
-          setFailure((current) =>
-            current?.kind === "mutation"
-              ? current
-              : {
-                  kind: "load",
-                  message:
-                    cause instanceof Error
-                      ? cause.message
-                      : "Could not load the app.",
-                }
-          )
-      }
-    },
-    [agentId, id]
-  )
   useEffect(() => {
-    const stop = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      4000,
-      true
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const actor = yield* makeAppOwner(
+          { agentId, id, visible: document.visibilityState === "visible" },
+          appRequests(agentId, id)
+        )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            actor.subscribe((snapshot) => {
+              if (mounted) setOwned({ actor, snapshot })
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        const visibility = () =>
+          Effect.runFork(
+            send(actor, {
+              type: "VISIBILITY",
+              visible: document.visibilityState === "visible",
+            })
+          )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            document.addEventListener("visibilitychange", visibility)
+          ),
+          () =>
+            Effect.sync(() =>
+              document.removeEventListener("visibilitychange", visibility)
+            )
+        )
+        if (mounted) setOwned({ actor, snapshot: actor.getSnapshot() })
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
     )
     return () => {
-      stop()
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      sequence.current++
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
+        )
+      )
     }
-  }, [refresh])
-  async function mutate(path: string, input: Record<string, unknown>) {
-    if (lock.current) return false
-    const pending = attempt ?? {
-      path,
-      input: { ...input, operationId: crypto.randomUUID() },
-    }
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    setAttempt(pending)
-    setError("")
-    try {
-      const document = Schema.decodeUnknownSync(AppDocument)(
-        await agentApi(agentId)(pending.path, pending.input)
-      )
-      setDetail((current) =>
-        current ? { ...current, app: document } : current
-      )
-      setAttempt(null)
-      return true
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The change is unconfirmed. Retry the same request."
-      )
-      return false
-    } finally {
-      await refresh(true)
-      lock.current = false
-      setBusy(false)
-    }
-  }
-  async function cancel() {
-    if (!attempt || lock.current) return
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    try {
-      const response = await agentApi(agentId)<{ applied: boolean }>(
-        "apps/cancel",
-        { operationId: attempt.input.operationId }
-      )
-      if (response.applied && !(await refresh(true)))
-        throw new Error("Could not reload the applied change")
-      setAttempt(null)
-      setError(
-        response.applied
-          ? "The previous change was already saved. The latest app is shown."
-          : ""
-      )
-    } catch {
-      setError(
-        "Cancellation is unconfirmed. Retry before making a different change."
-      )
-    } finally {
-      await refresh(true)
-      lock.current = false
-      setBusy(false)
-    }
-  }
+  }, [agentId, id])
+  const current =
+    owned?.snapshot.context.agentId === agentId &&
+    owned.snapshot.context.id === id
+      ? owned
+      : null
+  const command = (value: AppCommand) =>
+    current
+      ? Effect.runPromise(appCommand(current.actor, value))
+      : Promise.resolve(false)
   return {
-    detail,
-    error: failure?.message ?? "",
-    busy,
-    attempt,
-    refresh,
-    mutate,
-    cancel,
-    retry: () =>
-      attempt ? mutate(attempt.path, attempt.input) : Promise.resolve(false),
+    detail: current?.snapshot.context.detail ?? null,
+    error: current?.snapshot.context.failure?.message ?? "",
+    busy: !!current?.snapshot.context.ticket,
+    attempt: current?.snapshot.context.attempt ?? null,
+    refresh: async () => {
+      if (!current) return false
+      await Effect.runPromise(send(current.actor, { type: "REFRESH" }))
+      return true
+    },
+    mutate: (path: string, input: Record<string, unknown>) =>
+      command({
+        type: "mutate",
+        attempt: {
+          path,
+          input: {
+            ...structuredClone(input),
+            operationId: crypto.randomUUID(),
+          },
+        },
+      }),
+    cancel: () => command({ type: "cancel" }),
+    retry: () => command({ type: "retry" }),
   }
 }

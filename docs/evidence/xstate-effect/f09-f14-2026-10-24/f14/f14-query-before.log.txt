@@ -1,0 +1,62 @@
+
+Running 3 tests using 1 worker
+
+(node:27142) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/activity-query.spec.ts:20:1 › online refresh cannot overlap a held plan observation (374ms)
+(node:27216) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/browser/activity-query.spec.ts:27:1 › unmount revokes a held plan observation (5.2s)
+(node:27539) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 tests/browser/activity-query.spec.ts:33:1 › late run page cannot replace the newly selected run (439ms)
+
+
+  1) tests/browser/activity-query.spec.ts:20:1 › online refresh cannot overlap a held plan observation 
+
+    Error: expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  ["/api/agent/plans", "/api/agent/plans"]
+
+      23 |   await page.evaluate(() => window.dispatchEvent(new Event("online")))
+      24 |   await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 50)))
+    > 25 |   expect((await proof(page)).calls.filter(path => path.endsWith("/plans"))).toHaveLength(1)
+         |                                                                             ^
+      26 | })
+      27 | test("unmount revokes a held plan observation", async ({page}) => {
+      28 |   await mount(page,"plans")
+        at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/activity-query.spec.ts:25:77
+
+    Error Context: ../../../../../../private/tmp/f14-query-browser-results/activity-query-online-refr-d79c5-lap-a-held-plan-observation/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f14-query-browser-results/activity-query-online-refr-d79c5-lap-a-held-plan-observation/error-context.md
+
+  2) tests/browser/activity-query.spec.ts:27:1 › unmount revokes a held plan observation ───────────
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      29 |   await expect.poll(async () => (await proof(page)).calls.length).toBe(2)
+      30 |   await page.getByRole("button",{name:"Unmount query"}).click()
+    > 31 |   await expect.poll(async () => (await proof(page)).aborted).toBeGreaterThan(0)
+         |                                                              ^
+      32 | })
+      33 | test("late run page cannot replace the newly selected run", async ({page}) => {
+      34 |   await mount(page,"run")
+        at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/activity-query.spec.ts:31:62
+
+    Error Context: ../../../../../../private/tmp/f14-query-browser-results/activity-query-unmount-revokes-a-held-plan-observation/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f14-query-browser-results/activity-query-unmount-revokes-a-held-plan-observation/error-context.md
+
+  2 failed
+    tests/browser/activity-query.spec.ts:20:1 › online refresh cannot overlap a held plan observation 
+    tests/browser/activity-query.spec.ts:27:1 › unmount revokes a held plan observation ────────────
+  1 passed (12.2s)

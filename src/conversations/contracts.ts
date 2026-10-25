@@ -27,6 +27,13 @@ export const SendInput = Schema.Struct({
 export const CancelInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
 })
+export const RecoveryInput = Schema.Struct({
+  ...CancelInput.fields,
+  revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+})
+export const ControlUnconfirmed = Schema.NullOr(
+  Schema.Literals(["handoff", "observe", "stop"])
+)
 export type ChatTurn = {
   id: string
   text: string
@@ -108,6 +115,10 @@ export const TimelineItem = Schema.Union([
 ])
 export type TimelineItem = typeof TimelineItem.Type
 const VisibleTurn = Schema.Struct({
+  // Older snapshots remain readable, but cannot authorize revision-fenced recovery.
+  revision: Schema.optional(RecoveryInput.fields.revision),
+  controlUnconfirmed: Schema.optional(ControlUnconfirmed),
+  controlBusy: Schema.optional(Schema.Boolean),
   preparingFiles: Schema.optional(Schema.Boolean),
   provenance: Schema.optional(MessageProvenance),
   origin: Schema.optional(TurnOrigin),
@@ -148,6 +159,17 @@ const VisibleTurn = Schema.Struct({
     )
   ),
 })
+export const BackupRecovery = Schema.Struct({
+  attemptId: Schema.String,
+  target: Schema.String,
+})
+export type BackupRecovery = typeof BackupRecovery.Type
+export const CompactionRecovery = Schema.Struct({
+  epoch: Schema.String,
+  failedAt: Schema.Number,
+  message: Schema.String,
+})
+export type CompactionRecovery = typeof CompactionRecovery.Type
 export const ConversationMetadata = Schema.Struct({
   runtime: Schema.optional(RuntimeStatus),
   access: Schema.optional(AccessState),
@@ -160,10 +182,13 @@ export const ConversationMetadata = Schema.Struct({
     summaries: Schema.Number,
     ready: Schema.Boolean,
     issues: Schema.optional(Schema.Array(SummaryIssue)),
+    compactionRecovery: Schema.optional(CompactionRecovery),
     backup: Schema.optional(
       Schema.Struct({
         date: Schema.NullOr(Schema.String),
         error: Schema.NullOr(Schema.String),
+        recovery: Schema.optional(Schema.NullOr(BackupRecovery)),
+        schedulerRecovery: Schema.optional(Schema.NullOr(CompactionRecovery)),
       })
     ),
     usage: Schema.optional(

@@ -1,0 +1,15 @@
+# B12 Apps native proof
+
+Owns only tests/runtime/apps-worker.ts and scripts/test-apps-runtime.mjs in the xstate-frontend-resources worktree. No source-domain, package, migration, Git index or commit edits.
+
+The fixture composes actual AppStore/makeApps/appEventPump/AppEventRunner with the existing ConversationControlProbe fixture's production ConversationStore, journal, scoped pump, ConversationRunner and PiHarness. Apps event and Conversation admission share the same coordinated SQLite transaction. Probe tables count passes and committed admissions; no production DDL was added.
+
+Positive run passed: actual early empty Lifecycle scan retains the same sixty-second Apps job and physical alarm; interaction and receipt commit while the postcommit doorbell is omitted; SIGKILL then health-only restart with zero object requests for the real lease plus twelve seconds; original event/turn identity produces one committed admission, one done Conversation turn, one done native Pi receipt, one synthetic provider call and one submission. Bounded three SDK scan failures produce an exhausted App event and spent retained lease; repeated ordinary wake and cold recovery do not spend another dispatch attempt. A second restart and exact interaction replay preserve one event/receipt/admission/model/native identity.
+
+The negative build changes only the armed empty-scan retention expression in src/apps/discovery.machine.ts. It must fail the same post-SIGKILL accepted-event recovery assertion, preserving raw evidence. The control failed at the intended assertion: after a 72-second interval with zero object requests, the event remained pending, with one interaction receipt, zero Conversation admissions/turns/native receipts, no Apps jobs and no physical alarm.
+
+Run: node scripts/test-apps-runtime.mjs
+Control: node scripts/test-apps-runtime.mjs --negative-discovery
+APPS_RUNTIME_EVIDENCE selects the artifact prefix. The JSON evidence includes SHA256 source provenance, snapshots, zero-object-request intervals and explicit synthetic boundaries.
+
+Focused fixture typecheck, lint and formatting pass. Authority and model availability are synthetic. This native proof uses a checklist interaction; remote renderer lifetime/limits, real Access policy and live provider or external effects remain outside it. Domain/render behavioral coverage belongs to the Apps implementation lane.
