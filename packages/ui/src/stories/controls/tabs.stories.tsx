@@ -54,3 +54,37 @@ export const Focus: Story = {
   },
 }
 export const Vertical: Story = { args: { orientation: "vertical" } }
+
+export const Motion: Story = {
+  render: (args) => (
+    <div className="flex max-w-full flex-col items-start gap-6">
+      {["Workspace", "Independent"].map((name) => (
+        <Tabs key={name} className="max-w-md" {...args} defaultValue="overview">
+          <TabsList aria-label={name}>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="activity">Family activity</TabsTrigger>
+            <TabsTrigger value="connections">Connections</TabsTrigger>
+            <TabsTrigger value="unavailable" disabled>
+              Unavailable
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview">Your week at a glance.</TabsContent>
+          <TabsContent value="activity">Nothing new today.</TabsContent>
+          <TabsContent value="connections">
+            Manage your connected apps.
+          </TabsContent>
+        </Tabs>
+      ))}
+    </div>
+  ),
+}
+
+export const MotionVertical: Story = {
+  ...Motion,
+  args: { orientation: "vertical" },
+}
+
+export const Wrapped: Story = {
+  ...Motion,
+  args: { className: "w-60 max-w-full" },
+}
