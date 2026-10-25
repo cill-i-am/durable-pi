@@ -1,0 +1,77 @@
+name: UI catalogue
+on:
+  pull_request:
+    paths:
+      [
+        "packages/ui/**",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "components.json",
+        ".github/workflows/ui.yml",
+      ]
+  push:
+    branches: [main]
+    paths:
+      [
+        "packages/ui/**",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "components.json",
+        ".github/workflows/ui.yml",
+      ]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @workspace/ui typecheck
+      - run: pnpm exec oxlint packages/ui --config oxlint.config.ts --deny-warnings
+      - run: pnpm exec oxfmt --check packages/ui
+      - run: pnpm test:ui
+      - run: pnpm build:storybook
+      - run: pnpm --filter @workspace/ui exec playwright install --with-deps chromium
+      - run: pnpm test:ui:browser
+      - name: Retain UI examination results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ui-examination
+          path: |
+            packages/ui/test-results/
+            packages/ui/playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://ui.cill-i-am.com
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:storybook
+      - run: pnpm deploy:ui
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

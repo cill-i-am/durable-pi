@@ -19,3 +19,7 @@ test-results/
 evals/rich-answers/results/
 evals/family-invitations/results/
 .DS_Store
+
+storybook-static/
+
+playwright-report/

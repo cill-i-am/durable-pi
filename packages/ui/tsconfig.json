@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@workspace/ui/components/*": ["./src/components/*.tsx"],
+      "@workspace/ui/lib/*": ["./src/lib/*.ts"],
+      "@workspace/ui/hooks/*": ["./src/hooks/*.ts"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".storybook/**/*.ts",
+    ".storybook/**/*.tsx",
+    "tests/**/*.ts",
+    "*.ts"
+  ],
+  "exclude": ["node_modules", "storybook-static", "test-results"]
+}
