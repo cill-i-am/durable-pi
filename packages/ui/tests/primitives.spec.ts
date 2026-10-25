@@ -164,8 +164,52 @@ async function noDocumentOverflow(page: Page) {
   )
 }
 
+// Base UI's empty desktop sentinels redirect focus; axe cannot inspect React's
+// delegated focus handler. Keep all content audited, and verify redirection below.
+// https://github.com/mui/base-ui/issues/4668
+const nativeGuardSelector =
+  'html[data-ui-viewport="desktop"] span[data-base-ui-focus-guard][aria-hidden="true"]:empty'
+
+async function recordNativeGuards(page: Page, info: TestInfo, label: string) {
+  const guards = await page.locator(nativeGuardSelector).evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const style = getComputedStyle(node)
+      return {
+        type: node.getAttribute("data-type") ?? "trigger",
+        children: node.childNodes.length,
+        width: Number.parseFloat(style.width),
+        height: Number.parseFloat(style.height),
+        clip: style.clipPath,
+        position: style.position,
+      }
+    })
+  )
+  if (!guards.length) return
+  for (const guard of guards) {
+    expect(guard.children).toBe(0)
+    expect(guard.width).toBeLessThanOrEqual(1)
+    expect(guard.height).toBeLessThanOrEqual(1)
+    expect(guard.clip).toBe("inset(50%)")
+    expect(guard.position).toBe("fixed")
+  }
+  info.annotations.push({
+    type: "native-focus-guards",
+    description: `${label}: ${guards.length} empty Base UI sentinel spans are inspected separately; no accessibility rule is disabled. See the dedicated keyboard test and upstream issue4668.`,
+  })
+  await info.attach(`native-focus-guards-${label}`, {
+    body: JSON.stringify(
+      { source: "https://github.com/mui/base-ui/issues/4668", guards },
+      null,
+      2
+    ),
+    contentType: "application/json",
+  })
+}
+
 async function accessibility(page: Page, info: TestInfo, label: string) {
+  await recordNativeGuards(page, info, label)
   const result = await new AxeBuilder({ page })
+    .exclude(nativeGuardSelector)
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
     .analyze()
   await info.attach(`axe-${label}`, {
@@ -222,8 +266,165 @@ for (const story of stories) {
   })
 }
 
+test("catalogue: each primitive has independent docs and controls", async ({
+  page,
+}) => {
+  // This journey checks the catalogue chrome, rather than a phone-sized specimen.
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto("/?path=/docs/components-input--reference")
+  const navigation = page.getByRole("navigation", {
+    name: "Stories",
+    exact: true,
+  })
+  for (const name of [
+    "Button",
+    "Input",
+    "Textarea",
+    "Select",
+    "Checkbox",
+    "Switch",
+    "Tabs",
+    "Card",
+    "CardFrame",
+    "Sheet",
+    "Dialog",
+    "AlertDialog",
+  ]) {
+    await expect(
+      navigation.getByRole("button", { name, exact: true })
+    ).toBeVisible()
+  }
+  const preview = page.frameLocator("#storybook-preview-iframe")
+  await expect(
+    preview.getByRole("heading", { name: "Input", exact: true })
+  ).toBeVisible()
+  const placeholder = preview
+    .getByRole("row")
+    .filter({
+      has: preview.getByRole("cell", { name: "placeholder", exact: true }),
+    })
+    .getByRole("textbox")
+  await expect(placeholder).toBeVisible()
+  await placeholder.fill("Family name")
+  const specimen = preview.getByRole("textbox", { name: "Name", exact: true })
+  await expect(specimen).toHaveAttribute("placeholder", "Family name")
+  await specimen.fill("Family planning")
+  const disabled = preview.getByRole("switch", {
+    name: "disabled",
+    exact: true,
+  })
+  await disabled.focus()
+  await disabled.press("Space")
+  await expect(specimen).toBeDisabled()
+  await disabled.press("Space")
+  await expect(specimen).toBeEnabled()
+  await expect(specimen).toHaveValue("Family planning")
+  await expect(
+    preview.getByRole("cell", { name: "variant", exact: true })
+  ).toHaveCount(0)
+
+  await page.goto("/?path=/docs/components-button--reference")
+  await expect(
+    preview.getByRole("heading", { name: "Button", exact: true })
+  ).toBeVisible()
+  await expect(
+    preview.getByRole("cell", { name: "variant", exact: true })
+  ).toBeVisible()
+})
+
+test("menu: desktop sentinels redirect and native Tab restores focus", async ({
+  page,
+}, info) => {
+  const id = "components-dropdownmenu--playground"
+  await openStory(page, info, id, { autoplay: false })
+  const count = await page.locator(nativeGuardSelector).count()
+  if (info.project.name.startsWith("desktop"))
+    expect(
+      count,
+      "Desktop menu exposes the native sentinels being audited separately"
+    ).toBeGreaterThan(0)
+  for (let index = 0; index < count; index++) {
+    await openStory(page, info, id, { autoplay: false })
+    const guard = await page
+      .locator(nativeGuardSelector)
+      .nth(index)
+      .elementHandle()
+    expect(guard).not.toBeNull()
+    await guard!.focus()
+    await expect
+      .poll(() =>
+        page.evaluate((previous) => {
+          const active = document.activeElement
+          return (
+            !!active &&
+            active !== previous &&
+            active !== document.body &&
+            !active.matches("[data-base-ui-focus-guard]") &&
+            !active.closest('[aria-hidden="true"], [inert]')
+          )
+        }, guard)
+      )
+      .toBe(true)
+    await expect(page.locator(":focus")).toBeVisible()
+  }
+  await openStory(page, info, id, { autoplay: false })
+  const menu = page.getByRole("menu")
+  await expect(menu).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(menu).not.toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Note actions", exact: true })
+  ).toBeFocused()
+})
+
+test("select: pointer opening starts usable focus and Tab exits safely", async ({
+  page,
+}, info) => {
+  await openStory(page, info, "components-select--default", { autoplay: false })
+  const trigger = page.getByRole("combobox", { name: "Model", exact: true })
+  await trigger.click()
+  const list = page.getByRole("listbox")
+  await expect(list).toBeVisible()
+  if (info.project.name.startsWith("phone"))
+    await expect(
+      page.getByRole("option", { name: "GPT-6.1 Sol", exact: true })
+    ).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(list).not.toBeVisible()
+  await expect(page.locator("[data-base-ui-focus-guard]:focus")).toHaveCount(0)
+  if (info.project.name.startsWith("phone")) await expect(trigger).toBeFocused()
+})
+
+test("menu: Tab leaves a nested menu with visible focus", async ({
+  page,
+}, info) => {
+  await openStory(page, info, "components-dropdownmenu--playground", {
+    autoplay: false,
+  })
+  await page.getByRole("menuitem", { name: "Theme", exact: true }).click()
+  const choice = page.getByRole("menuitemradio", { name: "Light", exact: true })
+  await expect(choice).toBeVisible()
+  await choice.focus()
+  await page.keyboard.press("Tab")
+  await expect(choice).not.toBeVisible()
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const active = document.activeElement
+        return (
+          !!active &&
+          active !== document.body &&
+          !active.matches("[data-base-ui-focus-guard]") &&
+          !active.closest('[aria-hidden="true"], [inert]')
+        )
+      })
+    )
+    .toBe(true)
+  await expect(page.locator(":focus")).toBeVisible()
+})
+
 test("keyboard: button focus and opaque focus ring", async ({ page }, info) => {
-  await openStory(page, info, "primitives-controls--button-playground", {
+  await openStory(page, info, "components-button--default", {
     autoplay: false,
   })
   const button = page.getByRole("button", { name: "Save", exact: true })
@@ -242,7 +443,7 @@ test("keyboard: button focus and opaque focus ring", async ({ page }, info) => {
 test("keyboard: tabs select a panel and skip disabled controls", async ({
   page,
 }, info) => {
-  await openStory(page, info, "primitives-controls--tab-panels", {
+  await openStory(page, info, "components-tabs--default", {
     autoplay: false,
   })
   const active = page.getByRole("tab", { name: "Active", exact: true })
@@ -264,7 +465,7 @@ test("keyboard: tabs select a panel and skip disabled controls", async ({
 test("keyboard: checkbox, indeterminate, switch and single selection", async ({
   page,
 }, info) => {
-  await openStory(page, info, "primitives-controls--selection-controls", {
+  await openStory(page, info, "compositions-forms--selection-controls", {
     autoplay: false,
   })
   const checkbox = page.getByRole("checkbox", { name: "Off", exact: true })
@@ -297,7 +498,7 @@ test("keyboard: checkbox, indeterminate, switch and single selection", async ({
 test("keyboard: select opens, chooses an option and restores focus", async ({
   page,
 }, info) => {
-  await openStory(page, info, "primitives-controls--select-closed", {
+  await openStory(page, info, "components-select--default", {
     autoplay: false,
   })
   const trigger = page.getByRole("combobox", { name: "Model", exact: true })
@@ -326,7 +527,7 @@ test("keyboard: select opens, chooses an option and restores focus", async ({
 test("select: failed options recover without replacing the field", async ({
   page,
 }, info) => {
-  await openStory(page, info, "primitives-controls--select-error-recovery", {
+  await openStory(page, info, "components-select--error-recovery", {
     autoplay: false,
   })
   const trigger = page.getByRole("combobox", { name: "Model", exact: true })
@@ -434,11 +635,11 @@ test("200% text: forms, actions and long drawer labels reflow", async ({
 }, info) => {
   test.setTimeout(90_000)
   for (const id of [
-    "primitives-controls--editable-fields",
-    "primitives-controls--button-sizes",
-    "primitives-controls--tab-panels",
-    "primitives-controls--selection-controls",
-    "primitives-drawers--long-labels",
+    "compositions-forms--editable-fields",
+    "components-button--sizes",
+    "components-tabs--default",
+    "compositions-forms--selection-controls",
+    "compositions-settings--long-labels",
   ]) {
     await openStory(page, info, id, { scale: 200, autoplay: false })
     await noDocumentOverflow(page)
@@ -465,9 +666,9 @@ test("RTL: selection, select and drawer navigation keep direction", async ({
 }, info) => {
   test.setTimeout(90_000)
   for (const id of [
-    "primitives-controls--selection-controls",
-    "primitives-controls--select-closed",
-    "primitives-drawers--long-labels",
+    "compositions-forms--selection-controls",
+    "components-select--default",
+    "compositions-settings--long-labels",
   ]) {
     await openStory(page, info, id, { direction: "rtl", autoplay: false })
     await noDocumentOverflow(page)
@@ -509,7 +710,7 @@ test("RTL: selection, select and drawer navigation keep direction", async ({
 test("drawers: back preserves draft, Escape restores the parent focus", async ({
   page,
 }, info) => {
-  await openStory(page, info, "primitives-drawers--stacked-settings", {
+  await openStory(page, info, "compositions-settings--stacked-settings", {
     autoplay: false,
   })
   await page.getByRole("button", { name: "Open settings", exact: true }).click()
@@ -537,7 +738,7 @@ test("drawers: back preserves draft, Escape restores the parent focus", async ({
 test("drawers: wheel scrolls long content while the page stays locked", async ({
   page,
 }, info) => {
-  await openStory(page, info, "primitives-drawers--long-content", {
+  await openStory(page, info, "compositions-settings--long-content", {
     autoplay: false,
   })
   const dialog = page.getByRole("dialog", { name: "Model access", exact: true })
@@ -568,7 +769,7 @@ test("drawers: wheel scrolls long content while the page stays locked", async ({
 test("gradient labels: rendered endpoints meet 4.5:1", async ({
   page,
 }, info) => {
-  await openStory(page, info, "primitives-controls--button-states")
+  await openStory(page, info, "components-button--states")
   const result = await page.evaluate(() => {
     type Sample = {
       id: string

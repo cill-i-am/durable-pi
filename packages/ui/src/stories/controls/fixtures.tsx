@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from "@storybook/react-vite"
 import { Button } from "@workspace/ui/components/button"
 import { Checkbox } from "@workspace/ui/components/checkbox"
 import {
@@ -24,12 +23,6 @@ import {
 } from "@workspace/ui/components/select"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { Switch } from "@workspace/ui/components/switch"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@workspace/ui/components/tabs"
 import { Textarea } from "@workspace/ui/components/textarea"
 import {
   ToggleGroup,
@@ -37,44 +30,8 @@ import {
 } from "@workspace/ui/components/toggle-group"
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react"
 import { useId, useState } from "react"
-import { expect, userEvent, within } from "storybook/test"
 
-import { useLab } from "./state/use-lab"
-
-const meta = {
-  title: "Primitives/Controls",
-  component: Button,
-  tags: ["autodocs"],
-  parameters: { layout: "padded" },
-  args: {
-    children: "Save",
-    variant: "default",
-    size: "default",
-    disabled: false,
-  },
-  argTypes: {
-    variant: {
-      control: "select",
-      options: [
-        "default",
-        "outline",
-        "secondary",
-        "destructive",
-        "ghost",
-        "link",
-      ],
-    },
-    size: {
-      control: "select",
-      options: ["sm", "default", "lg", "icon-sm", "icon", "icon-lg"],
-    },
-    children: { control: "text" },
-    disabled: { control: "boolean" },
-  },
-} satisfies Meta<typeof Button>
-
-export default meta
-type Story = StoryObj<typeof meta>
+import { useLab } from "../state/use-lab"
 
 const roles = [
   {
@@ -136,6 +93,7 @@ const states = [
   "Disabled",
   "Working",
 ] as const
+
 const buttonPseudo = {
   hover: roles.map((role) => `#${role.key}-hover`),
   active: roles.map((role) => `#${role.key}-pressed`),
@@ -143,125 +101,13 @@ const buttonPseudo = {
   focusVisible: roles.map((role) => `#${role.key}-focus`),
 }
 
-export const ButtonPlayground: Story = {
-  render: (args) => (
-    <Button
-      {...args}
-      aria-label={args.size?.startsWith("icon") ? "More options" : undefined}
-    >
-      {args.size?.startsWith("icon") ? <MoreHorizontalIcon /> : args.children}
-    </Button>
-  ),
-}
+const models = [
+  { value: "sol", label: "GPT-6.1 Sol" },
+  { value: "astra", label: "GPT-6 Astra" },
+  { value: "luna", label: "GPT-6 Luna" },
+]
 
-export const ButtonStates: Story = {
-  parameters: { pseudo: buttonPseudo, controls: { disable: true } },
-  render: () => (
-    <div
-      role="region"
-      aria-label="Button states"
-      tabIndex={0}
-      className="overflow-x-auto p-2"
-    >
-      <table className="w-full min-w-[1050px] border-separate border-spacing-x-3 border-spacing-y-4">
-        <thead>
-          <tr>
-            <th className="text-left text-sm font-medium text-muted-foreground">
-              Role
-            </th>
-            {states.map((state) => (
-              <th
-                key={state}
-                className="text-sm font-medium text-muted-foreground"
-              >
-                {state}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {roles.map((role) => (
-            <tr key={role.key}>
-              <th
-                scope="row"
-                className="text-left text-sm font-medium text-muted-foreground"
-              >
-                {role.name}
-              </th>
-              {states.map((state) => (
-                <td key={state} className="text-center">
-                  <Button
-                    id={`${role.key}-${state.toLowerCase()}`}
-                    variant={role.variant}
-                    size={role.key === "icon" ? "icon" : "default"}
-                    disabled={state === "Disabled" || state === "Working"}
-                    aria-busy={state === "Working" || undefined}
-                    aria-label={
-                      role.key === "icon"
-                        ? state === "Working"
-                          ? role.working
-                          : role.label
-                        : undefined
-                    }
-                  >
-                    {state === "Working" ? (
-                      <>
-                        <Spinner data-icon="inline-start" />
-                        {role.key !== "icon" && role.working}
-                      </>
-                    ) : role.key === "icon" ? (
-                      <MoreHorizontalIcon />
-                    ) : (
-                      role.label
-                    )}
-                  </Button>
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ),
-}
-
-export const ButtonSizes: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => (
-    <div className="flex flex-col gap-6">
-      {roles
-        .filter((role) => role.key !== "icon")
-        .map((role) => (
-          <section
-            key={role.key}
-            aria-label={`${role.name} sizes`}
-            className="flex flex-wrap items-center gap-3"
-          >
-            <span className="w-24 text-sm text-muted-foreground">
-              {role.name}
-            </span>
-            {(["sm", "default", "lg"] as const).map((size) => (
-              <Button key={size} variant={role.variant} size={size}>
-                {role.label}
-              </Button>
-            ))}
-            {(["icon-sm", "icon", "icon-lg"] as const).map((size) => (
-              <Button
-                key={size}
-                variant={role.variant}
-                size={size}
-                aria-label={`${role.label} (${size})`}
-              >
-                <PlusIcon />
-              </Button>
-            ))}
-          </section>
-        ))}
-    </div>
-  ),
-}
-
-function ActionDemo({
+export function ActionDemo({
   scenario,
 }: {
   scenario: "success" | "error" | "uncertain" | "hold"
@@ -323,61 +169,7 @@ function ActionDemo({
   )
 }
 
-export const SaveSuccess: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ActionDemo scenario="success" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: "Save default" }))
-    await expect(canvas.getByRole("button", { name: "Saving…" })).toBeDisabled()
-    await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "Default saved."
-    )
-  },
-}
-
-export const SaveError: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ActionDemo scenario="error" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: "Save default" }))
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "Couldn’t save."
-    )
-  },
-}
-export const SaveUnconfirmed: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ActionDemo scenario="uncertain" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: "Save default" }))
-    await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "Save not confirmed."
-    )
-    await expect(
-      canvas.getByRole("button", { name: "Check status" })
-    ).toBeEnabled()
-    await expect(
-      canvas.queryByRole("button", { name: "Save default" })
-    ).not.toBeInTheDocument()
-  },
-}
-export const SaveCancellation: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ActionDemo scenario="hold" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: "Save default" }))
-    await userEvent.click(canvas.getByRole("button", { name: "Cancel" }))
-    await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "Save cancelled."
-    )
-  },
-}
-
-function FieldExample({
+export function FieldExample({
   state,
   kind,
 }: {
@@ -442,31 +234,7 @@ function FieldExample({
   )
 }
 
-export const FieldStates: Story = {
-  parameters: {
-    controls: { disable: true },
-    pseudo: {
-      focus: ["#input-focus", "#select-focus", "#textarea-focus"],
-      focusVisible: ["#input-focus", "#select-focus", "#textarea-focus"],
-    },
-  },
-  render: () => (
-    <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-      {(["Default", "Focus", "Error", "Disabled"] as const).map((state) => (
-        <section key={state} className="flex min-w-0 flex-col gap-6">
-          <h2 className="text-md leading-6 font-semibold">{state}</h2>
-          <FieldGroup>
-            {(["input", "select", "textarea"] as const).map((kind) => (
-              <FieldExample key={kind} state={state} kind={kind} />
-            ))}
-          </FieldGroup>
-        </section>
-      ))}
-    </div>
-  ),
-}
-
-function SelectionDemo() {
+export function SelectionDemo() {
   const id = useId()
   const [accepted, setAccepted] = useState(false)
   const [animations, setAnimations] = useState(true)
@@ -588,45 +356,7 @@ function SelectionDemo() {
   )
 }
 
-export const SelectionControls: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <SelectionDemo />,
-}
-
-export const TabPanels: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => (
-    <Tabs defaultValue="active" className="max-w-md">
-      <TabsList aria-label="Skills">
-        <TabsTrigger value="active">Active</TabsTrigger>
-        <TabsTrigger value="archived">Archived</TabsTrigger>
-        <TabsTrigger value="disabled" disabled>
-          Unavailable
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="active">Weekly planning</TabsContent>
-      <TabsContent value="archived">No archived skills.</TabsContent>
-    </Tabs>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("tab", { name: "Archived" }))
-    await expect(
-      canvas.getByRole("tabpanel", { name: "Archived" })
-    ).toHaveTextContent("No archived skills.")
-    await expect(
-      canvas.getByRole("tab", { name: "Unavailable" })
-    ).toBeDisabled()
-  },
-}
-
-const models = [
-  { value: "sol", label: "GPT-6.1 Sol" },
-  { value: "astra", label: "GPT-6 Astra" },
-  { value: "luna", label: "GPT-6 Luna" },
-]
-
-function ModelSelect({
+export function ModelSelect({
   defaultOpen = false,
   empty = false,
   loading = false,
@@ -694,32 +424,7 @@ function ModelSelect({
   )
 }
 
-export const SelectClosed: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ModelSelect />,
-}
-export const SelectOpen: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ModelSelect defaultOpen />,
-}
-export const SelectEmpty: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ModelSelect defaultOpen empty />,
-}
-export const SelectLoading: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ModelSelect loading />,
-}
-export const SelectInvalid: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ModelSelect invalid />,
-}
-export const SelectDisabled: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <ModelSelect disabled />,
-}
-
-function SelectRecoveryDemo() {
+export function SelectRecoveryDemo() {
   const id = useId()
   const lab = useLab({ scenario: "success", identity: "model-options" })
   const available = lab.status === "success"
@@ -779,12 +484,7 @@ function SelectRecoveryDemo() {
   )
 }
 
-export const SelectErrorRecovery: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <SelectRecoveryDemo />,
-}
-
-function EditableFieldsDemo() {
+export function EditableFieldsDemo() {
   const id = useId()
   const [name, setName] = useState("Weekly planning")
   const [instructions, setInstructions] = useState(
@@ -816,18 +516,131 @@ function EditableFieldsDemo() {
   )
 }
 
-export const EditableFields: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => <EditableFieldsDemo />,
+export const ButtonStateMatrix = () => (
+  <div
+    role="region"
+    aria-label="Button states"
+    tabIndex={0}
+    className="overflow-x-auto p-2"
+  >
+    <table className="w-full min-w-[1050px] border-separate border-spacing-x-3 border-spacing-y-4">
+      <thead>
+        <tr>
+          <th className="text-left text-sm font-medium text-muted-foreground">
+            Role
+          </th>
+          {states.map((state) => (
+            <th
+              key={state}
+              className="text-sm font-medium text-muted-foreground"
+            >
+              {state}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {roles.map((role) => (
+          <tr key={role.key}>
+            <th
+              scope="row"
+              className="text-left text-sm font-medium text-muted-foreground"
+            >
+              {role.name}
+            </th>
+            {states.map((state) => (
+              <td key={state} className="text-center">
+                <Button
+                  id={`${role.key}-${state.toLowerCase()}`}
+                  variant={role.variant}
+                  size={role.key === "icon" ? "icon" : "default"}
+                  disabled={state === "Disabled" || state === "Working"}
+                  aria-busy={state === "Working" || undefined}
+                  aria-label={
+                    role.key === "icon"
+                      ? state === "Working"
+                        ? role.working
+                        : role.label
+                      : undefined
+                  }
+                >
+                  {state === "Working" ? (
+                    <>
+                      <Spinner data-icon="inline-start" />
+                      {role.key !== "icon" && role.working}
+                    </>
+                  ) : role.key === "icon" ? (
+                    <MoreHorizontalIcon />
+                  ) : (
+                    role.label
+                  )}
+                </Button>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)
+
+export const ButtonSizeMatrix = () => (
+  <div className="flex flex-col gap-6">
+    {roles
+      .filter((role) => role.key !== "icon")
+      .map((role) => (
+        <section
+          key={role.key}
+          aria-label={`${role.name} sizes`}
+          className="flex flex-wrap items-center gap-3"
+        >
+          <span className="w-24 text-sm text-muted-foreground">
+            {role.name}
+          </span>
+          {(["sm", "default", "lg"] as const).map((size) => (
+            <Button key={size} variant={role.variant} size={size}>
+              {role.label}
+            </Button>
+          ))}
+          {(["icon-sm", "icon", "icon-lg"] as const).map((size) => (
+            <Button
+              key={size}
+              variant={role.variant}
+              size={size}
+              aria-label={`${role.label} (${size})`}
+            >
+              <PlusIcon />
+            </Button>
+          ))}
+        </section>
+      ))}
+  </div>
+)
+
+export const FormFieldStates = () => (
+  <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+    {(["Default", "Focus", "Error", "Disabled"] as const).map((state) => (
+      <section key={state} className="flex min-w-0 flex-col gap-6">
+        <h2 className="text-md leading-6 font-semibold">{state}</h2>
+        <FieldGroup>
+          {(["input", "select", "textarea"] as const).map((kind) => (
+            <FieldExample key={kind} state={state} kind={kind} />
+          ))}
+        </FieldGroup>
+      </section>
+    ))}
+  </div>
+)
+
+export const buttonStateParameters = {
+  pseudo: buttonPseudo,
+  controls: { disable: true },
 }
 
-export const SpinnerSizes: Story = {
-  parameters: { controls: { disable: true } },
-  render: () => (
-    <div role="status" aria-label="Loading" className="flex items-center gap-6">
-      <Spinner className="size-4" />
-      <Spinner className="size-5" />
-      <Spinner className="size-6" />
-    </div>
-  ),
+export const fieldStateParameters = {
+  controls: { disable: true },
+  pseudo: {
+    focus: ["#input-focus", "#select-focus", "#textarea-focus"],
+    focusVisible: ["#input-focus", "#select-focus", "#textarea-focus"],
+  },
 }

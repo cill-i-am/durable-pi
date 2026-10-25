@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from "@storybook/react-vite"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,10 +45,10 @@ import {
 import { ChevronRightIcon, CpuIcon, UsersIcon } from "lucide-react"
 import * as React from "react"
 
-import { useLab } from "./state/use-lab"
+import { useLab } from "../state/use-lab"
 
-type Scenario = "success" | "error" | "uncertain" | "hold"
-type DrawerArgs = {
+export type Scenario = "success" | "error" | "uncertain" | "hold"
+export type DrawerArgs = {
   startAt: "closed" | "root" | "child" | "third"
   scenario: Scenario
   longContent: boolean
@@ -57,7 +56,7 @@ type DrawerArgs = {
   backLabel: string
 }
 
-function Outcome({ lab }: { lab: ReturnType<typeof useLab> }) {
+export function Outcome({ lab }: { lab: ReturnType<typeof useLab> }) {
   if (lab.status === "success")
     return (
       <p className="drawer-lab-outcome" role="status">
@@ -85,7 +84,7 @@ function Outcome({ lab }: { lab: ReturnType<typeof useLab> }) {
   return null
 }
 
-function SaveActions({ lab }: { lab: ReturnType<typeof useLab> }) {
+export function SaveActions({ lab }: { lab: ReturnType<typeof useLab> }) {
   if (lab.busy)
     return (
       <>
@@ -118,7 +117,7 @@ function SaveActions({ lab }: { lab: ReturnType<typeof useLab> }) {
   )
 }
 
-function AccessDraft({
+export function AccessDraft({
   lab,
   longContent,
 }: {
@@ -161,7 +160,7 @@ function AccessDraft({
   )
 }
 
-function DrawerStack({
+export function DrawerStack({
   startAt,
   scenario,
   longContent,
@@ -249,60 +248,7 @@ function DrawerStack({
   )
 }
 
-const meta = {
-  title: "Primitives/Drawers",
-  component: DrawerStack,
-  parameters: { layout: "fullscreen" },
-  args: {
-    startAt: "closed",
-    scenario: "success",
-    longContent: false,
-    title: "Model access",
-    backLabel: "Family",
-  },
-  argTypes: {
-    startAt: {
-      control: "select",
-      options: ["closed", "root", "child", "third"],
-    },
-    scenario: {
-      control: "select",
-      options: ["success", "error", "uncertain", "hold"],
-    },
-    longContent: { control: "boolean" },
-    title: { control: "text" },
-    backLabel: { control: "text" },
-  },
-} satisfies Meta<typeof DrawerStack>
-
-export default meta
-type Story = StoryObj<typeof meta>
-
-export const StackedSettings: Story = {}
-export const Root: Story = { args: { startAt: "root" } }
-export const Child: Story = { args: { startAt: "child" } }
-export const ThirdLayer: Story = { args: { startAt: "third" } }
-export const GuardedPending: Story = {
-  args: { startAt: "third", scenario: "hold" },
-}
-export const RetryFailure: Story = {
-  args: { startAt: "third", scenario: "error" },
-}
-export const UnconfirmedSave: Story = {
-  args: { startAt: "third", scenario: "uncertain" },
-}
-export const LongContent: Story = {
-  args: { startAt: "third", longContent: true },
-}
-export const LongLabels: Story = {
-  args: {
-    startAt: "third",
-    title: "Model access for the whole family",
-    backLabel: "Family settings",
-  },
-}
-
-function DialogExample({ scenario }: { scenario: Scenario }) {
+export function DialogExample({ scenario }: { scenario: Scenario }) {
   const lab = useLab({ scenario, identity: "dialog-family-name" })
   const id = React.useId()
   return (
@@ -332,11 +278,7 @@ function DialogExample({ scenario }: { scenario: Scenario }) {
   )
 }
 
-export const DesktopDialog: Story = {
-  render: ({ scenario }) => <DialogExample scenario={scenario} />,
-}
-
-function DesktopSheetExample({ scenario }: { scenario: Scenario }) {
+export function DesktopSheetExample({ scenario }: { scenario: Scenario }) {
   const lab = useLab({ scenario, identity: "desktop-model-access" })
   return (
     <main className="drawer-lab">
@@ -363,11 +305,7 @@ function DesktopSheetExample({ scenario }: { scenario: Scenario }) {
   )
 }
 
-export const DesktopSheet: Story = {
-  render: ({ scenario }) => <DesktopSheetExample scenario={scenario} />,
-}
-
-function ConfirmationExample({ scenario }: { scenario: Scenario }) {
+export function ConfirmationExample({ scenario }: { scenario: Scenario }) {
   const lab = useLab({ scenario, identity: "disconnect-fixture-connection" })
   return (
     <main className="drawer-lab">
@@ -415,8 +353,4 @@ function ConfirmationExample({ scenario }: { scenario: Scenario }) {
       </AlertDialog>
     </main>
   )
-}
-
-export const DestructiveConfirmation: Story = {
-  render: ({ scenario }) => <ConfirmationExample scenario={scenario} />,
 }

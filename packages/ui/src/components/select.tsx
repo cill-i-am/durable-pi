@@ -8,7 +8,7 @@ import {
 import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
 import { cn } from "cn"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import { useState, type ComponentProps } from "react"
+import { useRef, useState, type ComponentProps } from "react"
 
 function Select<Value, Multiple extends boolean | undefined = false>({
   open: controlledOpen,
@@ -20,20 +20,20 @@ function Select<Value, Multiple extends boolean | undefined = false>({
   const mobile = useIsMobile()
   const [localOpen, setLocalOpen] = useState(defaultOpen)
   const open = controlledOpen ?? localOpen
+  const localActions = useRef<SelectPrimitive.Root.Actions>(null)
+  const actions = props.actionsRef ?? localActions
   return (
     <SelectPrimitive.Root
       {...props}
+      actionsRef={actions}
       open={open}
       modal={mobile ? false : props.modal}
       onOpenChange={(next, details) => {
         if (
           mobile &&
-          [
-            "focus-out",
-            "outside-press",
-            "window-resize",
-            "cancel-open",
-          ].includes(details.reason)
+          ["outside-press", "window-resize", "cancel-open"].includes(
+            details.reason
+          )
         ) {
           details.cancel()
           return
@@ -44,6 +44,7 @@ function Select<Value, Multiple extends boolean | undefined = false>({
     >
       <ResponsivePopup.Root
         open={open}
+        onTabOut={() => actions.current?.close()}
         onOpenChange={(next, details) => {
           onOpenChange?.(next, { ...details, reason: "none" })
           if (!details.isCanceled) setLocalOpen(next)
@@ -129,13 +130,17 @@ function SelectContent({
   const mobile = usePopupMobile()
   if (mobile)
     return (
-      <ResponsivePopup.Content title={mobileTitle}>
+      <ResponsivePopup.Content
+        title={mobileTitle}
+        finalFocus={props.finalFocus}
+      >
         <SelectPrimitive.Positioner
           alignItemWithTrigger={false}
           className="responsive-popup-positioner"
         >
           <SelectPrimitive.Popup
             {...props}
+            finalFocus={false}
             data-slot="select-content"
             className={(state) =>
               cn(

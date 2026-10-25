@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite"
+import type { StoryObj } from "@storybook/react-vite"
 import {
   Alert,
   AlertAction,
@@ -104,16 +104,9 @@ import {
 import { useId, useState, type ReactNode } from "react"
 import { expect, userEvent, waitFor, within } from "storybook/test"
 
-import { useLab } from "./state/use-lab"
+import { useLab } from "../state/use-lab"
 
-const meta = {
-  title: "Surfaces/Cards and frames",
-  component: CardFrame,
-  tags: ["autodocs"],
-  parameters: { layout: "padded", controls: { disable: true } },
-} satisfies Meta<typeof CardFrame>
-export default meta
-type Story = StoryObj<typeof meta>
+type Story = StoryObj
 type Scenario = "success" | "error" | "uncertain" | "hold"
 type Lab = ReturnType<typeof useLab>
 

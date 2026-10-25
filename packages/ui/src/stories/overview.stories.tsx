@@ -15,25 +15,25 @@ export const Overview: Story = {
         The Paper primitives, implemented as a shared UI package.
       </p>
       <p className="text-base text-muted-foreground">
-        Use the sidebar to examine controls, surfaces and drawers in isolation.
-        The toolbar switches Light/Night, text size and viewport. Every example
-        uses synthetic data and local work.
+        Choose Button, Input or another component in the sidebar. Each has its
+        own props, examples and states. The toolbar switches Light/Night, text
+        size and viewport. Every example uses synthetic data and local work.
       </p>
       <section className="flex flex-col gap-3">
         <h2 className="text-md font-semibold">What to review</h2>
         <ul className="flex list-disc flex-col gap-2 pl-5 text-base">
           <li>Type, geometry, spacing and colour roles in Foundations.</li>
           <li>
-            Default, hover, pressed, focus, disabled and working states in
-            Controls.
+            Default, hover, pressed, focus, disabled and working states under
+            each component.
           </li>
           <li>
             Card headers, exposed frame headers, context/action/split footers
-            and separated panels in Surfaces.
+            and separated panels under CardFrame.
           </li>
           <li>
-            Real mobile bottom sheets and nested Settings → Family → Model
-            access drawers.
+            Sheet, Dialog and AlertDialog in isolation; nested settings drawers
+            under Compositions.
           </li>
           <li>
             Success, failure, retry, cancellation and uncertain results in the

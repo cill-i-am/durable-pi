@@ -53,14 +53,21 @@ function DropdownMenu({
 }) {
   const { mobile, open, onMenuChange, onDrawerChange } =
     useMenuPresentation(props)
+  const localActions = React.useRef<MenuPrimitive.Root.Actions>(null)
+  const actions = props.actionsRef ?? localActions
   return (
     <MenuPrimitive.Root
       {...props}
+      actionsRef={actions}
       open={open}
       modal={mobile && !withinMenubar ? false : props.modal}
       onOpenChange={onMenuChange}
     >
-      <ResponsivePopup.Root open={open} onOpenChange={onDrawerChange}>
+      <ResponsivePopup.Root
+        open={open}
+        onOpenChange={onDrawerChange}
+        onTabOut={() => actions.current?.close()}
+      >
         {children}
       </ResponsivePopup.Root>
     </MenuPrimitive.Root>
@@ -96,10 +103,14 @@ function DropdownMenuContent({
   if (mobile) {
     return (
       <MenuPrimitive.Portal keepMounted>
-        <ResponsivePopup.Content title={mobileTitle}>
+        <ResponsivePopup.Content
+          title={mobileTitle}
+          finalFocus={props.finalFocus}
+        >
           <MenuPrimitive.Positioner className="responsive-popup-positioner">
             <MenuPrimitive.Popup
               {...props}
+              finalFocus={false}
               data-slot="dropdown-menu-content"
               className={cn("responsive-popup-content", className)}
             />
@@ -199,13 +210,20 @@ function DropdownMenuSub({
   ...props
 }: MenuPrimitive.SubmenuRoot.Props) {
   const { open, onMenuChange, onDrawerChange } = useMenuPresentation(props)
+  const localActions = React.useRef<MenuPrimitive.Root.Actions>(null)
+  const actions = props.actionsRef ?? localActions
   return (
     <MenuPrimitive.SubmenuRoot
       {...props}
+      actionsRef={actions}
       open={open}
       onOpenChange={onMenuChange}
     >
-      <ResponsivePopup.Root open={open} onOpenChange={onDrawerChange}>
+      <ResponsivePopup.Root
+        open={open}
+        onOpenChange={onDrawerChange}
+        onTabOut={() => actions.current?.close()}
+      >
         {children}
       </ResponsivePopup.Root>
     </MenuPrimitive.SubmenuRoot>

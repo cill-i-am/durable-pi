@@ -1,5 +1,12 @@
 import { DirectionProvider } from "@base-ui/react/direction-provider"
+import {
+  Controls,
+  Description,
+  Primary,
+  Title,
+} from "@storybook/addon-docs/blocks"
 import type { Preview } from "@storybook/react-vite"
+import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
 import * as React from "react"
 
 import "../src/styles/globals.css"
@@ -15,13 +22,15 @@ function Theme({
   direction: "ltr" | "rtl"
   children: React.ReactNode
 }) {
+  const mobile = useIsMobile()
   React.useLayoutEffect(() => {
+    document.documentElement.dataset.uiViewport = mobile ? "phone" : "desktop"
     const dark = theme === "dark"
     document.documentElement.classList.toggle("dark", dark)
     document.documentElement.style.colorScheme = dark ? "dark" : "light"
     document.documentElement.style.fontSize = textScale + "%"
     document.documentElement.dir = direction
-  }, [theme, textScale, direction])
+  }, [theme, textScale, direction, mobile])
   return <DirectionProvider direction={direction}>{children}</DirectionProvider>
 }
 
@@ -75,11 +84,30 @@ const preview: Preview = {
   ],
   parameters: {
     layout: "padded",
+    docs: {
+      page: () => (
+        <>
+          <Title />
+          <Description />
+          <Primary />
+          <Controls />
+        </>
+      ),
+    },
     controls: {
       expanded: true,
       matchers: { color: /(background|color)$/i, date: /Date$/i },
     },
-    a11y: { test: "error" },
+    a11y: {
+      test: "error",
+      // Empty desktop SDK sentinels redirect focus; their behavior is verified in browser tests.
+      // https://github.com/mui/base-ui/issues/4668
+      context: {
+        exclude: [
+          'html[data-ui-viewport="desktop"] span[data-base-ui-focus-guard][aria-hidden="true"]:empty',
+        ],
+      },
+    },
     viewport: {
       options: {
         narrow: {
@@ -102,16 +130,13 @@ const preview: Preview = {
     },
     options: {
       storySort: {
+        method: "alphabetical",
         order: [
-          "Start here",
+          "Components",
           "Foundations",
-          "Actions",
-          "Forms",
-          "Selection",
-          "Surfaces",
-          "Navigation",
-          "Overlays",
+          "Compositions",
           "Examination",
+          "Start here",
         ],
       },
     },
