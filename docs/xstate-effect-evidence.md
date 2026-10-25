@@ -97,11 +97,11 @@ Extract the preserved archive beside a checkout named `durable-pi` to reproduce 
 
 An earlier exploratory run killed the lost-ack fixture while inference was still active and observed two synthetic provider calls. This is a material limit: native submission dedupe does not promise one model/provider execution before a checkpoint. The passing lost-ack test waits for native result persistence before killing; it proves that narrower reconciliation window.
 
-## Verification ledger
+## Historical standards verification ledger
 
 Static, unit/build and the complete native suite were rerun locally after rebase. The local browser result precedes the rebase; CI ran it against the combined tree. Source review checked the acceptance transaction, dispatch/receipt path, failure controls, every inventory path and the diff against main. No independent human review or approval is implied.
 
-| Command | Fresh result / scope |
+| Command | Checkpoint result / scope |
 | --- | --- |
 | `pnpm prepare` | Exit 0; applied the repository's existing Effect compiler/Oxlint patches after frozen installation with scripts disabled. |
 | `pnpm exec vitest run tests/architecture.test.ts tests/architecture-cli.test.ts tests/xstate-effect.test.ts` | Exit 0; 65 tests in 3 files, also included in the complete unit suite. |
@@ -113,10 +113,10 @@ Static, unit/build and the complete native suite were rerun locally after rebase
 | `pnpm verify:browser` | Exit 0; 66 desktop/mobile tests, built passkey journeys and two-build stale-client recovery passed. |
 | Required remote CI | All required jobs and aggregate `check` passed for `87ff00f` in [run 39867469758](https://github.com/cill-i-am/durable-pi/actions/runs/39867469758): static (including actionlint/complexity), unit/build, native and browser. Container jobs succeeded with builds skipped for unchanged inputs; deploy skipped. Final documentation-only updates are subject to the same [PR #200 head checks](https://github.com/cill-i-am/durable-pi/pull/200/checks). |
 
-No merge, deployment, production reset, live email/WhatsApp send, or production provider exactly-once claim is part of this evidence. The [repository-wide goal](../BUILD.md#xstate-effect-lifecycle-refactor) remains open. B01 and the extracted B04 candidate have the distinct statuses recorded above; the remaining backend/frontend migration items still require their own implementation and proof.
+This standards checkpoint did not include merge, deployment or live-provider proof. The wider migration was still open then. The [release closeout](xstate-effect-release.md) records its subsequent merge, deployment and bounded signed-in production smoke; it makes no exactly-once external-provider claim.
 
 ## Composed Memory checkpoint — 23 October 2026
 
 B10, B11/B12 and B14 are published as unsigned draft PRs #211, #212 and #213. Their respective exact-commit runs 39978597994, 39978657761 and 39979172697 passed every required job and aggregate check; deployment was skipped. Earlier job-budget cancellations remain historical diagnostics.
 
-B13/B18 and the narrow F13 recovery UI are composed above `e521e98`. The original domain, independent review, native restart and UI checkpoints remain separately attributed in [the raw artifact manifest](evidence/xstate-effect/b13-b18-2026-10-23/manifest.json). Journal admission now checks actual prearmed summary/backup leases after transaction acquisition; source replay does not create new maintenance admission. The final cold-controller repair preserves unread authority instead of overwriting it. Composed static, 3,220 tests/283 files and all builds pass. All fifteen combined native suites, 108 browser journeys, passkeys and two-build recovery pass, as does the final Communication rerun after retiring the legacy runner. Draft publication and exact-commit CI remain pending. The wider goal remains open, including B15–B17 and F01–F14.
+B13/B18 and the narrow F13 recovery UI are composed above `e521e98`. The original domain, independent review, native restart and UI checkpoints remain separately attributed in [the raw artifact manifest](evidence/xstate-effect/b13-b18-2026-10-23/manifest.json). Journal admission now checks actual prearmed summary/backup leases after transaction acquisition; source replay does not create new maintenance admission. The final cold-controller repair preserves unread authority instead of overwriting it. Composed static, 3,220 tests/283 files and all builds pass. All fifteen combined native suites, 108 browser journeys, passkeys and two-build recovery pass, as does the final Communication rerun after retiring the legacy runner. Draft publication and exact-commit CI were pending at this Memory checkpoint, along with B15–B17 and F01–F14. All were completed before the release recorded above.

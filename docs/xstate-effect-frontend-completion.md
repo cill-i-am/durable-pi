@@ -1,4 +1,4 @@
-# Remaining frontend lifecycle owners
+# Completed frontend lifecycle owners
 
 **Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
 
