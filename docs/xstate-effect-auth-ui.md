@@ -1,5 +1,7 @@
 # Auth frontend lifecycles
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F08 moves request admission and completion into feature-owned machines using the official `@xstate/effect` integration. Better Auth, its passkey plugin, and the server remain the authentication and session authority. No authentication endpoint, session rotation rule, trust-device setting, or server security check changes.
 
 `auth-entry.machine.ts` admits one immutable request for login, initial setup, password recovery, reset, or a sign-in challenge. Requests retain redacted input and clear it after settlement. A failed challenge permits an explicit retry or a different challenge method; a rejected reset token ends that link's flow. Each reset hash change owns a fresh component and Effect scope, including token A → B → A. Successful completion callbacks run inside the request's owned invocation.

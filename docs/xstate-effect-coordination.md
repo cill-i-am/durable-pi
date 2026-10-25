@@ -1,5 +1,7 @@
 # Coordination and child-group lifecycles
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 This B08 candidate gives addressed delivery, local child dispatch and detached child cleanup explicit owners. It also fixes a reproduced Stop race: native abort could acknowledge before a held addressed submission was admitted. Stop now revokes future admission, joins the existing dispatch owner, and only then acknowledges native cancellation.
 
 ## Ownership

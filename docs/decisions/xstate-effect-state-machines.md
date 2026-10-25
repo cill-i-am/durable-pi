@@ -1,6 +1,6 @@
 # XState Effect application lifecycles
 
-Decision: required architecture. Initial implementation baseline: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`; rebased parent: `696aca98000a6e82a9cb202acc18f92f2c8e987e`. This standards change establishes executable conformance references and enforcement. The [repository-wide migration goal](../../BUILD.md#xstate-effect-lifecycle-refactor) remains open until its [inventory](../xstate-effect-inventory.md) is implemented.
+Decision: required architecture. Initial implementation baseline: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`; rebased parent: `696aca98000a6e82a9cb202acc18f92f2c8e987e`. This standards change establishes executable conformance references and enforcement. The [repository-wide migration](../../BUILD.md#xstate-effect-lifecycle-refactor) is complete: its [inventory](../xstate-effect-inventory.md) is implemented and the refactor is [merged, deployed and verified](../xstate-effect-release.md).
 
 ## Ownership and applicability
 
@@ -91,4 +91,4 @@ This is direct AST/import enforcement, not whole-program dataflow analysis. Arbi
 
 Each migration writes its invariants first, checks caller/write paths, compares behavior except for documented defect corrections, tests deterministic races, stale events, recovery and compatible/incompatible restoration, and demonstrates at least one meaningful failure-sensitive control. Use the existing Vitest, Effect clocks/barriers, real SQLite and native workerd gates; add browser journeys for affected frontend behavior. See [evidence](../xstate-effect-evidence.md).
 
-Earlier historical review advice treating handwritten reducers as an alternative default is superseded. This standard does not close the repository-wide goal, authorize deployment, or provide evidence of live-provider delivery.
+Earlier historical review advice treating handwritten reducers as an alternative default is superseded. The standard defines ongoing requirements; the separate [release closeout](../xstate-effect-release.md) records migration completion and the bounded production proof.

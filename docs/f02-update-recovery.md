@@ -1,5 +1,7 @@
 # F02 update and safe-reload ownership
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 `features/updates/recovery.machine.ts` owns version-check occupancy and explicit reload admission through the official XState/Effect integration. The component creates the owner in a scoped Effect and interrupts that scope on unmount. Conversation draft persistence and uncertain submission identities remain owned by their conversation features. An update never submits a message or retries a tool.
 
 ## State and authority

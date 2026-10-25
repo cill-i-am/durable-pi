@@ -10,22 +10,20 @@ import {
   armSummaryDiscovery,
   decideSummaryController,
   decideSummaryDispatch,
-  initialSummaryController,
   initialSummaryDispatch,
   observeSummaryDiscovery,
-  readSummaryController,
   readSummaryDiscovery,
   type SummaryController,
   type SummaryDispatch,
   type SummaryRecovery,
 } from "../summary-discovery.machine"
 import { MaintenanceRunnerHost } from "./runner-host"
+import { SummaryControllerRecord } from "./summary-controller"
 
 export class SummaryRecoveryChanged extends Error {}
 
 const pumpId = "memory-compactor:pump"
 const discoveryId = "memory-compactor:discovery"
-const controllerKey = "memory-compactor:failure"
 const retry = { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 }
 const Pump = Schema.Struct({
   schemaVersion: Schema.Literal(1),
@@ -53,8 +51,9 @@ type Owned = {
 export class SummaryRunner<E, R = never> extends LifecycleCapability {
   private readonly owned = new Map<string, Owned>()
   private gate: Promise<unknown> = Promise.resolve()
-  private unpersisted?: SummaryController
-  private observedControl?: SummaryController
+  private readonly controlRecord = new SummaryControllerRecord(
+    () => this.lifecycle.storage
+  )
   private readonly lifetime = new MaintenanceRunnerHost(() =>
     this.run(this.host.restore())
   )
@@ -139,16 +138,6 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
       ? { rescheduleAt: current.time }
       : result
   }
-  private async control() {
-    if (this.unpersisted) return this.unpersisted
-    const raw = await this.lifecycle.storage.get(controllerKey)
-    const control =
-      raw === undefined
-        ? initialSummaryController()
-        : readSummaryController(raw)
-    this.observedControl = control
-    return control
-  }
   private permitted(job: LifecycleJob, control: SummaryController) {
     return (
       !this.stopped &&
@@ -199,7 +188,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped)
       return Promise.reject(new Error("Summary runner is stopped"))
     return this.serial(async () => {
-      if ((await this.control()).phase === "exhausted")
+      if ((await this.controlRecord.read()).phase === "exhausted")
         throw new SummaryRecoveryChanged(
           "Retry compaction recovery before adding more summary work."
         )
@@ -212,8 +201,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     const lease = job && readSummaryDiscovery(job.payload)
     return (
       !this.stopped &&
-      !this.unpersisted &&
-      this.observedControl?.phase !== "exhausted" &&
+      this.controlRecord.admissionAvailable &&
       !!lease &&
       lease.recoveryEpoch === null &&
       Number.isFinite(deadline) &&
@@ -224,7 +212,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped)
       return Promise.reject(new Error("Summary runner is stopped"))
     return this.serial(async () => {
-      const control = await this.control()
+      const control = await this.controlRecord.read()
       return control.phase === "exhausted" ? control.recovery! : undefined
     })
   }
@@ -232,7 +220,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped)
       return Promise.reject(new Error("Summary runner is stopped"))
     return this.serial(async () => {
-      const control = await this.control()
+      const control = await this.controlRecord.read()
       if (control.phase !== "exhausted" || control.recovery?.epoch !== epoch)
         throw new SummaryRecoveryChanged(
           "Summary recovery changed. Refresh its status."
@@ -243,7 +231,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
   retryRecovery(epoch: string, deadline: number): Promise<boolean> {
     if (this.stopped) return Promise.resolve(false)
     return this.serial(async () => {
-      const control = await this.control()
+      const control = await this.controlRecord.read()
       if (control.phase === "available")
         return control.recovery?.epoch === epoch
       const discovery = this.current(discoveryId)
@@ -260,9 +248,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
       // The actual retained lease covers failure after the controller commit but
       // before the following doorbell. The spent token remains fenced forever.
       const next = decideSummaryController(control, { type: "RECOVER", epoch })
-      await this.lifecycle.storage.put(controllerKey, next)
-      this.observedControl = next
-      this.unpersisted = undefined
+      await this.controlRecord.commit(next)
       const retained = [...this.owned.entries()].find(
         ([, owner]) => owner.state.phase !== "idle"
       )
@@ -286,7 +272,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
   async wake() {
     if (this.stopped) return
     await this.serial(async () => {
-      const control = await this.control()
+      const control = await this.controlRecord.read()
       if (this.stopped || control.phase === "exhausted") return
       const current = this.current(pumpId)
       if (!current || readJob(current).token === control.retiredToken) {
@@ -318,7 +304,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped) return
     this.current(pumpId)
     this.current(discoveryId)
-    const control = await this.serial(() => this.control())
+    const control = await this.serial(() => this.controlRecord.read())
     if (this.stopped) return
     if (
       control.phase === "available" &&
@@ -441,7 +427,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     job,
   }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
     if (this.stopped) return
-    const control = await this.serial(() => this.control())
+    const control = await this.serial(() => this.controlRecord.read())
     if (
       this.stopped ||
       !this.owns(job) ||
@@ -508,7 +494,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     await this.serial(async () => {
       // An unavailable read cannot establish absence. In particular a cold
       // callback must not replace a saved exact recovery epoch/retired token.
-      const control = await this.control()
+      const control = await this.controlRecord.read()
       if (!this.permitted(job, control)) return
       const next = decideSummaryController(control, {
         type: "EXHAUST",
@@ -522,11 +508,8 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
       })
       // Keep a local spent marker even if this final write fails. The SDK swallows
       // onJobError failures and deletes the queue row; warm wakes must not renew it.
-      this.unpersisted = next
       try {
-        await this.lifecycle.storage.put(controllerKey, next)
-        this.observedControl = next
-        this.unpersisted = undefined
+        await this.controlRecord.retainExhaustion(next)
       } finally {
         this.host.notify?.()
       }

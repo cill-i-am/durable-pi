@@ -11,6 +11,12 @@ allowBuilds:
   core-js-pure: false
   protobufjs: false
 minimumReleaseAgeExclude:
+  - "@yielded/effect-tsrs@0.2.2"
+  - "@yielded/effect-tsrs-darwin-arm64@0.2.2"
+  - "@yielded/effect-tsrs-darwin-x64@0.2.2"
+  - "@yielded/effect-tsrs-linux-arm64@0.2.2"
+  - "@yielded/effect-tsrs-linux-x64@0.2.2"
+  - "@yielded/effect-tsrs-win32-x64@0.2.2"
   - "@cloudflare/workers-types@5.20261016.1"
   - "@shadcn/registry@0.2.0"
   - "@tanstack/react-router@1.170.45"

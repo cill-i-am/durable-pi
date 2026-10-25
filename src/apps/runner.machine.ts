@@ -4,21 +4,23 @@ import { standardSchemaValidator } from "xstate/validation"
 
 import { AppDiscovery } from "./discovery.machine"
 
-export type AppRunnerPermission =
-  | "start"
-  | "stopped"
-  | "new"
-  | "reuse"
-  | "spent"
-  | "orphan"
-  | "busy"
-  | "rearm"
-  | "reschedule"
-  | "empty"
-  | "pump"
-  | "exhaust"
-  | "defer"
-  | "stale"
+const permission = Schema.Literals([
+  "start",
+  "stopped",
+  "new",
+  "reuse",
+  "spent",
+  "orphan",
+  "busy",
+  "rearm",
+  "reschedule",
+  "empty",
+  "pump",
+  "exhaust",
+  "defer",
+  "stale",
+])
+export type AppRunnerPermission = typeof permission.Type
 export type AppRunnerReply = Deferred.Deferred<AppRunnerPermission>
 export type AppRunnerAck = Deferred.Deferred<void>
 const reply = Schema.declare((value): value is AppRunnerReply =>
@@ -40,23 +42,32 @@ const entry = Schema.Struct({
 })
 const response = Schema.Struct({
   reply,
-  permission: Schema.Literals([
-    "start",
-    "stopped",
-    "new",
-    "reuse",
-    "spent",
-    "orphan",
-    "busy",
-    "rearm",
-    "reschedule",
-    "empty",
-    "pump",
-    "exhaust",
-    "defer",
-    "stale",
-  ]),
+  permission,
 })
+
+function armPermission(
+  lease: typeof AppDiscovery.Type | null,
+  entries: readonly (typeof entry.Type)[],
+  now: number
+): AppRunnerPermission {
+  if (lease?.state === "exhausted") return "spent"
+  if (lease && entries.some((entry) => entry.token === lease.token))
+    return lease.armedUntil < now + 30_000 ? "busy" : "reuse"
+  if (!lease && entries.some((entry) => entry.until > now)) return "orphan"
+  return "new"
+}
+
+function admissionPermission(
+  current: boolean,
+  spent: boolean,
+  owned: typeof entry.Type | undefined,
+  job: object
+): AppRunnerPermission {
+  if (!current) return "stale"
+  if (spent) return "exhaust"
+  if (owned && (owned.job !== job || owned.phase !== "failed")) return "defer"
+  return "pump"
+}
 
 /** Local callback permission and scheduling ownership. The existing discovery
  * record remains durable lease authority; Lifecycle retains its retry budget. */
@@ -157,20 +168,7 @@ export const appRunnerMachine = setupEffect({
         },
         ARM: (args, enq) => {
           const { lease, now, reply } = args.event
-          const active =
-            lease &&
-            args.context.entries.some((entry) => entry.token === lease.token)
-          const permission =
-            lease?.state === "exhausted"
-              ? "spent"
-              : active
-                ? lease.armedUntil < now + 30_000
-                  ? "busy"
-                  : "reuse"
-                : !lease &&
-                    args.context.entries.some((entry) => entry.until > now)
-                  ? "orphan"
-                  : "new"
+          const permission = armPermission(lease, args.context.entries, now)
           enq(args.actions.respond, { ...args, params: { reply, permission } })
           return !lease && permission === "new"
             ? { context: { ...args.context, entries: [] } }
@@ -243,14 +241,12 @@ export const appRunnerMachine = setupEffect({
               const owned = args.context.entries.find(
                 (entry) => entry.token === args.event.token
               )
-              const permission = !args.event.current
-                ? "stale"
-                : args.event.spent
-                  ? "exhaust"
-                  : owned &&
-                      (owned.job !== args.event.job || owned.phase !== "failed")
-                    ? "defer"
-                    : "pump"
+              const permission = admissionPermission(
+                args.event.current,
+                args.event.spent,
+                owned,
+                args.event.job
+              )
               enq(args.actions.respond, {
                 ...args,
                 params: { reply: args.event.reply, permission },

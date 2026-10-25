@@ -1,12 +1,10 @@
-import { createEffectActor, send, type EffectActor } from "@xstate/effect"
 import {
   LifecycleCapability,
   type LifecycleJob,
   type LifecycleJobContext,
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
-import { Cause, Deferred, Effect, Exit, Schema, Scope } from "effect"
-import type { EventFromLogic } from "xstate"
+import { Effect, Exit, Schema } from "effect"
 
 import {
   armRoutineDiscovery,
@@ -20,20 +18,8 @@ const PumpOwner = Schema.Struct({
   token: Schema.String.check(Schema.isNonEmpty()),
 })
 export type { RoutineControlAttempt } from "../runner.machine"
-import {
-  routineRunnerMachine,
-  type RoutineControlAttempt,
-  type RoutineRunnerDecision,
-  type RoutineRunnerReply,
-  type RoutineRunnerAck,
-} from "../runner.machine"
-type RunnerMachine = typeof routineRunnerMachine
-type RoutineOwner = {
-  scope: Scope.Closeable
-  actor?: EffectActor<RunnerMachine>
-  operations: Set<Promise<unknown>>
-  closing?: Promise<void>
-}
+import type { RoutineControlAttempt } from "../runner.machine"
+import { routineOwner } from "./runner-owner"
 const pumpId = "routines:pump"
 const discoveryId = "routines:discovery"
 const discoveryDuration = 60_000
@@ -52,11 +38,9 @@ function readJob(job: LifecycleJob) {
   throw new Error(`Unsupported routine job: ${job.id}/${job.fn}`)
 }
 
-/** Native handles are shared by the same owner across warm facades. Their
- * permissions live only in the shared machine, never in this registry. */
+/** Queue orchestration uses the shared warm owner for admission and joined close. */
 export class RoutineRunner<E> extends LifecycleCapability {
-  private static readonly owners = new WeakMap<object, RoutineOwner>()
-  private readonly owner: RoutineOwner
+  private readonly owner: ReturnType<typeof routineOwner>
   constructor(
     readonly host: {
       owner: object
@@ -75,11 +59,7 @@ export class RoutineRunner<E> extends LifecycleCapability {
     }
   ) {
     super("routines")
-    this.owner = RoutineRunner.owners.get(host.owner) ?? {
-      scope: Scope.makeUnsafe(),
-      operations: new Set(),
-    }
-    RoutineRunner.owners.set(host.owner, this.owner)
+    this.owner = routineOwner(host.owner)
   }
 
   private async run<A>(work: Effect.Effect<A, E>): Promise<A> {
@@ -89,68 +69,18 @@ export class RoutineRunner<E> extends LifecycleCapability {
     if (Exit.isFailure(exit)) throw exit.cause
     return exit.value
   }
-  private getActor() {
-    return (this.owner.actor ??= Effect.runSync(
-      createEffectActor(routineRunnerMachine).pipe(
-        Scope.provide(this.owner.scope)
-      )
-    ))
-  }
-  private closed() {
-    // Eligibility may be read inside native SQL; never start an actor there.
-    return (
-      this.owner.actor?.getSnapshot().matches({ admission: "closed" }) ?? false
-    )
-  }
-  private track<A>(work: () => Promise<A>) {
-    this.getActor()
-    const pending = work()
-    this.owner.operations.add(pending)
-    void pending.then(
-      () => this.owner.operations.delete(pending),
-      () => this.owner.operations.delete(pending)
-    )
-    return pending
-  }
-  private ask(
-    event: (reply: RoutineRunnerReply) => EventFromLogic<RunnerMachine>
-  ) {
-    const reply = Deferred.makeUnsafe<RoutineRunnerDecision>()
-    Effect.runSync(send(this.getActor(), event(reply)))
-    return Effect.runPromise(Deferred.await(reply))
-  }
-  private acknowledge(
-    event: (ack: RoutineRunnerAck) => EventFromLogic<RunnerMachine>
-  ) {
-    const ack = Deferred.makeUnsafe<void>()
-    Effect.runSync(send(this.getActor(), event(ack)))
-    return Effect.runPromise(Deferred.await(ack))
-  }
-  private async schedule<A>(work: () => Promise<A>): Promise<A | undefined> {
-    if (this.closed()) return
-    if (
-      (await this.ask((reply) => ({ type: "SCHEDULE", reply }))).permission ===
-      "stopped"
-    )
-      return
-    try {
-      return this.closed() ? undefined : await work()
-    } finally {
-      await this.acknowledge((ack) => ({ type: "RELEASE", ack }))
-    }
-  }
   private current(id: string) {
     const job = this.lifecycle.jobs.get(id)
     if (job) readJob(job)
     return job
   }
   private owns(job: LifecycleJob) {
-    if (this.closed()) return false
+    if (this.owner.closed()) return false
     const latest = this.current(job.id)
     return !!latest && readJob(latest).token === readJob(job).token
   }
   private outcome(job: LifecycleJob, outcome: LifecycleJobOutcome) {
-    if (this.closed()) return
+    if (this.owner.closed()) return
     const latest = this.current(job.id)
     // The SDK guards outcomes with a running bit. A second alarm may already
     // have marked a newer same-ID job running, so an old completion must retain
@@ -176,43 +106,45 @@ export class RoutineRunner<E> extends LifecycleCapability {
     })
   }
   armDiscovery(): Promise<number> {
-    return this.track(() =>
-      this.schedule(async () => {
-        const now = Date.now(),
-          deadline = now + discoveryDuration
-        const prior = this.current(discoveryId)
-        const payload = armRoutineDiscovery(
-          prior?.payload,
-          deadline,
-          crypto.randomUUID()
-        )
-        await this.lifecycle.jobs.push({
-          id: discoveryId,
-          fn: "recover",
-          payload,
-          time: Math.min(now, prior?.time ?? Infinity),
-          singleflight: true,
-          recoveryLoop: true,
-          retry,
+    return this.owner
+      .track(() =>
+        this.owner.schedule(async () => {
+          const now = Date.now(),
+            deadline = now + discoveryDuration
+          const prior = this.current(discoveryId)
+          const payload = armRoutineDiscovery(
+            prior?.payload,
+            deadline,
+            crypto.randomUUID()
+          )
+          await this.lifecycle.jobs.push({
+            id: discoveryId,
+            fn: "recover",
+            payload,
+            time: Math.min(now, prior?.time ?? Infinity),
+            singleflight: true,
+            recoveryLoop: true,
+            retry,
+          })
+          return deadline
         })
+      )
+      .then((deadline) => {
+        if (deadline === undefined || this.owner.closed())
+          throw new Error("Routine runner is stopped")
         return deadline
       })
-    ).then((deadline) => {
-      if (deadline === undefined || this.closed())
-        throw new Error("Routine runner is stopped")
-      return deadline
-    })
   }
   wake() {
-    return this.track(() =>
-      this.schedule(async () => {
+    return this.owner.track(() =>
+      this.owner.schedule(async () => {
         const current = this.current(pumpId)
-        const { permission } = await this.ask((reply) => ({
+        const { permission } = await this.owner.ask((reply) => ({
           type: "WAKE",
           token: current ? readJob(current).token : null,
           reply,
         }))
-        if (this.closed()) return
+        if (this.owner.closed()) return
         if (permission === "empty") await this.pushPump(Date.now())
         else if (permission === "rearm") await this.lifecycle.jobs.rearm()
         else if (permission === "schedule")
@@ -221,27 +153,31 @@ export class RoutineRunner<E> extends LifecycleCapability {
     )
   }
   reconcile() {
-    return this.track(async () => {
-      if (this.closed()) return
+    return this.owner.track(async () => {
+      if (this.owner.closed()) return
       this.current(pumpId)
       this.current(discoveryId)
-      await this.schedule(async () => {
+      await this.owner.schedule(async () => {
         if (!this.current(pumpId) && !this.current(discoveryId)) {
           const next = await this.run(this.host.nextWake())
-          if (!this.closed() && next !== undefined && !this.current(pumpId))
+          if (
+            !this.owner.closed() &&
+            next !== undefined &&
+            !this.current(pumpId)
+          )
             await this.pushPump(next)
         }
-        if (!this.closed()) await this.lifecycle.jobs.rearm()
+        if (!this.owner.closed()) await this.lifecycle.jobs.rearm()
       })
     })
   }
   onJob(context: LifecycleJobContext): Promise<LifecycleJobOutcome> {
-    return this.track(() => this.dispatch(context))
+    return this.owner.track(() => this.dispatch(context))
   }
   private async dispatch({
     job,
   }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
-    if (this.closed()) return
+    if (this.owner.closed()) return
     const { token } = readJob(job)
     if (!this.owns(job)) return this.outcome(job, undefined)
     if (job.fn === "recover") {
@@ -258,7 +194,7 @@ export class RoutineRunner<E> extends LifecycleCapability {
       }
       return this.outcome(job, outcome)
     }
-    const { permission } = await this.ask((reply) => ({
+    const { permission } = await this.owner.ask((reply) => ({
       type: "ADMIT",
       token,
       job,
@@ -272,19 +208,17 @@ export class RoutineRunner<E> extends LifecycleCapability {
         permission === "defer" ? { rescheduleAt: Date.now() + 1000 } : undefined
       )
     // An intervening close/replacement cannot spend the granted callback.
-    if (this.closed() || !this.owns(job)) {
-      await this.ask((reply) => ({ type: "FINISHED", token, job, reply }))
+    if (this.owner.closed() || !this.owns(job)) {
+      await this.owner.ask((reply) => ({ type: "FINISHED", token, job, reply }))
       return this.outcome(job, undefined)
     }
     try {
       const next = await this.host.step((receipt) => {
         // Receipt observation occurs after the domain claim transaction. Enqueue
         // synchronously so completion cannot overtake this exact receipt.
-        Effect.runSync(
-          send(this.getActor(), { type: "RECEIPT", token, job, receipt })
-        )
+        this.owner.receipt(token, job, receipt)
       })
-      const result = await this.ask((reply) => ({
+      const result = await this.owner.ask((reply) => ({
         type: "FINISHED",
         token,
         job,
@@ -299,7 +233,12 @@ export class RoutineRunner<E> extends LifecycleCapability {
             : { rescheduleAt: next }
       )
     } catch (error) {
-      await this.acknowledge((ack) => ({ type: "FAILED", token, job, ack }))
+      await this.owner.acknowledge((ack) => ({
+        type: "FAILED",
+        token,
+        job,
+        ack,
+      }))
       throw error
     } finally {
       this.host.notify?.()
@@ -309,19 +248,19 @@ export class RoutineRunner<E> extends LifecycleCapability {
     context: LifecycleJobContext,
     error: unknown
   ): Promise<LifecycleJobOutcome> {
-    return this.track(() => this.failed(context, error))
+    return this.owner.track(() => this.failed(context, error))
   }
   private async failed(
     { job }: LifecycleJobContext,
     error: unknown
   ): Promise<LifecycleJobOutcome> {
-    if (this.closed()) return
+    if (this.owner.closed()) return
     const { token } = readJob(job)
     if (job.fn === "recover") {
       await this.run(
         Effect.logError("Routine job exhausted", { job: job.id }, error)
       )
-      if (this.closed()) return
+      if (this.owner.closed()) return
       const now = Date.now()
       const command = observeRoutineDiscovery(job.payload, {
         now,
@@ -332,7 +271,7 @@ export class RoutineRunner<E> extends LifecycleCapability {
         command ? { rescheduleAt: command.at } : undefined
       )
     }
-    const { permission, receipt } = await this.ask((reply) => ({
+    const { permission, receipt } = await this.owner.ask((reply) => ({
       type: "ERROR",
       token,
       job,
@@ -341,38 +280,23 @@ export class RoutineRunner<E> extends LifecycleCapability {
     }))
     if (permission !== "start") return this.outcome(job, undefined)
     try {
-      if (!receipt || this.closed()) return this.outcome(job, undefined)
+      if (!receipt || this.owner.closed()) return this.outcome(job, undefined)
       await this.run(
         Effect.logError("Routine job exhausted", { job: job.id }, error)
       )
       await this.run(this.host.exhaust(receipt, () => this.owns(job)))
     } finally {
-      await this.acknowledge((ack) => ({ type: "EXHAUSTED", token, job, ack }))
+      await this.owner.acknowledge((ack) => ({
+        type: "EXHAUSTED",
+        token,
+        job,
+        ack,
+      }))
       this.host.notify?.()
     }
     return this.outcome(job, undefined)
   }
   dispose() {
-    return (this.owner.closing ??= (async () => {
-      await this.acknowledge((ack) => ({ type: "CLOSE", ack }))
-      const settled = await Promise.allSettled([...this.owner.operations])
-      const exit = await Effect.runPromiseExit(
-        Scope.close(this.owner.scope, Exit.void)
-      )
-      const causes = settled.flatMap((result) =>
-        result.status === "rejected"
-          ? [
-              Cause.isCause(result.reason)
-                ? result.reason
-                : Cause.fail(result.reason),
-            ]
-          : []
-      )
-      if (Exit.isFailure(exit)) causes.push(exit.cause)
-      if (causes.length)
-        throw Cause.fromReasons([
-          ...new Set(causes.flatMap((cause) => cause.reasons)),
-        ])
-    })())
+    return this.owner.dispose()
   }
 }

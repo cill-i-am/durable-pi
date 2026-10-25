@@ -1,5 +1,7 @@
 # Workspace lifecycle migration (B10)
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 ## Invariants written before implementation
 
 - The ledger retains file/content identities and capacity reservations. A repeated upload compares immutable input before any external work; an accepted reservation may finish after archival. New reservations and explicit extraction retries require current write authority.

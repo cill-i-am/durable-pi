@@ -1,5 +1,7 @@
 # Memory maintenance runner lifetimes
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Summary and Backup retain their existing durable controllers, dispatch machines, native model/bucket ownership, discovery deadlines, exact recovery epochs and receipts. `memory/runner-host.machine.ts` now owns their common local activation and closed admission. Each runner has its own instance through `MaintenanceRunnerHost`; no shared runtime, journal or business retry budget is introduced.
 
 The machine separates admission from cold/restoring/ready activation. The scoped host starts lazily in the first native caller's context. Synchronous eligibility reads project the existing state and never start actors inside SQL transactions. Restoration is coalesced, successful restoration is retained, and only a request observing a later cold attempt may retry a failed restoration. Each request carries the generation it observed before enqueueing: native child completion can overtake a queued request, but that request must receive the same attempt's result. The failed coalescing check demonstrates why enqueueing alone is insufficient.

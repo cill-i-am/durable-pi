@@ -1,5 +1,7 @@
 # Frontend resource lifetimes and draft admission
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F15 implementation record, 23 October 2026. PlacesMap, interaction sound, syntax loading, and question draft admission now use the official XState/Effect integration. Each component owns an Effect scope; machines decide progression and Effect owns native work and cleanup. The [source manifest](evidence/xstate-effect/f15-source-manifest.json.txt) identifies the 16 source/test files above `2c13994f478c38f9549000eaa13106df4c94203b`. Package pins, preference storage, and the shared React architecture are unchanged. This local record does not establish hosted CI, merge, or deployment.
 
 ## Ownership and behavior

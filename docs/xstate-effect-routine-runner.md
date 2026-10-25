@@ -1,5 +1,7 @@
 # Routine runner shared lifetime
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Invariants for this slice:
 
 - Facades attached to the same native owner share one machine and one scoped lifetime. Creating another warm facade cannot reclaim a live callback, reset its retry budget or reopen a closed owner.

@@ -1,5 +1,7 @@
 # Terminal frontend ownership
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F04 invariants and falsifiable probes, before implementation:
 
 1. The session lease deadline is independent from transport retry. A late renewal cannot revive an expired or ended session. Closing the observer aborts and joins native renewal work; it does not claim remote cancellation or save.

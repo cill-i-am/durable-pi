@@ -1,5 +1,7 @@
 # MCP connection ownership
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B17 invariants, implementation and falsifiable probes.
 
 1. The existing connection row is the only activation authority. Its ID, normalized URL, active flag and monotonically increasing revision survive restoration; MCP SDK registration/authentication state is a projection, not another writable application authority. Exact command replay retains the same revision; conflicting/stale commands fail.

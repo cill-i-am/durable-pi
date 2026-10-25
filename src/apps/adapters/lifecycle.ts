@@ -8,33 +8,20 @@ import {
 import { Cause, Deferred, Effect, Exit, Scope } from "effect"
 import type { EventFromLogic } from "xstate"
 
-import {
-  changeAppDiscovery,
-  observeAppDiscovery,
-  readAppDiscovery,
-} from "../discovery.machine"
+import { changeAppDiscovery, observeAppDiscovery } from "../discovery.machine"
 import {
   appRunnerMachine,
   type AppRunnerReply,
   type AppRunnerAck,
   type AppRunnerPermission,
 } from "../runner.machine"
+import {
+  appEventJobId as id,
+  readAppEventJob as read,
+  appEventJob,
+  appEventOutcome,
+} from "./event-job"
 
-const id = "app-events:pump"
-const retry = { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 }
-const read = (job: LifecycleJob) => {
-  if (job.id !== id || job.fn !== "pump")
-    throw new Error("Unsupported app delivery job")
-  return readAppDiscovery(
-    job.payload ?? {
-      schemaVersion: 1,
-      workflowVersion: 1,
-      state: "armed",
-      token: `legacy:${job.createdAt}:${job.time}`,
-      armedUntil: Math.max(job.createdAt, job.time) + 60_000,
-    }
-  )
-}
 /** One retained job owns both discovery and bounded dispatch. An active lease
  * cannot be extended by a doorbell: new admission uses its persisted deadline
  * or fails before commit. An exhausted lease only terminalizes late commits. */
@@ -125,26 +112,7 @@ export class AppEventRunner<E> extends LifecycleCapability {
     return !!current && read(current).token === read(job).token
   }
   private outcome(job: LifecycleJob, at?: number): LifecycleJobOutcome {
-    const current = this.current()
-    if (
-      current &&
-      (read(current).token !== read(job).token ||
-        read(current).state !== read(job).state)
-    )
-      return { rescheduleAt: current.time }
-    return at === undefined ? undefined : { rescheduleAt: at }
-  }
-  private push(payload: ReturnType<typeof read>, time: number) {
-    return this.lifecycle.jobs.push({
-      id,
-      fn: "pump",
-      payload,
-      time,
-      singleflight: true,
-      recoveryLoop: true,
-      hungTimeoutSeconds: 600,
-      retry,
-    })
+    return appEventOutcome(this.current(), job, at)
   }
   armDiscovery(): Promise<number> {
     return this.track(() =>
@@ -193,7 +161,9 @@ export class AppEventRunner<E> extends LifecycleCapability {
               },
           { type: "ARM", token: crypto.randomUUID(), deadline }
         )
-        await this.push(payload, Math.min(now, prior?.time ?? Infinity))
+        await this.lifecycle.jobs.push(
+          appEventJob(payload, Math.min(now, prior?.time ?? Infinity))
+        )
         return payload.armedUntil
       })
     ).then((deadline) => {
@@ -310,7 +280,9 @@ export class AppEventRunner<E> extends LifecycleCapability {
           // Commit spent authority before terminal writes; this never grants a
           // new pump attempt, including after a cold restart or lost response.
           const exhausted = changeAppDiscovery(lease, { type: "EXHAUST" })
-          await this.push(exhausted, lease.armedUntil)
+          await this.lifecycle.jobs.push(
+            appEventJob(exhausted, lease.armedUntil)
+          )
           await this.acknowledge((ack) => ({
             type: "SPENT",
             token: lease.token,

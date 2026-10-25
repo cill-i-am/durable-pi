@@ -1,5 +1,7 @@
 # Memory summary lifecycle
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B13 migrates summary admission, native requests, bounded correction, durable failure and explicit retry into official `@xstate/effect` machines. It preserves the existing summary algorithm, immutable originals and nodes, merge priority, source attribution, lineage, pinned model routes, and fifteen-request budget. Backup publication is the separate B18 lifecycle.
 
 ## Authority and ownership

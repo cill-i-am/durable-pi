@@ -1,5 +1,7 @@
 # Browser and Execution UI lifecycles
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F05 migrates Browser and Execution observation, commands and screenshot readiness to the official XState/Effect integration. Backend Browser/Execution records remain authoritative for action identity, outcome and cancellation. This UI owns local HTTP observations and component resources; disposing them does not confirm remote cancellation.
 
 ## Ownership and invariants
