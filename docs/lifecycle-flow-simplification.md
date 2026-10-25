@@ -18,9 +18,11 @@ Each pass must simplify a concrete flow behind an existing small interface, remo
 | 4 | Routine warm owner | Own the shared actor lifetime in a routine-local module. | `routine-runner`: 20 focused tests and composed static/unit/build passed; native CI pending | Implemented |
 | 5 | Conversation queue protocol | Concentrate supported job forms in one adapter-local protocol. | `conversation-runner`: 50 focused tests and composed static/unit/build passed; native CI pending | Implemented |
 | 6 | Communication recovery ledger | Put durable epoch persistence and retry acceptance behind a small local interface. | `communication-runner, communication-control-runtime`: 66 focused tests and composed static/unit/build passed; native CI pending | Implemented |
-| 7 | Workspace cleanup | Give cleanup-only settlement one internal operation, retaining exact claim fences. | `workspace-runner` | Planned |
+| 7 | Workspace cleanup | Concentrate native job decoding, intent construction and stale-outcome projection; keep cleanup orchestration with its machine events. | `workspace-runner`: 44 focused tests passed; final composed gates pending | Implemented |
 | 8 | Memory summary controller | Concentrate controller read, commit and warm exhaustion retention. | `memory-summary-runner, memory-summary-runtime` | Planned |
 | 9 | Memory backup recovery | Concentrate scheduler persistence and claim attachment while retaining distinct domain recovery. | `memory-backup-runner, memory-backup-lifecycle, memory-backup-runtime` | Planned |
 | 10 | Model-default editing | Keep draft projections in the conversation feature and lifecycle targets in its machine. | `model-defaults-lifecycle, model-defaults-ownership` | Planned |
 
 The independent exploration rejected seven parallel job-manager classes as shallow indirection. These passes preserve the external runner interfaces and keep internal modules private to their domain or feature. Existing characterization tests remain the test surface.
+
+Review correction: pass 7 initially split cleanup behind nine callback dependencies. The deletion test rejected that shallow interface. The final pass keeps cleanup orchestration together and extracts the Workspace native job protocol instead.

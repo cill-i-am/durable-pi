@@ -10,50 +10,29 @@ import type { EventFromLogic } from "xstate"
 
 import { nativeFailure, nativeOperation } from "../../shared/interop"
 import {
-  armWorkspaceDiscovery,
   observeWorkspaceDiscovery,
-  readWorkspaceDiscovery,
   readWorkspacePump,
   WorkspacePreparationClaim,
   type WorkspacePump,
 } from "../discovery.machine"
 import { WorkspaceUnavailable } from "../files"
-import type { PreparationClaim } from "../workspace"
-
-const pumpId = "workspace-extraction:pump"
-const discoveryId = "workspace-extraction:recovery"
-const retry = { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 }
 import {
   workspaceRunnerMachine,
   type WorkspaceRunnerDecision,
   type WorkspaceRunnerReply,
   type WorkspaceRunnerAck,
 } from "../runner.machine"
+import type { PreparationClaim } from "../workspace"
+import {
+  workspacePumpId as pumpId,
+  workspaceDiscoveryId as discoveryId,
+  readWorkspaceJob as readJob,
+  workspacePumpJob,
+  workspaceDiscoveryJob,
+  workspaceJobOutcome,
+} from "./runner-jobs"
 type RunnerMachine = ReturnType<typeof workspaceRunnerMachine>
 type Result = { outcome: LifecycleJobOutcome; retain: boolean }
-function pumpPayload(token: string): WorkspacePump {
-  return {
-    schemaVersion: 1,
-    workflowVersion: 1,
-    token,
-    phase: "dispatch",
-    claim: null,
-    cleanupAt: 0,
-    finalBatch: false,
-  }
-}
-function readJob(job: LifecycleJob) {
-  if (job.id === pumpId && job.fn === "pump") {
-    // The former ExtractionRunner used no payload. Keep the same queue identity.
-    return job.payload === undefined || job.payload === null
-      ? pumpPayload(`legacy:${job.createdAt}:${job.time}`)
-      : readWorkspacePump(job.payload)
-  }
-  if (job.id === discoveryId && job.fn === "recover")
-    return readWorkspaceDiscovery(job.payload)
-  throw new Error(`Unsupported Workspace job: ${job.id}/${job.fn}`)
-}
-
 /** Lifecycle owns the only alarm and its three transport attempts. Preparation
  * owns native scope joining, business attempts and persisted recovery deadlines. */
 export class WorkspaceRunner<E> extends LifecycleCapability {
@@ -165,22 +144,10 @@ export class WorkspaceRunner<E> extends LifecycleCapability {
   }
   private outcome(job: LifecycleJob, result: LifecycleJobOutcome) {
     if (this.closed()) return
-    const current = this.current(job.id)
-    return current && readJob(current).token !== readJob(job).token
-      ? { rescheduleAt: current.time }
-      : result
+    return workspaceJobOutcome(this.current(job.id), job, result)
   }
-  private pushPump(time: number, payload = pumpPayload(crypto.randomUUID())) {
-    return this.lifecycle.jobs.push({
-      id: pumpId,
-      fn: "pump",
-      payload: { ...payload, token: crypto.randomUUID() },
-      time,
-      singleflight: true,
-      recoveryLoop: true,
-      hungTimeoutSeconds: 600,
-      retry,
-    })
+  private pushPump(time: number, payload?: WorkspacePump) {
+    return this.lifecycle.jobs.push(workspacePumpJob(time, payload))
   }
   armDiscovery(): Promise<number> {
     return this.track(() => this.schedule(() => this.arm())).then(
@@ -193,21 +160,12 @@ export class WorkspaceRunner<E> extends LifecycleCapability {
   }
   private async arm(): Promise<number> {
     const now = Date.now()
-    const deadline = now + 60_000
-    const prior = this.current(discoveryId)
-    await this.lifecycle.jobs.push({
-      id: discoveryId,
-      fn: "recover",
-      payload: armWorkspaceDiscovery(
-        prior?.payload,
-        deadline,
-        crypto.randomUUID()
-      ),
-      time: Math.min(now, prior?.time ?? Infinity),
-      singleflight: true,
-      recoveryLoop: true,
-      retry,
-    })
+    const { job, deadline } = workspaceDiscoveryJob(
+      this.current(discoveryId),
+      now,
+      crypto.randomUUID()
+    )
+    await this.lifecycle.jobs.push(job)
     return deadline
   }
   wake() {
