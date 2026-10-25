@@ -1,4 +1,5 @@
-packages: []
+packages:
+  - "packages/*"
 
 allowBuilds:
   esbuild: true
@@ -48,3 +49,10 @@ patchedDependencies:
   alchemy@2.0.0-beta.83: patches/alchemy@2.0.0-beta.83.patch
   "@modelcontextprotocol/client@2.3.1": patches/@modelcontextprotocol__client@2.3.1.patch
   agents@0.28.1: patches/agents@0.28.1.patch
+
+# Runtime fixtures resolve workerd from Alchemy; keep the existing runtime isolated
+# from the UI package's independent Wrangler dependency.
+packageExtensions:
+  "alchemy@2.0.0-beta.83":
+    dependencies:
+      workerd: 1.20261002.1
