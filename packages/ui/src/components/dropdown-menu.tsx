@@ -2,6 +2,7 @@
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
+import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import { cn } from "@workspace/ui/lib/utils"
 import { CheckIcon, ChevronRightIcon } from "lucide-react"
 import * as React from "react"
@@ -100,6 +101,7 @@ function DropdownMenuContent({
     "align" | "alignOffset" | "side" | "sideOffset"
   > & { mobileTitle?: string }) {
   const mobile = usePopupMobile()
+  const reducedMotion = useUIReducedMotion()
   if (mobile) {
     return (
       <MenuPrimitive.Portal keepMounted>
@@ -130,8 +132,9 @@ function DropdownMenuContent({
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
+          data-motion-reduced={reducedMotion ? "true" : undefined}
           className={cn(
-            "max-h-(--available-height) w-max max-w-[min(24rem,calc(100vw-2rem))] min-w-[248px] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-[10px] border border-border bg-popover p-1 text-popover-foreground shadow-(--shadow-menu) transition-[opacity,transform] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+            "ui-floating-popup max-h-(--available-height) w-max max-w-[min(24rem,calc(100vw-2rem))] min-w-[248px] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-[10px] border border-border bg-popover p-1 text-popover-foreground shadow-(--shadow-menu) outline-none",
             className
           )}
           {...props}

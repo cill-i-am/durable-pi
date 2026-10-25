@@ -78,3 +78,29 @@ export const Controlled: Story = {
   parameters: { controls: { disable: true } },
   render: () => <ControlledExample />,
 }
+
+export const MotionIsolation: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="flex max-w-2xl flex-col gap-6">
+      {[
+        { label: "Single selection", multiple: false },
+        { label: "Multiple selection", multiple: true },
+        { label: "Independent selection", multiple: false },
+      ].map(({ label, multiple }) => (
+        <section key={label} className="flex min-w-0 flex-col gap-2">
+          <h2 className="text-md font-semibold">{label}</h2>
+          <ToggleGroup
+            aria-label={label}
+            multiple={multiple}
+            defaultValue={["one"]}
+          >
+            <ToggleGroupItem value="one">One</ToggleGroupItem>
+            <ToggleGroupItem value="two">Two</ToggleGroupItem>
+            <ToggleGroupItem value="three">Three</ToggleGroupItem>
+          </ToggleGroup>
+        </section>
+      ))}
+    </div>
+  ),
+}

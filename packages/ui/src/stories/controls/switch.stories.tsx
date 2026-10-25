@@ -65,3 +65,20 @@ export const Controlled: Story = {
   parameters: { controls: { disable: true } },
   render: () => <ControlledExample />,
 }
+
+function RapidExample() {
+  const [checked, setChecked] = useState(false)
+  return (
+    <div className="flex max-w-sm flex-col gap-2">
+      <Example checked={checked} onCheckedChange={setChecked} />
+      <p role="status" className="text-sm text-muted-foreground">
+        {checked ? "On" : "Off"}
+      </p>
+    </div>
+  )
+}
+
+export const MotionRapid: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => <RapidExample />,
+}

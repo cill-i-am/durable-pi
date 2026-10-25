@@ -17,7 +17,8 @@ export const Overview: Story = {
       <p className="text-base text-muted-foreground">
         Choose Button, Input or another component in the sidebar. Each has its
         own props, examples and states. The toolbar switches Light/Night, text
-        size and viewport. Every example uses synthetic data and local work.
+        size, viewport and motion preference. Every example uses synthetic data
+        and local work.
       </p>
       <section className="flex flex-col gap-3">
         <h2 className="text-md font-semibold">What to review</h2>

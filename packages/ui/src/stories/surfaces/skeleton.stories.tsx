@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { Skeleton } from "@workspace/ui/components/skeleton"
+import { MotionConfig } from "motion/react"
 
 const meta = {
   title: "Components/Skeleton",
@@ -53,5 +54,13 @@ export const LoadingRows: Story = {
         </div>
       ))}
     </div>
+  ),
+}
+
+export const ReducedMotion: Story = {
+  render: (args) => (
+    <MotionConfig reducedMotion="always">
+      <Skeleton {...args} />
+    </MotionConfig>
   ),
 }

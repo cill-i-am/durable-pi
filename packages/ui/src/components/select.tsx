@@ -6,6 +6,7 @@ import {
   usePopupMobile,
 } from "@workspace/ui/components/responsive-popup"
 import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
+import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import { cn } from "cn"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { useRef, useState, type ComponentProps } from "react"
@@ -97,7 +98,7 @@ function SelectTrigger({
         data-slot="select-trigger"
         className={(state) =>
           cn(
-            "flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-[10px] border border-input bg-card px-3 py-2 text-md leading-[1.5rem] text-foreground transition-[border-color,box-shadow] duration-150 outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground motion-reduce:transition-none sm:text-base sm:leading-[1.25rem] [&_svg]:size-4 [&_svg]:shrink-0",
+            "flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-[10px] border border-input bg-card px-3 py-2 text-md leading-[1.5rem] text-foreground outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground sm:text-base sm:leading-[1.25rem] [&_svg]:size-4 [&_svg]:shrink-0",
             typeof className === "function" ? className(state) : className
           )
         }
@@ -128,6 +129,7 @@ function SelectContent({
   ...props
 }: SelectContentProps) {
   const mobile = usePopupMobile()
+  const reducedMotion = useUIReducedMotion()
   if (mobile)
     return (
       <ResponsivePopup.Content
@@ -166,9 +168,10 @@ function SelectContent({
       >
         <SelectPrimitive.Popup
           data-slot="select-content"
+          data-motion-reduced={reducedMotion ? "true" : undefined}
           className={(state) =>
             cn(
-              "max-h-(--available-height) w-(--anchor-width) min-w-40 overflow-y-auto rounded-[10px] border border-border bg-popover p-1 text-popover-foreground shadow-(--shadow-menu) outline-none",
+              "ui-floating-popup max-h-(--available-height) w-(--anchor-width) min-w-40 overflow-y-auto rounded-[10px] border border-border bg-popover p-1 text-popover-foreground shadow-(--shadow-menu) outline-none",
               typeof className === "function" ? className(state) : className
             )
           }

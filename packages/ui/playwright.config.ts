@@ -6,7 +6,7 @@ const packageRoot = fileURLToPath(new URL(".", import.meta.url))
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: "primitives.spec.ts",
+  testMatch: ["primitives.spec.ts", "motion.spec.ts"],
   fullyParallel: true,
   workers: 2,
   forbidOnly: !!process.env.CI,

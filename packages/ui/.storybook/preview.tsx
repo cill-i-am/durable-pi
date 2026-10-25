@@ -6,6 +6,7 @@ import {
   Title,
 } from "@storybook/addon-docs/blocks"
 import type { Preview } from "@storybook/react-vite"
+import { MotionProvider } from "@workspace/ui/components/motion-provider"
 import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
 import * as React from "react"
 
@@ -15,27 +16,67 @@ function Theme({
   theme,
   textScale,
   direction,
+  motion,
   children,
 }: {
   theme: string
   textScale: number
   direction: "ltr" | "rtl"
+  motion: "system" | "reduced"
   children: React.ReactNode
 }) {
   const mobile = useIsMobile()
+  const previousTheme = React.useRef(theme)
   React.useLayoutEffect(() => {
     document.documentElement.dataset.uiViewport = mobile ? "phone" : "desktop"
+    document.documentElement.dataset.uiMotion = motion
+    const changedTheme = previousTheme.current !== theme
+    previousTheme.current = theme
+    const freeze = changedTheme ? document.createElement("style") : undefined
+    if (freeze) {
+      freeze.textContent = "*,*::before,*::after{transition:none!important}"
+      document.head.append(freeze)
+    }
     const dark = theme === "dark"
     document.documentElement.classList.toggle("dark", dark)
     document.documentElement.style.colorScheme = dark ? "dark" : "light"
     document.documentElement.style.fontSize = textScale + "%"
     document.documentElement.dir = direction
-  }, [theme, textScale, direction, mobile])
-  return <DirectionProvider direction={direction}>{children}</DirectionProvider>
+    if (!freeze) return
+    // Commit the new colors before restoring interactive transitions.
+    void document.documentElement.offsetHeight
+    let second = 0
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => freeze.remove())
+    })
+    return () => {
+      cancelAnimationFrame(first)
+      cancelAnimationFrame(second)
+      freeze.remove()
+    }
+  }, [theme, textScale, direction, mobile, motion])
+  return (
+    <DirectionProvider direction={direction}>
+      <MotionProvider reducedMotion={motion === "reduced" ? "always" : "user"}>
+        {children}
+      </MotionProvider>
+    </DirectionProvider>
+  )
 }
 
 const preview: Preview = {
   globalTypes: {
+    motion: {
+      description: "Motion preference",
+      toolbar: {
+        icon: "play",
+        items: [
+          { value: "system", title: "System motion" },
+          { value: "reduced", title: "Reduced motion" },
+        ],
+        dynamicTitle: true,
+      },
+    },
     theme: {
       description: "Theme",
       toolbar: {
@@ -70,11 +111,17 @@ const preview: Preview = {
       },
     },
   },
-  initialGlobals: { theme: "light", textScale: "100", direction: "ltr" },
+  initialGlobals: {
+    theme: "light",
+    textScale: "100",
+    direction: "ltr",
+    motion: "system",
+  },
   decorators: [
     (Story, context) => (
       <Theme
         theme={String(context.globals.theme)}
+        motion={context.globals.motion === "reduced" ? "reduced" : "system"}
         textScale={String(context.globals.textScale) === "200" ? 200 : 100}
         direction={context.globals.direction === "rtl" ? "rtl" : "ltr"}
       >

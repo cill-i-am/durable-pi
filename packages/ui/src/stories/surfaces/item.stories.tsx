@@ -12,8 +12,39 @@ import {
   ItemSeparator,
   ItemTitle,
 } from "@workspace/ui/components/item"
+import { cn } from "@workspace/ui/lib/utils"
 import { BookOpenIcon, ChevronRightIcon } from "lucide-react"
-import { fn } from "storybook/test"
+import { useState, type ComponentProps } from "react"
+import { expect, fn, userEvent, within } from "storybook/test"
+
+function SelectionExample(args: ComponentProps<typeof Item>) {
+  const [selected, setSelected] = useState("weekly")
+  return (
+    <ItemGroup aria-label="Selected skill" className="max-w-lg gap-1">
+      {[
+        { value: "weekly", label: "Weekly planning" },
+        { value: "meals", label: "Meal planning" },
+      ].map(({ value, label }) => (
+        <Item
+          {...args}
+          key={value}
+          render={<button type="button" />}
+          className={cn(
+            args.className,
+            selected === value ? "hover:bg-accent" : "hover:bg-muted"
+          )}
+          variant={selected === value ? "selected" : "default"}
+          aria-pressed={selected === value}
+          onClick={() => setSelected(value)}
+        >
+          <ItemContent>
+            <ItemTitle>{label}</ItemTitle>
+          </ItemContent>
+        </Item>
+      ))}
+    </ItemGroup>
+  )
+}
 
 const meta = {
   title: "Components/Item",
@@ -121,5 +152,23 @@ export const LongContent: Story = {
         </ItemDescription>
       </ItemContent>
     ),
+  },
+}
+
+export const SelectionFeedback: Story = {
+  render: (args) => <SelectionExample {...args} />,
+  argTypes: {
+    variant: { control: false },
+    children: { control: false },
+    render: { control: false },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const meals = canvas.getByRole("button", { name: "Meal planning" })
+    await userEvent.click(meals)
+    await expect(meals).toHaveAttribute("aria-pressed", "true")
+    await expect(
+      canvas.getByRole("button", { name: "Weekly planning" })
+    ).toHaveAttribute("aria-pressed", "false")
   },
 }

@@ -3,7 +3,14 @@
   inset: 0;
   background: var(--overlay, #18181b40);
   opacity: calc(1 - var(--drawer-swipe-progress, 0));
-  transition: opacity 250ms ease;
+  transition: opacity var(--ui-motion-enter, 200ms)
+    var(--ui-motion-ease, cubic-bezier(0.2, 0, 0, 1));
+}
+.responsive-overlay-backdrop[data-ending-style] {
+  transition-duration: var(--ui-motion-exit, 150ms);
+}
+.responsive-overlay-backdrop[data-swiping] {
+  transition: none;
 }
 .responsive-overlay-backdrop:is([data-starting-style], [data-ending-style]) {
   opacity: 0;
@@ -37,9 +44,14 @@
   box-shadow: var(--shadow-dialog, 0 24px 60px #18181b26);
   pointer-events: auto;
   container-type: inline-size;
-  transition:
-    opacity 150ms ease,
-    transform 150ms ease;
+  --overlay-closed-offset: 100%;
+  --overlay-enter-duration: var(--ui-motion-enter, 200ms);
+  --overlay-exit-duration: var(--ui-motion-exit, 150ms);
+  --overlay-enter-scale: 0.98;
+  --overlay-exit-scale: 0.99;
+  transition-property: opacity, transform, scale;
+  transition-duration: var(--overlay-enter-duration);
+  transition-timing-function: var(--ui-motion-ease, cubic-bezier(0.2, 0, 0, 1));
 }
 .responsive-overlay:focus-visible {
   outline: 2px solid var(--ring, var(--primary));
@@ -47,7 +59,19 @@
 }
 .responsive-overlay:is([data-starting-style], [data-ending-style]) {
   opacity: 0;
-  transform: translateY(8px);
+}
+.responsive-overlay[data-ending-style] {
+  transition-duration: var(--overlay-exit-duration);
+}
+.responsive-overlay[data-overlay-mobile="false"]:not(
+    [data-desktop="sheet"]
+  )[data-starting-style] {
+  scale: var(--overlay-enter-scale);
+}
+.responsive-overlay[data-overlay-mobile="false"]:not(
+    [data-desktop="sheet"]
+  )[data-ending-style] {
+  scale: var(--overlay-exit-scale);
 }
 .responsive-overlay-body {
   display: flex;
@@ -219,13 +243,25 @@
     [data-starting-style],
     [data-ending-style]
   ) {
-  transform: translateX(32px);
+  transform: translateX(var(--overlay-closed-offset));
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="left"]:is(
     [data-starting-style],
     [data-ending-style]
   ) {
-  transform: translateX(-32px);
+  transform: translateX(calc(-1 * var(--overlay-closed-offset)));
+}
+.ui-sheet[data-overlay-mobile="false"][data-side="top"]:is(
+    [data-starting-style],
+    [data-ending-style]
+  ) {
+  transform: translateY(calc(-1 * var(--overlay-closed-offset)));
+}
+.ui-sheet[data-overlay-mobile="false"][data-side="bottom"]:is(
+    [data-starting-style],
+    [data-ending-style]
+  ) {
+  transform: translateY(var(--overlay-closed-offset));
 }
 .responsive-overlay-viewport[data-overlay-mobile="true"] {
   align-items: flex-end;
@@ -244,16 +280,27 @@
   border-radius: 24px 24px 0 0;
   background: var(--canvas, var(--background));
   box-shadow: var(--shadow-drawer, 0 -1px 0 #18181b12, 0 -10px 28px #18181b18);
-  transform: translateY(var(--drawer-swipe-movement-y, 0px));
-  transition: transform calc(300ms * var(--drawer-swipe-strength, 1))
-    cubic-bezier(0.32, 0.72, 0, 1);
+  transform: translateY(
+    calc(
+      var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)
+    )
+  );
+  transition-property: opacity, transform;
+  transition-duration:
+    var(--overlay-enter-duration),
+    calc(var(--overlay-enter-duration) * var(--drawer-swipe-strength, 1));
+}
+.responsive-overlay[data-overlay-mobile="true"][data-ending-style] {
+  transition-duration:
+    var(--overlay-exit-duration),
+    calc(var(--overlay-exit-duration) * var(--drawer-swipe-strength, 1));
 }
 .responsive-overlay[data-overlay-mobile="true"]:is(
     [data-starting-style],
     [data-ending-style]
   ) {
   opacity: 1;
-  transform: translateY(100%);
+  transform: translateY(var(--overlay-closed-offset));
 }
 .responsive-overlay[data-overlay-mobile="true"][data-swiping] {
   transition: none;
@@ -351,23 +398,49 @@
     flex: 1 1 100%;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .responsive-overlay-backdrop,
-  .responsive-overlay,
-  .responsive-overlay[data-overlay-mobile="true"] {
-    transition: opacity 100ms linear;
-  }
-  .responsive-overlay:is([data-starting-style], [data-ending-style]),
-  .responsive-overlay[data-overlay-mobile="true"]:is(
-      [data-starting-style],
-      [data-ending-style]
-    ) {
-    transform: none;
-    opacity: 0;
-  }
-  .responsive-overlay[data-overlay-mobile="true"][data-nested-drawer-open] {
-    transform: none;
-  }
+/* Native Drawer keeps swipe/snap/stack transforms. Reduced motion changes
+   only the automatic entrance offset and duration, never gesture geometry. */
+.responsive-overlay[data-motion-reduced="true"] {
+  --overlay-closed-offset: 0%;
+  --overlay-enter-scale: 1;
+  --overlay-exit-scale: 1;
+  --overlay-enter-duration: var(--ui-motion-fast, 100ms);
+  --overlay-exit-duration: var(--ui-motion-fast, 100ms);
+  transition-property: opacity;
+}
+.responsive-overlay-backdrop[data-motion-reduced="true"] {
+  transition-duration: var(--ui-motion-fast, 100ms);
+}
+.responsive-overlay[data-overlay-mobile="true"][data-motion-reduced="true"]:is(
+    [data-starting-style],
+    [data-ending-style]
+  ) {
+  opacity: 0;
+  transform: translateY(
+    calc(
+      var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px)
+    )
+  );
+}
+.responsive-overlay[data-overlay-mobile="true"][data-motion-reduced="true"][data-nested-drawer-open] {
+  transform: translateY(calc(-16px * var(--nested-drawers)))
+    scale(max(0.84, calc(1 - 0.04 * var(--nested-drawers))));
+}
+
+/* Frequent floating surfaces fade without zoom, travel, or blur. Base UI owns
+   presence and waits for these reversible transitions before unmounting. */
+.ui-floating-popup,
+.ui-tooltip-popup {
+  opacity: 1;
+  transition: opacity var(--ui-motion-fast, 100ms)
+    var(--ui-motion-ease, cubic-bezier(0.2, 0, 0, 1));
+}
+.ui-floating-popup:is([data-starting-style], [data-ending-style]),
+.ui-tooltip-popup:is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+}
+.ui-floating-popup {
+  overscroll-behavior: contain;
 }
 
 .drawer-lab {
@@ -476,4 +549,5 @@
   border-radius: 0;
   box-shadow: none;
   animation: none;
+  transition: none;
 }

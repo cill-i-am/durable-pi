@@ -1,6 +1,7 @@
 "use client"
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
+import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import { cn } from "@workspace/ui/lib/utils"
 
 function TooltipProvider({
@@ -30,6 +31,7 @@ function TooltipContent({
     TooltipPrimitive.Positioner.Props,
     "side" | "sideOffset" | "align" | "alignOffset"
   >) {
+  const reducedMotion = useUIReducedMotion()
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
@@ -41,8 +43,9 @@ function TooltipContent({
       >
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
+          data-motion-reduced={reducedMotion ? "true" : undefined}
           className={cn(
-            "max-w-[min(20rem,calc(100vw-2rem))] origin-(--transform-origin) rounded-[10px] bg-foreground px-3 py-2 text-sm/[1.25rem] text-background shadow-(--shadow-menu) transition-[opacity,transform] duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+            "ui-tooltip-popup max-w-[min(20rem,calc(100vw-2rem))] origin-(--transform-origin) rounded-[10px] bg-foreground px-3 py-2 text-sm/[1.25rem] text-background shadow-(--shadow-menu)",
             className
           )}
           {...props}

@@ -124,3 +124,47 @@ export const KeptMounted: Story = { args: { keepMounted: true } }
 export const Guarded: Story = {
   args: { defaultOpen: true, dismissible: false },
 }
+
+export const SnapPoints: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "On phones, drag the native handle between half and full height. Reduced motion keeps the snap geometry and direct manipulation.",
+      },
+    },
+  },
+  render: (args) => (
+    <main className="drawer-lab">
+      <Sheet
+        {...args}
+        snapPoints={[0.5, 1]}
+        defaultSnapPoint={0.5}
+        snapToSequentialPoints
+      >
+        <SheetTrigger render={<Button />}>Open sheet</SheetTrigger>
+        <SheetContent
+          side="bottom"
+          mobileLayout="panel"
+          showCloseButton={false}
+          keepMounted={args.keepMounted}
+        >
+          <SheetNavigation title="Notes" />
+          <SheetBody>
+            {Array.from({ length: 12 }, (_, index) => (
+              <p key={index}>
+                Note {index + 1}. Keep the details together so everyone can pick
+                up where they left off.
+              </p>
+            ))}
+          </SheetBody>
+          <SheetFooter>
+            <SheetClose render={<Button variant="outline" />}>
+              Close sheet
+            </SheetClose>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </main>
+  ),
+}

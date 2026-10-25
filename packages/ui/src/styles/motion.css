@@ -1,0 +1,7 @@
+:root {
+  --ui-motion-fast: 100ms;
+  --ui-motion-press: 150ms;
+  --ui-motion-enter: 200ms;
+  --ui-motion-exit: 150ms;
+  --ui-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+}

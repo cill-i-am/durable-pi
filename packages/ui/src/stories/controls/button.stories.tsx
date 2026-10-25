@@ -20,6 +20,7 @@ const meta = {
     variant: "default",
     size: "default",
     disabled: false,
+    static: false,
   },
   argTypes: {
     variant: {
@@ -39,6 +40,7 @@ const meta = {
     },
     children: { control: "text" },
     disabled: { control: "boolean" },
+    static: { control: "boolean" },
   },
 } satisfies Meta<typeof Button>
 export default meta
@@ -52,6 +54,17 @@ export const Default: Story = {
     >
       {args.size?.startsWith("icon") ? <MoreHorizontalIcon /> : args.children}
     </Button>
+  ),
+}
+export const Static: Story = { args: { static: true } }
+export const Motion: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button>Press</Button>
+      <Button static>Static</Button>
+      <Button disabled>Disabled</Button>
+    </div>
   ),
 }
 export const States: Story = {

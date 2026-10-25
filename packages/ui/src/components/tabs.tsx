@@ -44,7 +44,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
       data-slot="tabs-trigger"
       className={(state) =>
         cn(
-          "inline-flex min-h-11 min-w-11 flex-auto items-center justify-center gap-2 rounded-[6px] px-4 py-2 text-base leading-[1.25rem] text-foreground transition-[background-color,box-shadow] duration-150 outline-none focus-visible:shadow-(--shadow-focus) enabled:hover:bg-(--control-hover) disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none data-active:bg-card data-active:font-medium data-active:shadow-(--shadow-segment) data-active:focus-visible:[box-shadow:var(--shadow-segment),var(--shadow-focus)] [&_svg]:size-4 [&_svg]:shrink-0",
+          "inline-flex min-h-11 min-w-11 flex-auto items-center justify-center gap-2 rounded-[6px] px-4 py-2 text-base leading-[1.25rem] text-foreground transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:shadow-(--shadow-focus) enabled:hover:bg-(--control-hover) disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none data-active:bg-card data-active:font-medium data-active:shadow-(--shadow-segment) data-active:focus-visible:[box-shadow:var(--shadow-segment),var(--shadow-focus)] [&_svg]:size-4 [&_svg]:shrink-0",
           typeof className === "function" ? className(state) : className
         )
       }

@@ -1,3 +1,6 @@
+"use client"
+
+import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import { cn } from "@workspace/ui/lib/utils"
 import type * as React from "react"
 
@@ -65,11 +68,13 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+  const reduced = useUIReducedMotion()
   return (
     <tr
       data-slot="table-row"
+      data-motion-reduced={reduced ? "true" : undefined}
       className={cn(
-        "border-b border-border transition-colors hover:bg-muted data-[state=selected]:bg-accent motion-reduce:transition-none",
+        "border-b border-border transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) hover:bg-muted data-[motion-reduced=true]:transition-none data-[state=selected]:bg-accent motion-reduce:transition-none",
         className
       )}
       {...props}

@@ -2,6 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
+import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import { cn } from "@workspace/ui/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
 import * as React from "react"
@@ -39,7 +40,7 @@ function ItemSeparator({
 }
 
 const itemVariants = cva(
-  "group/item flex w-full min-w-0 flex-wrap items-center gap-3 text-base/[1.25rem] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-disabled:opacity-50 motion-reduce:transition-none [&_svg]:shrink-0",
+  "group/item flex w-full min-w-0 flex-wrap items-center gap-3 text-base/[1.25rem] transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-disabled:opacity-50 data-[motion-reduced=true]:transition-none motion-reduce:transition-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -66,14 +67,22 @@ function Item({
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof itemVariants>) {
   const inList = React.useContext(ItemGroupContext)
+  const reduced = useUIReducedMotion()
   const row = useRender({
     defaultTagName: "div",
     render,
     props: mergeProps<"div">(
-      { className: cn(itemVariants({ variant, size }), className) },
+      {
+        className: cn(itemVariants({ variant, size }), className),
+      },
       props
     ),
-    state: { slot: "item", variant, size },
+    state: {
+      slot: "item",
+      variant,
+      size,
+      "motion-reduced": reduced ? "true" : undefined,
+    },
   })
   // Keep link/button semantics on polymorphic rows while owning the list item outside them.
   return inList ? (
