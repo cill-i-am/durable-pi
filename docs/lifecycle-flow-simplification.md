@@ -21,7 +21,7 @@ Each pass must simplify a concrete flow behind an existing small interface, remo
 | 7 | Workspace cleanup | Concentrate native job decoding, intent construction and stale-outcome projection; keep cleanup orchestration with its machine events. | `workspace-runner`: 44 focused tests passed; final composed gates pending | Implemented |
 | 8 | Memory summary controller | Concentrate controller read, commit and warm exhaustion retention. | `memory-summary-runner, memory-summary-runtime`: 26 focused tests passed; final composed gates pending | Implemented |
 | 9 | Memory backup recovery | Concentrate scheduler persistence and claim attachment while retaining distinct domain recovery. | `memory-backup-runner, memory-backup-lifecycle, memory-backup-runtime`: 39 focused tests passed; final composed gates pending | Implemented |
-| 10 | Model-default editing | Keep draft projections in the conversation feature and lifecycle targets in its machine. | `model-defaults-lifecycle, model-defaults-ownership` | Planned |
+| 10 | Model-default editing | Keep draft projections in the conversation feature and lifecycle targets in its machine. | `model-defaults-lifecycle, model-defaults-ownership`: 10 focused tests passed; final composed gates pending | Implemented |
 
 The independent exploration rejected seven parallel job-manager classes as shallow indirection. These passes preserve the external runner interfaces and keep internal modules private to their domain or feature. Existing characterization tests remain the test surface.
 
