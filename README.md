@@ -62,6 +62,8 @@ CI runs the verification suites in parallel and requires the aggregate `check` r
 
 `pnpm run deploy` provisions the production stage through Alchemy using the explicitly configured profile. A Cloudflare account with Workers, D1, and R2 permissions is required; hosting charges are separate from ChatGPT model usage.
 
+`pnpm typecheck` retains TypeScript 7 as the required compiler. `pnpm typecheck:rust` exposes the experimental tsrs checker; it currently reports a recursive Zod type incompatibility on this project. `pnpm lint:effect` runs standalone Rust Effect diagnostics. Errors fail static verification; warnings and suggestions stay advisory. Existing Oxlint correctness rules remain enforced. Keep optional dependencies enabled for the native binaries. See [tooling measurements and compatibility](docs/typecheck-tooling.md) for benchmarks, commands, and fallback details.
+
 Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, Workers R2 Storage read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access. A fresh machine also needs Secrets Store read/write to retrieve remote-state credentials; an existing trusted state-credential cache avoids that additional local permission.
 
 Workers use the `2026-09-25` compatibility date. Alchemy beta.83 bundles local workerd `2026-10-02`. Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
