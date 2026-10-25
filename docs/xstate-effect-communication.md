@@ -1,5 +1,7 @@
 # Communication mailbox lifecycles
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B07 gives Communication admission, delivery, native execution, Stop and recovery explicit XState owners through the official Effect integration. It fixes a reproduced ownership race: a held native submission could outlive its 30-second lease while a replacement pump or Stop acted on the same task. Stop now revokes future authority immediately, joins the existing owner, and acknowledges cleanup only after native settlement.
 
 ## Ownership and persistence

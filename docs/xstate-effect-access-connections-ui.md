@@ -1,5 +1,7 @@
 # Approval and MCP connection frontend lifecycles
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F06 moves approval decisions, tool-policy requests and connection catalog/mutation requests into feature-owned machines through the official `@xstate/effect` integration. The public Access and Connections APIs are unchanged. Access and the MCP SDK retain authorization and protocol authority.
 
 ## Invariants and ownership

@@ -1,5 +1,7 @@
 # Retained runner boundary audit
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Invariants for this slice:
 
 - Coordination and App-event retain their existing callback/lease machines. Their native Effect executors and actual callback bindings must preserve complete failure reasons through shutdown.

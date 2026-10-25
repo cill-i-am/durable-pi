@@ -1,5 +1,7 @@
 # Additional host and request owners
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 This slice closes eight concrete ownership gaps discovered after the domain migrations: auth request ordering, model catalogue policy, conversation observation, diagnostic handoff, Terminal capacity, Terminal cutover, Terminal service admission and the Coordination callback runner. Domain records remain the durable authority. No SQL migration, replacement Pi journal, new physical alarm owner or business retry budget is introduced.
 
 | Boundary | Decision owner and retained mechanism | Failure-sensitive evidence |

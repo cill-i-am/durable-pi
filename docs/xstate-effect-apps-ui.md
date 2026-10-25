@@ -1,5 +1,7 @@
 # Apps frontend lifecycle
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 ## Invariants and probes before implementation
 
 1. One mounted agent/app owner admits a mutation at a time. Explicit retry reuses its immutable path, payload and operation ID; refresh never resubmits. An uncertain cancellation retains that identity until a confirmed result, including a required reload after an already-applied cancellation.

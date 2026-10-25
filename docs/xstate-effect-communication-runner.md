@@ -1,5 +1,7 @@
 # Communication runner lifetime
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Invariants for this slice:
 
 - The existing mailbox recovery record, retired epoch, discovery lease, exact control receipt and transactional revision fences remain durable authority. Lifecycle owns the three attempts and physical alarm.

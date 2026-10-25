@@ -1,5 +1,7 @@
 # File and media browser lifecycles
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F03 moves browser-owned progression into official scoped `@xstate/effect` actors. Backend file reservations, extraction jobs, file data, and composer draft persistence keep their existing owners. This change does not add a browser workflow journal or a Pi execution.
 
 ## Upload and file ownership

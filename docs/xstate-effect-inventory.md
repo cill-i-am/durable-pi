@@ -1,6 +1,8 @@
 # Repository-wide lifecycle refactor inventory
 
-Baseline: `696aca98000a6e82a9cb202acc18f92f2c8e987e` (initial discovery at `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`, refreshed after #198). Status: **implementation and local verification complete; current-head CI remains the delivery gate**. Canonical rules: [XState Effect](decisions/xstate-effect-state-machines.md). Tracking owner: [BUILD.md](../BUILD.md#xstate-effect-lifecycle-refactor).
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
+Baseline: `696aca98000a6e82a9cb202acc18f92f2c8e987e` (initial discovery at `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`, refreshed after #198). Status: **merged, deployed and verified at `b7b465c`**. Canonical rules: [XState Effect](decisions/xstate-effect-state-machines.md). Tracking owner: [BUILD.md](../BUILD.md#xstate-effect-lifecycle-refactor).
 
 All application-owned lifecycles meeting the applicability definition must be explicit XState machines through the official `@xstate/effect` integration. Effect or pure functions implement work; Pi remains the durable execution engine where required. Every lifecycle has one authoritative owner, explicit recovery semantics and executable behavioral tests. Superseded handwritten control paths are removed.
 
@@ -72,7 +74,7 @@ Every item here is local and must use an explicitly owned Effect actor scope. Ba
 
 Frontend paths after the first path in each cell are relative to that path's directory until another `src/` prefix appears. No row authorizes one giant cross-feature machine. Basic async submit lifecycles qualify even when they are short; queries already fully delegated to TanStack need no mirrored machine.
 
-F04–F08 are published in [draft #220](https://github.com/cill-i-am/durable-pi/pull/220) with [frozen source and composed gates](evidence/xstate-effect/f04-f08-publication-manifest.json). F09–F14 and the three frontend follow-ups are in [draft #221](https://github.com/cill-i-am/durable-pi/pull/221), with [owner paths and final local evidence](xstate-effect-frontend-completion.md). Both include the [reproduced passkey focus correction](evidence/xstate-effect/f08-focus-repair/README.md). The first hosted browser runs exposed that correction after their Playwright cases passed. The current-main integration supersedes those revisions and passes the full local browser gate; the current #220/#221 checks are the delivery gate.
+F04–F08 are published in [draft #220](https://github.com/cill-i-am/durable-pi/pull/220) with [frozen source and composed gates](evidence/xstate-effect/f04-f08-publication-manifest.json). F09–F14 and the three frontend follow-ups are in [draft #221](https://github.com/cill-i-am/durable-pi/pull/221), with [owner paths and final local evidence](xstate-effect-frontend-completion.md). Both include the [reproduced passkey focus correction](evidence/xstate-effect/f08-focus-repair/README.md). The first hosted browser runs exposed that correction after their Playwright cases passed. The current-main integration supersedes those revisions and passes the full local browser gate; the final #220/#221 checks and production release subsequently passed.
 
 ## Responsibility-based exclusions and coverage reconciliation
 
@@ -95,7 +97,7 @@ These exclusions concern the named responsibility, not every future line in the 
 
 All top-level `src` roots are covered by candidates or these responsibility exclusions. Closing the goal requires a fresh complete file/write-path scan, including newly added roots, with no unresolved in-scope candidates. Discovery must be repeated during each migration: the current table is a baseline, not a claim that regexes prove future completeness.
 
-## Remaining coverage follow-ups
+## Completed coverage follow-ups
 
 The composed-source census after B17 identified these additional application-owned control paths. They are now implemented and published, including the later host and current-main drawer deltas below. Earlier row-level proof retains its recorded scope; each current PR head requires its own hosted checks. These were coverage findings, not claims of reproduced production failures.
 
@@ -122,7 +124,7 @@ A further full-source rescan identified local adapter ownership still outside th
 
 The Routine composition additionally exposed checked Effect failures being squashed at native Promise boundaries. Routine and Conversation are corrected with stronger failure-sensitive/native binding proof. Communication and Workspace now pass the same strengthened adapter/native binding proof. The [retained Coordination/App/Background/Reply audit](xstate-effect-runner-boundaries.md) now preserves complete adapter/native failures, ordered admission/close and accepted work through actual runtime/SQL shutdown. It adds only the missing Background/Reply local lifetimes; domain/recovery machines and Lifecycle remain progression owners. All 89 focused cases, 3,811 full tests, static/build and native recovery/host suites pass. Unsigned `efc3588` in [draft #230](https://github.com/cill-i-am/durable-pi/pull/230) passed [CI 40133743444](https://github.com/cill-i-am/durable-pi/actions/runs/40133743444). Current-main census and refreshed checks are recorded separately below.
 
-The same census classifies CopyButton's copied/failed feedback timer as presentation: it does not gate copy admission or retry. `src/http/poll.ts` and its sole legacy test file are removed after composing all remaining consumers and confirming no caller remains. The three frontend census follow-ups are published in #221. Final integrated source hashes, the complete source census and all local behavioral gates are recorded in #231. Current-head hosted checks remain the delivery gate.
+The same census classifies CopyButton's copied/failed feedback timer as presentation: it does not gate copy admission or retry. `src/http/poll.ts` and its sole legacy test file are removed after composing all remaining consumers and confirming no caller remains. The three frontend census follow-ups are published in #221. Final integrated source hashes, the complete source census and all local behavioral gates are recorded in #231. All final hosted checks passed; the merged revision and production verification are recorded in the release closeout.
 
 ## Current-main integration
 

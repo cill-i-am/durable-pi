@@ -1,4 +1,6 @@
-# Current-main settings integration
+# Final pre-merge settings integration
+
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
 
 The lifecycle stack was rebased from `696aca98000a6e82a9cb202acc18f92f2c8e987e` onto `1f800d419d1823de1bda960721d89964ae06a492`. The newer main introduces global settings routes, separate personal libraries and agent assignments, native nested drawers, and upstream idle heartbeats. Earlier CI links remain historical evidence for their recorded commits. They do not establish checks for the rebased heads.
 
@@ -35,7 +37,7 @@ The prior inventory remains the responsibility map. The current-main source delt
 | `src/workspace/attachments.ts`, `src/features/activity/use-plans.ts` | One admitted work invocation prepares/project files or joins a batch of reads. Durable Workspace and Activity query machines retain retry and observation progression. |
 | `src/hooks/interaction-sound-resource.ts`, `src/features/rich-results/places-map-resource.ts`, `src/browser/adapters/cloudflare.ts` | Effect scopes retain native nodes, maps and disconnect handles under their existing feature/connection machines. Native resource flags prevent duplicate cleanup; they do not select the next business step. |
 
-Local integration gates, the complete source census and the rebased-head crosswalk are recorded. The repository-wide goal stays open until every final PR head passes the required hosted checks. The last published application-source commit is unsigned `1cc6c9db67e2fa9312207acd2c002ceaf2ab35c8`; the recorded application hashes remain unchanged. Later workflow, evidence and native test-fixture corrections are recorded separately.
+Local integration gates, the complete source census and the rebased-head crosswalk are recorded. Every final PR head subsequently passed its required hosted checks; the repository-wide migration is complete. The last published application-source commit is unsigned `1cc6c9db67e2fa9312207acd2c002ceaf2ab35c8`; the recorded application hashes remain unchanged. Later workflow, evidence and native test-fixture corrections are recorded separately.
 
 ## Hosted verification budget
 

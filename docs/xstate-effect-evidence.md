@@ -1,8 +1,10 @@
 # XState Effect standard and migration evidence
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Historical implementation base: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`, fetched from `cill-i-am/durable-pi/main` for the original standard. That work was isolated on `codex/xstate-effect-standard`. The original working checkout's unrelated changes were retained. Before publication the branch was rebased onto `696aca98000a6e82a9cb202acc18f92f2c8e987e` after #198 merged; both upstream and XState native gates were retained. The refreshed open-PR check found #199 (idle observer cleanup) and #163, with no equivalent standards PR. Open PRs inspected before edits: #198 (upstream observer) and #163 (local Worker startup/cache isolation); neither implements this standard.
 
-## Current review stack — 23 October 2026
+## Historical review stack — 23 October 2026
 
 B01 Access is implemented at `0a309bd27a64b6cc97ed75609f1b09579f99012f`. [PR #201](https://github.com/cill-i-am/durable-pi/pull/201) has a completed, successful [Check and deploy run 39950948740](https://github.com/cill-i-am/durable-pi/actions/runs/39950948740) for that exact commit. This is Access CI evidence, not a result for a later stack layer or the repository-wide migration.
 
@@ -14,11 +16,11 @@ B02 Replies/channel delivery and B03 Background handoff/remote Stop are publishe
 
 This review stack now inherits B01–B06, F15 and published B09 `8304a30`, with the distinct delivery/check states recorded here. B06 delivery is complete at unsigned `2c13994f478c38f9549000eaa13106df4c94203b` in [draft PR #207](https://github.com/cill-i-am/durable-pi/pull/207); all required jobs and aggregate `check` passed in [exact-head CI 39958894422](https://github.com/cill-i-am/durable-pi/actions/runs/39958894422), with deployment skipped. B07–B18 and F01–F14 remain open; F15 delivery is complete with all required hosted checks passed, as recorded below. The following standard/witness sections preserve their original verification context; they are not new checks of the extracted candidate.
 
-## B09 Browser and Execution — published, hosted CI in progress
+## Historical B09 checkpoint — published, hosted CI in progress
 
 Unsigned `8304a30d3f9a3e5284a255bb1cabc321c767f2a6` is published in [draft PR #209](https://github.com/cill-i-am/durable-pi/pull/209), above F15 [#208](https://github.com/cill-i-am/durable-pi/pull/208). The exact candidate passed local static checks, **2,726 tests in 248 files** and builds, **84 browser journeys** with passkey/upgrade checks, and all **eight native suites**. [Domain evidence](xstate-effect-browser-execution.md) links the raw gate logs and distinguishes Execution native coverage from focused Browser provider/ownership coverage. [Hosted CI 39970730763](https://github.com/cill-i-am/durable-pi/actions/runs/39970730763) is in progress at this tracking checkpoint. B09 delivery remains open; the draft is unmerged and no deployment is claimed.
 
-## Active implementation — B07/B08 and B10–B18
+## Historical implementation checkpoint — B07/B08 and B10–B18
 
 B07 Communication and B08 Coordination/child groups continue on `codex/xstate-mailboxes`, based on inherited B09 `8304a30`. The current composed candidate passes [full static-7](evidence/xstate-effect/b07-b08-final-static-7.log.txt), [**2,936 tests in 262 files** and application/Worker builds](evidence/xstate-effect/b07-b08-final-unit-build-2.log.txt), and [all **ten native suites**](evidence/xstate-effect/b07-b08-final-native.log.txt). The prior checkpoint above F15 `0cf6861` passed **92 browser journeys**, passkeys and two-build recovery; frontend sources are unchanged, and those remain earlier-base browser results. Both independent reviews are clear; publication and exact-head hosted verification remain open.
 

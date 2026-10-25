@@ -1,5 +1,7 @@
 # Conversations admission, control and recovery
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B06 implementation record, 23 October 2026. Conversations now uses the official XState/Effect integration for admission, input preparation/delivery, root control, pump progression, Stop, discovery and tool recovery. B06 delivery is complete, with local verification and all required hosted checks passed. Final static, unit/build, proposed-file credential and all eight native suites pass after the Stop fixes. The preserved local browser gate passed before the final backend Stop corrections; frontend sources were unchanged and no new local run is claimed. Unsigned `2c13994f478c38f9549000eaa13106df4c94203b` is published in [draft PR #207](https://github.com/cill-i-am/durable-pi/pull/207); all required jobs and aggregate `check` passed in [exact-head CI 39958894422](https://github.com/cill-i-am/durable-pi/actions/runs/39958894422). Deployment was skipped and the draft remains unmerged. This record follows the [canonical standard](decisions/xstate-effect-state-machines.md); the repository-wide migration remains open.
 
 ## Review candidate and evidence provenance

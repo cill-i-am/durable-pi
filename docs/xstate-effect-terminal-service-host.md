@@ -1,5 +1,7 @@
 # Terminal service host admission
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 This bounded coverage completion moves Terminal's local admission and cleanup permissions into `service-host.machine.ts`. The existing command, occupancy, execution and interactive-session machines retain their responsibilities and durable representation. There is no storage migration, new retry budget, or change to native command identity.
 
 ## Invariants and falsifiable probes

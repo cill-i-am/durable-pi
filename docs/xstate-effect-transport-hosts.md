@@ -1,5 +1,7 @@
 # Transport host lifetimes
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B16 moves application-owned transport admission, observation, cancellation and joined release into official `@xstate/effect` machines. Effect retains native resources and their complete settlement. SSE, the model SDK protocol, Access policy, Pi execution and the existing durable ledgers keep their owners.
 
 ## Ownership

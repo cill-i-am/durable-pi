@@ -1,5 +1,7 @@
 # Remaining frontend lifecycle owners
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Family invitations, model sign-in and membership mutations; Agents/workspace navigation and editors; Apps frames and interactions; Routines/Skills; channel settings and Memory imports; and Activity controls/queries now have explicit scoped XState/Effect owners. Original receipts, backend authority, uncertain attempts and exact retry inputs remain authoritative. Native SDK/cache/DOM mechanisms retain their own responsibilities.
 
 The final census added three owners. Model-default saves retain the admitted agent, draft and revision through acknowledgement and refresh, with explicit read/reapply after an uncertain write. Workspace controls own deferred navigation and invalidation/reset cleanup; a later successful retry cannot erase an earlier compound cleanup failure. Memory query owners fence agent/search/source changes and join aborted reads. These additions do not introduce backend CAS, idempotency or restoration operations that did not already exist.
