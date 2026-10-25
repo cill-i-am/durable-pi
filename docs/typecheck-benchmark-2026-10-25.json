@@ -1,0 +1,224 @@
+{
+  "timestamp": "2026-10-25T10:36:17.112Z",
+  "revision": "8ed77749d0c49ae5c2b847c6c047ccd57da00b6f",
+  "sourceAndConfigSha256": "a680cdcd6dad4ac83e30ab831f9441ec6dbf51759c4f2743d1322f23bfbb38c1",
+  "trackedTypeScriptFiles": 1509,
+  "environment": {
+    "node": "v26.10.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M1 Pro",
+    "logicalCpus": 10,
+    "memoryGiB": 32
+  },
+  "versions": {
+    "typescript": "6.0.2",
+    "@typescript/native": "7.0.2",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
+    "@yielded/effect-tsrs": "0.2.2"
+  },
+  "commands": {
+    "tsc": [
+      "node_modules/@typescript/native/bin/tsc",
+      "--noEmit",
+      "--pretty",
+      "false"
+    ],
+    "tsrs": ["node_modules/tsrs/bin/tsrs", "--noEmit", "--pretty", "false"],
+    "effect": [
+      "node_modules/@yielded/effect-tsrs/bin/effect-tsrs.js",
+      "diagnostics",
+      "--project",
+      "tsconfig.json",
+      "--format",
+      "json",
+      "--lspconfig",
+      "{}"
+    ]
+  },
+  "warmups": {
+    "tsc": {
+      "seconds": 14.130586292,
+      "peakMiB": 9807.328125,
+      "exitCode": 0,
+      "signal": null
+    },
+    "tsrs": {
+      "seconds": 1.9654800420000011,
+      "peakMiB": 2798.8125,
+      "exitCode": 2,
+      "signal": null
+    },
+    "effect": {
+      "seconds": 3.215152583000001,
+      "peakMiB": 2902.8125,
+      "exitCode": 0,
+      "signal": null,
+      "diagnosticSummary": {
+        "filesChecked": 1501,
+        "filesWithoutPlugin": 0,
+        "totalFiles": 1501,
+        "errors": 0,
+        "warnings": 789,
+        "messages": 1716
+      }
+    }
+  },
+  "results": {
+    "tsc": [
+      {
+        "seconds": 12.223723958000003,
+        "peakMiB": 9636.703125,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "seconds": 12.216717750000003,
+        "peakMiB": 9591.875,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "seconds": 12.584433457999992,
+        "peakMiB": 9752.0625,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "seconds": 12.348696916000002,
+        "peakMiB": 9550.640625,
+        "exitCode": 0,
+        "signal": null
+      },
+      {
+        "seconds": 12.434851709000009,
+        "peakMiB": 9846.6875,
+        "exitCode": 0,
+        "signal": null
+      }
+    ],
+    "tsrs": [
+      {
+        "seconds": 1.944641082999995,
+        "peakMiB": 2770.828125,
+        "exitCode": 2,
+        "signal": null
+      },
+      {
+        "seconds": 1.8106000410000052,
+        "peakMiB": 2730.6875,
+        "exitCode": 2,
+        "signal": null
+      },
+      {
+        "seconds": 1.975826000000001,
+        "peakMiB": 2791.0625,
+        "exitCode": 2,
+        "signal": null
+      },
+      {
+        "seconds": 1.795645457999999,
+        "peakMiB": 2788.6875,
+        "exitCode": 2,
+        "signal": null
+      },
+      {
+        "seconds": 1.8336647910000028,
+        "peakMiB": 2747.203125,
+        "exitCode": 2,
+        "signal": null
+      }
+    ],
+    "effect": [
+      {
+        "seconds": 3.4840608340000037,
+        "peakMiB": 2945.75,
+        "exitCode": 0,
+        "signal": null,
+        "diagnosticSummary": {
+          "filesChecked": 1501,
+          "filesWithoutPlugin": 0,
+          "totalFiles": 1501,
+          "errors": 0,
+          "warnings": 789,
+          "messages": 1716
+        }
+      },
+      {
+        "seconds": 3.440840457999999,
+        "peakMiB": 2949.203125,
+        "exitCode": 0,
+        "signal": null,
+        "diagnosticSummary": {
+          "filesChecked": 1501,
+          "filesWithoutPlugin": 0,
+          "totalFiles": 1501,
+          "errors": 0,
+          "warnings": 789,
+          "messages": 1716
+        }
+      },
+      {
+        "seconds": 3.5113531250000016,
+        "peakMiB": 2922.390625,
+        "exitCode": 0,
+        "signal": null,
+        "diagnosticSummary": {
+          "filesChecked": 1501,
+          "filesWithoutPlugin": 0,
+          "totalFiles": 1501,
+          "errors": 0,
+          "warnings": 789,
+          "messages": 1716
+        }
+      },
+      {
+        "seconds": 3.564883375000005,
+        "peakMiB": 2975.203125,
+        "exitCode": 0,
+        "signal": null,
+        "diagnosticSummary": {
+          "filesChecked": 1501,
+          "filesWithoutPlugin": 0,
+          "totalFiles": 1501,
+          "errors": 0,
+          "warnings": 789,
+          "messages": 1716
+        }
+      },
+      {
+        "seconds": 3.4219554579999967,
+        "peakMiB": 2920.390625,
+        "exitCode": 0,
+        "signal": null,
+        "diagnosticSummary": {
+          "filesChecked": 1501,
+          "filesWithoutPlugin": 0,
+          "totalFiles": 1501,
+          "errors": 0,
+          "warnings": 789,
+          "messages": 1716
+        }
+      }
+    ]
+  },
+  "summaries": {
+    "tsc": {
+      "medianSeconds": 12.348696916000002,
+      "medianPeakMiB": 9636.703125,
+      "allPassed": true
+    },
+    "tsrs": {
+      "medianSeconds": 1.8336647910000028,
+      "medianPeakMiB": 2770.828125,
+      "allPassed": false
+    },
+    "effect": {
+      "medianSeconds": 3.4840608340000037,
+      "medianPeakMiB": 2945.75,
+      "allPassed": true
+    }
+  },
+  "speedup": null,
+  "memoryReductionPercent": null
+}
