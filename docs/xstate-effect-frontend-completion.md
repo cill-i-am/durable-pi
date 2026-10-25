@@ -1,4 +1,6 @@
-# Remaining frontend lifecycle owners
+# Completed frontend lifecycle owners
+
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
 
 Family invitations, model sign-in and membership mutations; Agents/workspace navigation and editors; Apps frames and interactions; Routines/Skills; channel settings and Memory imports; and Activity controls/queries now have explicit scoped XState/Effect owners. Original receipts, backend authority, uncertain attempts and exact retry inputs remain authoritative. Native SDK/cache/DOM mechanisms retain their own responsibilities.
 

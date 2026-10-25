@@ -5,6 +5,12 @@ import { standardSchemaValidator } from "xstate/validation"
 
 import { advanceInput } from "./input.machine"
 import {
+  canClaimRoot,
+  canRetryRootStop,
+  canExhaustRoot,
+  completedRootOutcome,
+} from "./root-run-policy"
+import {
   ConversationControl,
   conversationControlAttemptLimit,
   conversationControl,
@@ -183,19 +189,7 @@ const pending = (status: "queued" | "preparing" | "running" | "stopping") => ({
     context: RootContext
     event: typeof events.CLAIM.Type
   }) => {
-    if (
-      context.parent !== null ||
-      context.control.owner !== null ||
-      !event.owner ||
-      event.deadline <= event.now ||
-      (event.expectedRevision !== null &&
-        context.revision !== event.expectedRevision) ||
-      (event.mode !== "inspect" &&
-        (context.control.attempts ?? 0) >= conversationControlAttemptLimit) ||
-      (event.mode === "automatic" && context.control.unconfirmed !== null) ||
-      (event.mode === "stop" && status !== "stopping")
-    )
-      return
+    if (!canClaimRoot(context, status, event)) return
     return {
       context: {
         ...changed(context),
@@ -253,14 +247,7 @@ const pending = (status: "queued" | "preparing" | "running" | "stopping") => ({
     context: RootContext
     event: typeof events.RETRY_STOP.Type
   }) => {
-    if (
-      status !== "stopping" ||
-      context.control.owner !== null ||
-      context.control.unconfirmed === null ||
-      context.revision !== event.expectedRevision ||
-      event.discoveryDeadline <= event.now
-    )
-      return
+    if (!canRetryRootStop(context, status, event)) return
     return {
       context: {
         ...changed(context),
@@ -276,13 +263,7 @@ const pending = (status: "queued" | "preparing" | "running" | "stopping") => ({
     context: RootContext
     event: typeof events.EXHAUST.Type
   }) => {
-    if (
-      context.control.owner !== null ||
-      context.revision !== event.expectedRevision ||
-      (status === "stopping" && event.phase !== "stop") ||
-      !event.eligible
-    )
-      return
+    if (!canExhaustRoot(context, status, event)) return
     return {
       context: {
         ...changed(context),
@@ -301,19 +282,8 @@ const pending = (status: "queued" | "preparing" | "running" | "stopping") => ({
     context: RootContext
     event: typeof events.COMPLETE.Type
   }) => {
-    if (
-      context.parent !== null ||
-      context.revision !== event.expectedRevision ||
-      context.control.owner !== event.owner ||
-      (context.control.unconfirmed !== null && event.owner === null) ||
-      new Set(event.memberIds).size !== event.memberIds.length ||
-      new Set(event.outcomes.map((o) => o.id)).size !== event.outcomes.length ||
-      event.memberIds.length !== event.outcomes.length ||
-      !event.memberIds.includes(context.id) ||
-      event.outcomes.some((o) => !event.memberIds.includes(o.id))
-    )
-      return
-    const outcome = event.outcomes.find((o) => o.id === context.id)!
+    const outcome = completedRootOutcome(context, event)
+    if (!outcome) return
     return {
       target: finishStatus(true, status === "stopping", outcome.delivery),
       context: {

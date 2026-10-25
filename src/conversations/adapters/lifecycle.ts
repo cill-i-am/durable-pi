@@ -10,17 +10,8 @@ import type { EventFromLogic } from "xstate"
 
 import { nativeFailure, nativeOperation } from "../../shared/interop"
 import { ConversationExecutionError } from "../execution"
-import {
-  armConversationDiscovery,
-  observeConversationDiscovery,
-  readConversationDiscovery,
-} from "../recovery-discovery.machine"
+import { observeConversationDiscovery } from "../recovery-discovery.machine"
 
-const PumpOwner = Schema.Struct({
-  schemaVersion: Schema.Literal(1),
-  workflowVersion: Schema.Literal(1),
-  token: Schema.String.check(Schema.isNonEmpty()),
-})
 export type { ConversationControlAttempt } from "../runner.machine"
 import {
   conversationRunnerMachine,
@@ -30,23 +21,14 @@ import {
   type ConversationRunnerAck,
 } from "../runner.machine"
 type RunnerMachine = ReturnType<typeof conversationRunnerMachine>
-const pumpId = "pump"
-const discoveryId = "conversation-recovery"
-const discoveryDuration = 60_000
-const retry = { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 }
-
-function readJob(job: LifecycleJob) {
-  if (job.id === pumpId && job.fn === "pump") {
-    // The prior TurnRunner persisted no payload. Preserve its identity until
-    // its ordinary job completes; a future format requires an explicit migration.
-    return job.payload === undefined || job.payload === null
-      ? { token: `legacy:${job.createdAt}:${job.time}` }
-      : Schema.decodeUnknownSync(PumpOwner)(job.payload)
-  }
-  if (job.id === discoveryId && job.fn === "recover")
-    return readConversationDiscovery(job.payload)
-  throw new Error(`Unsupported conversation job: ${job.id}/${job.fn}`)
-}
+import {
+  conversationPumpId as pumpId,
+  conversationDiscoveryId as discoveryId,
+  readConversationJob as readJob,
+  conversationPumpJob,
+  conversationDiscoveryJob,
+  conversationJobOutcome,
+} from "./runner-jobs"
 
 /** Lifecycle owns durable scheduling. This adapter only retains admission
  * discovery and correlates a bounded failed dispatch with its domain claim. */
@@ -163,50 +145,23 @@ export class ConversationRunner<E> extends LifecycleCapability {
   }
   private outcome(job: LifecycleJob, outcome: LifecycleJobOutcome) {
     if (this.closed()) return
-    const latest = this.current(job.id)
-    // The SDK guards outcomes with a running bit. A second alarm may already
-    // have marked a newer same-ID job running, so an old completion must retain
-    // that newer intent instead of deleting it or applying its old deadline.
-    return latest && readJob(latest).token !== readJob(job).token
-      ? { rescheduleAt: latest.time }
-      : outcome
+    return conversationJobOutcome(this.current(job.id), job, outcome)
   }
   private async pushPump(time: number) {
-    await this.lifecycle.jobs.push({
-      id: pumpId,
-      fn: "pump",
-      payload: {
-        schemaVersion: 1,
-        workflowVersion: 1,
-        token: crypto.randomUUID(),
-      },
-      time,
-      singleflight: true,
-      recoveryLoop: true,
-      hungTimeoutSeconds: 600,
-      retry,
-    })
+    await this.lifecycle.jobs.push(
+      conversationPumpJob(time, crypto.randomUUID())
+    )
   }
   armDiscovery(): Promise<number> {
     return this.track(() =>
       this.schedule(async () => {
-        const now = Date.now(),
-          deadline = now + discoveryDuration
-        const prior = this.current(discoveryId)
-        const payload = armConversationDiscovery(
-          prior?.payload,
-          deadline,
+        const now = Date.now()
+        const { job, deadline } = conversationDiscoveryJob(
+          this.current(discoveryId),
+          now,
           crypto.randomUUID()
         )
-        await this.lifecycle.jobs.push({
-          id: discoveryId,
-          fn: "recover",
-          payload,
-          time: Math.min(now, prior?.time ?? Infinity),
-          singleflight: true,
-          recoveryLoop: true,
-          retry,
-        })
+        await this.lifecycle.jobs.push(job)
         return deadline
       })
     ).then((deadline) => {

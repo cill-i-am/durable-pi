@@ -19,9 +19,8 @@ import {
   armCommunicationDiscovery,
   observeCommunicationDiscovery,
   readCommunicationDiscovery,
-  readMailboxRecoveryState,
-  transitionMailboxRecovery,
 } from "../recovery.machine"
+import { MailboxRecoveryRecord } from "./recovery-record"
 
 const PumpOwner = Schema.Struct({
   schemaVersion: Schema.Literal(1),
@@ -39,7 +38,6 @@ import {
 type RunnerMachine = ReturnType<typeof communicationRunnerMachine>
 const pumpId = "bot-communication:pump"
 const discoveryId = "bot-communication:recovery"
-const recoveryKey = "bot-communication:failure"
 const discoveryDuration = 60_000
 const retry = { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 }
 
@@ -63,6 +61,18 @@ export class CommunicationRunner<E> extends LifecycleCapability {
   private actor?: EffectActor<RunnerMachine>
   private readonly operations = new Set<Promise<unknown>>()
   private closing?: Promise<void>
+
+  private readonly recoveryRecord = new MailboxRecoveryRecord({
+    storage: () => this.lifecycle.storage,
+    epoch: (id) => {
+      const job = this.current(id)
+      return job ? readJob(job).token : undefined
+    },
+    discovery: () => {
+      const job = this.current(discoveryId)
+      return job ? readCommunicationDiscovery(job.payload) : undefined
+    },
+  })
 
   constructor(
     readonly host: {
@@ -228,27 +238,7 @@ export class CommunicationRunner<E> extends LifecycleCapability {
   private async persistFailure() {
     const completed = this.getActor().getSnapshot().context.failure
     if (!completed) return
-    await this.lifecycle.storage.transaction(async (storage) => {
-      const prior = readMailboxRecoveryState(await storage.get(recoveryKey))
-      // A joined failed epoch can be retried after its SDK row was removed,
-      // but cannot replace a newer pump or a newer durable failure summary.
-      const current = this.current(completed.jobId)
-      if (
-        (current && readJob(current).token !== completed.recovery.epoch) ||
-        prior.retiredEpoch === completed.recovery.epoch ||
-        (!current &&
-          prior.recovery &&
-          prior.recovery.epoch !== completed.recovery.epoch)
-      )
-        return
-      await storage.put(
-        recoveryKey,
-        transitionMailboxRecovery(prior, {
-          type: "EXHAUSTED",
-          recovery: completed.recovery,
-        })
-      )
-    })
+    await this.recoveryRecord.retain(completed)
     await this.acknowledge((ack) => ({
       type: "FAILURE_PERSISTED",
       key: completed.key,
@@ -263,9 +253,7 @@ export class CommunicationRunner<E> extends LifecycleCapability {
   }
   private async recoveryState() {
     await this.persistFailure()
-    return readMailboxRecoveryState(
-      await this.lifecycle.storage.get(recoveryKey)
-    )
+    return this.recoveryRecord.read()
   }
   recovery(): Promise<MailboxRecovery | null> {
     return this.track(async () => {
@@ -298,39 +286,9 @@ export class CommunicationRunner<E> extends LifecycleCapability {
   }
   private async retry(epoch: string, deadline: number): Promise<void> {
     await this.persistFailure()
-    await this.lifecycle.storage.transaction(async (storage) => {
-      const prior = readMailboxRecoveryState(await storage.get(recoveryKey))
-      const discovery = this.current(discoveryId)
-      const now = Date.now()
-      if (prior.recovery?.epoch !== epoch)
-        throw failure(
-          "conflict",
-          "This mailbox failure has changed. Reload its current status."
-        )
-      if (
-        !discovery ||
-        readCommunicationDiscovery(discovery.payload).recoveryEpoch !== epoch ||
-        readCommunicationDiscovery(discovery.payload).armedUntil < deadline ||
-        now >= deadline
-      )
-        throw failure(
-          "storage",
-          "Mailbox recovery discovery expired. Retry the same recovery."
-        )
-      const next = transitionMailboxRecovery(prior, {
-        type: "RETRY",
-        epoch,
-        now,
-        deadline,
-        pumpEpoch: this.current(pumpId)
-          ? readJob(this.current(pumpId)!).token
-          : null,
-      })
-      if (next.recovery)
-        throw failure("conflict", "Mailbox recovery was not accepted.")
-      await storage.put(recoveryKey, next)
-    })
+    await this.recoveryRecord.retry(epoch, deadline)
   }
+
   wake() {
     return this.track(() => this.schedule(() => this.wakeQueue()))
   }

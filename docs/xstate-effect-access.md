@@ -1,5 +1,7 @@
 # Access lifecycle migration (B01)
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 The Access ledger now reconstructs `operation.machine.ts` from its existing rows for every approval, claim, cancellation, revocation, expiry and completion. `run.machine.ts` owns a caller's admission, wait, claim, replay and execution lifetime through the official Effect actor host. This is the first production migration after the standards PR; the repository-wide goal remains open.
 
 ## Invariants and representation

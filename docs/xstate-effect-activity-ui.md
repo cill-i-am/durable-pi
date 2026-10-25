@@ -1,5 +1,7 @@
 # Activity controls and query lifetimes
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F14 moves the Activity workbench's command and query lifetimes into scoped official `@xstate/effect` actors. Backend task, plan, mailbox and Pi records remain authoritative. The UI does not infer successful remote cancellation from an HTTP acknowledgement or start remote work when it mounts.
 
 ## Command ownership

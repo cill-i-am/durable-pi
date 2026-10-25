@@ -1,5 +1,7 @@
 # Objects UI lifecycle ownership
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F07 migrates checklist editing, save recovery, reads, creation and origin dialogs to the official `@xstate/effect` integration. The source is in `src/features/objects`. Backend Objects/Pi authority, public mutation schemas and mutation digests are unchanged. This is a frontend migration above backend B14.
 
 ## Owners and invariants

@@ -2,7 +2,7 @@
 
 This guide explains the product's source-of-truth boundaries at revision `a133e4b` (October 19, 2026). Start with the [feature map](../FEATURES.md) for user-visible capabilities and verification recipes. Domains are modules with durable ownership, not a requirement for one service per module.
 
-The mandatory [XState Effect lifecycle standard](decisions/xstate-effect-state-machines.md) governs existing and future application-owned lifecycles, including frontend interaction/resource flows. XState through `@xstate/effect` owns states, events, guards and transitions; Effect owns work and live resource lifetimes; pure functions own computation. Pi owns durable agent/task execution and recovery, domain storage owns application records, Lifecycle owns durable wakes, and Access owns authorization. The [refactor inventory](xstate-effect-inventory.md) tracks implementation against that standard; the domain descriptions below do not imply that every current lifecycle already conforms.
+The mandatory [XState Effect lifecycle standard](decisions/xstate-effect-state-machines.md) governs existing and future application-owned lifecycles, including frontend interaction/resource flows. XState through `@xstate/effect` owns states, events, guards and transitions; Effect owns work and live resource lifetimes; pure functions own computation. Pi owns durable agent/task execution and recovery, domain storage owns application records, Lifecycle owns durable wakes, and Access owns authorization. The [refactor inventory](xstate-effect-inventory.md) tracks implementation against that standard; the [release closeout](xstate-effect-release.md) records the completed migration at `b7b465c`.
 
 ## How the application fits together
 

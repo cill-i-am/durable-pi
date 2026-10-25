@@ -1,5 +1,7 @@
 # Apps delivery and render lifetimes
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B12 keeps app definitions, saved checkbox/form/web values, immutable interaction receipts and event identity in the existing Apps ledger. `delivery.machine.ts` owns each event's pending → admitted/cancelled/exhausted progression. `pump.machine.ts` owns one local delivery pass. `render.machine.ts` owns preparing → executing → committing → settled for one request. All local actors use the official Effect integration and request/pass scopes; no new task engine or journal exists.
 
 ## Durable acceptance and handoff

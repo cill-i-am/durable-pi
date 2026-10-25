@@ -8,19 +8,12 @@ import {
 } from "xstate"
 import { standardSchemaValidator } from "xstate/validation"
 
+import { CommandRecord, restoreCommandRecord } from "./command-record"
 import { CommandRun, TerminalFailure, type CommandInput } from "./contracts"
-import { TerminalOccupancy, claimTerminalOccupancy } from "./occupancy.machine"
+import { claimTerminalOccupancy } from "./occupancy.machine"
 import type { TerminalAuthority } from "./repository"
+export { CommandRecord, restoreCommandRecord } from "./command-record"
 
-export const CommandRecord = Schema.Struct({
-  ...CommandRun.fields,
-  schemaVersion: Schema.Literal(1),
-  workflowVersion: Schema.Literal(1),
-  revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
-  attemptId: Schema.String,
-  occupancy: TerminalOccupancy,
-})
-export type CommandRecord = typeof CommandRecord.Type
 const { status: _, ...fields } = CommandRecord.fields
 const Context = Schema.Struct(fields)
 const result = Schema.Struct({
@@ -32,6 +25,17 @@ const bump = (context: typeof Context.Type) => ({
   ...context,
   revision: context.revision + 1,
 })
+function cancellationError(
+  cancelled: boolean,
+  publishing: boolean,
+  allowed: boolean
+) {
+  if (cancelled)
+    return "Cancelled. Workspace recovery uses the last saved checkpoint."
+  if (publishing && !allowed)
+    return "Bot archived. Workspace recovery uses the last saved checkpoint."
+  return null
+}
 export const terminalCommandMachine = setupEffect({
   validator: standardSchemaValidator(),
   schemas: {
@@ -83,17 +87,18 @@ export const terminalCommandMachine = setupEffect({
             : undefined,
         FINISH: ({ context, event }) => {
           if (context.attemptId !== event.attemptId) return
-          const denied = event.cancelled || (event.publishing && !event.allowed)
+          const denial = cancellationError(
+            event.cancelled,
+            event.publishing,
+            event.allowed
+          )
+          const denied = denial !== null
           return {
             target: denied ? "cancelled" : event.result.status,
             context: {
               ...bump(context),
               exitCode: denied ? null : event.result.exitCode,
-              error: denied
-                ? event.cancelled
-                  ? "Cancelled. Workspace recovery uses the last saved checkpoint."
-                  : "Bot archived. Workspace recovery uses the last saved checkpoint."
-                : event.result.error,
+              error: denial ?? event.result.error,
               finishedAt: event.now,
               savedAt: denied ? null : event.savedAt,
             },
@@ -120,25 +125,6 @@ export type CommandEvent = EventFromLogic<typeof terminalCommandMachine>
 const supported = (effects: readonly ExecutableEffect[]) => {
   if (effects.length)
     throw new Error(`Unsupported terminal command effect: ${effects[0]!.type}`)
-}
-export function restoreCommandRecord(saved: unknown): CommandRecord {
-  if (typeof saved !== "object" || saved === null)
-    throw new Error("Invalid terminal command record")
-  if ("schemaVersion" in saved || "workflowVersion" in saved)
-    return Schema.decodeUnknownSync(CommandRecord)(saved)
-  const legacy = Schema.decodeUnknownSync(CommandRun)(saved)
-  const attemptId = `legacy:${legacy.id}`
-  return Schema.decodeUnknownSync(CommandRecord)({
-    ...legacy,
-    schemaVersion: 1,
-    workflowVersion: 1,
-    revision: 0,
-    attemptId,
-    occupancy:
-      legacy.status === "running"
-        ? claimTerminalOccupancy(attemptId)
-        : { state: "free", ownerId: null },
-  })
 }
 export function advanceCommandRecord(
   saved: unknown,

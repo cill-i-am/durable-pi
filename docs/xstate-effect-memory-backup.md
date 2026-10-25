@@ -1,5 +1,7 @@
 # Memory backup publication
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B18 moves incremental publication, local retry admission, and detached alarm dispatch into explicit machines built through `@xstate/effect`. Existing SQLite facts and the existing R2 objects remain authoritative. The archive format, content hashes, page selection, and memory algorithms are unchanged.
 
 ## Authority and progression

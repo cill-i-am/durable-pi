@@ -1,5 +1,7 @@
 # Conversation runner lifetime
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Invariants for this slice:
 
 - Lifecycle retains the existing pump/discovery job identities, legacy payload compatibility, finite three-attempt budget and one alarm owner. Conversation domain receipts and revisioned exhaustion remain durable authority.

@@ -1,5 +1,7 @@
 # App-event runner lifetime
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 The Apps event ledger, discovery lease and delivery/render machines already own durable business state. This slice replaces the remaining local dispatch Map in `AppEventRunner` with `apps/runner.machine.ts`, hosted through the official Effect integration in the runner's scope. It preserves the existing job IDs, payload versions, lease deadlines, native callback identity, spent markers and Lifecycle's three attempts. No data migration or new retry budget is added.
 
 The machine distinguishes a running callback, its failed attempt and exhausted cleanup. Only the exact callback may resume a failed attempt. A duplicate of the same callback is deferred while its native pump remains held; an overlapping error callback cannot spend that lease. Both cases are reproduced failures against the preceding adapter. Native jobs remain SDK-owned.

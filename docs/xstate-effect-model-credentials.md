@@ -1,5 +1,7 @@
 # Model credential lifecycles
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B15 separates the account owner, durable token rotation, and durable sign-in attempt. The official Effect-backed machines are `credential-host.machine.ts`, `credential-rotation.machine.ts`, and `sign-in.machine.ts`. The existing OAuth adapter remains bounded native transport and validation work invoked by the rotation owner. It does not independently retry or choose lifecycle transitions.
 
 ## Authority and storage

@@ -1,5 +1,7 @@
 # F12 routines, webhooks and skills UI
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 ## Routines and webhooks
 
 The browser owns scoped official `@xstate/effect` actors. `routines-ui.machine.ts` owns loading, four-second visible-page observation, command admission, acknowledgement, explicit retry, cancellation resolution and Stop uncertainty. `webhook-ui.machine.ts` owns settings load, configure-and-verify, exact retry and cancellation resolution. Effect owns native request/body settlement and scope cleanup. Routine contents, schedules, editor fields, selection and pure list merging remain data. The existing B11 backend remains authoritative for receipts, expected revisions, admission and native work.

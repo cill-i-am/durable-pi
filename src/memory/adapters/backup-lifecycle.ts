@@ -11,10 +11,8 @@ import {
   observeBackupDiscovery,
   readBackupDiscovery,
   decideBackupController,
-  initialBackupController,
-  readBackupController,
-  type BackupController,
   type BackupSchedulerRecovery,
+  type BackupController,
 } from "../backup-discovery.machine"
 import {
   decideBackupDispatch,
@@ -26,7 +24,7 @@ import type { MemoryStorageError } from "../domain"
 
 const id = "memory-backups:pump"
 const discoveryId = "memory-backups:discovery"
-const controllerKey = "memory-backups:failure"
+import { BackupControllerRecord } from "./backup-controller"
 import { MaintenanceRunnerHost } from "./runner-host"
 
 export class BackupRecoveryChanged extends Error {}
@@ -77,7 +75,9 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     return this.lifetime.stopped
   }
   private gate: Promise<unknown> = Promise.resolve()
-  private unpersisted?: BackupController
+  private readonly controlRecord = new BackupControllerRecord(
+    () => this.lifecycle.storage
+  )
   private readonly operations = new Set<Promise<unknown>>()
   private readonly cleanup = new Set<Promise<void>>()
   constructor(
@@ -147,24 +147,14 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
   }
   private async claimPublication(claim: BackupClaim) {
     await this.serial(async () => {
-      const state = await this.control()
-      if (state.phase !== "exhausted") return
-      const next = decideBackupController(state, { type: "ATTACH", claim })
-      this.unpersisted = next
-      await this.lifecycle.storage.put(controllerKey, next)
-      this.unpersisted = undefined
-      throw new Error("Backup scheduling exhausted before publication")
+      if (await this.controlRecord.attach(claim))
+        throw new Error("Backup scheduling exhausted before publication")
     })
   }
   private async settledClaim(claim: BackupClaim | null) {
     if (!claim) return
     await this.serial(async () => {
-      const state = await this.control()
-      const next = decideBackupController(state, {
-        type: "SETTLED",
-        attemptId: claim.attemptId,
-      })
-      await this.lifecycle.storage.put(controllerKey, next)
+      await this.controlRecord.settle(claim)
       for (const [token, owner] of this.owned)
         if (!owner.pending && owner.claim?.attemptId === claim.attemptId)
           this.owned.delete(token)
@@ -193,13 +183,6 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     )
     return work
   }
-  private async control() {
-    if (this.unpersisted) return this.unpersisted
-    const raw = await this.lifecycle.storage.get(controllerKey)
-    return raw === undefined
-      ? initialBackupController()
-      : readBackupController(raw)
-  }
   private live() {
     return (
       this.cleanup.size > 0 ||
@@ -219,7 +202,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped)
       return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
-      const state = await this.control()
+      const state = await this.controlRecord.read()
       return state.phase === "exhausted" ? state.recovery! : undefined
     })
   }
@@ -227,7 +210,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     await this.serial(async () => {
       // An unavailable read may hide the sole durable cleanup receipt. Only a
       // confirmed absent record may initialize control; never overwrite unknown.
-      const state = await this.control()
+      const state = await this.controlRecord.read()
       if (!this.owns(job) || state.phase === "exhausted") return
       const next = decideBackupController(state, {
         type: "EXHAUST",
@@ -240,10 +223,8 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
             "Backup scheduling could not persist or discover its work. Retry backup recovery when storage is available.",
         },
       })
-      this.unpersisted = next
       try {
-        await this.lifecycle.storage.put(controllerKey, next)
-        this.unpersisted = undefined
+        await this.controlRecord.retainExhaustion(next)
       } finally {
         this.host.notify?.()
       }
@@ -322,7 +303,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped)
       return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
-      if ((await this.control()).phase === "exhausted")
+      if ((await this.controlRecord.read()).phase === "exhausted")
         throw new BackupRecoveryChanged(
           "Retry backup scheduling recovery before adding memory."
         )
@@ -333,7 +314,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped)
       return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
-      const state = await this.control()
+      const state = await this.controlRecord.read()
       if (
         this.live() ||
         state.phase !== "exhausted" ||
@@ -351,7 +332,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
   ): Promise<boolean> {
     if (this.stopped) return Promise.resolve(false)
     return this.serial(async () => {
-      const state = await this.control()
+      const state = await this.controlRecord.read()
       if (
         this.live() ||
         state.phase !== "exhausted" ||
@@ -366,8 +347,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
         { ...state, claim: state.claim ?? this.retainedClaim() ?? null },
         { type: "RECOVER", epoch }
       )
-      await this.lifecycle.storage.put(controllerKey, next)
-      this.unpersisted = undefined
+      await this.controlRecord.commit(next)
       return true
     }).then(async (recovered) => {
       if (recovered) await this.wake()
@@ -387,7 +367,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     if (this.stopped)
       return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
-      const state = await this.control()
+      const state = await this.controlRecord.read()
       if (
         this.live() ||
         this.unsettledReceipt() ||
@@ -436,7 +416,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
   }
   private async wakeNow() {
     if (this.stopped) return
-    const control = await this.control()
+    const control = await this.controlRecord.read()
     if (this.stopped || control.phase === "exhausted") return
     const job = this.current()
     if (control.claim) {
@@ -563,7 +543,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     job,
   }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
     if (this.stopped) return
-    const control = await this.serial(() => this.control())
+    const control = await this.serial(() => this.controlRecord.read())
     if (this.stopped || !this.owns(job)) return this.outcome(job, undefined)
     const blocked = this.blocked(control, job)
     if (blocked) return this.outcome(job, blocked.outcome)

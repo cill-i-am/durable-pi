@@ -1,5 +1,7 @@
 # Planning and Objects operation authority
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B14 keeps plans, working objects, histories, root bindings, operation receipts and cancellation sentinels in their existing Pi documents. Official `@xstate/effect` machines decide application transitions synchronously within the existing native commit callback. Pi still owns document identity, transaction publication, serialization and rollback. There is no additional journal, scheduler, durable wake or execution engine.
 
 ## Contract and ownership

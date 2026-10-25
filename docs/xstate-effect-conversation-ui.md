@@ -1,5 +1,7 @@
 # Conversation connection and draft ownership
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 F01 replaces the conversation connection, draft persistence, submission and per-turn command control paths with scoped actors from the official XState/Effect integration. Pi and the backend conversation ledger still own execution, receipts and cancellation. TanStack still interprets the SSE protocol and projects the transcript.
 
 ## Owners and invariants

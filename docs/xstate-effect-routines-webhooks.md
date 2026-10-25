@@ -1,5 +1,7 @@
 # Routines and webhook admission (B11)
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 Routine availability, run admission and recovery, webhook activation and receipt admission, and local command/ingress/pump ordering now have owning `@xstate/effect` machines. Existing SQLite records and receipts remain authoritative. Conversations admits the original turn identity, Pi owns native execution, Access owns tool authority, and Lifecycle remains the physical alarm owner.
 
 ## Invariants and preserved behavior

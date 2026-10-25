@@ -1,5 +1,7 @@
 # Browser and Execution lifecycle migration (B09)
 
+**Release status — 25 October 2026:** the refactor is [merged, deployed and verified](xstate-effect-release.md). The checkpoints below retain their original source and test scope; pre-merge delivery status is historical.
+
 B09 replaces browser session/operation/retirement and code-run lifecycle decisions with the pinned official `@xstate/effect` integration. This candidate retains the existing browser and code-run ledgers, resource identities, Access decisions, network policy, and native execution limits. The public Browser and Execution APIs are unchanged. No SQL schema migration, provider action, merge, or deployment is part of this lane.
 
 ## Invariants and caller inventory
