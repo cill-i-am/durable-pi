@@ -13,7 +13,7 @@ Each pass must simplify a concrete flow behind an existing small interface, remo
 | Pass | Flow | Change | Proof | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Conversation root control | Name the domain eligibility rules and compare exact membership with sets. | `conversation-control, conversation-domain`: 20 tests passed; typecheck passed | Complete |
-| 2 | Terminal command records | Concentrate versioned records and result projection in the Terminal domain. | `terminal-domain, terminal-claim` | Planned |
+| 2 | Terminal command records | Concentrate versioned records and result projection in the Terminal domain. | `terminal-domain, terminal-claim`: 21 tests passed; typecheck passed | Complete |
 | 3 | App event recovery lease | Separate the native job protocol and name lease eligibility inside the machine. | `app-lifecycle, app-delivery-machine, runner-boundaries` | Planned |
 | 4 | Routine warm owner | Own the shared actor lifetime in a routine-local module. | `routine-runner` | Planned |
 | 5 | Conversation queue protocol | Concentrate supported job forms in one adapter-local protocol. | `conversation-runner` | Planned |
