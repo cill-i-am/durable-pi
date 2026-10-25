@@ -11,7 +11,7 @@
     "lint": "oxlint --config oxlint.config.ts --deny-warnings",
     "format": "oxfmt --write .",
     "check": "oxfmt --check .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "deploy": "alchemy deploy --stage production --profile durable-pi",
     "test": "vitest run",
     "verify": "pnpm verify:static && pnpm verify:unit-and-build && pnpm verify:native-runtime && pnpm verify:browser && pnpm verify:container",
@@ -54,7 +54,8 @@
     "lint:effect": "effect-tsrs diagnostics --project tsconfig.json --lspconfig '{}'",
     "bench:typecheck": "node scripts/bench-typecheck.mjs",
     "test:tooling": "node --test scripts/typecheck-tooling.test.mjs",
-    "typecheck:rust": "tsrs --noEmit"
+    "typecheck:rust": "tsrs --noEmit",
+    "typecheck:typescript": "tsc --noEmit"
   },
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.83",

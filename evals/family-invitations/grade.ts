@@ -7,6 +7,7 @@ import {
   FamilySnapshot,
 } from "../../src/family/contracts"
 import { readArchive, type Check } from "../rich-answers/grade"
+import { toolCall as call } from "../tool-call"
 import type { InvitationCase } from "./cases"
 
 const approval = z.object({
@@ -37,10 +38,6 @@ export const invitationEvidence = z.object({
 })
 export type InvitationEvidence = z.infer<typeof invitationEvidence>
 
-const call = z.object({
-  name: z.string(),
-  arguments: z.record(z.string(), z.json()),
-})
 const sent = z.object({ status: z.literal("sent"), email: z.email() })
 const claimsSent = (text: string) =>
   text

@@ -65,6 +65,44 @@ void test("both compilers accept valid types and reject an ordinary type error",
   }
 })
 
+void test("both compilers preserve recursive JSON input and output types", () => {
+  const imports = `import { z } from "zod"
+import { toolCall } from "../../evals/tool-call"
+`
+  for (const compiler of ["tsc", "tsrs"]) {
+    const valid = run(
+      compiler,
+      `${imports}
+export const input: z.input<typeof toolCall> = {
+  name: "example", arguments: { nested: [{ value: [null, true, "text", 42] }] }
+}
+export const output: { name: string; arguments: Record<string, z.core.util.JSONType> } = toolCall.parse(input)
+`
+    )
+    assert.equal(valid.status, 0, valid.stdout + valid.stderr)
+    for (const direction of ["input", "output"]) {
+      const invalid = run(
+        compiler,
+        `${imports}
+export const invalid: z.${direction}<typeof toolCall> = {
+  name: "example", arguments: { nested: [{ value: () => null }] }
+}
+`
+      )
+      assert.notEqual(invalid.status, 0)
+      assert.match(invalid.stdout, /TS2322/)
+    }
+    const missing = run(
+      compiler,
+      `${imports}
+export const missing: z.input<typeof toolCall> = { name: "example" }
+`
+    )
+    assert.notEqual(missing.status, 0)
+    assert.match(missing.stdout, /TS2741/)
+  }
+})
+
 void test("Effect checking catches an unexecuted Effect that TypeScript accepts", () => {
   const source = 'import { Effect } from "effect"\nEffect.succeed(42)\n'
   const ordinary = run("tsc", source)
