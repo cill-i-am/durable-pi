@@ -55,7 +55,7 @@ function run(compiler, source) {
   return result
 }
 
-test("both compilers accept valid types and reject an ordinary type error", () => {
+void test("both compilers accept valid types and reject an ordinary type error", () => {
   for (const compiler of ["tsc", "tsrs"]) {
     const valid = run(compiler, "export const answer: number = 42\n")
     assert.equal(valid.status, 0, valid.stdout + valid.stderr)
@@ -65,7 +65,7 @@ test("both compilers accept valid types and reject an ordinary type error", () =
   }
 })
 
-test("Effect checking catches an unexecuted Effect that TypeScript accepts", () => {
+void test("Effect checking catches an unexecuted Effect that TypeScript accepts", () => {
   const source = 'import { Effect } from "effect"\nEffect.succeed(42)\n'
   const ordinary = run("tsc", source)
   assert.equal(ordinary.status, 0, ordinary.stdout + ordinary.stderr)
@@ -80,7 +80,7 @@ test("Effect checking catches an unexecuted Effect that TypeScript accepts", () 
   )
 })
 
-test("Effect checking accepts a yielded Effect and rejects bare yield", () => {
+void test("Effect checking accepts a yielded Effect and rejects bare yield", () => {
   const checked = run(
     "effect",
     'import { Effect } from "effect"\nexport const task = Effect.gen(function* () { yield* Effect.void })\n'
