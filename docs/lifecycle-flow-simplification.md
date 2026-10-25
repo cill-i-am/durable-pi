@@ -15,7 +15,7 @@ Each pass must simplify a concrete flow behind an existing small interface, remo
 | 1 | Conversation root control | Name the domain eligibility rules and compare exact membership with sets. | `conversation-control, conversation-domain`: 20 tests passed; typecheck passed | Complete |
 | 2 | Terminal command records | Concentrate versioned records and result projection in the Terminal domain. | `terminal-domain, terminal-claim`: 21 tests passed; typecheck passed | Complete |
 | 3 | App event recovery lease | Separate the native job protocol and name lease eligibility inside the machine. | `app-lifecycle, app-delivery-machine, runner-boundaries`: 45 focused tests and composed static/unit/build passed; native CI pending | Implemented |
-| 4 | Routine warm owner | Own the shared actor lifetime in a routine-local module. | `routine-runner` | Planned |
+| 4 | Routine warm owner | Own the shared actor lifetime in a routine-local module. | `routine-runner`: 20 focused tests and composed static/unit/build passed; native CI pending | Implemented |
 | 5 | Conversation queue protocol | Concentrate supported job forms in one adapter-local protocol. | `conversation-runner` | Planned |
 | 6 | Communication recovery ledger | Put durable epoch persistence and retry acceptance behind a small local interface. | `communication-runner, communication-control-runtime` | Planned |
 | 7 | Workspace cleanup | Give cleanup-only settlement one internal operation, retaining exact claim fences. | `workspace-runner` | Planned |
