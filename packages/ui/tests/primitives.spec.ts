@@ -672,7 +672,7 @@ test("RTL: selection, select and drawer navigation keep direction", async ({
   ]) {
     await openStory(page, info, id, { direction: "rtl", autoplay: false })
     await noDocumentOverflow(page)
-    if (id.endsWith("select-closed")) {
+    if (id === "components-select--default") {
       const trigger = page.getByRole("combobox", { name: "Model", exact: true })
       await trigger.click()
       await page
