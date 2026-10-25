@@ -19,7 +19,7 @@ Each pass must simplify a concrete flow behind an existing small interface, remo
 | 5 | Conversation queue protocol | Concentrate supported job forms in one adapter-local protocol. | `conversation-runner`: 50 focused tests and composed static/unit/build passed; native CI pending | Implemented |
 | 6 | Communication recovery ledger | Put durable epoch persistence and retry acceptance behind a small local interface. | `communication-runner, communication-control-runtime`: 66 focused tests and composed static/unit/build passed; native CI pending | Implemented |
 | 7 | Workspace cleanup | Concentrate native job decoding, intent construction and stale-outcome projection; keep cleanup orchestration with its machine events. | `workspace-runner`: 44 focused tests passed; final composed gates pending | Implemented |
-| 8 | Memory summary controller | Concentrate controller read, commit and warm exhaustion retention. | `memory-summary-runner, memory-summary-runtime` | Planned |
+| 8 | Memory summary controller | Concentrate controller read, commit and warm exhaustion retention. | `memory-summary-runner, memory-summary-runtime`: 26 focused tests passed; final composed gates pending | Implemented |
 | 9 | Memory backup recovery | Concentrate scheduler persistence and claim attachment while retaining distinct domain recovery. | `memory-backup-runner, memory-backup-lifecycle, memory-backup-runtime` | Planned |
 | 10 | Model-default editing | Keep draft projections in the conversation feature and lifecycle targets in its machine. | `model-defaults-lifecycle, model-defaults-ownership` | Planned |
 
