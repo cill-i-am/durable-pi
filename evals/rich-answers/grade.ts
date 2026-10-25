@@ -16,13 +16,10 @@ import {
   weatherWindow,
   weatherRequestSchema,
 } from "../../src/rich-results/weather"
+import { toolCall } from "../tool-call"
 import { adaptiveDataChecks, cardChecks } from "./card-checks"
 import type { EvalCase } from "./cases"
 
-const toolCall = z.object({
-  name: z.string(),
-  arguments: z.record(z.string(), z.json()),
-})
 export const uiEvidence = z.object({
   failed: z.boolean(),
   fallback: z.boolean(),
