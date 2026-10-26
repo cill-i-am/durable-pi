@@ -5,7 +5,7 @@ import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import { cn } from "@workspace/ui/lib/utils"
 
 function TooltipProvider({
-  delay = 0,
+  delay = 200,
   ...props
 }: TooltipPrimitive.Provider.Props) {
   return <TooltipPrimitive.Provider delay={delay} {...props} />
@@ -44,10 +44,12 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           data-motion-reduced={reducedMotion ? "true" : undefined}
-          className={cn(
-            "ui-tooltip-popup max-w-[min(20rem,calc(100vw-2rem))] origin-(--transform-origin) rounded-md bg-foreground px-3 py-2 text-sm text-background shadow-(--shadow-menu)",
-            className
-          )}
+          className={(state) =>
+            cn(
+              "ui-tooltip-popup max-w-[min(20rem,calc(100vw-2rem))] origin-(--transform-origin) rounded-md bg-foreground px-3 py-2 text-sm text-background shadow-(--shadow-menu)",
+              typeof className === "function" ? className(state) : className
+            )
+          }
           {...props}
         />
       </TooltipPrimitive.Positioner>

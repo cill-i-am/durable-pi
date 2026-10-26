@@ -116,21 +116,28 @@ export function ActionDemo({
   return (
     <div className="flex max-w-md flex-col gap-4">
       <div className="flex flex-wrap gap-2">
-        {(lab.status === "idle" || lab.status === "error" || lab.busy) && (
-          <Button
-            {...lab.interactionProps}
-            disabled={lab.disabled}
-            aria-busy={lab.busy || undefined}
-            onClick={lab.status === "error" ? lab.retry : lab.start}
-          >
-            {lab.busy && <Spinner data-icon="inline-start" />}
-            {lab.busy
-              ? "Saving…"
-              : lab.status === "error"
-                ? "Try again"
-                : "Save default"}
-          </Button>
-        )}
+        <Button
+          {...lab.interactionProps}
+          disabled={
+            lab.disabled || (lab.status !== "idle" && lab.status !== "error")
+          }
+          focusableWhenDisabled
+          aria-busy={lab.busy || undefined}
+          onClick={lab.status === "error" ? lab.retry : lab.start}
+        >
+          {lab.busy && <Spinner data-icon="inline-start" />}
+          {lab.busy
+            ? "Saving…"
+            : lab.status === "error"
+              ? "Try again"
+              : lab.status === "success"
+                ? "Saved"
+                : lab.status === "uncertain"
+                  ? "Save not confirmed"
+                  : lab.status === "cancelled"
+                    ? "Save cancelled"
+                    : "Save default"}
+        </Button>
         {lab.busy && (
           <Button variant="outline" onClick={lab.cancel}>
             Cancel

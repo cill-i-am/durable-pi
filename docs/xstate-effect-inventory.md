@@ -76,6 +76,10 @@ Frontend paths after the first path in each cell are relative to that path's dir
 
 F04–F08 are published in [draft #220](https://github.com/cill-i-am/durable-pi/pull/220) with [frozen source and composed gates](evidence/xstate-effect/f04-f08-publication-manifest.json). F09–F14 and the three frontend follow-ups are in [draft #221](https://github.com/cill-i-am/durable-pi/pull/221), with [owner paths and final local evidence](xstate-effect-frontend-completion.md). Both include the [reproduced passkey focus correction](evidence/xstate-effect/f08-focus-repair/README.md). The first hosted browser runs exposed that correction after their Playwright cases passed. The current-main integration supersedes those revisions and passes the full local browser gate; the final #220/#221 checks and production release subsequently passed.
 
+## UI catalogue sound audition
+
+`packages/ui/src/stories/sound/sound.machine.ts` owns the optional Storybook audition's consent, cue admission, receipt deduplication, repetition limit and cancellation. `sound-owner.ts` starts its official Effect actor in an explicitly owned scope; `browser-sound.ts` owns each cue's AudioContext and oscillator lifetime. The component host interrupts and joins disposal. This is local synthetic review work, with no application playback integration, persistence or durable recovery owner. `packages/ui/tests/sound.test.ts` and `sound.spec.ts` cover admission and resource cleanup; browser audio instrumentation does not prove audible quality or physical-device behavior.
+
 ## Responsibility-based exclusions and coverage reconciliation
 
 These exclusions concern the named responsibility, not every future line in the directory. A module can contain both an excluded pure helper and an in-scope control path listed above.

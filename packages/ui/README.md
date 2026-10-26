@@ -39,3 +39,9 @@ Motion for React (`motion/react`, the current Framer Motion package) supplies in
 Wrap the review or application root in `MotionProvider`. Components also work without it and respect the OS preference. Storybook's **System motion / Reduced motion** toolbar can reduce motion further; it cannot override an OS preference to reduce it. Preference changes apply to mounted components. Native Base UI keeps focus, gestures, stacking and mounting ownership.
 
 [Primitive-by-primitive decisions](MOTION.md) cover movement, deliberate stillness, timing and reduced-motion behavior. Existing text, icons and native selected/checked states remain the source of meaning; motion only reinforces them.
+
+## Sound audition
+
+**Foundations / Sound / Audition** previews two optional outcome cues: Complete and Attention. Each visit starts muted. Enable sounds grants local consent; only an explicit cue button plays audio. Muting, leaving the example or hiding the page interrupts playback and releases its audio resources. Duplicate receipts and rapid repetition are suppressed; hidden requests are dropped rather than replayed later.
+
+This is a Storybook audition, not a global sound provider or an application integration. Routine control interaction, navigation, loading, cancellation and unconfirmed results remain silent. A future consumer must use confirmed operation outcomes and retain visible feedback. Browser tests observe audio lifetime with a stub; they do not establish audible quality, loudness, physical-device behavior or autoplay compatibility across browsers.

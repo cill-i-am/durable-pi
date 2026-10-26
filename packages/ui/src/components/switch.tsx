@@ -21,7 +21,7 @@ function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
       data-motion-reduced={reduced ? "true" : undefined}
       className={(state) =>
         cn(
-          "peer relative inline-flex h-5.5 w-9 shrink-0 items-center rounded-full border border-input bg-card p-0.5 shadow-(--shadow-switch-track) outline-none after:absolute after:-inset-x-1 after:-inset-y-[11px] focus-visible:border-ring focus-visible:[box-shadow:var(--shadow-switch-track),var(--shadow-focus)] aria-invalid:border-destructive data-checked:border-primary data-checked:bg-primary data-disabled:cursor-not-allowed data-disabled:opacity-50",
+          "peer relative inline-flex h-5.5 w-9 shrink-0 items-center rounded-full border border-input bg-card p-0.5 shadow-(--shadow-switch-track) outline-none after:absolute after:-inset-x-[5px] after:-inset-y-[12px] focus-visible:border-ring focus-visible:[box-shadow:var(--shadow-switch-track),var(--shadow-focus)] aria-invalid:border-destructive data-checked:border-primary data-checked:bg-primary data-disabled:cursor-not-allowed data-disabled:opacity-50",
           typeof className === "function" ? className(state) : className
         )
       }

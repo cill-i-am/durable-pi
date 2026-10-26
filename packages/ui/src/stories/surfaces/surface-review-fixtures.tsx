@@ -346,13 +346,25 @@ function ContextFooter() {
   )
 }
 
-function Outcome({ lab }: { lab: Lab }) {
+function Outcome({
+  lab,
+  operation = "save",
+}: {
+  lab: Lab
+  operation?: "save" | "archive"
+}) {
   if (lab.status === "error")
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" className="w-full">
         <AlertCircleIcon aria-hidden="true" />
-        <AlertTitle>Couldn’t save</AlertTitle>
-        <AlertDescription>{lab.error}</AlertDescription>
+        <AlertTitle>
+          {operation === "archive" ? "Couldn’t archive" : "Couldn’t save"}
+        </AlertTitle>
+        <AlertDescription>
+          {operation === "archive"
+            ? "The simulated archive failed. Retry the same request or reset."
+            : lab.error}
+        </AlertDescription>
         <AlertAction>
           <Button variant="outline" onClick={lab.retry}>
             Retry
@@ -362,9 +374,13 @@ function Outcome({ lab }: { lab: Lab }) {
     )
   if (lab.status === "uncertain")
     return (
-      <Alert variant="warning">
+      <Alert variant="warning" className="w-full">
         <AlertCircleIcon aria-hidden="true" />
-        <AlertTitle>Save not confirmed</AlertTitle>
+        <AlertTitle>
+          {operation === "archive"
+            ? "Archive not confirmed"
+            : "Save not confirmed"}
+        </AlertTitle>
         <AlertDescription>
           Check the result before trying again.
         </AlertDescription>
@@ -379,11 +395,19 @@ function Outcome({ lab }: { lab: Lab }) {
     return (
       <Status role="status">
         <CheckIcon aria-hidden="true" />
-        Saved in this simulation.
+        {operation === "archive"
+          ? "Archived in this simulation."
+          : "Saved in this simulation."}
       </Status>
     )
   if (lab.status === "cancelled")
-    return <Status role="status">Cancelled. No automatic retry.</Status>
+    return (
+      <Status role="status">
+        {operation === "archive"
+          ? "Archive cancelled. No automatic retry."
+          : "Cancelled. No automatic retry."}
+      </Status>
+    )
   return null
 }
 
@@ -551,7 +575,7 @@ function Product() {
   return (
     <CardFrame>
       <CardPanel>
-        <CardContent className="flex flex-col gap-4 p-5">
+        <CardContent className="@container/product flex flex-col gap-4 p-5">
           <div className="flex flex-col gap-2">
             <CardTitle>Travel wireless</CardTitle>
             <p className="text-base text-muted-foreground">Example retailer</p>
@@ -561,13 +585,22 @@ function Product() {
             A lighter pair that folds for travel.
           </p>
           <Badge variant="outline">Illustrative product</Badge>
-          <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Battery</dt>
-            <dd className="text-right font-medium tabular-nums">40 hours</dd>
-            <dt className="text-muted-foreground">Weight</dt>
-            <dd className="text-right font-medium tabular-nums">210 g</dd>
-            <dt className="text-muted-foreground">Noise cancelling</dt>
-            <dd className="text-right font-medium">Yes</dd>
+          <dl className="flex flex-col gap-2 text-sm">
+            {[
+              ["Battery", "40 hours"],
+              ["Weight", "210 g"],
+              ["Noise cancelling", "Yes"],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="grid grid-cols-1 gap-x-4 gap-y-1 @min-[12rem]/product:grid-cols-[minmax(0,1fr)_auto]"
+              >
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="font-medium tabular-nums @min-[12rem]/product:text-end">
+                  {value}
+                </dd>
+              </div>
+            ))}
           </dl>
         </CardContent>
       </CardPanel>
@@ -1024,10 +1057,10 @@ function MenuExample({ scenario = "success" }: { scenario?: Scenario }) {
       {lab.busy && (
         <Status role="status">
           <Spinner />
-          Working…
+          Archiving…
         </Status>
       )}
-      <Outcome lab={lab} />
+      <Outcome lab={lab} operation="archive" />
       {lab.status !== "idle" && !lab.busy && (
         <Button variant="outline" onClick={lab.reset}>
           Reset simulation
@@ -1077,10 +1110,10 @@ export const MenuFailureAndRetry: Story = {
     await userEvent.click(
       await screen.findByRole("menuitem", { name: /^Archive$/ })
     )
-    await expect(await canvas.findByText("Couldn’t save")).toBeVisible()
+    await expect(await canvas.findByText("Couldn’t archive")).toBeVisible()
     await userEvent.click(canvas.getByRole("button", { name: "Retry" }))
     await expect(
-      await canvas.findByText("Saved in this simulation.")
+      await canvas.findByText("Archived in this simulation.")
     ).toBeVisible()
   },
 }

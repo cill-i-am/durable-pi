@@ -34,6 +34,8 @@ Review each component in Storybook with **System motion**, then **Reduced motion
 | Separator | Still. Group boundaries never animate. | Same. |
 | IconSwap | Opt-in contextual icon pair, 0.25↔1 scale and 4px blur use a 300ms spring with no bounce; a separate 100ms CSS opacity fade stays interruptible. Both layers stay mounted; no initial animation. | 100ms opacity only, no blur or scale. |
 
+Tooltip pointer disclosure waits 200ms by default. Native keyboard focus and the provider's adjacent-tooltip skip behavior remain immediate. Callers can use the existing delay prop for deliberate exceptions.
+
 ## Composition and ownership
 
 `MotionProvider` is a plain MotionConfig boundary; source-exported components also work on their own. `useUIReducedMotion` subscribes to the native media query because Motion 14.3's own hook reads it once. Per-component reduced flags reach portals without depending on a DOM ancestor.
@@ -41,6 +43,8 @@ Review each component in Storybook with **System motion**, then **Reduced motion
 Base UI owns focus, input state, popup presence, gestures, snap geometry and restoration. Its CSS transitions remain interruptible; no second AnimatePresence or drag controller competes with the native drawer. Motion owns springs and ToggleGroup selection interpolation; Tabs uses Base UI’s measured indicator with CSS transitions. XState/Effect continues to own the asynchronous examination scenarios.
 
 Use `IconSwap` inside an owner with a stable accessible name. Its layers are decorative; the parent exposes pressed/checked/selected state or visible status text. Do not animate navigation icons or frequently repeated row actions.
+
+The separate **Foundations / Sound** audition starts muted and previews only optional Complete/Attention cues. It adds no sound to primitives. Its scoped XState/Effect owner admits previews and owns audio cleanup; visual feedback works without audio. Sound is independent of motion preference and always has its own explicit consent and mute control.
 
 ## References
 
