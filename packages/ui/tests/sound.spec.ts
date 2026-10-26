@@ -294,6 +294,7 @@ test.describe("sound audition", () => {
         name: "Play Complete",
         exact: true,
       })
+      await expect(play).toBeEnabled()
       await play.focus()
       await page.keyboard.press("Enter")
       await expect(page.getByRole("status")).toContainText(
@@ -323,6 +324,7 @@ test.describe("sound audition", () => {
     })
     await enable.focus()
     await page.keyboard.press("Enter")
+    await expect(complete).toBeEnabled()
     await complete.focus()
     await page.keyboard.press("Enter")
     await expect.poll(async () => (await metrics(page)).started).toBe(2)
