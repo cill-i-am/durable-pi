@@ -248,7 +248,7 @@ test.describe("sound audition", () => {
     expect((await metrics(page)).created).toBe(1)
   })
 
-  test("story unmount joins native close; returning starts muted", async ({
+  test("story remount joins native close; replacement starts muted", async ({
     page,
   }, info) => {
     await stubAudio(page, "held")
@@ -262,28 +262,16 @@ test.describe("sound audition", () => {
     await expect.poll(async () => (await metrics(page)).started).toBe(2)
     await page.evaluate(() =>
       (window as unknown as AudioWindow).__STORYBOOK_ADDONS_CHANNEL__.emit(
-        "setCurrentStory",
-        { storyId: "foundations-system--tokens", viewMode: "story" }
+        "forceRemount",
+        { storyId: "foundations-sound--audition" }
       )
     )
-    await expect(
-      page.getByRole("heading", {
-        name: "Type, colour & geometry",
-        exact: true,
-      })
-    ).toBeVisible()
     await expect.poll(async () => (await metrics(page)).closing).toBe(1)
     expect((await metrics(page)).closed).toBe(0)
     await page.evaluate(() =>
       (window as unknown as AudioWindow).__releaseSoundClose()
     )
     await expect.poll(async () => (await metrics(page)).closed).toBe(1)
-    await page.evaluate(() =>
-      (window as unknown as AudioWindow).__STORYBOOK_ADDONS_CHANNEL__.emit(
-        "setCurrentStory",
-        { storyId: "foundations-sound--audition", viewMode: "story" }
-      )
-    )
     await expect(
       page.getByRole("button", { name: "Enable sound", exact: true })
     ).toBeEnabled()
