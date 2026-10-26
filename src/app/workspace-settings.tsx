@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import { Schema } from "effect"
 import {
   ArrowLeft,
@@ -19,7 +20,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { authClient } from "@/auth/client"
-import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useOverlayMobile } from "@/components/ui/responsive-overlay"
@@ -293,7 +293,11 @@ function SettingsNavigation({
         ) : (
           agent && (
             <>
-              <AgentMark tone={agentTone(agent.id)} />
+              <AgentAvatar
+                name={agent.id}
+                label={agent.name}
+                aria-hidden="true"
+              />
               <span>{agent.name}</span>
             </>
           )
