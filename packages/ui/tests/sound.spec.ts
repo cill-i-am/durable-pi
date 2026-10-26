@@ -290,16 +290,78 @@ test.describe("sound audition", () => {
       await page
         .getByRole("button", { name: "Enable sound", exact: true })
         .click()
-      await page
-        .getByRole("button", { name: "Play Complete", exact: true })
-        .click()
+      const play = page.getByRole("button", {
+        name: "Play Complete",
+        exact: true,
+      })
+      await play.focus()
+      await page.keyboard.press("Enter")
       await expect(page.getByRole("status")).toContainText(
         mode === "blocked" ? "Audio was blocked" : "Web Audio is unavailable"
       )
       await expect(
         page.getByRole("button", { name: "Enable sound", exact: true })
       ).toBeEnabled()
+      await expect(play).toBeFocused()
+      await expect(play).toBeDisabled()
       expect((await metrics(page)).started).toBe(0)
       if (mode === "blocked") expect((await metrics(page)).closed).toBe(1)
     })
+
+  test("keyboard focus survives playback, cooldown and held mute cleanup", async ({
+    page,
+  }, info) => {
+    await stubAudio(page, "held")
+    await openAudition(page, info)
+    const enable = page.getByRole("button", {
+      name: "Enable sound",
+      exact: true,
+    })
+    const complete = page.getByRole("button", {
+      name: "Play Complete",
+      exact: true,
+    })
+    await enable.focus()
+    await page.keyboard.press("Enter")
+    await complete.focus()
+    await page.keyboard.press("Enter")
+    await expect.poll(async () => (await metrics(page)).started).toBe(2)
+    await expect(complete).toBeFocused()
+    await expect(complete).toBeDisabled()
+    await page.keyboard.press("Enter")
+    expect((await metrics(page)).created).toBe(1)
+    await expect.poll(async () => (await metrics(page)).closing).toBe(1)
+    await expect(complete).toBeFocused()
+    await page.evaluate(() =>
+      (window as unknown as AudioWindow).__releaseSoundClose()
+    )
+    await expect(page.getByRole("status")).toContainText("Wait two seconds")
+    await expect(complete).toBeFocused()
+    await page.keyboard.press("Enter")
+    expect((await metrics(page)).created).toBe(1)
+    await expect(complete).toBeEnabled()
+    await expect(complete).toBeFocused()
+
+    const attention = page.getByRole("button", {
+      name: "Play Attention",
+      exact: true,
+    })
+    await attention.focus()
+    await page.keyboard.press("Enter")
+    await expect.poll(async () => (await metrics(page)).started).toBe(4)
+    const mute = page.getByRole("button", { name: "Mute sound", exact: true })
+    await mute.focus()
+    await page.keyboard.press("Enter")
+    await expect.poll(async () => (await metrics(page)).closing).toBe(2)
+    await expect(enable).toBeFocused()
+    await expect(enable).toBeDisabled()
+    await page.keyboard.press("Enter")
+    expect((await metrics(page)).created).toBe(2)
+    await page.evaluate(() =>
+      (window as unknown as AudioWindow).__releaseSoundClose()
+    )
+    await expect(enable).toBeEnabled()
+    await expect(enable).toBeFocused()
+    expect((await metrics(page)).closed).toBe(2)
+  })
 })

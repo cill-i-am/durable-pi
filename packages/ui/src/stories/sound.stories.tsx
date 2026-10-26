@@ -38,6 +38,7 @@ function SoundAudition() {
           static
           variant="outline"
           disabled={!sound.canEnable && sound.muted}
+          focusableWhenDisabled={sound.ready}
           onClick={() => sound.send({ type: sound.muted ? "ENABLE" : "MUTE" })}
         >
           {sound.muted ? "Enable sound" : "Mute sound"}
@@ -55,6 +56,7 @@ function SoundAudition() {
             static
             variant="outline"
             disabled={!sound.canPlay}
+            focusableWhenDisabled={sound.ready}
             onClick={() => play("complete")}
           >
             Play Complete
@@ -71,6 +73,7 @@ function SoundAudition() {
             static
             variant="outline"
             disabled={!sound.canPlay}
+            focusableWhenDisabled={sound.ready}
             onClick={() => play("attention")}
           >
             Play Attention
