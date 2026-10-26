@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import {
   Archive,
   Activity,
@@ -15,7 +16,7 @@ import {
 
 import { AgentProfile, homeAgentId } from "@/agents/contracts"
 import { authClient } from "@/auth/client"
-import { AgentMark, agentTone } from "@/components/agent-mark"
+import { AgentMark } from "@/components/agent-mark"
 import { AgentStatusMarker, agentStatusLabel } from "@/components/agent-status"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -210,7 +211,11 @@ export function AgentSidebar({
                     onClick={() => setOpenMobile(false)}
                   >
                     <span className="agent-avatar">
-                      <AgentMark tone={agentTone(agent.id)} />
+                      <AgentAvatar
+                        name={agent.id}
+                        label={agent.name}
+                        aria-hidden="true"
+                      />
                       <AgentStatusMarker status={state} />
                     </span>
                     <span className="agent-sidebar-copy flex min-w-0 flex-col gap-0.5">
@@ -409,7 +414,11 @@ export function AgentEditor({
         </SheetHeader>
         <form onSubmit={save}>
           <div className="agent-editor-preview">
-            <AgentMark tone={agentTone(editor.id)} />
+            <AgentAvatar
+              name={editor.id}
+              label={name || "New agent"}
+              aria-hidden="true"
+            />
             <span>{name || "A new point of view"}</span>
           </div>
           <FieldGroup>

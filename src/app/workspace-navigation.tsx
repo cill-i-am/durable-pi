@@ -1,3 +1,4 @@
+import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import {
   Activity,
   BookOpen,
@@ -20,7 +21,6 @@ import {
 import { useRef } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
-import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -292,7 +292,11 @@ export function WorkspaceNavigation({
                         search.choose({ kind: "agent", id: agent.id })
                       }
                     >
-                      <AgentMark tone={agentTone(agent.id)} />
+                      <AgentAvatar
+                        name={agent.id}
+                        label={agent.name}
+                        aria-hidden="true"
+                      />
                       <span className="min-w-0 flex-1 truncate">
                         {agent.name}
                       </span>

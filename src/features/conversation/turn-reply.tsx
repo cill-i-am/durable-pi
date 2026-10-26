@@ -1,5 +1,6 @@
+import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
+
 import { ActivityOrb } from "@/components/activity-visuals"
-import { AgentMark, agentTone } from "@/components/agent-mark"
 import { CopyButton } from "@/components/copy-button"
 import { Markdown } from "@/components/markdown"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -45,7 +46,11 @@ export function TurnReply({
     <Message align="start" className="assistant-message">
       <MessageContent>
         <MessageHeader className="sr-only">
-          <AgentMark tone={agentId ? agentTone(agentId) : "primary"} />
+          <AgentAvatar
+            name={agentId ?? "home"}
+            label={agentName}
+            aria-hidden="true"
+          />
           <span className="assistant-label">{agentName}</span>
         </MessageHeader>
         {!!turn.skills?.length && (

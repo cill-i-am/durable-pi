@@ -1,3 +1,4 @@
+import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import { Schema } from "effect"
 import { ArrowRight, ChevronDown, Clock3, RefreshCw } from "lucide-react"
 
@@ -8,7 +9,6 @@ import {
   type ActivityAgent,
   type ActivityEntry,
 } from "@/activity/contracts"
-import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -184,9 +184,11 @@ export function ActivityTimeline({
                   hour12: false,
                 })}
               </time>
-              <AgentMark
-                tone={agentTone(entry.agent.id)}
-                className="size-6 shrink-0"
+              <AgentAvatar
+                name={entry.agent.id}
+                label={entry.agent.name}
+                size={24}
+                aria-hidden="true"
               />
               <span className="min-w-0 flex-1">
                 <span className="block text-xs text-muted-foreground">

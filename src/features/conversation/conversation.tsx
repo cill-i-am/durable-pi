@@ -1,3 +1,4 @@
+import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import { Array as EffectArray, Option, Schema } from "effect"
 import {
   ArrowUp,
@@ -26,7 +27,6 @@ import {
 
 import type { AgentProfile } from "@/agents/contracts"
 import { ActivityBorder } from "@/components/activity-visuals"
-import { AgentMark, agentTone } from "@/components/agent-mark"
 import { AgentStatus } from "@/components/agent-status"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
@@ -238,7 +238,7 @@ export function Conversation({
       <header className="chat-header">
         <div className="chat-identity">
           <SidebarTrigger />
-          <AgentMark tone={agentTone(agent.id)} />
+          <AgentAvatar name={agent.id} label={agent.name} aria-hidden="true" />
           <div className="chat-identity-copy">
             <div className="chat-identity-title">
               <h1>{agent.name}</h1>
@@ -319,7 +319,11 @@ export function Conversation({
                 <MessageScrollerItem messageId="empty">
                   <Empty className="conversation-empty">
                     <EmptyHeader>
-                      <AgentMark tone={agentTone(agent.id)} />
+                      <AgentAvatar
+                        name={agent.id}
+                        label={agent.name}
+                        aria-hidden="true"
+                      />
                       <EmptyTitle>Hello, {name.split(" ")[0]}.</EmptyTitle>
                       <EmptyDescription>
                         What would you like to work on?
