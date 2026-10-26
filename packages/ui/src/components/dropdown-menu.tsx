@@ -173,7 +173,7 @@ function DropdownMenuLabel({
 }
 
 const menuItemClassName =
-  "relative flex min-h-11 cursor-default items-center gap-2 rounded-sm px-3 py-2 text-base/5 outline-none select-none data-highlighted:bg-muted focus:bg-muted focus-visible:[box-shadow:inset_0_0_0_2px_var(--ring)] data-inset:pl-9 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0"
+  "group/menu-item relative flex min-h-11 md:pointer-fine:not-any-pointer-coarse:min-h-8 md:pointer-fine:not-any-pointer-coarse:py-1.5 cursor-default items-center gap-2 rounded-sm px-3 py-2 text-base/5 outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:[box-shadow:inset_0_0_0_2px_var(--ring)] data-inset:pl-9 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0"
 
 function DropdownMenuItem({
   className,
@@ -200,7 +200,7 @@ function DropdownMenuItem({
       data-variant={variant}
       className={cn(
         menuItemClassName,
-        "data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:data-highlighted:bg-destructive/10",
+        "data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive/10 data-[variant=destructive]:data-highlighted:text-destructive",
         className
       )}
       {...props}
@@ -246,7 +246,11 @@ function DropdownMenuSubTrigger({
         openOnHover={!mobile}
         data-slot="dropdown-menu-sub-trigger"
         data-inset={inset}
-        className={cn(menuItemClassName, "data-popup-open:bg-muted", className)}
+        className={cn(
+          menuItemClassName,
+          "data-popup-open:bg-accent data-popup-open:text-accent-foreground",
+          className
+        )}
         {...props}
       >
         {children}
@@ -358,7 +362,10 @@ function DropdownMenuShortcut({
   return (
     <span
       data-slot="dropdown-menu-shortcut"
-      className={cn("ml-auto pl-4 text-sm text-muted-foreground", className)}
+      className={cn(
+        "ml-auto pl-4 text-sm text-muted-foreground group-focus/menu-item:text-accent-foreground group-data-highlighted/menu-item:text-accent-foreground group-data-popup-open/menu-item:text-accent-foreground group-data-[variant=destructive]/menu-item:text-destructive",
+        className
+      )}
       {...props}
     />
   )

@@ -37,7 +37,7 @@
   max-height: calc(100dvh - 48px);
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sheet);
+  @apply rounded-sheet;
   background: var(--canvas, var(--background));
   color: var(--foreground);
   box-shadow: var(--shadow-dialog, 0 24px 60px #18181b26);
@@ -132,7 +132,7 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-md);
+  @apply rounded-md;
   background: var(--muted);
 }
 .alert-dialog-media > svg {
@@ -153,6 +153,7 @@
   padding: 16px;
 }
 .sheet-header {
+  gap: 8px;
   padding-inline-end: 60px;
 }
 .sheet-footer {
@@ -213,14 +214,14 @@
   inset: 0 0 0 auto;
   width: min(100%, 480px);
   max-height: 100%;
-  border-radius: var(--radius-sheet) 0 0 var(--radius-sheet);
+  @apply rounded-l-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="left"] {
   position: absolute;
   inset: 0 auto 0 0;
   width: min(100%, 480px);
   max-height: 100%;
-  border-radius: 0 var(--radius-sheet) var(--radius-sheet) 0;
+  @apply rounded-r-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="top"] {
   position: absolute;
@@ -228,7 +229,7 @@
   width: 100%;
   max-width: none;
   max-height: 80dvh;
-  border-radius: 0 0 var(--radius-sheet) var(--radius-sheet);
+  @apply rounded-b-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="bottom"] {
   position: absolute;
@@ -236,7 +237,7 @@
   width: 100%;
   max-width: none;
   max-height: 80dvh;
-  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  @apply rounded-t-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="right"]:is(
     [data-starting-style],
@@ -276,7 +277,7 @@
   max-height: 100%;
   min-height: 0;
   border: 0;
-  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  @apply rounded-t-sheet rounded-none;
   background: var(--canvas, var(--background));
   box-shadow: var(--shadow-drawer, 0 -1px 0 #18181b12, 0 -10px 28px #18181b18);
   transform: translateY(

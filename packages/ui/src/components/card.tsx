@@ -106,8 +106,10 @@ const footerVariants = cva(
     variants: {
       variant: {
         context: "min-h-14",
-        actions: "min-h-18 justify-end",
-        split: "min-h-18 justify-between",
+        actions:
+          "min-h-18 justify-end md:pointer-fine:not-any-pointer-coarse:min-h-14 md:pointer-fine:not-any-pointer-coarse:py-2",
+        split:
+          "min-h-18 justify-between md:pointer-fine:not-any-pointer-coarse:min-h-14 md:pointer-fine:not-any-pointer-coarse:py-2",
       },
     },
     defaultVariants: { variant: "context" },

@@ -13,13 +13,13 @@ const buttonVariants = cva(
         default:
           "border-primary bg-primary bg-[image:var(--gradient-button)] text-primary-foreground shadow-(--shadow-button) not-disabled:hover:bg-[image:var(--gradient-button-hover)] not-disabled:active:bg-[image:var(--gradient-button-pressed)] not-disabled:active:shadow-(--shadow-button-pressed) not-disabled:active:focus-visible:[box-shadow:var(--shadow-button-pressed),var(--shadow-focus)]",
         outline:
-          "border-input bg-card bg-[image:var(--gradient-outline)] text-foreground shadow-(--shadow-button) not-disabled:hover:bg-[image:linear-gradient(var(--control-hover),var(--control-hover))] not-disabled:active:bg-[image:var(--gradient-button-pressed)] not-disabled:active:shadow-(--shadow-button-pressed) not-disabled:active:focus-visible:[box-shadow:var(--shadow-button-pressed),var(--shadow-focus)]",
+          "border-input bg-card bg-[image:var(--gradient-outline)] text-card-foreground shadow-(--shadow-button) not-disabled:hover:bg-[image:linear-gradient(var(--accent),var(--accent))] not-disabled:hover:text-accent-foreground not-disabled:active:bg-[image:var(--gradient-button-pressed)] not-disabled:active:text-card-foreground not-disabled:active:shadow-(--shadow-button-pressed) not-disabled:active:focus-visible:[box-shadow:var(--shadow-button-pressed),var(--shadow-focus)]",
         secondary:
-          "border-border bg-muted bg-[image:var(--gradient-secondary)] text-foreground shadow-(--shadow-button) not-disabled:hover:bg-[image:linear-gradient(var(--control-hover),var(--control-hover))] not-disabled:active:bg-[image:var(--gradient-button-pressed)] not-disabled:active:shadow-(--shadow-button-pressed) not-disabled:active:focus-visible:[box-shadow:var(--shadow-button-pressed),var(--shadow-focus)]",
+          "border-border bg-secondary bg-[image:var(--gradient-secondary)] text-secondary-foreground shadow-(--shadow-button) not-disabled:hover:bg-[image:linear-gradient(var(--accent),var(--accent))] not-disabled:hover:text-accent-foreground not-disabled:active:bg-[image:var(--gradient-button-pressed)] not-disabled:active:text-secondary-foreground not-disabled:active:shadow-(--shadow-button-pressed) not-disabled:active:focus-visible:[box-shadow:var(--shadow-button-pressed),var(--shadow-focus)]",
         destructive:
           "border-(--destructive-fill) bg-(--destructive-fill) bg-[image:var(--gradient-button)] text-destructive-foreground shadow-(--shadow-button) not-disabled:hover:bg-[image:var(--gradient-button-hover)] not-disabled:active:bg-[image:var(--gradient-button-pressed)] not-disabled:active:shadow-(--shadow-button-pressed) not-disabled:active:focus-visible:[box-shadow:var(--shadow-button-pressed),var(--shadow-focus)]",
         ghost:
-          "bg-transparent text-foreground not-disabled:hover:bg-(--control-hover) focus-visible:[box-shadow:var(--shadow-focus)] not-disabled:active:bg-(--control-hover)",
+          "bg-transparent text-foreground not-disabled:hover:bg-accent not-disabled:hover:text-accent-foreground focus-visible:[box-shadow:var(--shadow-focus)] not-disabled:active:bg-accent not-disabled:active:text-accent-foreground",
         link: "bg-transparent text-primary underline-offset-4 not-disabled:hover:underline focus-visible:[box-shadow:var(--shadow-focus)]",
       },
       size: {

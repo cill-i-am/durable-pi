@@ -16,7 +16,7 @@ function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
       data-motion-reduced={reduced ? "true" : undefined}
       className={(state) =>
         cn(
-          "peer relative inline-flex size-4.5 shrink-0 items-center justify-center rounded-[5px] border border-input bg-card text-primary-foreground outline-none after:absolute after:-inset-[13px] focus-visible:border-ring focus-visible:shadow-(--shadow-focus) aria-invalid:border-destructive data-indeterminate:border-primary data-indeterminate:bg-primary data-checked:border-primary data-checked:bg-primary data-disabled:cursor-not-allowed data-disabled:opacity-50",
+          "peer relative inline-flex size-4.5 shrink-0 items-center justify-center rounded-sm border border-input bg-card text-primary-foreground outline-none after:absolute after:-inset-[13px] focus-visible:border-ring focus-visible:shadow-(--shadow-focus) aria-invalid:border-destructive data-indeterminate:border-primary data-indeterminate:bg-primary data-checked:border-primary data-checked:bg-primary data-disabled:cursor-not-allowed data-disabled:opacity-50",
           typeof className === "function" ? className(state) : className
         )
       }

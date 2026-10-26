@@ -341,6 +341,17 @@ test("card frame: header action stays beside the title at phone width and grows 
     await expect(
       page.locator('[data-slot="card-frame-description"]')
     ).toHaveCount(0)
+    const radiusInset = await page
+      .locator('[data-slot="card-frame"]')
+      .evaluate(
+        (node) =>
+          Number.parseFloat(getComputedStyle(node).borderRadius) -
+          Number.parseFloat(
+            getComputedStyle(node.querySelector('[data-slot="card-panel"]')!)
+              .borderRadius
+          )
+      )
+    expect(radiusInset).toBe(4)
     await noDocumentOverflow(page)
   }
 })
@@ -388,6 +399,229 @@ test("button sizes: compact on fine-pointer desktops, generous on phones and wid
         .boundingBox())!.height
     ).toBeGreaterThanOrEqual(44)
   }
+})
+
+test("primitive density: form and selection controls match buttons without shrinking touch targets", async ({
+  page,
+}, info) => {
+  for (const scale of [100, 200] as const) {
+    for (const [id, slot] of [
+      ["components-input--default", "input"],
+      ["components-select--default", "select-trigger"],
+      ["components-tabs--default", "tabs-trigger"],
+      ["components-togglegroup--default", "toggle-group-item"],
+    ] as const) {
+      await openStory(page, info, id, { scale, autoplay: false })
+      const compact = await page.evaluate(
+        () =>
+          matchMedia("(min-width: 48rem)").matches &&
+          matchMedia("(pointer: fine)").matches &&
+          !matchMedia("(any-pointer: coarse)").matches
+      )
+      const control = page.locator(`[data-slot="${slot}"]`).first()
+      const height = (await control.boundingBox())!.height
+      expect(height).toBeGreaterThanOrEqual(((compact ? 36 : 44) * scale) / 100)
+      if (scale === 100) expect(height).toBe(compact ? 36 : 44)
+      if (slot === "input" || slot === "select-trigger")
+        await expect(control).toHaveCSS(
+          "font-size",
+          `${((compact ? 14 : 16) * scale) / 100}px`
+        )
+      await noDocumentOverflow(page)
+    }
+  }
+  // A wide touch viewport must retain its touch sizing and editable text.
+  if (await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches)) {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await openStory(page, info, "components-input--default", {
+      autoplay: false,
+    })
+    const input = page.getByRole("textbox", { name: "Name", exact: true })
+    await expect(input).toHaveCSS("font-size", "16px")
+    expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  }
+})
+
+test("list density: desktop menus and tables tighten while phone rows retain their space", async ({
+  page,
+}, info) => {
+  const compact = await page.evaluate(
+    () =>
+      matchMedia("(min-width: 48rem)").matches &&
+      matchMedia("(pointer: fine)").matches &&
+      !matchMedia("(any-pointer: coarse)").matches
+  )
+  await openStory(page, info, "components-dropdownmenu--playground", {
+    autoplay: false,
+  })
+  const edit = page.getByRole("menuitem", { name: /^Edit/ })
+  await expect(edit).toBeVisible()
+  expect((await edit.boundingBox())!.height).toBe(compact ? 32 : 44)
+  await openStory(page, info, "components-table--default", { autoplay: false })
+  const header = page
+    .locator('[data-slot="table-header"] [data-slot="table-row"]')
+    .first()
+  const row = page
+    .locator('[data-slot="table-body"] [data-slot="table-row"]')
+    .first()
+  // Collapsed borders can contribute half a CSS pixel at the row edges.
+  expect((await header.boundingBox())!.height).toBeGreaterThanOrEqual(
+    (compact ? 36 : 44) - 1
+  )
+  expect((await header.boundingBox())!.height).toBeLessThanOrEqual(
+    (compact ? 36 : 44) + 1
+  )
+  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(
+    (compact ? 44 : 60) - 1
+  )
+  expect((await row.boundingBox())!.height).toBeLessThanOrEqual(
+    (compact ? 44 : 60) + 1
+  )
+  await noDocumentOverflow(page)
+})
+
+test("alert: narrow actions follow full-width content and inline errors stay compact", async ({
+  page,
+}, info) => {
+  await openStory(page, info, "components-alert--long-content", {
+    autoplay: false,
+  })
+  const title = page.locator('[data-slot="alert-title"]')
+  const description = page.locator('[data-slot="alert-description"]')
+  const action = page.getByRole("button", { name: "Reconnect", exact: true })
+  const titleBox = (await title.boundingBox())!
+  const descriptionBox = (await description.boundingBox())!
+  const actionBox = (await action.boundingBox())!
+  expect(titleBox.width).toBeGreaterThan(220)
+  expect(actionBox.y).toBeGreaterThanOrEqual(
+    descriptionBox.y + descriptionBox.height
+  )
+  expect(Math.abs(actionBox.x - titleBox.x)).toBeLessThanOrEqual(1)
+  await noDocumentOverflow(page)
+  await openStory(page, info, "components-alert--inline-error", {
+    autoplay: false,
+  })
+  const alertBox = (await page.getByRole("alert").boundingBox())!
+  expect(alertBox.height).toBeLessThan(44)
+})
+
+test("separator: both orientations draw a visible line", async ({
+  page,
+}, info) => {
+  for (const orientation of ["horizontal", "vertical"] as const) {
+    await openStory(
+      page,
+      info,
+      `components-separator--${orientation === "horizontal" ? "default" : "vertical"}`,
+      { autoplay: false }
+    )
+    const separator = page.locator('[data-slot="separator"]')
+    await expect(separator).toHaveAttribute("data-orientation", orientation)
+    const box = (await separator.boundingBox())!
+    expect(orientation === "horizontal" ? box.height : box.width).toBe(1)
+    expect(
+      orientation === "horizontal" ? box.width : box.height
+    ).toBeGreaterThan(20)
+  }
+})
+
+test("theme: standard shadcn surface pairs and radius reach the actual primitives", async ({
+  page,
+}, info) => {
+  const setTheme = async () => {
+    await page.evaluate(() => {
+      for (const [name, value] of Object.entries({
+        "--radius": "1rem",
+        "--foreground": "rgb(40, 42, 44)",
+        "--card": "rgb(234, 244, 234)",
+        "--card-foreground": "rgb(18, 58, 28)",
+        "--secondary": "rgb(242, 228, 202)",
+        "--secondary-foreground": "rgb(78, 42, 12)",
+        "--popover": "rgb(226, 237, 250)",
+        "--popover-foreground": "rgb(20, 42, 78)",
+        "--accent": "rgb(228, 215, 242)",
+        "--accent-foreground": "rgb(62, 24, 92)",
+      })) {
+        document.documentElement.style.setProperty(name, value)
+      }
+    })
+  }
+  await openStory(page, info, "components-cardframe--header-and-action", {
+    autoplay: false,
+  })
+  await setTheme()
+  await page.locator('[data-slot="card-frame"]').evaluate((node) => {
+    node.style.setProperty("--radius", "1.25rem")
+  })
+  await expect(page.locator('[data-slot="card-panel"]')).toHaveCSS(
+    "background-color",
+    "rgb(234, 244, 234)"
+  )
+  await expect(page.locator('[data-slot="card-frame-title"]')).toHaveCSS(
+    "color",
+    "rgb(18, 58, 28)"
+  )
+  await expect(page.locator('[data-slot="card-panel"]')).toHaveCSS(
+    "border-radius",
+    "20px"
+  )
+  await expect(page.locator('[data-slot="card-frame"]')).toHaveCSS(
+    "border-radius",
+    "24px"
+  )
+  await expect(page.getByRole("button", { name: "Add note" })).toHaveCSS(
+    "border-radius",
+    "20px"
+  )
+  await openStory(page, info, "foundations-system--tokens", {
+    autoplay: false,
+  })
+  await setTheme()
+  await expect(
+    page.getByRole("button", { name: "Refresh", exact: true })
+  ).toHaveCSS("background-color", "rgb(242, 228, 202)")
+  await expect(
+    page.getByRole("button", { name: "Refresh", exact: true })
+  ).toHaveCSS("color", "rgb(78, 42, 12)")
+  const texture = await page
+    .getByRole("button", { name: "Refresh", exact: true })
+    .evaluate((node) => getComputedStyle(node).backgroundImage)
+  expect(texture).toContain("gradient")
+  expect(texture).not.toContain("228, 215, 242")
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    for (const [name, foreground] of [
+      ["Refresh", "rgb(78, 42, 12)"],
+      ["Connect", "rgb(18, 58, 28)"],
+    ] as const) {
+      const button = page.getByRole("button", { name, exact: true })
+      await button.hover()
+      await expect(button).toHaveCSS("color", "rgb(62, 24, 92)")
+      await page.mouse.down()
+      await expect(button).toHaveCSS("color", foreground)
+      await page.mouse.up()
+    }
+  }
+  await openStory(page, info, "components-select--default", {
+    autoplay: false,
+  })
+  await setTheme()
+  await page.getByRole("combobox", { name: "Model", exact: true }).click()
+  const option = page.getByRole("option", { name: "GPT-6 Astra", exact: true })
+  await expect(option).toBeVisible()
+  const mobile = await page.evaluate(
+    () => matchMedia("(max-width: 767px)").matches
+  )
+  await expect(option).toHaveCSS(
+    "color",
+    mobile ? "rgb(40, 42, 44)" : "rgb(20, 42, 78)"
+  )
+  await openStory(page, info, "components-dialog--open", { autoplay: false })
+  const dialog = page.getByRole("dialog", { name: "Edit profile", exact: true })
+  await dialog.evaluate((node) => node.style.setProperty("--radius", "1.25rem"))
+  await expect(dialog).toHaveCSS("border-top-left-radius", "34px")
+  await expect(
+    dialog.getByRole("textbox", { name: "Name", exact: true })
+  ).toHaveCSS("border-radius", "20px")
 })
 
 test("catalogue: each primitive has independent docs and controls", async ({

@@ -98,7 +98,7 @@ function SelectTrigger({
         data-slot="select-trigger"
         className={(state) =>
           cn(
-            "rounded-control flex min-h-11 w-full min-w-0 items-center justify-between gap-2 border border-input bg-card px-3 py-2 text-md text-foreground outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground sm:text-base sm:leading-5 [&_svg]:size-4 [&_svg]:shrink-0",
+            "rounded-control flex min-h-11 w-full min-w-0 items-center justify-between gap-2 border border-input bg-card px-3 py-2 text-md text-card-foreground outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5 md:pointer-fine:not-any-pointer-coarse:text-base md:pointer-fine:not-any-pointer-coarse:leading-5 [&_svg]:size-4 [&_svg]:shrink-0",
             typeof className === "function" ? className(state) : className
           )
         }
@@ -214,7 +214,7 @@ function SelectItem({
       data-slot="select-item"
       className={(state) =>
         cn(
-          "relative flex min-h-11 w-full cursor-default items-center gap-2 rounded-sm py-2 ps-3 pe-9 text-md text-foreground outline-none select-none focus-visible:[box-shadow:inset_0_0_0_2px_var(--ring)] data-highlighted:bg-accent sm:text-base sm:leading-5 data-disabled:pointer-events-none data-disabled:opacity-50",
+          "relative flex min-h-11 w-full cursor-default items-center gap-2 rounded-sm py-2 ps-3 pe-9 text-md text-foreground outline-none select-none focus-visible:[box-shadow:inset_0_0_0_2px_var(--ring)] data-highlighted:bg-accent data-highlighted:text-accent-foreground md:text-popover-foreground md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5 md:pointer-fine:not-any-pointer-coarse:text-base md:pointer-fine:not-any-pointer-coarse:leading-5 data-disabled:pointer-events-none data-disabled:opacity-50",
           typeof className === "function" ? className(state) : className
         )
       }
@@ -257,7 +257,7 @@ function SelectScrollUpButton({
       data-slot="select-scroll-up-button"
       className={(state) =>
         cn(
-          "flex min-h-11 items-center justify-center bg-popover text-foreground",
+          "flex min-h-11 items-center justify-center bg-popover text-popover-foreground md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5",
           typeof className === "function" ? className(state) : className
         )
       }
@@ -277,7 +277,7 @@ function SelectScrollDownButton({
       data-slot="select-scroll-down-button"
       className={(state) =>
         cn(
-          "flex min-h-11 items-center justify-center bg-popover text-foreground",
+          "flex min-h-11 items-center justify-center bg-popover text-popover-foreground md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5",
           typeof className === "function" ? className(state) : className
         )
       }

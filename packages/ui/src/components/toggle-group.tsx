@@ -107,7 +107,7 @@ function ToggleGroupItem<Value extends string>({
       data-motion-reduced={reduced ? "true" : undefined}
       className={(state) =>
         cn(
-          "relative isolate inline-flex min-h-11 min-w-11 flex-1 items-center justify-center gap-2 rounded-sm px-3 py-2 text-base leading-5 text-foreground transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:shadow-(--shadow-focus) enabled:hover:bg-(--control-hover) disabled:pointer-events-none disabled:opacity-50 data-pressed:font-medium motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0",
+          "relative isolate inline-flex min-h-11 min-w-11 flex-1 items-center justify-center gap-2 rounded-sm px-3 py-2 text-base leading-5 text-foreground transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:shadow-(--shadow-focus) enabled:not-data-pressed:hover:bg-accent enabled:not-data-pressed:hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 data-pressed:font-medium data-pressed:text-card-foreground motion-reduce:transition-none md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:min-w-9 md:pointer-fine:not-any-pointer-coarse:py-1.5 [&_svg]:size-4 [&_svg]:shrink-0",
           !single &&
             "data-pressed:bg-card data-pressed:shadow-(--shadow-segment) data-pressed:focus-visible:[box-shadow:var(--shadow-segment),var(--shadow-focus)]",
           typeof className === "function" ? className(state) : className
