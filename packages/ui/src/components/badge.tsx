@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import type * as React from "react"
 
 const badgeVariants = cva(
-  "inline-flex min-h-6 w-fit max-w-full shrink-0 items-center justify-center gap-1.5 rounded-full border px-2 py-0.5 text-sm/[1.25rem] font-medium wrap-anywhere outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&>svg]:size-3.5 [&>svg]:shrink-0",
+  "inline-flex min-h-6 w-fit max-w-full shrink-0 items-center justify-center gap-1.5 rounded-full border px-2 py-0.5 text-sm font-medium wrap-anywhere outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&>svg]:size-3.5 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -50,7 +50,7 @@ function Status({
       data-slot="status"
       data-tone={tone}
       className={cn(
-        "inline-flex min-w-0 items-center gap-2 text-sm/[1.25rem] font-medium text-foreground data-[tone=destructive]:text-destructive data-[tone=warning]:text-warning [&>svg]:size-[18px] [&>svg]:shrink-0",
+        "inline-flex min-w-0 items-center gap-2 text-sm font-medium text-foreground data-[tone=destructive]:text-destructive data-[tone=warning]:text-warning [&>svg]:size-[18px] [&>svg]:shrink-0",
         className
       )}
       {...props}

@@ -98,7 +98,7 @@ function SelectTrigger({
         data-slot="select-trigger"
         className={(state) =>
           cn(
-            "flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-[10px] border border-input bg-card px-3 py-2 text-md leading-[1.5rem] text-foreground outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground sm:text-base sm:leading-[1.25rem] [&_svg]:size-4 [&_svg]:shrink-0",
+            "rounded-control flex min-h-11 w-full min-w-0 items-center justify-between gap-2 border border-input bg-card px-3 py-2 text-md text-foreground outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground sm:text-base sm:leading-5 [&_svg]:size-4 [&_svg]:shrink-0",
             typeof className === "function" ? className(state) : className
           )
         }
@@ -171,7 +171,7 @@ function SelectContent({
           data-motion-reduced={reducedMotion ? "true" : undefined}
           className={(state) =>
             cn(
-              "ui-floating-popup max-h-(--available-height) w-(--anchor-width) min-w-40 overflow-y-auto rounded-[10px] border border-border bg-popover p-1 text-popover-foreground shadow-(--shadow-menu) outline-none",
+              "ui-floating-popup max-h-(--available-height) w-(--anchor-width) min-w-40 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-(--shadow-menu) outline-none",
               typeof className === "function" ? className(state) : className
             )
           }
@@ -195,7 +195,7 @@ function SelectLabel({
       data-slot="select-label"
       className={(state) =>
         cn(
-          "px-3 py-2 text-sm leading-[1.25rem] text-muted-foreground",
+          "px-3 py-2 text-sm text-muted-foreground",
           typeof className === "function" ? className(state) : className
         )
       }
@@ -214,7 +214,7 @@ function SelectItem({
       data-slot="select-item"
       className={(state) =>
         cn(
-          "relative flex min-h-11 w-full cursor-default items-center gap-2 rounded-[6px] py-2 ps-3 pe-9 text-md leading-[1.5rem] text-foreground outline-none select-none focus-visible:[box-shadow:inset_0_0_0_2px_var(--ring)] data-highlighted:bg-accent sm:text-base sm:leading-[1.25rem] data-disabled:pointer-events-none data-disabled:opacity-50",
+          "relative flex min-h-11 w-full cursor-default items-center gap-2 rounded-sm py-2 ps-3 pe-9 text-md text-foreground outline-none select-none focus-visible:[box-shadow:inset_0_0_0_2px_var(--ring)] data-highlighted:bg-accent sm:text-base sm:leading-5 data-disabled:pointer-events-none data-disabled:opacity-50",
           typeof className === "function" ? className(state) : className
         )
       }

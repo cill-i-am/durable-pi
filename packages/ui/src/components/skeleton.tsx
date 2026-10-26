@@ -12,7 +12,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
       data-motion-reduced={reduced ? "true" : undefined}
       aria-hidden="true"
       className={cn(
-        "animate-pulse rounded-[6px] bg-muted data-[motion-reduced=true]:animate-none motion-reduce:animate-none",
+        "animate-pulse rounded-sm bg-muted data-[motion-reduced=true]:animate-none motion-reduce:animate-none",
         className
       )}
       {...props}

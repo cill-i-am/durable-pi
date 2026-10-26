@@ -40,6 +40,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-control-hover: var(--control-hover);
+}
+
+@theme {
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -177,7 +180,7 @@
   body {
     @apply bg-canvas font-sans text-foreground;
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     line-height: 1.57143;
     -webkit-font-smoothing: antialiased;
   }

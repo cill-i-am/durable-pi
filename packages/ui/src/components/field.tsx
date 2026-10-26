@@ -23,8 +23,8 @@ function FieldLegend({
     <legend
       data-slot="field-legend"
       className={cn(
-        "mb-4 text-md leading-[1.5rem] font-semibold text-foreground",
-        variant === "label" && "text-base leading-[1.25rem] font-medium",
+        "mb-4 text-md font-semibold text-foreground",
+        variant === "label" && "text-base leading-5 font-medium",
         className
       )}
       {...props}
@@ -99,7 +99,7 @@ function FieldTitle({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="field-title"
       className={cn(
-        "text-base leading-[1.25rem] font-medium text-foreground",
+        "text-base leading-5 font-medium text-foreground",
         className
       )}
       {...props}
@@ -112,7 +112,7 @@ function FieldDescription({ className, ...props }: ComponentProps<"p">) {
     <p
       data-slot="field-description"
       className={cn(
-        "text-sm leading-[1.25rem] text-muted-foreground [&_a]:underline [&_a]:underline-offset-4",
+        "text-sm text-muted-foreground [&_a]:underline [&_a]:underline-offset-4",
         className
       )}
       {...props}
@@ -133,7 +133,7 @@ function FieldSeparator({
     >
       <Separator />
       {children && (
-        <span className="absolute bg-background px-2 text-sm leading-[1.25rem] text-muted-foreground">
+        <span className="absolute bg-background px-2 text-sm text-muted-foreground">
           {children}
         </span>
       )}
@@ -170,7 +170,7 @@ function FieldError({
     <div
       role="alert"
       data-slot="field-error"
-      className={cn("text-sm leading-[1.25rem] text-destructive", className)}
+      className={cn("text-sm text-destructive", className)}
       {...props}
     >
       {content}

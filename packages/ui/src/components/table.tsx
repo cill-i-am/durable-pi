@@ -25,7 +25,7 @@ function Table({
       <table
         data-slot="table"
         className={cn(
-          "w-full caption-bottom border-collapse text-base/[1.25rem]",
+          "w-full caption-bottom border-collapse text-base/5",
           className
         )}
         {...props}
@@ -92,7 +92,7 @@ function TableHead({
       data-slot="table-head"
       scope={scope}
       className={cn(
-        "h-11 px-3 py-2 text-left align-middle text-sm/[1.25rem] font-medium text-muted-foreground",
+        "h-11 px-3 py-2 text-left align-middle text-sm font-medium text-muted-foreground",
         className
       )}
       {...props}
@@ -118,7 +118,7 @@ function TableCaption({
     <caption
       data-slot="table-caption"
       className={cn(
-        "px-3 py-3 text-left text-sm/[1.25rem] text-muted-foreground",
+        "px-3 py-3 text-left text-sm text-muted-foreground",
         className
       )}
       {...props}

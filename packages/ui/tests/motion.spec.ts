@@ -817,16 +817,11 @@ test.describe("motion contracts", () => {
       exact: true,
     })
     const choice = group.getByRole("button", { name: "Three", exact: true })
-    await rapidClicks(page, choice, 1)
-    await expect(choice).toHaveAttribute("aria-pressed", "true")
-    const marker = choice.locator('[data-slot="toggle-group-indicator"]')
-    expect(
-      (await sampleVisual(marker, 2)).some((value) => !value.identity),
-      "The selected marker must be in flight before reduction"
-    ).toBe(true)
-    const firstFrames = await armReducedFrames(choice, [
-      '[data-slot="toggle-group-indicator"]',
-    ])
+    const firstFrames = await armReducedFrames(
+      choice,
+      ['[data-slot="toggle-group-indicator"]'],
+      true
+    )
     await page.emulateMedia({ reducedMotion: "reduce" })
     await expect(choice).toHaveAttribute("data-motion-reduced", "true")
     assertImmediateSpatialStop(await reducedFrames(page, firstFrames))
@@ -1198,11 +1193,18 @@ let probeSequence = 0
 
 async function armReducedFrames(
   marker: Locator,
-  selectors: readonly (string | null)[] = [null]
+  selectors: readonly (string | null)[] = [null],
+  activate = false
 ) {
   const id = `post-flag-${++probeSequence}`
   await marker.evaluate(
-    (node, input) => {
+    async (node, input) => {
+      if (input.activate) {
+        ;(node as HTMLElement).click()
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve())
+        )
+      }
       const probes = window as unknown as {
         __uiReducedProbes?: Record<string, ReducedProbe>
       }
@@ -1308,8 +1310,29 @@ async function armReducedFrames(
         attributeFilter: ["data-motion-reduced"],
       })
       begin()
+      if (input.activate) {
+        // Observe the native projection in this renderer, with the reduction
+        // recorder already armed. Host roundtrips can outlast the 150ms spring.
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const style = getComputedStyle(targets[0]!)
+          const matrix = new DOMMatrixReadOnly(
+            style.transform === "none" ? undefined : style.transform
+          )
+          if (
+            Math.abs(matrix.e) > 0.5 ||
+            Math.abs(matrix.f) > 0.5 ||
+            Math.abs(matrix.a - 1) > 0.002 ||
+            Math.abs(matrix.d - 1) > 0.002
+          )
+            return
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve())
+          )
+        }
+        throw new Error("The native marker must move before reducing motion")
+      }
     },
-    { id, selectors }
+    { id, selectors, activate }
   )
   return id
 }
