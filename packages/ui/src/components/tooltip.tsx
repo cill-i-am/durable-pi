@@ -45,7 +45,7 @@ function TooltipContent({
           data-slot="tooltip-content"
           data-motion-reduced={reducedMotion ? "true" : undefined}
           className={cn(
-            "ui-tooltip-popup max-w-[min(20rem,calc(100vw-2rem))] origin-(--transform-origin) rounded-[10px] bg-foreground px-3 py-2 text-sm/[1.25rem] text-background shadow-(--shadow-menu)",
+            "ui-tooltip-popup max-w-[min(20rem,calc(100vw-2rem))] origin-(--transform-origin) rounded-md bg-foreground px-3 py-2 text-sm text-background shadow-(--shadow-menu)",
             className
           )}
           {...props}

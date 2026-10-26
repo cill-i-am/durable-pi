@@ -10,7 +10,7 @@ Review each component in Storybook with **System motion**, then **Reduced motion
 | Checkbox | Native checked/indeterminate state drives a 100ms opacity fade and 300ms geometry spring, without mount animation or mirrored checked state. | Opacity only; the check or mixed icon remains. |
 | Switch | Native checked state moves the thumb with a short, non-bouncy spring; RTL reverses direction. | Thumb snaps to its actual selected position. |
 | ToggleGroup | A short shared selection spring is scoped to each single-selection group. Multiple selection uses independent backgrounds. | Local opacity fade; no travelling indicator. |
-| Tabs | Immediate panel change and focus; only the selected background changes briefly. No panel entrance, moving label or icon animation. | Immediate panels; short background feedback. |
+| Tabs | Base UI’s measured selection highlight retargets over 150ms with the shared ease, including vertical and wrapped lists. Labels, focus and panels update immediately; no entrance on mount. | The highlight moves directly to the selection without interpolation, including live preference changes. |
 | Input | Immediate text, caret, validation and focus. | Same. |
 | Textarea | Immediate editing and resizing; no height tween while typing. | Same. |
 | Field | Static grouping, labels, descriptions and validation. No moving error text or layout animation. | Same. |
@@ -38,7 +38,7 @@ Review each component in Storybook with **System motion**, then **Reduced motion
 
 `MotionProvider` is a plain MotionConfig boundary; source-exported components also work on their own. `useUIReducedMotion` subscribes to the native media query because Motion 14.3's own hook reads it once. Per-component reduced flags reach portals without depending on a DOM ancestor.
 
-Base UI owns focus, input state, popup presence, gestures, snap geometry and restoration. Its CSS transitions remain interruptible; no second AnimatePresence or drag controller competes with the native drawer. Motion owns springs and selected-indicator interpolation. XState/Effect continues to own the asynchronous examination scenarios.
+Base UI owns focus, input state, popup presence, gestures, snap geometry and restoration. Its CSS transitions remain interruptible; no second AnimatePresence or drag controller competes with the native drawer. Motion owns springs and ToggleGroup selection interpolation; Tabs uses Base UI’s measured indicator with CSS transitions. XState/Effect continues to own the asynchronous examination scenarios.
 
 Use `IconSwap` inside an owner with a stable accessible name. Its layers are decorative; the parent exposes pressed/checked/selected state or visible status text. Do not animate navigation icons or frequently repeated row actions.
 

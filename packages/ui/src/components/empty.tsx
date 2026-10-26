@@ -37,7 +37,7 @@ function EmptyMedia({
       data-slot="empty-media"
       data-variant={variant}
       className={cn(
-        "flex shrink-0 items-center justify-center text-muted-foreground data-[variant=icon]:size-9 data-[variant=icon]:rounded-[10px] data-[variant=icon]:bg-muted [&_svg]:size-[18px] [&_svg]:shrink-0",
+        "flex shrink-0 items-center justify-center text-muted-foreground data-[variant=icon]:size-9 data-[variant=icon]:rounded-md data-[variant=icon]:bg-muted [&_svg]:size-[18px] [&_svg]:shrink-0",
         className
       )}
       {...props}
@@ -49,7 +49,7 @@ function EmptyTitle({ className, ...props }: React.ComponentProps<"h3">) {
   return (
     <h3
       data-slot="empty-title"
-      className={cn("text-md/[1.5rem] font-semibold wrap-anywhere", className)}
+      className={cn("text-md font-semibold wrap-anywhere", className)}
       {...props}
     />
   )
@@ -60,7 +60,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="empty-description"
       className={cn(
-        "text-base/[1.25rem] wrap-anywhere text-muted-foreground [&_a]:underline [&_a]:underline-offset-4",
+        "text-base/5 wrap-anywhere text-muted-foreground [&_a]:underline [&_a]:underline-offset-4",
         className
       )}
       {...props}

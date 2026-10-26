@@ -25,7 +25,7 @@ function ToggleGroup<Value extends string>({
           multiple={multiple}
           className={(state) =>
             cn(
-              "inline-flex w-fit max-w-full flex-wrap items-center gap-0.5 rounded-[10px] border border-input bg-muted p-[3px] data-[orientation=vertical]:flex-col data-disabled:opacity-50",
+              "rounded-control inline-flex w-fit max-w-full flex-wrap items-center gap-0.5 border border-input bg-muted p-[3px] data-[orientation=vertical]:flex-col data-disabled:opacity-50",
               typeof className === "function" ? className(state) : className
             )
           }
@@ -53,7 +53,7 @@ function ToggleIndicator({ disabled }: { disabled: boolean }) {
         still ? { duration: 0.1, ease: motionEase } : motionFastSpring
       }
       className={cn(
-        "pointer-events-none absolute inset-0 rounded-[6px] bg-card shadow-(--shadow-segment)",
+        "pointer-events-none absolute inset-0 rounded-sm bg-card shadow-(--shadow-segment)",
         still && "[transform:none]!"
       )}
     />
@@ -107,7 +107,7 @@ function ToggleGroupItem<Value extends string>({
       data-motion-reduced={reduced ? "true" : undefined}
       className={(state) =>
         cn(
-          "relative isolate inline-flex min-h-11 min-w-11 flex-1 items-center justify-center gap-2 rounded-[6px] px-3 py-2 text-base leading-[1.25rem] text-foreground transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:shadow-(--shadow-focus) enabled:hover:bg-(--control-hover) disabled:pointer-events-none disabled:opacity-50 data-pressed:font-medium motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0",
+          "relative isolate inline-flex min-h-11 min-w-11 flex-1 items-center justify-center gap-2 rounded-sm px-3 py-2 text-base leading-5 text-foreground transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:shadow-(--shadow-focus) enabled:not-data-pressed:hover:bg-accent enabled:not-data-pressed:hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 data-pressed:font-medium data-pressed:text-card-foreground motion-reduce:transition-none md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:min-w-9 md:pointer-fine:not-any-pointer-coarse:py-1.5 [&_svg]:size-4 [&_svg]:shrink-0",
           !single &&
             "data-pressed:bg-card data-pressed:shadow-(--shadow-segment) data-pressed:focus-visible:[box-shadow:var(--shadow-segment),var(--shadow-focus)]",
           typeof className === "function" ? className(state) : className

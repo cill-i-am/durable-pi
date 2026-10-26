@@ -258,6 +258,286 @@ test.describe("motion contracts", () => {
     await expect(independent.locator(marker)).toHaveCount(1)
   })
 
+  for (const direction of ["ltr", "rtl"] as const) {
+    for (const story of ["motion", "motion-vertical", "wrapped"]) {
+      test(`tabs: ${story} ${direction} retargets the highlight without delaying panels or crossing instances`, async ({
+        page,
+      }, info) => {
+        await openStory(page, info, `components-tabs--${story}`, { direction })
+        const list = page.getByRole("tablist", {
+          name: "Workspace",
+          exact: true,
+        })
+        const independent = page.getByRole("tablist", {
+          name: "Independent",
+          exact: true,
+        })
+        await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+        await expect.poll(() => tabIndicatorAligned(independent)).toBe(true)
+        const original = await independent
+          .locator('[data-slot="tabs-indicator"]')
+          .boundingBox()
+        const frames = sampleTabs(list, 20)
+        await rapidClicks(
+          page,
+          list.getByRole("tab", { name: "Connections", exact: true }),
+          1
+        )
+        const samples = await frames
+        expect(
+          samples.some(
+            (sample) => sample.selected === "Connections" && sample.distance > 2
+          ),
+          "The selected highlight must actually travel"
+        ).toBe(true)
+        expect(
+          samples.every(
+            (sample) =>
+              sample.contained && sample.panelVisible && sample.labelsStill
+          )
+        ).toBe(true)
+        await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+        await rapidClicks(
+          page,
+          list.getByRole("tab", { name: "Overview", exact: true }),
+          1
+        )
+        await rapidClicks(
+          page,
+          list.getByRole("tab", { name: "Family activity", exact: true }),
+          1
+        )
+        await rapidClicks(
+          page,
+          list.getByRole("tab", { name: "Connections", exact: true }),
+          1
+        )
+        await expect(
+          list.getByRole("tab", { name: "Connections", exact: true })
+        ).toHaveAttribute("aria-selected", "true")
+        await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+        expect(
+          await independent
+            .locator('[data-slot="tabs-indicator"]')
+            .boundingBox()
+        ).toEqual(original)
+        await expect(
+          independent.getByRole("tab", { name: "Overview", exact: true })
+        ).toHaveAttribute("aria-selected", "true")
+        const connections = list.getByRole("tab", {
+          name: "Connections",
+          exact: true,
+        })
+        await connections.press("Home")
+        await expect(
+          list.getByRole("tab", { name: "Overview", exact: true })
+        ).toBeFocused()
+        await expect(connections).toHaveAttribute("aria-selected", "true")
+        await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+        await page.keyboard.press("End")
+        const unavailable = list.getByRole("tab", {
+          name: "Unavailable",
+          exact: true,
+        })
+        // Base UI exposes disabled tabs to arrow navigation, but never activates them.
+        await expect(unavailable).toBeFocused()
+        await page.keyboard.press("Enter")
+        await expect(unavailable).toBeDisabled()
+        await expect(unavailable).toHaveAttribute("aria-selected", "false")
+        await expect(connections).toHaveAttribute("aria-selected", "true")
+        await page.keyboard.press(
+          story === "motion-vertical"
+            ? "ArrowUp"
+            : direction === "rtl"
+              ? "ArrowRight"
+              : "ArrowLeft"
+        )
+        await expect(connections).toBeFocused()
+        expect(
+          await connections.evaluate((node) => node.matches(":focus-visible"))
+        ).toBe(true)
+      })
+    }
+  }
+
+  test("tabs: first paint starts on the selected tab; 200% RTL wrapping remains aligned", async ({
+    page,
+  }, info) => {
+    await page.addInitScript(() => {
+      const target = window as unknown as {
+        __tabMountFrames: { distance: number; opacity: string; scale: string }[]
+      }
+      target.__tabMountFrames = []
+      let remaining = 300
+      const collect = () => {
+        const marker = document.querySelector(
+          '[data-slot="tabs-indicator"]:not([hidden])'
+        )
+        if (marker) {
+          const selected = marker
+            .parentElement!.querySelector('[aria-selected="true"]')!
+            .getBoundingClientRect()
+          const indicator = marker.getBoundingClientRect(),
+            style = getComputedStyle(marker)
+          target.__tabMountFrames.push({
+            distance: Math.max(
+              Math.abs(selected.left - indicator.left),
+              Math.abs(selected.top - indicator.top),
+              Math.abs(selected.width - indicator.width),
+              Math.abs(selected.height - indicator.height)
+            ),
+            opacity: style.opacity,
+            scale: style.scale,
+          })
+        }
+        if (target.__tabMountFrames.length < 12 && remaining-- > 0)
+          requestAnimationFrame(collect)
+      }
+      requestAnimationFrame(collect)
+    })
+    await openStory(page, info, "components-tabs--wrapped", {
+      direction: "rtl",
+      scale: 200,
+    })
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                __tabMountFrames: {
+                  distance: number
+                  opacity: string
+                  scale: string
+                }[]
+              }
+            ).__tabMountFrames.length
+        )
+      )
+      .toBe(12)
+    const mounted = await page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __tabMountFrames: {
+              distance: number
+              opacity: string
+              scale: string
+            }[]
+          }
+        ).__tabMountFrames
+    )
+    // Native geometry is hidden until measured. Later font/text-scale reflow can
+    // update its bounds; it must not enter from an origin or a hidden scale.
+    expect(mounted[0]!.distance).toBeLessThan(1.5)
+    expect(
+      mounted.every(
+        (sample) => sample.opacity === "1" && sample.scale === "none"
+      )
+    ).toBe(true)
+    const list = page.getByRole("tablist", { name: "Workspace", exact: true })
+    await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+    await list.getByRole("tab", { name: "Connections", exact: true }).click()
+    await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+    await list.evaluate((node) => {
+      const root = node.closest<HTMLElement>('[data-slot="tabs"]')!
+      root.style.width = "200px"
+    })
+    await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1
+      )
+    ).toBe(true)
+  })
+
+  test("tabs: forced colors retain the selected outline after focus leaves", async ({
+    page,
+  }, info) => {
+    await page.emulateMedia({ forcedColors: "active" })
+    await openStory(page, info, "components-tabs--motion")
+    const selected = page
+      .getByRole("tablist", { name: "Workspace", exact: true })
+      .getByRole("tab", { name: "Overview", exact: true })
+    await selected.focus()
+    await page.keyboard.press("Tab")
+    await expect(selected).not.toBeFocused()
+    await expect(selected).toHaveAttribute("aria-selected", "true")
+    await expect(selected).toHaveCSS("outline-style", "solid")
+    await expect(selected).toHaveCSS("outline-width", "2px")
+  })
+
+  for (const preference of ["system", "toolbar"] as const) {
+    test(`tabs: ${preference} reduced motion cancels travel while mounted`, async ({
+      page,
+    }, info) => {
+      await openStory(page, info, "components-tabs--motion")
+      const list = page.getByRole("tablist", { name: "Workspace", exact: true })
+      const marker = list.locator('[data-slot="tabs-indicator"]')
+      await expect.poll(() => tabIndicatorAligned(list)).toBe(true)
+      const probe = await armReducedFrames(list, [
+        '[data-slot="tabs-indicator"]',
+      ])
+      await rapidClicks(
+        page,
+        list.getByRole("tab", { name: "Connections", exact: true }),
+        1
+      )
+      expect(
+        await marker.evaluate((node) =>
+          node
+            .getAnimations()
+            .some((animation) => animation.playState === "running")
+        )
+      ).toBe(true)
+      if (preference === "system")
+        await page.emulateMedia({ reducedMotion: "reduce" })
+      else
+        await page.evaluate(async () => {
+          const preview = (
+            window as unknown as {
+              __STORYBOOK_ADDONS_CHANNEL__: {
+                emit: (event: string, payload: unknown) => void
+              }
+            }
+          ).__STORYBOOK_ADDONS_CHANNEL__
+          preview.emit("updateGlobals", { globals: { motion: "reduced" } })
+        })
+      const stopped = await reducedFrames(page, probe)
+      expect(
+        stopped.every(
+          (sample) =>
+            sample.connected && sample.offset !== null && sample.offset < 1.5
+        )
+      ).toBe(true)
+      await expect(list).toHaveAttribute("data-motion-reduced", "true")
+      expect(
+        await marker.evaluate(
+          (node) => getComputedStyle(node).transitionProperty
+        )
+      ).toBe("none")
+      await rapidClicks(
+        page,
+        list.getByRole("tab", { name: "Family activity", exact: true }),
+        1
+      )
+      const reduced = await sampleTabs(list, 6)
+      expect(
+        reduced.every(
+          (sample) =>
+            sample.distance < 1.5 && sample.panelVisible && sample.labelsStill
+        )
+      ).toBe(true)
+      expect(
+        await marker.evaluate((node) =>
+          node
+            .getAnimations()
+            .some((animation) => animation.playState === "running")
+        )
+      ).toBe(false)
+    })
+  }
+
   test("menu: close/reopen during exit retains native selection, then nested Tab restores usable focus", async ({
     page,
   }, info) => {
@@ -537,16 +817,11 @@ test.describe("motion contracts", () => {
       exact: true,
     })
     const choice = group.getByRole("button", { name: "Three", exact: true })
-    await rapidClicks(page, choice, 1)
-    await expect(choice).toHaveAttribute("aria-pressed", "true")
-    const marker = choice.locator('[data-slot="toggle-group-indicator"]')
-    expect(
-      (await sampleVisual(marker, 2)).some((value) => !value.identity),
-      "The selected marker must be in flight before reduction"
-    ).toBe(true)
-    const firstFrames = await armReducedFrames(choice, [
-      '[data-slot="toggle-group-indicator"]',
-    ])
+    const firstFrames = await armReducedFrames(
+      choice,
+      ['[data-slot="toggle-group-indicator"]'],
+      true
+    )
     await page.emulateMedia({ reducedMotion: "reduce" })
     await expect(choice).toHaveAttribute("data-motion-reduced", "true")
     assertImmediateSpatialStop(await reducedFrames(page, firstFrames))
@@ -918,11 +1193,18 @@ let probeSequence = 0
 
 async function armReducedFrames(
   marker: Locator,
-  selectors: readonly (string | null)[] = [null]
+  selectors: readonly (string | null)[] = [null],
+  activate = false
 ) {
   const id = `post-flag-${++probeSequence}`
   await marker.evaluate(
-    (node, input) => {
+    async (node, input) => {
+      if (input.activate) {
+        ;(node as HTMLElement).click()
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve())
+        )
+      }
       const probes = window as unknown as {
         __uiReducedProbes?: Record<string, ReducedProbe>
       }
@@ -979,6 +1261,22 @@ async function armReducedFrames(
                 ? left
                 : outer.width - right - thumb.width
             }
+            if (
+              node.getAttribute("data-slot") === "tabs-list" &&
+              element.getAttribute("data-slot") === "tabs-indicator"
+            ) {
+              const selected = node
+                .querySelector('[aria-selected="true"]')!
+                .getBoundingClientRect()
+              const indicator = element.getBoundingClientRect()
+              offset = Math.max(
+                Math.abs(selected.left - indicator.left),
+                Math.abs(selected.top - indicator.top),
+                Math.abs(selected.width - indicator.width),
+                Math.abs(selected.height - indicator.height)
+              )
+              endpoint = 0
+            }
             probe.frames.push({
               frame: index,
               target: targetIndex,
@@ -1012,8 +1310,29 @@ async function armReducedFrames(
         attributeFilter: ["data-motion-reduced"],
       })
       begin()
+      if (input.activate) {
+        // Observe the native projection in this renderer, with the reduction
+        // recorder already armed. Host roundtrips can outlast the 150ms spring.
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const style = getComputedStyle(targets[0]!)
+          const matrix = new DOMMatrixReadOnly(
+            style.transform === "none" ? undefined : style.transform
+          )
+          if (
+            Math.abs(matrix.e) > 0.5 ||
+            Math.abs(matrix.f) > 0.5 ||
+            Math.abs(matrix.a - 1) > 0.002 ||
+            Math.abs(matrix.d - 1) > 0.002
+          )
+            return
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve())
+          )
+        }
+        throw new Error("The native marker must move before reducing motion")
+      }
     },
-    { id, selectors }
+    { id, selectors, activate }
   )
   return id
 }
@@ -1350,4 +1669,51 @@ async function stableGeometry(locator: Locator) {
     }
     throw new Error("Native overlay did not reach stable entry geometry")
   })
+}
+
+async function tabIndicatorAligned(list: Locator) {
+  const samples = await sampleTabs(list, 1)
+  return samples.every((sample) => sample.distance < 1.5)
+}
+async function sampleTabs(list: Locator, count: number) {
+  return list.evaluate(async (node, frames) => {
+    const samples = []
+    for (let index = 0; index < frames; index++) {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      )
+      const selected = node.querySelector('[aria-selected="true"]')!
+      const marker = node.querySelector('[data-slot="tabs-indicator"]')!
+      const tab = selected.getBoundingClientRect(),
+        indicator = marker.getBoundingClientRect(),
+        own = node.getBoundingClientRect()
+      const panel = document.getElementById(
+        selected.getAttribute("aria-controls")!
+      )
+      samples.push({
+        selected: selected.textContent,
+        distance: Math.max(
+          Math.abs(tab.left - indicator.left),
+          Math.abs(tab.top - indicator.top),
+          Math.abs(tab.width - indicator.width),
+          Math.abs(tab.height - indicator.height)
+        ),
+        contained:
+          indicator.left >= own.left - 1.5 &&
+          indicator.right <= own.right + 1.5 &&
+          indicator.top >= own.top - 1.5 &&
+          indicator.bottom <= own.bottom + 1.5,
+        panelVisible:
+          !!panel &&
+          !panel.hidden &&
+          getComputedStyle(panel).display !== "none",
+        labelsStill: [...node.querySelectorAll('[role="tab"]')].every(
+          (tab) =>
+            getComputedStyle(tab).transform === "none" &&
+            getComputedStyle(tab).translate === "none"
+        ),
+      })
+    }
+    return samples
+  }, count)
 }

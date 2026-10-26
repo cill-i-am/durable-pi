@@ -25,7 +25,7 @@ function Table({
       <table
         data-slot="table"
         className={cn(
-          "w-full caption-bottom border-collapse text-base/[1.25rem]",
+          "w-full caption-bottom border-collapse text-base/5",
           className
         )}
         {...props}
@@ -74,7 +74,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
       data-slot="table-row"
       data-motion-reduced={reduced ? "true" : undefined}
       className={cn(
-        "border-b border-border transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) hover:bg-muted data-[motion-reduced=true]:transition-none data-[state=selected]:bg-accent motion-reduce:transition-none",
+        "group/table-row border-b border-border transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) hover:bg-accent hover:text-accent-foreground data-[motion-reduced=true]:transition-none data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground motion-reduce:transition-none",
         className
       )}
       {...props}
@@ -92,7 +92,7 @@ function TableHead({
       data-slot="table-head"
       scope={scope}
       className={cn(
-        "h-11 px-3 py-2 text-left align-middle text-sm/[1.25rem] font-medium text-muted-foreground",
+        "h-11 px-3 py-2 text-left align-middle text-sm font-medium text-muted-foreground group-hover/table-row:text-accent-foreground group-data-[state=selected]/table-row:text-accent-foreground md:pointer-fine:not-any-pointer-coarse:h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5",
         className
       )}
       {...props}
@@ -104,7 +104,10 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn("h-15 px-3 py-2 align-middle wrap-anywhere", className)}
+      className={cn(
+        "h-15 px-3 py-2 align-middle wrap-anywhere md:pointer-fine:not-any-pointer-coarse:h-11",
+        className
+      )}
       {...props}
     />
   )
@@ -118,7 +121,7 @@ function TableCaption({
     <caption
       data-slot="table-caption"
       className={cn(
-        "px-3 py-3 text-left text-sm/[1.25rem] text-muted-foreground",
+        "px-3 py-3 text-left text-sm text-muted-foreground",
         className
       )}
       {...props}

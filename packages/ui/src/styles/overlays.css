@@ -3,11 +3,10 @@
   inset: 0;
   background: var(--overlay, #18181b40);
   opacity: calc(1 - var(--drawer-swipe-progress, 0));
-  transition: opacity var(--ui-motion-enter, 200ms)
-    var(--ui-motion-ease, cubic-bezier(0.2, 0, 0, 1));
+  transition: opacity var(--ui-motion-enter) var(--ui-motion-ease);
 }
 .responsive-overlay-backdrop[data-ending-style] {
-  transition-duration: var(--ui-motion-exit, 150ms);
+  transition-duration: var(--ui-motion-exit);
 }
 .responsive-overlay-backdrop[data-swiping] {
   transition: none;
@@ -38,20 +37,20 @@
   max-height: calc(100dvh - 48px);
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sheet, 24px);
+  @apply rounded-sheet;
   background: var(--canvas, var(--background));
   color: var(--foreground);
   box-shadow: var(--shadow-dialog, 0 24px 60px #18181b26);
   pointer-events: auto;
   container-type: inline-size;
   --overlay-closed-offset: 100%;
-  --overlay-enter-duration: var(--ui-motion-enter, 200ms);
-  --overlay-exit-duration: var(--ui-motion-exit, 150ms);
+  --overlay-enter-duration: var(--ui-motion-enter);
+  --overlay-exit-duration: var(--ui-motion-exit);
   --overlay-enter-scale: 0.98;
   --overlay-exit-scale: 0.99;
   transition-property: opacity, transform, scale;
   transition-duration: var(--overlay-enter-duration);
-  transition-timing-function: var(--ui-motion-ease, cubic-bezier(0.2, 0, 0, 1));
+  transition-timing-function: var(--ui-motion-ease);
 }
 .responsive-overlay:focus-visible {
   outline: 2px solid var(--ring, var(--primary));
@@ -88,16 +87,16 @@
 .overlay-title {
   min-width: 0;
   margin: 0;
-  font-size: 1.125rem;
-  line-height: 1.625rem;
+  font-size: var(--text-sheet);
+  line-height: var(--text-sheet--line-height);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 .overlay-description {
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 0.875rem;
-  line-height: 1.375rem;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
   overflow-wrap: anywhere;
 }
 .overlay-close {
@@ -133,7 +132,7 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  @apply rounded-md;
   background: var(--muted);
 }
 .alert-dialog-media > svg {
@@ -154,6 +153,7 @@
   padding: 16px;
 }
 .sheet-header {
+  gap: 8px;
   padding-inline-end: 60px;
 }
 .sheet-footer {
@@ -197,7 +197,7 @@
   justify-content: flex-start;
   padding-inline: 0;
   white-space: normal;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   text-align: start;
 }
 .sheet-back > svg {
@@ -214,14 +214,14 @@
   inset: 0 0 0 auto;
   width: min(100%, 480px);
   max-height: 100%;
-  border-radius: 24px 0 0 24px;
+  @apply rounded-l-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="left"] {
   position: absolute;
   inset: 0 auto 0 0;
   width: min(100%, 480px);
   max-height: 100%;
-  border-radius: 0 24px 24px 0;
+  @apply rounded-r-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="top"] {
   position: absolute;
@@ -229,7 +229,7 @@
   width: 100%;
   max-width: none;
   max-height: 80dvh;
-  border-radius: 0 0 24px 24px;
+  @apply rounded-b-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="bottom"] {
   position: absolute;
@@ -237,7 +237,7 @@
   width: 100%;
   max-width: none;
   max-height: 80dvh;
-  border-radius: 24px 24px 0 0;
+  @apply rounded-t-sheet rounded-none;
 }
 .ui-sheet[data-overlay-mobile="false"][data-side="right"]:is(
     [data-starting-style],
@@ -277,7 +277,7 @@
   max-height: 100%;
   min-height: 0;
   border: 0;
-  border-radius: 24px 24px 0 0;
+  @apply rounded-t-sheet rounded-none;
   background: var(--canvas, var(--background));
   box-shadow: var(--shadow-drawer, 0 -1px 0 #18181b12, 0 -10px 28px #18181b18);
   transform: translateY(
@@ -404,12 +404,12 @@
   --overlay-closed-offset: 0%;
   --overlay-enter-scale: 1;
   --overlay-exit-scale: 1;
-  --overlay-enter-duration: var(--ui-motion-fast, 100ms);
-  --overlay-exit-duration: var(--ui-motion-fast, 100ms);
+  --overlay-enter-duration: var(--ui-motion-fast);
+  --overlay-exit-duration: var(--ui-motion-fast);
   transition-property: opacity;
 }
 .responsive-overlay-backdrop[data-motion-reduced="true"] {
-  transition-duration: var(--ui-motion-fast, 100ms);
+  transition-duration: var(--ui-motion-fast);
 }
 .responsive-overlay[data-overlay-mobile="true"][data-motion-reduced="true"]:is(
     [data-starting-style],
@@ -432,8 +432,7 @@
 .ui-floating-popup,
 .ui-tooltip-popup {
   opacity: 1;
-  transition: opacity var(--ui-motion-fast, 100ms)
-    var(--ui-motion-ease, cubic-bezier(0.2, 0, 0, 1));
+  transition: opacity var(--ui-motion-fast) var(--ui-motion-ease);
 }
 .ui-floating-popup:is([data-starting-style], [data-ending-style]),
 .ui-tooltip-popup:is([data-starting-style], [data-ending-style]) {
@@ -488,8 +487,8 @@
 .drawer-lab-outcome {
   margin: 0;
   padding: 0 16px 16px;
-  font-size: 0.875rem;
-  line-height: 1.375rem;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
   overflow-wrap: anywhere;
 }
 .drawer-lab-outcome[data-error="true"] {
@@ -504,14 +503,14 @@
   margin: 0;
   padding: 16px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 0.875rem;
-  line-height: 1.375rem;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
   overflow-wrap: anywhere;
 }
 .drawer-lab-status {
   color: var(--muted-foreground);
-  font-size: 0.875rem;
-  line-height: 1.375rem;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 [dir="rtl"] .sheet-back > svg,

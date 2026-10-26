@@ -40,19 +40,20 @@ function ItemSeparator({
 }
 
 const itemVariants = cva(
-  "group/item flex w-full min-w-0 flex-wrap items-center gap-3 text-base/[1.25rem] transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-disabled:opacity-50 data-[motion-reduced=true]:transition-none motion-reduce:transition-none [&_svg]:shrink-0",
+  "group/item flex w-full min-w-0 flex-wrap items-center gap-3 text-base/5 transition-[background-color] duration-(--ui-motion-fast) ease-(--ui-motion-ease) outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-disabled:opacity-50 data-[motion-reduced=true]:transition-none motion-reduce:transition-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-transparent",
-        outline: "rounded-[10px] border border-border",
-        muted: "rounded-[10px] bg-muted",
-        selected: "rounded-[10px] bg-accent text-primary",
+        outline: "rounded-md border border-border",
+        muted: "rounded-md bg-muted",
+        selected: "rounded-md bg-accent text-accent-foreground",
       },
       size: {
-        default: "min-h-15 px-3 py-2",
-        sm: "min-h-11 px-3 py-2",
-        xs: "min-h-10 px-2.5 py-1.5",
+        default:
+          "min-h-15 px-3 py-2 md:pointer-fine:not-any-pointer-coarse:min-h-11",
+        sm: "min-h-11 px-3 py-2 md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5",
+        xs: "min-h-11 px-2.5 py-1.5 md:pointer-fine:not-any-pointer-coarse:min-h-8 md:pointer-fine:not-any-pointer-coarse:py-1",
       },
     },
     defaultVariants: { variant: "default", size: "default" },
@@ -104,7 +105,7 @@ function ItemMedia({
       data-slot="item-media"
       data-variant={variant}
       className={cn(
-        "flex w-6 shrink-0 items-center justify-center text-muted-foreground data-[variant=image]:size-9 data-[variant=image]:overflow-hidden data-[variant=image]:rounded-[6px] [&_img]:size-full [&_img]:object-cover [&_svg]:size-[18px] [&_svg]:shrink-0",
+        "flex w-6 shrink-0 items-center justify-center text-muted-foreground group-data-[variant=selected]/item:text-accent-foreground data-[variant=image]:size-9 data-[variant=image]:overflow-hidden data-[variant=image]:rounded-sm [&_img]:size-full [&_img]:object-cover [&_svg]:size-[18px] [&_svg]:shrink-0",
         className
       )}
       {...props}
@@ -126,10 +127,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-title"
-      className={cn(
-        "min-w-0 text-base/[1.25rem] font-medium wrap-anywhere",
-        className
-      )}
+      className={cn("min-w-0 text-base/5 font-medium wrap-anywhere", className)}
       {...props}
     />
   )
@@ -140,7 +138,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="item-description"
       className={cn(
-        "min-w-0 text-sm/[1.25rem] wrap-anywhere text-muted-foreground [&_a]:underline [&_a]:underline-offset-4",
+        "min-w-0 text-sm wrap-anywhere text-muted-foreground group-data-[variant=selected]/item:text-accent-foreground [&_a]:underline [&_a]:underline-offset-4",
         className
       )}
       {...props}
@@ -179,7 +177,7 @@ function ItemFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-footer"
       className={cn(
-        "flex min-w-0 basis-full flex-wrap items-center justify-between gap-2 text-sm/[1.25rem] text-muted-foreground",
+        "flex min-w-0 basis-full flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground group-data-[variant=selected]/item:text-accent-foreground",
         className
       )}
       {...props}

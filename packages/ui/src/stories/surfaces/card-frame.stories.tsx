@@ -52,9 +52,25 @@ export const HeaderAndAction: Story = {
       <>
         <CardFrameHeader>
           <CardFrameTitle>Notes</CardFrameTitle>
-          <CardFrameDescription>
-            Details shared with your family.
-          </CardFrameDescription>
+          <CardFrameAction>
+            <Button variant="outline" onClick={fn()}>
+              Add note
+            </Button>
+          </CardFrameAction>
+        </CardFrameHeader>
+        <CardPanel className="p-4">School closes at 2 pm on Friday.</CardPanel>
+      </>
+    ),
+  },
+}
+
+export const WithDescription: Story = {
+  args: {
+    children: (
+      <>
+        <CardFrameHeader>
+          <CardFrameTitle>School</CardFrameTitle>
+          <CardFrameDescription>Term dates</CardFrameDescription>
           <CardFrameAction>
             <Button variant="outline" onClick={fn()}>
               Add note

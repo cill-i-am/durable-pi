@@ -24,6 +24,12 @@ Coverage and limitations are documented in Storybook's examination stories and t
 
 One `CardFrame` recipe: continuous 14px outer rim, 3px inset, 10px panel. Headers and context/action/split footers are optional sections on that same frame. There is no alternate flush/extended frame variant. `Card` remains the plain white content surface.
 
+## Sizing and themes
+
+Sizing uses Tailwind's spacing scale inside each component and existing shadcn size variants. There is no density provider or parallel sizing API. Default controls are 36px on fine-pointer desktops; small buttons and desktop menu items are 32px. Phones, coarse pointers and hybrid touch devices retain targets of at least 44px. Text fields retain 16px editable text on those devices. Minimum heights allow wrapping and enlarged text to grow.
+
+Theme colours use shadcn's semantic surface/foreground pairs. Override those CSS variables and `--radius` in `src/styles/globals.css`; the existing radius aliases derive from that single value. Fonts are Tailwind theme variables. Pi's additional material variables (canvas, frame, warning, destructive fill, gradients and shadows) remain in that same stylesheet, so texture and depth can be adjusted with the theme. Components keep ordinary `className`, composition and variant conventions.
+
 Desktop Base UI focus guards are the only scan exclusion: empty, 1px clipped sentinel spans, never component content. Their focus redirection is tested separately; mobile guards stay in the audit; no axe rule is disabled. [Upstream explanation](https://github.com/mui/base-ui/issues/4668).
 
 ## Motion

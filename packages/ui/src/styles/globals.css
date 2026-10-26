@@ -8,27 +8,25 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Geist Variable", sans-serif;
   --font-heading: var(--font-sans);
-  --font-mono: "Geist Mono Variable", monospace;
   --color-background: var(--background);
   --color-canvas: var(--canvas);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-card-foreground: var(--foreground);
+  --color-card-foreground: var(--card-foreground);
   --color-card-frame: var(--card-frame);
   --color-card-panel: var(--surface-underlay);
   --color-surface-underlay: var(--surface-underlay);
   --color-popover: var(--popover);
-  --color-popover-foreground: var(--foreground);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--muted);
-  --color-secondary-foreground: var(--foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
-  --color-accent-foreground: var(--foreground);
+  --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-fill: var(--destructive-fill);
   --color-destructive-bg: var(--destructive-bg);
@@ -40,13 +38,18 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-control-hover: var(--control-hover);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-frame: 14px;
-  --radius-control: 10px;
-  --radius-sheet: 24px;
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 0.25rem);
+  --radius-xl: calc(var(--radius) + 0.625rem);
+  --radius-frame: calc(var(--radius) + 4px);
+  --radius-control: var(--radius);
+  --radius-sheet: calc(var(--radius) + 0.875rem);
+}
+
+@theme {
+  --font-sans: "Geist Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
   --text-sm: 0.8125rem;
@@ -64,18 +67,24 @@
 }
 
 :root {
+  --radius: 0.625rem;
   --background: #fff;
   --canvas: #fafafa;
   --foreground: #28282c;
   --card: #fff;
+  --card-foreground: #28282c;
   --card-frame: #f5f5f5;
   --surface-underlay: #f5f5f5;
   --popover: #fff;
+  --popover-foreground: #28282c;
   --primary: #535fc6;
   --primary-foreground: #fff;
+  --secondary: #f1f1f3;
+  --secondary-foreground: #28282c;
   --muted: #f1f1f3;
   --muted-foreground: #67676f;
   --accent: #ebebef;
+  --accent-foreground: #28282c;
   --control-hover: #ebebef;
   --border: #e4e4e7;
   --input: #888890;
@@ -99,16 +108,8 @@
     #00000016,
     #0000000a
   );
-  --gradient-outline: linear-gradient(
-    in oklab 180deg,
-    var(--background),
-    var(--muted)
-  );
-  --gradient-secondary: linear-gradient(
-    in oklab 180deg,
-    var(--muted),
-    var(--accent)
-  );
+  --gradient-outline: linear-gradient(in oklab 180deg, #ffffff0d, #00000008);
+  --gradient-secondary: linear-gradient(in oklab 180deg, #ffffff0d, #00000008);
   --shadow-button: inset 0 1px 0 #ffffff26, 0 2px 3px #18181b1a;
   --shadow-button-soft: var(--shadow-button);
   --shadow-button-pressed: inset 0 1px 3px #18181b33;
@@ -131,14 +132,19 @@
   --canvas: #1c1c1f;
   --foreground: #ededef;
   --card: #242427;
+  --card-foreground: #ededef;
   --card-frame: #303035;
   --surface-underlay: #303035;
   --popover: #242427;
+  --popover-foreground: #ededef;
   --primary: #a2a6ff;
   --primary-foreground: #1c1c1f;
+  --secondary: #303035;
+  --secondary-foreground: #ededef;
   --muted: #303035;
   --muted-foreground: #a0a0aa;
   --accent: #303035;
+  --accent-foreground: #ededef;
   --control-hover: #39393e;
   --border: #34343a;
   --ring: #a2a6ff;
@@ -147,16 +153,6 @@
   --warning: #dbb97c;
   --warning-bg: #332c20;
   --overlay: #00000066;
-  --gradient-outline: linear-gradient(
-    in oklab 180deg,
-    var(--card),
-    var(--accent)
-  );
-  --gradient-secondary: linear-gradient(
-    in oklab 180deg,
-    var(--accent),
-    var(--accent)
-  );
   --shadow-button: inset 0 1px 0 #ffffff14, 0 2px 3px #00000026;
   --shadow-button-pressed: inset 0 1px 3px #00000055;
   --shadow-segment: inset 0 1px 0 #ffffff0d, 0 1px 3px #00000033;
@@ -177,7 +173,7 @@
   body {
     @apply bg-canvas font-sans text-foreground;
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     line-height: 1.57143;
     -webkit-font-smoothing: antialiased;
   }
