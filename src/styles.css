@@ -284,14 +284,8 @@ body {
   height: 32px;
   color: var(--primary);
 }
-.agent-mark[data-tone="peach"] {
-  color: var(--peach);
-}
-.agent-mark[data-tone="lilac"] {
-  color: var(--lilac);
-}
-.agent-mark[data-tone="blue"] {
-  color: var(--blue);
+[data-slot="agent-avatar"] {
+  --avatar-size: 32px;
 }
 .pi-mark {
   width: 32px;
@@ -500,9 +494,8 @@ body {
   gap: 18px;
   max-width: 100%;
 }
-.conversation-empty .agent-mark {
-  width: 48px;
-  height: 48px;
+.conversation-empty [data-slot="agent-avatar"] {
+  --avatar-size: 48px;
 }
 .conversation-empty [data-slot="empty-title"] {
   font-size: 32px;
@@ -873,9 +866,10 @@ body {
   font-weight: 500;
   color: var(--muted-foreground);
 }
-.workspace-sidebar [data-slot="sidebar-menu-button"] .agent-mark {
-  width: 30px;
-  height: 30px;
+.workspace-sidebar
+  [data-slot="sidebar-menu-button"]
+  [data-slot="agent-avatar"] {
+  --avatar-size: 30px;
 }
 .workspace-sidebar [data-slot="sidebar-menu-button"] > .agent-sidebar-copy {
   flex: 1;
@@ -931,9 +925,8 @@ body {
   min-height: 38px;
   padding-inline: 10px;
 }
-.workspace-command [data-slot="command-item"] .agent-mark {
-  width: 22px;
-  height: 22px;
+.workspace-command [data-slot="command-item"] [data-slot="agent-avatar"] {
+  --avatar-size: 22px;
 }
 .workspace-command-footer {
   display: flex;
@@ -1027,9 +1020,8 @@ body {
   width: 100%;
   overflow: visible;
 }
-.assistant-message [data-slot="message-header"] .agent-mark {
-  width: 22px;
-  height: 22px;
+.assistant-message [data-slot="message-header"] [data-slot="agent-avatar"] {
+  --avatar-size: 22px;
 }
 .assistant-message [data-slot="message-footer"] {
   gap: 8px;
@@ -1772,9 +1764,8 @@ body {
     font-size: 16px;
     line-height: 23px;
   }
-  .chat-identity .agent-mark {
-    width: 28px;
-    height: 28px;
+  .chat-identity [data-slot="agent-avatar"] {
+    --avatar-size: 28px;
   }
   .chat-identity [data-slot="badge"] {
     max-width: 88px;
@@ -1893,9 +1884,8 @@ body {
   align-items: flex-start;
   gap: 8px;
 }
-.chat-identity > .agent-mark {
-  width: 24px;
-  height: 24px;
+.chat-identity > [data-slot="agent-avatar"] {
+  --avatar-size: 24px;
   flex-shrink: 0;
 }
 .chat-identity-copy {
@@ -2069,9 +2059,8 @@ body {
   margin-bottom: 32px;
   font-size: 14px;
 }
-.agent-editor-preview .agent-mark {
-  width: 36px;
-  height: 36px;
+.agent-editor-preview [data-slot="agent-avatar"] {
+  --avatar-size: 36px;
 }
 @media (max-width: 767px) {
   .workbench-filter-row {
@@ -2184,9 +2173,8 @@ body {
   border-bottom: 1px solid var(--border);
   font-weight: 600;
 }
-.settings-agent .agent-mark {
-  width: 30px;
-  height: 30px;
+.settings-agent [data-slot="agent-avatar"] {
+  --avatar-size: 30px;
 }
 .settings-nav-content {
   padding: 28px 20px;

@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router"
+import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import { Archive, ArrowLeft, Plus, Settings2, Undo2 } from "lucide-react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { homeAgentId } from "@/agents/contracts"
-import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -86,7 +86,11 @@ export function AgentCollection({
         {shown.map((agent) => (
           <li key={agent.id} className="flex items-center gap-3 p-4">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <AgentMark tone={agentTone(agent.id)} />
+              <AgentAvatar
+                name={agent.id}
+                label={agent.name}
+                aria-hidden="true"
+              />
               <span className="min-w-0">
                 {archived ? (
                   <strong className="block truncate text-sm">
