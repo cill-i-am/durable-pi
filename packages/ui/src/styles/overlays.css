@@ -374,7 +374,9 @@
   box-shadow: none;
   outline: none;
 }
-@container (max-width: 360px) {
+/* Follow the text scale as well as the available width: the same two-row
+   navigation that fits a narrow phone also keeps enlarged back labels legible. */
+@container (max-width: 22.5rem) {
   .sheet-navigation[data-has-back="true"] {
     grid-template-columns: minmax(0, 1fr) 44px;
     gap: 4px 12px;
@@ -393,6 +395,8 @@
     padding-block: 4px;
     text-align: start;
   }
+}
+@container (max-width: 360px) {
   .dialog-footer > [data-slot="button"],
   .sheet-footer > [data-slot="button"] {
     flex: 1 1 100%;
@@ -437,6 +441,9 @@
 .ui-floating-popup:is([data-starting-style], [data-ending-style]),
 .ui-tooltip-popup:is([data-starting-style], [data-ending-style]) {
   opacity: 0;
+}
+.ui-tooltip-popup[data-instant] {
+  transition-duration: 0ms;
 }
 .ui-floating-popup {
   overscroll-behavior: contain;

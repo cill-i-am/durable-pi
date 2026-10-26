@@ -92,7 +92,7 @@ function TableHead({
       data-slot="table-head"
       scope={scope}
       className={cn(
-        "h-11 px-3 py-2 text-left align-middle text-sm font-medium text-muted-foreground group-hover/table-row:text-accent-foreground group-data-[state=selected]/table-row:text-accent-foreground md:pointer-fine:not-any-pointer-coarse:h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5",
+        "h-11 px-3 py-2 text-start align-middle text-sm font-medium text-muted-foreground group-hover/table-row:text-accent-foreground group-data-[state=selected]/table-row:text-accent-foreground md:pointer-fine:not-any-pointer-coarse:h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5",
         className
       )}
       {...props}
@@ -121,7 +121,7 @@ function TableCaption({
     <caption
       data-slot="table-caption"
       className={cn(
-        "px-3 py-3 text-left text-sm text-muted-foreground",
+        "px-3 py-3 text-start text-sm text-muted-foreground",
         className
       )}
       {...props}

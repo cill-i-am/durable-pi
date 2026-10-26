@@ -9,7 +9,6 @@ import { ResponsiveOverlay } from "./responsive-overlay"
 const PopupContext = React.createContext<{
   mobile: boolean
   trigger: React.RefObject<HTMLElement | null>
-  afterClose: React.RefObject<(() => void) | null>
   onTabOut?: () => void
 } | null>(null)
 
@@ -24,21 +23,9 @@ function Root({
 > & { onTabOut?: () => void }) {
   const mobile = useIsMobile()
   const trigger = React.useRef<HTMLElement>(null)
-  const parent = React.useContext(PopupContext)
-  const localAction = React.useRef<(() => void) | null>(null)
-  const afterClose = parent?.afterClose ?? localAction
   return (
-    <PopupContext.Provider value={{ mobile, trigger, afterClose, onTabOut }}>
-      <ResponsiveOverlay.Root
-        open={mobile && open}
-        onOpenChange={onOpenChange}
-        onOpenChangeComplete={(next) => {
-          if (next) return
-          const action = afterClose.current
-          afterClose.current = null
-          action?.()
-        }}
-      >
+    <PopupContext.Provider value={{ mobile, trigger, onTabOut }}>
+      <ResponsiveOverlay.Root open={mobile && open} onOpenChange={onOpenChange}>
         {children}
       </ResponsiveOverlay.Root>
     </PopupContext.Provider>
@@ -79,11 +66,7 @@ function Content({
           popup.current?.querySelector<HTMLElement>('[role="menu"]') ??
           popup.current
         }
-        finalFocus={
-          finalFocus ??
-          (() =>
-            context?.afterClose.current ? false : context?.trigger.current)
-        }
+        finalFocus={finalFocus ?? (() => context?.trigger.current)}
         onKeyDown={(event) => {
           if (
             event.key !== "Tab" ||
@@ -110,10 +93,6 @@ export function usePopupMobile() {
   return React.useContext(PopupContext)?.mobile ?? false
 }
 
-export function usePopupAction() {
-  const context = React.useContext(PopupContext)
-  return (action: () => void) => {
-    if (context?.mobile) context.afterClose.current = action
-    else action()
-  }
+export function usePopupClose() {
+  return React.useContext(PopupContext)?.onTabOut
 }

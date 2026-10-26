@@ -56,29 +56,43 @@ export type DrawerArgs = {
   backLabel: string
 }
 
-export function Outcome({ lab }: { lab: ReturnType<typeof useLab> }) {
+export function Outcome({
+  lab,
+  operation = "save",
+}: {
+  lab: ReturnType<typeof useLab>
+  operation?: "save" | "disconnect"
+}) {
   if (lab.status === "success")
     return (
       <p className="drawer-lab-outcome" role="status">
-        Changes saved.
+        {operation === "disconnect"
+          ? "Connection disconnected."
+          : "Changes saved."}
       </p>
     )
   if (lab.status === "cancelled")
     return (
       <p className="drawer-lab-outcome" role="status">
-        Save cancelled. Your draft is kept.
+        {operation === "disconnect"
+          ? "Disconnect cancelled. No automatic retry."
+          : "Save cancelled. Your draft is kept."}
       </p>
     )
   if (lab.status === "error")
     return (
       <p className="drawer-lab-outcome" data-error="true" role="alert">
-        {lab.error}
+        {operation === "disconnect"
+          ? "Couldn’t disconnect. Retry the same request or close the example."
+          : lab.error}
       </p>
     )
   if (lab.status === "uncertain")
     return (
       <p className="drawer-lab-outcome" role="status">
-        The save is unconfirmed. Check its status before trying again.
+        {operation === "disconnect"
+          ? "The disconnect is unconfirmed. Check its status before trying again."
+          : "The save is unconfirmed. Check its status before trying again."}
       </p>
     )
   return null
@@ -315,30 +329,35 @@ export function ConfirmationExample({ scenario }: { scenario: Scenario }) {
         </AlertDialogTrigger>
         <AlertDialogContent keepMounted>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect this connection?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {lab.status === "success"
+                ? "Connection disconnected"
+                : "Disconnect this connection?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              New tool calls will stop for all assistants. Actions already sent
-              may finish.
+              {lab.status === "success"
+                ? "New tool calls are stopped for this simulated connection. Actions already sent may finish."
+                : "New tool calls will stop for all assistants. Actions already sent may finish."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Outcome lab={lab} />
+          <Outcome lab={lab} operation="disconnect" />
           <AlertDialogFooter>
             {lab.busy ? (
               <Button variant="outline" onClick={lab.cancel}>
                 Cancel request
               </Button>
             ) : (
-              <AlertDialogCancel>Keep connection</AlertDialogCancel>
+              <AlertDialogCancel>
+                {lab.status === "success" || lab.status === "uncertain"
+                  ? "Close"
+                  : "Keep connection"}
+              </AlertDialogCancel>
             )}
             {lab.status === "uncertain" ? (
               <Button onClick={lab.check}>Check status</Button>
             ) : lab.status === "error" ? (
               <Button onClick={lab.retry}>Retry request</Button>
-            ) : lab.status === "success" ? (
-              <Button variant="outline" onClick={lab.reset}>
-                Reset example
-              </Button>
-            ) : (
+            ) : lab.status !== "success" ? (
               <AlertDialogAction
                 variant="destructive"
                 {...lab.interactionProps}
@@ -347,7 +366,7 @@ export function ConfirmationExample({ scenario }: { scenario: Scenario }) {
               >
                 {lab.busy ? "Disconnecting…" : "Disconnect"}
               </AlertDialogAction>
-            )}
+            ) : null}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
