@@ -171,18 +171,20 @@ const nativeGuardSelector =
   'html[data-ui-viewport="desktop"] span[data-base-ui-focus-guard][aria-hidden="true"]:empty'
 
 async function recordNativeGuards(page: Page, info: TestInfo, label: string) {
-  const guards = await page.locator(nativeGuardSelector).evaluateAll((nodes) =>
-    nodes.map((node) => {
-      const style = getComputedStyle(node)
-      return {
-        type: node.getAttribute("data-type") ?? "trigger",
-        children: node.childNodes.length,
-        width: Number.parseFloat(style.width),
-        height: Number.parseFloat(style.height),
-        clip: style.clipPath,
-        position: style.position,
-      }
-    })
+  const guards = await page.evaluate(
+    (selector) =>
+      [...document.querySelectorAll(selector)].map((node) => {
+        const style = getComputedStyle(node)
+        return {
+          type: node.getAttribute("data-type") ?? "trigger",
+          children: node.childNodes.length,
+          width: Number.parseFloat(style.width),
+          height: Number.parseFloat(style.height),
+          clip: style.clipPath,
+          position: style.position,
+        }
+      }),
+    nativeGuardSelector
   )
   if (!guards.length) return
   for (const guard of guards) {
@@ -265,6 +267,128 @@ for (const story of stories) {
     await accessibility(page, info, story.id)
   })
 }
+
+test("card headers: actions align with their title and description without extra rows", async ({
+  page,
+}, info) => {
+  for (const [id, prefix] of [
+    ["components-card--with-action", "card"],
+    ["components-cardframe--with-description", "card-frame"],
+  ] as const) {
+    await openStory(page, info, id, { autoplay: false })
+    const header = page.locator(`[data-slot="${prefix}-header"]`)
+    const geometry = await header.evaluate((node) => {
+      const title = node
+        .querySelector('[data-slot$="title"]')!
+        .getBoundingClientRect()
+      const description = node
+        .querySelector('[data-slot$="description"]')!
+        .getBoundingClientRect()
+      const action = node
+        .querySelector('[data-slot$="action"]')!
+        .getBoundingClientRect()
+      return {
+        height: node.getBoundingClientRect().height,
+        stacked:
+          getComputedStyle(node).gridTemplateColumns.split(" ").length === 1,
+        actionTop: action.top,
+        descriptionBottom: description.bottom,
+        textCenter: (title.top + description.bottom) / 2,
+        actionCenter: (action.top + action.bottom) / 2,
+      }
+    })
+    if (geometry.stacked) {
+      expect(geometry.actionTop).toBeGreaterThanOrEqual(
+        geometry.descriptionBottom
+      )
+      expect(geometry.height).toBeLessThanOrEqual(
+        prefix === "card-frame" ? 110 : 116
+      )
+    } else {
+      expect(
+        Math.abs(geometry.textCenter - geometry.actionCenter)
+      ).toBeLessThanOrEqual(1)
+      expect(geometry.height).toBeLessThanOrEqual(
+        prefix === "card-frame" ? 64 : 72
+      )
+    }
+    await noDocumentOverflow(page)
+  }
+})
+
+test("card frame: header action stays beside the title at phone width and grows with text", async ({
+  page,
+}, info) => {
+  for (const scale of [100, 200] as const) {
+    await openStory(page, info, "components-cardframe--header-and-action", {
+      scale,
+      autoplay: false,
+    })
+    const header = page.locator('[data-slot="card-frame-header"]')
+    const title = page.getByRole("heading", { name: "Notes", exact: true })
+    const action = page.getByRole("button", { name: "Add note", exact: true })
+    await expect(title).toHaveCSS("font-size", `${(16 * scale) / 100}px`)
+    if (scale === 100) {
+      const titleBox = (await title.boundingBox())!,
+        actionBox = (await action.boundingBox())!
+      expect(
+        Math.abs(
+          titleBox.y + titleBox.height / 2 - actionBox.y - actionBox.height / 2
+        )
+      ).toBeLessThanOrEqual(1)
+      expect((await header.boundingBox())!.height).toBeLessThanOrEqual(60)
+    }
+    await expect(
+      page.locator('[data-slot="card-frame-description"]')
+    ).toHaveCount(0)
+    await noDocumentOverflow(page)
+  }
+})
+
+test("button sizes: compact on fine-pointer desktops, generous on phones and wide touch devices", async ({
+  page,
+}, info) => {
+  const touch = await page.evaluate(
+    () => matchMedia("(any-pointer: coarse)").matches
+  )
+  for (const scale of [100, 200] as const) {
+    await openStory(page, info, "components-button--sizes", {
+      scale,
+      autoplay: false,
+    })
+    const compact = await page.evaluate(
+      () =>
+        matchMedia("(min-width: 48rem)").matches &&
+        matchMedia("(pointer: fine)").matches &&
+        !matchMedia("(any-pointer: coarse)").matches
+    )
+    const heights = compact
+      ? [32, 36, 44, 32, 36, 44]
+      : [44, 44, 48, 44, 44, 48]
+    const buttons = page
+      .locator("section")
+      .first()
+      .locator('[data-slot="button"]')
+    await expect(buttons).toHaveCount(6)
+    for (let index = 0; index < heights.length; index++) {
+      const box = (await buttons.nth(index).boundingBox())!
+      expect(box.height).toBe((heights[index]! * scale) / 100)
+      if (index >= 3) expect(box.width).toBe(box.height)
+    }
+    await noDocumentOverflow(page)
+  }
+  if (touch) {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await openStory(page, info, "components-button--default", {
+      autoplay: false,
+    })
+    expect(
+      (await page
+        .getByRole("button", { name: "Save", exact: true })
+        .boundingBox())!.height
+    ).toBeGreaterThanOrEqual(44)
+  }
+})
 
 test("catalogue: each primitive has independent docs and controls", async ({
   page,

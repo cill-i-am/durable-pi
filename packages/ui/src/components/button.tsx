@@ -6,7 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 const buttonVariants = cva(
-  "rounded-control inline-flex min-h-11 max-w-full shrink-0 items-center justify-center gap-2 border border-transparent px-3 py-2 text-center text-base leading-5 font-medium [overflow-wrap:anywhere] transition-[background-color,scale] duration-(--ui-motion-press) ease-out outline-none select-none [-webkit-tap-highlight-color:transparent] focus-visible:[box-shadow:var(--shadow-button),var(--shadow-focus)] disabled:pointer-events-none disabled:opacity-50 disabled:aria-busy:opacity-100 aria-invalid:border-destructive motion-reduce:transition-none data-disabled:pointer-events-none data-disabled:opacity-50 data-disabled:aria-busy:opacity-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "rounded-control inline-flex min-h-11 max-w-full shrink-0 items-center justify-center gap-2 border border-transparent px-3 py-2 text-center text-base leading-5 font-medium [overflow-wrap:anywhere] transition-[background-color,scale] duration-(--ui-motion-press) ease-out outline-none select-none [-webkit-tap-highlight-color:transparent] focus-visible:[box-shadow:var(--shadow-button),var(--shadow-focus)] disabled:pointer-events-none disabled:opacity-50 disabled:aria-busy:opacity-100 aria-invalid:border-destructive motion-reduce:transition-none md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5 data-disabled:pointer-events-none data-disabled:opacity-50 data-disabled:aria-busy:opacity-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -24,11 +24,13 @@ const buttonVariants = cva(
       },
       size: {
         default: "",
-        sm: "px-2.5 text-sm",
-        lg: "min-h-12 px-5 text-md",
-        icon: "size-11 p-0",
-        "icon-sm": "size-11 p-0 [&_svg]:size-4",
-        "icon-lg": "size-12 p-0 [&_svg]:size-5",
+        sm: "px-2.5 text-sm md:pointer-fine:not-any-pointer-coarse:min-h-8 md:pointer-fine:not-any-pointer-coarse:py-1",
+        lg: "min-h-12 px-5 text-md md:pointer-fine:not-any-pointer-coarse:min-h-11 md:pointer-fine:not-any-pointer-coarse:py-2",
+        icon: "size-11 p-0 md:pointer-fine:not-any-pointer-coarse:size-9 md:pointer-fine:not-any-pointer-coarse:p-0",
+        "icon-sm":
+          "size-11 p-0 md:pointer-fine:not-any-pointer-coarse:size-8 md:pointer-fine:not-any-pointer-coarse:min-h-8 md:pointer-fine:not-any-pointer-coarse:p-0 [&_svg]:size-4",
+        "icon-lg":
+          "size-12 p-0 md:pointer-fine:not-any-pointer-coarse:size-11 md:pointer-fine:not-any-pointer-coarse:min-h-11 md:pointer-fine:not-any-pointer-coarse:p-0 [&_svg]:size-5",
       },
     },
     defaultVariants: { variant: "default", size: "default" },
