@@ -66,10 +66,6 @@ export function useConversationCommands(
                           current.profile === attempt.profile
                             ? "auto"
                             : current.profile,
-                        job:
-                          current.job === attempt.job
-                            ? "conversation"
-                            : current.job,
                         files: current.files.filter(
                           (file) => !submitted.includes(file.id)
                         ),
