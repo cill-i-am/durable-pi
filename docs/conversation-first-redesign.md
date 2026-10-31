@@ -20,7 +20,7 @@ Status is recorded separately for Paper, code and verification. A shared compone
 
 | Area | Existing surfaces | Paper | Implementation | Verification |
 | --- | --- | --- | --- | --- |
-| Shell | Expanded/collapsed sidebar, family/account menus, command search, startup, not found and route recovery | Designed p-C-1 + shell states | Implemented | Focused checks; final integration underway |
+| Shell | Expanded/collapsed sidebar, family/account menus, command search, startup, not found and route recovery | Designed p-C-1 + shell states | Implemented | Focused/native checks passed; final CI tracked in PR #239 |
 | Conversation | Empty/history/search, messages, composer, attachments, queued/steered/stopped/recovered turns, inline rich results, actual participants | Designed p-C-1 + empty/recovery states | Implemented | 45 units; 20 browser flows passed |
 | Decisions | Pending/expanded/detail, allow/deny/future permission, saving/accepted/running/completed, uncertainty/recovery, defer | Approved p-C-1 | Implemented | 33 units; dock + 10 integration flows passed |
 | Workbench frame | Open/close/add/select tabs, expanded/return, mobile stack, retained state and locks | Approved p-C-1 | Implemented | 12 units; desktop/mobile native regression passed |
@@ -38,8 +38,8 @@ Status is recorded separately for Paper, code and verification. A shared compone
 | Code | Execution list/detail, submit/run/stop/recovery | Designed p-G-0 | Implemented | Execution-tool checks passed |
 | Routines | List, editor/schedule, webhook, history/run/detail/recovery | Designed p-G-0 | Implemented | 90 tool units; 43 browser cases incl mobile race passed |
 | Activity | Timeline/filter/search, task list/detail, controls/recovery | Designed p-G-0 | Implemented | Execution-tool checks passed |
-| Inline answers | Answer gallery, structured questions, Weather/Places/Route/Products/Calculation/DataTable/Comparison results | 9-board / 12-renderer set p-I-0 | Implemented | 86 units, 14 browser cases; final combined pass underway |
-| Shared feedback | Loading/empty/error, stale/update/reload recovery, toasts, responsive overlays | UI primitives + shell recovery p-C-1 | Implemented | Class/contrast + built-site upgrade recovery checks underway |
+| Inline answers | Answer gallery, structured questions, Weather/Places/Route/Products/Calculation/DataTable/Comparison results | 9-board / 12-renderer set p-I-0 | Implemented | 86 units, 14 browser flows + 4 final scenarios passed; final CI in PR #239 |
+| Shared feedback | Loading/empty/error, stale/update/reload recovery, toasts, responsive overlays | UI primitives + shell recovery p-C-1 | Implemented | Class/contrast + built-site upgrade recovery passed |
 
 ## Working boundaries
 
@@ -55,3 +55,7 @@ Status is recorded separately for Paper, code and verification. A shared compone
 Each owner adds its route/surface list, Executor skills read, Paper page/artboard links, design-before-code confirmation, implementation files and checks here when handing back. No page is complete with only a theme change or only a Paper screenshot.
 
 Evidence is split by owning surface: [shell](design-evidence-shell.md), [foundations](design-evidence-foundations.md), [conversation](design-evidence-conversation.md), [decisions](design-evidence-decisions.md), [workbench](design-evidence-workbench.md), [auth and assistants](design-evidence-auth-agents.md), [settings](design-evidence-settings.md), [resources](design-evidence-resources.md), [execution tools](design-evidence-execution-tools.md), and [inline answers](design-evidence-answers.md).
+
+## Publication
+
+The complete implementation is published in [PR #239](https://github.com/cill-i-am/durable-pi/pull/239) on `codex/conversation-first-redesign`. GitHub verified the implementation and navigation-test commits. Per-area reports record the local checkpoints that preceded publication; the PR's current-head checks are the authoritative final integration result. This publication does not merge or deploy the redesign.

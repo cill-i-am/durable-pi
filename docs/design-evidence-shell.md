@@ -30,6 +30,6 @@ Independent review identified and corrected terminal locking, lost AppView draft
 - Shared UI: 24 unit tests passed, plus the focused motion, keyboard, density, contrast and overlay browser evidence in the foundation report.
 - Built website passkey ceremonies: passed. Real Better Auth and browser WebAuthn against local native fixtures.
 - Two-build client upgrade: passed; retired asset recovery preserves the unsent draft and attachment with zero submissions.
-- Full desktop/mobile browser sweep is being completed. Early failures from removed navigation were updated to the actual workflow without removing the behavior assertions. Resource recovery/scroll corrections and final answer checks are tracked in their owning reports.
+- Full desktop/mobile integration is tracked on [PR #239](https://github.com/cill-i-am/durable-pi/pull/239). Early failures from removed navigation were updated to the actual workflow without removing the behavior assertions. Isolated resource recovery/scroll and final answer checks passed in their owning reports; final current-head CI remains distinct from these local checkpoints.
 
 This document records local evidence. CI, merge, deployment and production verification are separate delivery states.
