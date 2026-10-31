@@ -6,6 +6,10 @@ import type { MemoryRepository } from "../memory/repository"
 import { observeCleanup } from "../shared/effect"
 import type { AttachmentReadiness } from "./attachments"
 import {
+  initialControlReleases,
+  advanceControlReleases,
+} from "./control-release.machine"
+import {
   ConversationControlTimeout,
   ConversationExecutionError,
   type ConversationExecution,
@@ -21,7 +25,7 @@ import {
 } from "./pump.machine"
 import type { RecoveryView } from "./recovery"
 import type { Conversations } from "./service"
-import { ConversationConflict, type ControlRelease, type Turn } from "./turns"
+import { ConversationConflict, type Turn } from "./turns"
 
 export interface ConversationPumpHost<TError, TRequirements = never> {
   prepareRuntime?: (turn: Turn) => Effect.Effect<void, TError, TRequirements>
@@ -74,25 +78,20 @@ export function conversationPump<TError, TRequirements>(
   type C = ConversationPumpContext<E>
   // These receipts exist only after this host has joined the actor's native
   // cleanup. They permit exact release retries, never takeover of live work.
-  const completedReleases = new Map<
-    string,
-    {
-      rootId: string
-      owner: string
-      confirmed: boolean
-      result: ControlRelease
-    }
-  >()
+  let releases = initialControlReleases()
   const reconcile = Effect.fn("Conversations.reconcileCompletedControl")(
     function* () {
-      for (const receipt of [...completedReleases.values()]) {
+      for (const receipt of releases.context.receipts) {
         yield* conversations.releaseControl(
           receipt.rootId,
           receipt.owner,
           receipt.confirmed,
           receipt.result
         )
-        completedReleases.delete(receipt.owner)
+        releases = advanceControlReleases(releases, {
+          type: "RELEASED",
+          receipt,
+        })
       }
     }
   )
@@ -462,14 +461,20 @@ export function conversationPump<TError, TRequirements>(
                       : "Reply control could not be confirmed after several attempts. Check the reply or retry Stop.",
                   },
                 }
-                completedReleases.set(owner, receipt)
+                releases = advanceControlReleases(releases, {
+                  type: "RETAIN",
+                  receipt,
+                })
                 yield* conversations.releaseControl(
                   receipt.rootId,
                   owner,
                   confirmed,
                   receipt.result
                 )
-                completedReleases.delete(owner)
+                releases = advanceControlReleases(releases, {
+                  type: "RELEASED",
+                  receipt,
+                })
               })
             )
             const retained: Cause.Reason<E>[] = [
