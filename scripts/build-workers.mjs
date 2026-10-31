@@ -1,7 +1,7 @@
 import { createRequire } from "node:module"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild")
 
 // Compile production entrypoints and the legacy migration fixture independently
 // of the website. This bundles locally without evaluating the stack.

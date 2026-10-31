@@ -631,8 +631,8 @@ it.effect(
         expect(
           exit.cause.reasons.some(
             (reason) =>
-              reason._tag === "Fail" &&
-              reason.error === checked.error &&
+              reason._tag === "Die" &&
+              reason.defect === checked.error &&
               reason.annotations.get(Marker.key) === "checked"
           )
         ).toBe(true)

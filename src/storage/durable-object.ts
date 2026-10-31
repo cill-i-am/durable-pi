@@ -135,7 +135,7 @@ export function makeDurableObjectSqlite(storage: DurableObjectStorage) {
       },
     })
     const services = yield* Layer.build(Driver.layer({ storage: guarded }))
-    const orm = yield* Drizzle.makeWithDefaults({ storage: guarded }).pipe(
+    const orm = yield* Drizzle.makeWithDefaults({}).pipe(
       Effect.provideContext(services)
     )
     return makeSqlite(owner, orm, transaction(storage, owner)) satisfies Sqlite

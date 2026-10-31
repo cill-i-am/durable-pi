@@ -3,13 +3,13 @@ import {
   Cause,
   Clock,
   Context,
-  Crypto,
   Deferred,
   Effect,
   Exit,
   Fiber,
   Layer,
 } from "effect"
+import { Digest } from "effect/crypto"
 import { TestClock } from "effect/testing"
 
 import { ConversationStorageError } from "../src/conversations/turns"
@@ -407,17 +407,14 @@ it.effect(
         { transactionGroup: f.db, active: () => Effect.succeed(active) },
         wakeHost(events)
       )
-      const digest = Layer.succeed(
-        Crypto.Crypto,
-        Crypto.make({
-          randomBytes: (size) => new Uint8Array(size),
-          digest: () =>
-            Effect.sync(() => {
-              active = true
-              return new Uint8Array(32)
-            }),
-        })
-      )
+      const digest = Layer.succeed(Digest.Digest, {
+        digest: () => Effect.succeed(new Uint8Array(32)),
+        digestHex: () =>
+          Effect.sync(() => {
+            active = true
+            return "0".repeat(64)
+          }),
+      })
       const result = yield* command(jsonl).pipe(
         Effect.provide(digest),
         Effect.result

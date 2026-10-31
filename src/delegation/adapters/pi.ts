@@ -33,12 +33,14 @@ import { makeDelegations } from "../service"
 import { delegationCommit, delegationNative } from "./interop"
 
 const Catalog = defineDoc({
+  checkpointWhen: () => false,
   kind: "delegation.catalog",
   scope: "session",
   version: 1,
   initial: () => ({ ids: [] as number[] }),
 })
 const Groups = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "delegation.group",
   scope: "session",
   family: true,
@@ -46,6 +48,7 @@ const Groups = defineDocFamily({
   initial: (_: null) => ({ value: "" }),
 })
 const Parents = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "delegation.parent",
   scope: "session",
   family: true,
@@ -53,6 +56,7 @@ const Parents = defineDocFamily({
   initial: (_: null) => ({ group: 0 }),
 })
 const Children = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "delegation.child",
   scope: "session",
   family: true,
@@ -60,6 +64,7 @@ const Children = defineDocFamily({
   initial: (_: null) => ({ group: 0 }),
 })
 const Providers = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "delegation.provider",
   scope: "session",
   family: true,
@@ -67,6 +72,7 @@ const Providers = defineDocFamily({
   initial: (_: null) => ({ group: 0, child: 0 }),
 })
 const Operations = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "delegation.operation",
   scope: "session",
   family: true,

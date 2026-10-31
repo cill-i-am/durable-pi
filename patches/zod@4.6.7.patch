@@ -1,0 +1,33 @@
+diff --git a/v4/classic/package.json b/v4/classic/package.json
+index f5d2e90cdae223ed38764ab1d69169a1c54b6661..65ac759ac6df7b3f0d7d90604c7a8b151eb323af 100644
+--- a/v4/classic/package.json
++++ b/v4/classic/package.json
+@@ -3,5 +3,5 @@
+   "main": "./index.cjs",
+   "module": "./index.js",
+   "types": "./index.d.cts",
+-  "sideEffects": false
++  "sideEffects": true
+ }
+diff --git a/v4/core/package.json b/v4/core/package.json
+index f5d2e90cdae223ed38764ab1d69169a1c54b6661..65ac759ac6df7b3f0d7d90604c7a8b151eb323af 100644
+--- a/v4/core/package.json
++++ b/v4/core/package.json
+@@ -3,5 +3,5 @@
+   "main": "./index.cjs",
+   "module": "./index.js",
+   "types": "./index.d.cts",
+-  "sideEffects": false
++  "sideEffects": true
+ }
+diff --git a/v4/package.json b/v4/package.json
+index f5d2e90cdae223ed38764ab1d69169a1c54b6661..65ac759ac6df7b3f0d7d90604c7a8b151eb323af 100644
+--- a/v4/package.json
++++ b/v4/package.json
+@@ -3,5 +3,5 @@
+   "main": "./index.cjs",
+   "module": "./index.js",
+   "types": "./index.d.cts",
+-  "sideEffects": false
++  "sideEffects": true
+ }

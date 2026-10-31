@@ -1,5 +1,9 @@
 import { EventType, type StreamChunk } from "@tanstack/ai"
-import { createEffectActor, type EffectActor } from "@xstate/effect"
+import {
+  createEffectActor,
+  EffectFailure,
+  type EffectActor,
+} from "@xstate/effect"
 import {
   Cause,
   Deferred,
@@ -131,7 +135,11 @@ export function makeConversationConnection(
           error: (cause) => {
             Queue.failCauseUnsafe(
               queue,
-              Cause.isCause(cause) ? cause : Cause.die(cause)
+              EffectFailure.is(cause)
+                ? cause.cause
+                : Cause.isCause(cause)
+                  ? cause
+                  : Cause.die(cause)
             )
           },
         })

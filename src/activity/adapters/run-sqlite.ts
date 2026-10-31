@@ -157,10 +157,13 @@ export function readRunRecords(
           .unionAll(
             orm
               .select({
-                key: concat("model:", inferenceAttempts.id),
-                at: jsonField<string>(inferenceAttempts.payload, "$.startedAt"),
-                kind: literal<string>("model"),
-                reference: asText(inferenceAttempts.id),
+                key: concat("model:", inferenceAttempts.id).as("key"),
+                at: jsonField<string>(
+                  inferenceAttempts.payload,
+                  "$.startedAt"
+                ).as("at"),
+                kind: literal<string>("model").as("kind"),
+                reference: asText(inferenceAttempts.id).as("reference"),
                 payload: inferenceAttempts.payload,
               })
               .from(inferenceAttempts)
@@ -174,10 +177,10 @@ export function readRunRecords(
           .unionAll(
             orm
               .select({
-                key: concat("tool:", toolOperations.id),
-                at: isoMillis(toolOperations.createdAt),
-                kind: literal<string>("tool"),
-                reference: asText(toolOperations.id),
+                key: concat("tool:", toolOperations.id).as("key"),
+                at: isoMillis(toolOperations.createdAt).as("at"),
+                kind: literal<string>("tool").as("kind"),
+                reference: asText(toolOperations.id).as("reference"),
                 payload: jsonObject({
                   title: toolOperations.tool,
                   status: toolOperations.status,
@@ -190,7 +193,7 @@ export function readRunRecords(
                     ),
                     null
                   ),
-                }),
+                }).as("payload"),
               })
               .from(toolOperations)
               .where(eq(toolOperations.turnId, runId))
@@ -198,10 +201,12 @@ export function readRunRecords(
           .unionAll(
             orm
               .select({
-                key: concat("recovery:", asText(chatRecoveryHistory.id)),
+                key: concat("recovery:", asText(chatRecoveryHistory.id)).as(
+                  "key"
+                ),
                 at: chatRecoveryHistory.at,
-                kind: literal<string>("recovery"),
-                reference: asText(chatRecoveryHistory.id),
+                kind: literal<string>("recovery").as("kind"),
+                reference: asText(chatRecoveryHistory.id).as("reference"),
                 payload: chatRecoveryHistory.view,
               })
               .from(chatRecoveryHistory)

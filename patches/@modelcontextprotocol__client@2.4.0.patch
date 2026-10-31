@@ -1,8 +1,7 @@
-diff --git a/dist/index.cjs b/dist/index.cjs
-index 71cf630..d1baa51 100644
---- a/dist/index.cjs
-+++ b/dist/index.cjs
-@@ -642,7 +642,25 @@ function warnCredentialInvalidation(provider, error, invalidated) {
+diff --git a/dist/public-CvV4ZHkX.mjs b/dist/public-CvV4ZHkX.mjs
+--- a/dist/public-CvV4ZHkX.mjs
++++ b/dist/public-CvV4ZHkX.mjs
+@@ -637,7 +637,25 @@
  * This can be used as a single entry point for all authorization functionality,
  * instead of linking together the other lower-level functions in this module.
  */
@@ -28,11 +27,10 @@ index 71cf630..d1baa51 100644
  	try {
  		return await authInternal(provider, options);
  	} catch (error) {
-diff --git a/dist/index.mjs b/dist/index.mjs
-index c1a09a8..261afdd 100644
---- a/dist/index.mjs
-+++ b/dist/index.mjs
-@@ -639,7 +639,25 @@ function warnCredentialInvalidation(provider, error, invalidated) {
+diff --git a/dist/public-C-9H-ftO.cjs b/dist/public-C-9H-ftO.cjs
+--- a/dist/public-C-9H-ftO.cjs
++++ b/dist/public-C-9H-ftO.cjs
+@@ -640,7 +640,25 @@
  * This can be used as a single entry point for all authorization functionality,
  * instead of linking together the other lower-level functions in this module.
  */

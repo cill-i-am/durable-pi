@@ -1,4 +1,4 @@
-FROM docker.io/cloudflare/sandbox:0.12.10@sha256:35c932d3e5b35f28d350800cf00551cac46dfe28274afb54e16325b8d8f560d1
+FROM docker.io/cloudflare/sandbox:0.12.14@sha256:b8175e89ae5efd83987ffd5056f57c28c390fd5706d42ef70fb669e275248e7b
 COPY --chmod=755 pi-shell /usr/local/bin/pi-shell
 COPY --chmod=755 pi-video.py /usr/local/bin/pi-video.py
 RUN apt-get update && apt-get install -y --no-install-recommends python3 ffmpeg \

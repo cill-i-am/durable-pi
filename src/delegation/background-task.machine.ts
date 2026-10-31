@@ -3,6 +3,10 @@ import { Schema } from "effect"
 import { initialTransition, transition, type EventFromLogic } from "xstate"
 import { standardSchemaValidator } from "xstate/validation"
 
+import {
+  runtimeLibraryVersion,
+  nativePiVersion,
+} from "../shared/runtime-versions"
 import { backgroundRejected } from "./background-domain"
 import {
   BackgroundState,
@@ -394,8 +398,8 @@ export function initializeBackgroundTask(
   const input: Data = {
     schemaVersion: 2,
     workflowVersion: 1,
-    libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
-    piVersion: "1.3.0",
+    libraryVersion: runtimeLibraryVersion,
+    piVersion: nativePiVersion,
     handoff,
     authority: "active",
     revision: 0,

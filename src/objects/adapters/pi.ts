@@ -29,6 +29,7 @@ import {
 import { makeWorkingObjects } from "../service"
 
 const Catalog = defineDoc({
+  checkpointWhen: () => false,
   kind: "working-objects.catalog",
   scope: "session",
   version: 1,
@@ -40,6 +41,7 @@ const Catalog = defineDoc({
   }),
 })
 const Objects = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "working-objects.checklist",
   scope: "session",
   family: true,
@@ -51,6 +53,7 @@ const Objects = defineDocFamily({
   }),
 })
 const Events = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "working-objects.event",
   scope: "session",
   family: true,
@@ -62,6 +65,7 @@ const Events = defineDocFamily({
   }),
 })
 const Operations = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "working-objects.operation",
   scope: "session",
   family: true,

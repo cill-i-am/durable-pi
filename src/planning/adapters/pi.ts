@@ -27,12 +27,14 @@ import type { PlanAuthority, PlanEvidence } from "../plans"
 import { makePlans } from "../service"
 
 const Catalog = defineDoc({
+  checkpointWhen: () => false,
   kind: "plans.catalog",
   scope: "session",
   version: 1,
   initial: () => ({ ids: [] as string[] }),
 })
 const Documents = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.task",
   scope: "session",
   family: true,
@@ -48,6 +50,7 @@ const Documents = defineDocFamily({
   },
 })
 const History = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.revision",
   scope: "session",
   family: true,
@@ -55,6 +58,7 @@ const History = defineDocFamily({
   initial: (_: null) => ({ value: "" }),
 })
 const Bindings = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.turn",
   scope: "session",
   family: true,
@@ -77,6 +81,7 @@ const Bindings = defineDocFamily({
   },
 })
 const Operations = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.operation",
   scope: "session",
   family: true,

@@ -7,9 +7,9 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild")
-const workerd = requireAlchemy("workerd")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild")
+const workerd = requireRuntime("workerd")
 const directory = await mkdtemp(join(tmpdir(), "durable-pi-memory-backup-"))
 const listener = createServer()
 await new Promise((done) => listener.listen(0, "127.0.0.1", done))
@@ -129,7 +129,7 @@ try {
     define: { NEGATIVE_DISCOVERY: String(broken) },
   })
   const schema = join(
-    dirname(requireAlchemy.resolve("workerd")),
+    dirname(requireRuntime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )

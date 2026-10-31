@@ -207,7 +207,7 @@ it.effect(
         expect(
           exit.cause.reasons.some(
             (reason) =>
-              reason._tag === "Fail" && reason.error === f.work.timeout
+              reason._tag === "Die" && reason.defect === f.work.timeout
           )
         ).toBe(true)
       }

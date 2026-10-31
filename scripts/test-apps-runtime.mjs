@@ -7,9 +7,9 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild"),
-  workerd = requireAlchemy("workerd")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild"),
+  workerd = requireRuntime("workerd")
 const negative = process.argv.includes("--negative-discovery")
 const directory = await mkdtemp(join(tmpdir(), "pi-apps-runtime-"))
 const prefix =
@@ -140,7 +140,7 @@ try {
       : [],
   })
   const schema = join(
-    dirname(requireAlchemy.resolve("workerd")),
+    dirname(requireRuntime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )

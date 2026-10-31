@@ -3,6 +3,7 @@ import { Clock, Effect, Exit, Schema } from "effect"
 import { standardSchemaValidator } from "xstate/validation"
 
 import { ResolvedRoute } from "../inference/policy"
+import { StoredNativeExecutionVersion } from "../shared/runtime-versions"
 import { Outcome, Task, terminal } from "./contracts"
 
 const executionFields = {
@@ -15,7 +16,7 @@ export const LegacyNativeExecution = Schema.Struct(executionFields)
 export const NativeExecution = Schema.Struct({
   schemaVersion: Schema.Literal(1),
   workflowVersion: Schema.Literal(1),
-  nativeVersion: Schema.Literal("pi-durable@1.3.0"),
+  nativeVersion: StoredNativeExecutionVersion,
   ...executionFields,
 })
 export type NativeExecution = typeof NativeExecution.Type
