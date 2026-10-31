@@ -124,7 +124,7 @@ it("choosing the current agent returns from its workbench to its conversation", 
 })
 
 it.each([
-  ["settings", "/settings"],
+  ["settings", "/settings/account"],
   ["security", "/settings/security"],
 ] as const)(
   "opens account-owned %s from the committed workbench without adopting a pending location",

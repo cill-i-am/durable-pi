@@ -202,9 +202,9 @@ async function driveUpgrade(origin, replacement) {
       .click({ trial: true })
     await page.screenshot({ path: join(evidence, "retired-asset.png") })
     await page.getByRole("button", { name: "Reload page", exact: true }).click()
-    await expect(page).toHaveURL(/\/agents\/navi\/settings$/)
+    await expect(page).toHaveURL(/\/agents\/navi\/settings\/general$/)
     await expect(
-      page.getByRole("heading", { name: "Assistant settings", exact: true })
+      page.getByRole("heading", { name: "General", exact: true })
     ).toBeVisible()
     const newEntry = await page
       .locator('script[type="module"][src]')
@@ -215,7 +215,7 @@ async function driveUpgrade(origin, replacement) {
       "Reload must fetch the replacement build"
     )
     await page
-      .getByRole("button", { name: "Close settings", exact: true })
+      .getByRole("button", { name: "Back to workspace", exact: true })
       .click()
     await expect(composer).toHaveValue(
       "Preserve this unsent draft across the real build replacement."

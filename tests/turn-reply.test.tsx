@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import type { ChatState } from "../src/conversations/contracts"
+import { TurnDelivery } from "../src/features/conversation/turn-delivery"
 import { TurnReply } from "../src/features/conversation/turn-reply"
 
 const base = {
@@ -12,6 +13,50 @@ const base = {
   created_at: "2026-10-11T00:00:00Z",
 }
 describe("terminal conversation outcomes", () => {
+  it("shows persisted reply times separately from the original message and steering", () => {
+    const html = renderToStaticMarkup(
+      <TurnReply
+        agentName="Research"
+        turn={{
+          ...base,
+          status: "done",
+          activity: [
+            {
+              id: "reply",
+              type: "text",
+              text: "Answer",
+              created_at: "2026-10-11T00:01:00Z",
+            },
+            { id: "steer:two", type: "steer", text: "Correction" },
+          ],
+          steering: [
+            {
+              id: "two",
+              text: "Correction",
+              created_at: "2026-10-11T00:02:00Z",
+              delivery: "answered",
+            },
+          ],
+        }}
+      />
+    )
+    expect(html).toContain('dateTime="2026-10-11T00:01:00.000Z"')
+    expect(html).toContain('dateTime="2026-10-11T00:02:00.000Z"')
+    expect(html).not.toContain('dateTime="2026-10-11T00:00:00.000Z"')
+  })
+  it("keeps the incoming message time visible while queued or preparing files", () => {
+    for (const preparingFiles of [false, true]) {
+      const html = renderToStaticMarkup(
+        <TurnDelivery
+          turn={{ ...base, status: "queued", preparingFiles }}
+          waiting
+          onCancel={() => {}}
+        />
+      )
+      expect(html).toContain('dateTime="2026-10-11T00:00:00.000Z"')
+      expect(html).toContain(preparingFiles ? "Preparing files…" : "Queued")
+    }
+  })
   it("labels agent steering in both live and saved activity", () => {
     const provenance = {
       author: { kind: "agent" as const, id: "researcher" },

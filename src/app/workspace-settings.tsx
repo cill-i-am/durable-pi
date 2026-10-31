@@ -24,7 +24,7 @@ import type { AgentProfile } from "@/agents/contracts"
 import { authClient } from "@/auth/client"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useOverlayMobile } from "@/components/ui/responsive-overlay"
-import { useSidebar } from "@/components/ui/sidebar"
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { UserAvatar } from "@/components/user-avatar"
 import { AccessPanel } from "@/features/access"
 import { AppearanceSettings } from "@/features/appearance/appearance-settings"
@@ -164,6 +164,8 @@ function SettingsRoot({
   const open = entered && depth > 0
   return (
     <Dialog
+      desktop="page"
+      modal={depth === 1}
       open={open}
       dismissible={!context.locked}
       onOpenChange={(next) => {
@@ -198,12 +200,14 @@ function SettingsPresentation({
   onLayerClosed: (id: string) => void
 }) {
   const { state: sidebarState } = useSidebar()
+  const mobile = useOverlayMobile()
   const active = frames[Math.max(0, depth - 1)] ?? root
   const global = isGlobalSettingsSection(root.category)
   const rows = useRef(new Map<string, HTMLElement>())
   return (
     <DialogContent
       showCloseButton={false}
+      container={document.getElementById("settings-page-host")}
       mobileLayout="panel"
       className="workspace-settings translate-none"
       overlayClassName="settings-backdrop"
@@ -214,6 +218,7 @@ function SettingsPresentation({
       data-settings-scope={global ? "personal" : "agent"}
       finalFocus={() => document.getElementById("main-content")}
     >
+      {!mobile && <SettingsPageHeader frame={root} context={context} />}
       <SettingsNavigation
         root={root}
         selected={active}
@@ -221,16 +226,18 @@ function SettingsPresentation({
         context={context}
         rows={rows.current}
       />
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="settings-root-close"
-        aria-label="Close settings"
-        disabled={context.locked}
-        onClick={() => context.exit()}
-      >
-        <X />
-      </Button>
+      {mobile && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="settings-root-close"
+          aria-label="Close settings"
+          disabled={context.locked}
+          onClick={() => context.exit()}
+        >
+          <X />
+        </Button>
+      )}
       {frames[1] && (
         <SettingsLayer
           key={frames[1].id}
@@ -418,6 +425,8 @@ function SettingsLayer({
   )
   return (
     <Dialog
+      desktop="page"
+      modal={index === depth - 1}
       open={open}
       dismissible={!context.locked && index === depth - 1}
       onOpenChange={(next) => {
@@ -428,6 +437,7 @@ function SettingsLayer({
       }}
     >
       <DialogContent
+        container={document.getElementById("settings-page-host")}
         showCloseButton={false}
         mobileLayout="panel"
         className="workspace-settings settings-route-drawer translate-none"
@@ -441,15 +451,18 @@ function SettingsLayer({
           (frame.category === "family" || frame.category === "model-access")
         }
         finalFocus={() =>
-          trigger.current?.isConnected &&
-          trigger.current
-            .closest("[data-settings-route]")
-            ?.getAttribute("data-settings-route") === parent.id
-            ? trigger.current
-            : (returnFocus?.() ?? null)
+          !mobile
+            ? document.getElementById("main-content")
+            : trigger.current?.isConnected &&
+                trigger.current
+                  .closest("[data-settings-route]")
+                  ?.getAttribute("data-settings-route") === parent.id
+              ? trigger.current
+              : (returnFocus?.() ?? null)
         }
         ref={body}
       >
+        {!mobile && <SettingsPageHeader frame={frame} context={context} />}
         <DialogTitle render={<span />} className="sr-only">
           {mobile ? title : global ? "Settings" : "Assistant settings"}
         </DialogTitle>
@@ -486,6 +499,53 @@ function SettingsLayer({
   )
 }
 
+function SettingsPageHeader({
+  frame,
+  context,
+}: {
+  frame: SettingsFrame
+  context: StackContext
+}) {
+  const global = isGlobalSettingsSection(frame.category)
+  return (
+    <header className="settings-page-header">
+      <SidebarTrigger size="icon-sm" />
+      <span className="settings-page-divider" aria-hidden="true" />
+      <nav
+        aria-label="Breadcrumb"
+        className="flex min-w-0 items-center gap-3 text-sm"
+      >
+        <span className="truncate text-muted-foreground">
+          {global
+            ? "Settings"
+            : (context.props.agent?.name ?? "Assistant settings")}
+        </span>
+        {frame.category !== "settings" &&
+          frame.category !== "agent-settings" && (
+            <>
+              <ChevronRight
+                className="size-3 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <span aria-current="page">{frameTitle(frame)}</span>
+            </>
+          )}
+      </nav>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="ml-auto"
+        aria-label="Back to workspace"
+        title="Back to workspace"
+        disabled={context.locked}
+        onClick={() => context.exit()}
+      >
+        <ArrowLeft />
+      </Button>
+    </header>
+  )
+}
+
 function SettingsDetail({
   frame,
   parent,
@@ -501,30 +561,32 @@ function SettingsDetail({
 }) {
   return (
     <div className="settings-detail">
-      <div className="settings-detail-bar">
-        {mobile && parent && (
+      {mobile && (
+        <div className="settings-detail-bar">
+          {parent && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={"Back to " + frameTitle(parent)}
+              disabled={context.locked}
+              onClick={onDismiss}
+            >
+              <ArrowLeft data-icon="inline-start" />
+              {frameTitle(parent)}
+            </Button>
+          )}
           <Button
             variant="ghost"
-            size="sm"
-            aria-label={"Back to " + frameTitle(parent)}
+            size="icon-sm"
+            className="ml-auto"
+            aria-label={"Close " + frameTitle(frame)}
             disabled={context.locked}
             onClick={onDismiss}
           >
-            <ArrowLeft data-icon="inline-start" />
-            {frameTitle(parent)}
+            <X />
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="ml-auto"
-          aria-label={mobile ? "Close " + frameTitle(frame) : "Close settings"}
-          disabled={context.locked}
-          onClick={onDismiss}
-        >
-          <X />
-        </Button>
-      </div>
+        </div>
+      )}
       <div className="settings-detail-content">
         <SettingsBody frame={frame} context={context} onDismiss={onDismiss} />
       </div>

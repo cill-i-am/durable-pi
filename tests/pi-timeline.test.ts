@@ -74,6 +74,9 @@ describe("Pi display projection", () => {
       status: "done",
       output: "Saved preference",
     })
+    expect(result[1]).toMatchObject({
+      created_at: new Date(assistant.timestamp).toISOString(),
+    })
     expect(JSON.stringify(result)).not.toContain("PRIVATE_")
   })
   it("shows in-flight provider text and limits tool previews", () => {

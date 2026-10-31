@@ -12,6 +12,7 @@ export function piTimeline(
     {
       id: string
       text: string
+      created_at?: string
       attachments?: readonly FileInfo[]
       provenance?: MessageProvenance
     }
@@ -41,6 +42,7 @@ export function piTimeline(
           id: `steer:${steer.id}`,
           type: "steer",
           text: steer.text,
+          created_at: steer.created_at,
           attachments: steer.attachments,
           provenance: steer.provenance,
         })
@@ -49,7 +51,12 @@ export function piTimeline(
       const id = `assistant:${assistantIndex++}`
       message.content.forEach((block, index) => {
         if (block.type === "text" && block.text)
-          items.push({ id: `${id}:${index}`, type: "text", text: block.text })
+          items.push({
+            id: `${id}:${index}`,
+            type: "text",
+            text: block.text,
+            created_at: new Date(message.timestamp).toISOString(),
+          })
         if (block.type === "thinking" && block.thinking)
           items.push({
             id: `${id}:${index}`,

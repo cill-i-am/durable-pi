@@ -67,6 +67,11 @@ test("sign in, open an agent, receive a fixture reply and reload it", async ({
   ).toBeVisible()
   await expect(page.getByText("Human message", { exact: true })).toHaveCount(0)
   await expect(page.locator(".owner-message")).toContainText("Bench")
+  await expect(page.locator(".owner-message time")).toHaveCount(1)
+  await expect(page.locator(".assistant-message time")).toHaveCount(1)
+  const messageTimes = await page
+    .locator(".chat-workspace time")
+    .evaluateAll((times) => times.map((time) => time.getAttribute("datetime")))
   await expect(
     page
       .locator(".assistant-message")
@@ -80,6 +85,14 @@ test("sign in, open an agent, receive a fixture reply and reload it", async ({
   await expect(
     page.getByText("Fixture reply received.", { exact: true })
   ).toBeVisible()
+  await expect(page.locator(".chat-workspace time")).toHaveCount(2)
+  expect(
+    await page
+      .locator(".chat-workspace time")
+      .evaluateAll((times) =>
+        times.map((time) => time.getAttribute("datetime"))
+      )
+  ).toEqual(messageTimes)
   await expect(
     page
       .locator(".assistant-message")

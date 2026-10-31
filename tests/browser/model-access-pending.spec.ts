@@ -62,7 +62,7 @@ test("a return-address draft blocks settings dismissal until explicitly discarde
   })
   await openModelAccess(page)
   const close = settingsFront(page).getByRole("button", {
-    name: isMobile ? "Close Model access" : "Close settings",
+    name: isMobile ? "Close Model access" : "Back to workspace",
     exact: true,
   })
   const field = page.getByLabel("Return address", { exact: true })
@@ -126,7 +126,7 @@ test("a reconnect request stays guarded through an unresolved error without retr
   try {
     await openModelAccess(page)
     const close = settingsFront(page).getByRole("button", {
-      name: isMobile ? "Close Model access" : "Close settings",
+      name: isMobile ? "Close Model access" : "Back to workspace",
       exact: true,
     })
     await page.getByLabel("Return address", { exact: true }).fill(address)
