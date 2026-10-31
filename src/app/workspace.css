@@ -33,6 +33,10 @@
   height: auto;
   padding: 0;
 }
+/* The fixed icon rail must fit the space reserved by Sidebar's inset gap. */
+[data-collapsible="icon"] .workspace-sidebar[data-slot="sidebar-container"] {
+  width: calc(var(--sidebar-width-icon) + var(--spacing) * 4);
+}
 .workspace-sidebar [data-slot="sidebar-inner"] {
   gap: 24px;
 }

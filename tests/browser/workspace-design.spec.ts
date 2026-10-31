@@ -134,3 +134,74 @@ test("device animation preference reaches shared controls and native overlay CSS
   await control.click()
   await expect(page.locator("html")).toHaveAttribute("data-ui-motion", "full")
 })
+
+test("the inset frame stays outside the sidebar in expanded and icon states", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Desktop inset frame")
+  await page.setViewportSize({ width: 1456, height: 853 })
+  await signIn(page)
+  await page.goto("/agents/navi")
+  const toggle = page.getByRole("button", {
+    name: "Toggle Sidebar",
+    exact: true,
+  })
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(
+      (value) =>
+        document.documentElement.classList.toggle("dark", value === "dark"),
+      theme
+    )
+    for (const state of ["expanded", "collapsed"] as const) {
+      const sidebar = page.locator(
+        '[data-slot="sidebar"][data-variant="inset"]'
+      )
+      if ((await sidebar.getAttribute("data-state")) !== state)
+        await toggle.click()
+      await expect(sidebar).toHaveAttribute("data-state", state)
+      await page.locator('[data-slot="sidebar-gap"]').evaluate(async (node) => {
+        getComputedStyle(node).width
+        await Promise.allSettled(
+          node.getAnimations().map((animation) => animation.finished)
+        )
+      })
+      const metrics = () =>
+        page.evaluate(() => {
+          const frame = document.querySelector(".workspace-main")!
+          const sidebar = document.querySelector(
+            '.workspace-sidebar[data-slot="sidebar-container"]'
+          )!
+          const style = getComputedStyle(frame)
+          return {
+            left: frame.getBoundingClientRect().left,
+            sidebarRight: sidebar.getBoundingClientRect().right,
+            edgeClear: !!document
+              .elementFromPoint(
+                frame.getBoundingClientRect().left + 0.5,
+                frame.getBoundingClientRect().top +
+                  frame.getBoundingClientRect().height / 2
+              )
+              ?.closest(".workspace-main"),
+            border: style.borderLeftWidth,
+            radius: style.borderTopLeftRadius,
+          }
+        })
+      await expect
+        .poll(async () => {
+          const m = await metrics()
+          return m.sidebarRight <= m.left
+        })
+        .toBe(true)
+      const m = await metrics()
+      expect(m.edgeClear).toBe(true)
+      expect(m.border).toBe("1px")
+      expect(parseFloat(m.radius)).toBeGreaterThan(0)
+      if (theme === "dark" && state === "collapsed")
+        await page.screenshot({
+          path: "test-results/inset-frame-collapsed.png",
+          animations: "disabled",
+        })
+    }
+  }
+})
