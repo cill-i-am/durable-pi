@@ -1,9 +1,10 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { ArrowLeft, ChevronDown, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,10 +12,11 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Skeleton } from "@/components/ui/skeleton"
 
 import { AppCanvas } from "./app-canvas"
 import { useApp } from "./use-app"
+
+import "./apps.css"
 
 export function AppView(props: Parameters<typeof AppViewContent>[0]) {
   return <AppViewContent key={`${props.agentId}/${props.id}`} {...props} />
@@ -26,6 +28,7 @@ function AppViewContent({
   compact = false,
   onBack,
   onPendingChange,
+  active = true,
 }: {
   agentId: string
   id: string
@@ -33,6 +36,7 @@ function AppViewContent({
   compact?: boolean
   onBack?: () => void
   onPendingChange?: (pending: boolean) => void
+  active?: boolean
 }) {
   const app = useApp(agentId, id)
   const busy = app.busy || !!app.attempt
@@ -92,7 +96,7 @@ function AppViewContent({
   const published = version.version === document.publishedVersion
   const editable = published && !document.archived && !busy
   return (
-    <section className="flex min-w-0 flex-col gap-4" aria-label="Private app">
+    <section className="app-view" aria-label="Private app">
       <AppToolbar
         app={app}
         document={document}
@@ -101,6 +105,7 @@ function AppViewContent({
         published={published}
         onBack={onBack}
         setSelected={setSelected}
+        active={active}
       />
       {app.error && (
         <Alert>
@@ -150,14 +155,16 @@ function AppViewContent({
         version={version.version}
         revision={document.revision}
         state={published ? document.state : { checks: {}, forms: {} }}
-        disabled={!editable}
+        disabled={!editable || !active}
         onAction={(action, expectedRevision) =>
-          app.mutate("apps/interact", {
-            id,
-            version: version.version,
-            expectedRevision: expectedRevision ?? document.revision,
-            action,
-          })
+          active
+            ? app.mutate("apps/interact", {
+                id,
+                version: version.version,
+                expectedRevision: expectedRevision ?? document.revision,
+                action,
+              })
+            : Promise.resolve(false)
         }
       />
       <AppPublication
@@ -222,6 +229,7 @@ function AppToolbar({
   published,
   onBack,
   setSelected,
+  active,
 }: {
   app: ReturnType<typeof useApp>
   document: NonNullable<ReturnType<typeof useApp>["detail"]>["app"]
@@ -230,6 +238,7 @@ function AppToolbar({
   published: boolean
   onBack?: () => void
   setSelected: (version: number) => void
+  active: boolean
 }) {
   return (
     <div className="app-view-toolbar">
@@ -251,7 +260,7 @@ function AppToolbar({
             ? "Published"
             : "Version preview"}
       </Badge>
-      <DropdownMenu>
+      <DropdownMenu key={active ? "active" : "inactive"}>
         <DropdownMenuTrigger
           render={
             <Button
@@ -264,21 +273,23 @@ function AppToolbar({
           Version {version.version}
           <ChevronDown data-icon="inline-end" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuGroup>
-            {versions.map((value) => (
-              <DropdownMenuItem
-                key={value.version}
-                onClick={() => setSelected(value.version)}
-              >
-                Version {value.version}
-                {value.version === document.publishedVersion
-                  ? " · published"
-                  : ""}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
+        {active && (
+          <DropdownMenuContent>
+            <DropdownMenuGroup>
+              {versions.map((value) => (
+                <DropdownMenuItem
+                  key={value.version}
+                  onClick={() => setSelected(value.version)}
+                >
+                  Version {value.version}
+                  {value.version === document.publishedVersion
+                    ? " · published"
+                    : ""}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        )}
       </DropdownMenu>
       <Button
         variant="ghost"

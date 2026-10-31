@@ -1,9 +1,10 @@
+import { Button } from "@workspace/ui/components/button"
 import { Plus, Upload, X } from "lucide-react"
 import { useRef } from "react"
 
-import { Button } from "@/components/ui/button"
-
 import type { FilesState } from "./use-files"
+
+import "./files.css"
 
 export function FilePicker({
   state,
@@ -52,14 +53,11 @@ export function FilePicker({
 }
 export function UploadStatus({ state }: { state: FilesState }) {
   return (
-    <div aria-live="polite" className="flex flex-col gap-2">
+    <div aria-live="polite" className="file-uploads">
       {state.uploads.map((item) => (
-        <div
-          key={item.id}
-          className="flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-xs"
-        >
+        <div key={item.id} className="file-upload">
           <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{item.file.name}</p>
+            <p className="font-medium break-words">{item.file.name}</p>
             <p className="text-muted-foreground">
               {item.status === "uploading"
                 ? "Preparing and uploading…"

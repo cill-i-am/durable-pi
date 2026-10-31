@@ -32,7 +32,7 @@ function TabsList({ className, children, ...props }: TabsPrimitive.List.Props) {
       data-motion-reduced={reduced ? "true" : undefined}
       className={(state) =>
         cn(
-          "group/tabs-list rounded-control relative isolate inline-flex w-fit max-w-full min-w-0 flex-wrap items-center gap-1 border border-border bg-muted p-1 group-data-[orientation=vertical]/tabs:flex-col",
+          "group/tabs-list relative isolate inline-flex w-fit max-w-full min-w-0 flex-wrap items-center gap-1 rounded-control border border-border bg-muted p-1 group-data-[orientation=vertical]/tabs:flex-col",
           typeof className === "function" ? className(state) : className
         )
       }

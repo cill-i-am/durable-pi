@@ -1,25 +1,29 @@
-import { Bookmark, ExternalLink, ShoppingBag } from "lucide-react"
-import { useContext, useMemo, useState, type ReactNode } from "react"
-
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Card,
   CardContent,
   CardDescription,
   CardFrame,
   CardHeader,
-  CardPanel,
+  CardFrameFooter,
   CardTitle,
-} from "@/components/ui/card"
+} from "@workspace/ui/components/card"
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-} from "@/components/ui/empty"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/empty"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
+import { Bookmark, ExternalLink } from "lucide-react"
+import { useContext, useMemo, useState, type ReactNode } from "react"
+
 import {
   Select,
   SelectTrigger,
@@ -28,7 +32,6 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { AnswerProps } from "@/rich-results/catalog"
 
 import { ComparisonTable, ResultCard } from "./cards"
@@ -114,25 +117,45 @@ export function ProductsCard(props: AnswerProps<"Products">) {
   return (
     <ResultCard
       title={props.title}
-      description="Explore the options. Shortlist up to four to compare."
+      description="Shortlist up to four products to compare."
       provenance={props}
-      action={
-        <ShoppingBag className="size-5 text-primary" aria-hidden="true" />
-      }
     >
       <AnswerWorkspace
         title={props.title}
         description="Explore sourced offers, then compare the details that matter to you."
+        toolbar={
+          <>
+            <ToggleGroup
+              value={view}
+              onValueChange={(value) => value.length && setView(value)}
+              aria-label="Product view"
+            >
+              <ToggleGroupItem value="browse">Browse</ToggleGroupItem>
+              <ToggleGroupItem value="compare">
+                Compare ({selected.length})
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button
+              className="ms-auto"
+              size="sm"
+              variant={shortlistOnly ? "secondary" : "ghost"}
+              aria-pressed={shortlistOnly}
+              onClick={() => {
+                setShortlistOnly((current) => !current)
+                setView(["browse"])
+              }}
+            >
+              <Bookmark data-icon="inline-start" />
+              Shortlist ({selected.length})
+            </Button>
+          </>
+        }
         sidebar={
           <>
-            <div className="flex flex-col gap-2">
-              <p className="font-mono text-xs text-muted-foreground">
-                The question
-              </p>
-              <h3 className="text-xl font-semibold tracking-tight">
-                {props.context?.question ?? props.title}
-              </h3>
-            </div>
+            {props.context?.question &&
+              props.context.question !== props.title && (
+                <p className="text-sm font-medium">{props.context.question}</p>
+              )}
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">What to compare</p>
               <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
@@ -158,31 +181,6 @@ export function ProductsCard(props: AnswerProps<"Products">) {
         }
       >
         <div className="@container flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <ToggleGroup
-              value={view}
-              onValueChange={(value) => value.length && setView(value)}
-              aria-label="Product view"
-              variant="outline"
-            >
-              <ToggleGroupItem value="browse">Browse</ToggleGroupItem>
-              <ToggleGroupItem value="compare">
-                Compare ({selected.length})
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <Button
-              size="sm"
-              variant={shortlistOnly ? "secondary" : "ghost"}
-              aria-pressed={shortlistOnly}
-              onClick={() => {
-                setShortlistOnly((current) => !current)
-                setView(["browse"])
-              }}
-            >
-              <Bookmark data-icon="inline-start" />
-              Shortlist ({selected.length})
-            </Button>
-          </div>
           {view[0] === "compare" ? (
             choices.length >= 2 ? (
               <div className="flex flex-col gap-3">
@@ -235,7 +233,7 @@ export function ProductsCard(props: AnswerProps<"Products">) {
             )
           ) : (
             <>
-              <FieldGroup className="grid gap-3 sm:grid-cols-[1fr_9rem]">
+              <FieldGroup className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_9rem_minmax(9rem,0.65fr)]">
                 <Field>
                   <FieldLabel>Search products</FieldLabel>
                   <Input
@@ -258,8 +256,6 @@ export function ProductsCard(props: AnswerProps<"Products">) {
                     onChange={(event) => setBudget(event.target.value)}
                   />
                 </Field>
-              </FieldGroup>
-              <FieldGroup>
                 <Field>
                   <FieldLabel>Retailer</FieldLabel>
                   <Select
@@ -297,8 +293,6 @@ export function ProductsCard(props: AnswerProps<"Products">) {
                   value={sort}
                   onValueChange={(value) => value.length && setSort(value)}
                   aria-label="Sort products"
-                  variant="outline"
-                  size="sm"
                 >
                   <ToggleGroupItem value="recommended">
                     Original order
@@ -373,7 +367,7 @@ function ProductOffer({
 }) {
   return (
     <CardFrame className="min-w-0">
-      <Card size="sm" className="flex-1">
+      <Card className="flex-1">
         {product.imageUrl && (
           <img
             src={product.imageUrl}
@@ -408,7 +402,7 @@ function ProductOffer({
           </dl>
         </CardContent>
       </Card>
-      <CardPanel className="justify-between px-4">
+      <CardFrameFooter className="justify-between px-4">
         {shortlist}
         <a
           href={product.url}
@@ -422,7 +416,7 @@ function ProductOffer({
           View retailer
           <ExternalLink data-icon="inline-end" />
         </a>
-      </CardPanel>
+      </CardFrameFooter>
     </CardFrame>
   )
 }

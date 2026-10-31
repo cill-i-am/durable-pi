@@ -1,3 +1,21 @@
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import { Checkbox } from "@workspace/ui/components/checkbox"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@workspace/ui/components/tabs"
+import { Textarea } from "@workspace/ui/components/textarea"
 import { cn } from "cn"
 import { Schema } from "effect"
 import {
@@ -11,10 +29,6 @@ import {
 import { useEffect, useId, useState } from "react"
 
 import { Markdown } from "@/components/markdown"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -22,8 +36,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectTrigger,
@@ -32,9 +44,6 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import {
   type Checklist,
   ChecklistTask,
@@ -48,6 +57,8 @@ import {
 import { useObjects, useObjectState } from "./context"
 import type { ObjectStore } from "./store"
 import { useObjectOrigin } from "./use-object-origin"
+
+import "./checklist.css"
 
 export const statusLabels = {
   pending: "To do",
@@ -157,7 +168,6 @@ export function SaveState({ store, id }: { store: ObjectStore; id: string }) {
       className="flex items-center gap-1 text-xs text-muted-foreground"
     >
       <Check className="size-3" /> Saved
-      {current ? ` · Revision ${current.revision}` : ""}
     </p>
   )
 }
@@ -287,9 +297,7 @@ function InlineChecklist({
         <>
           <div className="inline-checklist-heading">
             <h2>{object.title}</h2>
-            <Badge variant="secondary" className="checklist-live-badge">
-              {object.archived ? "Archived" : "Live checklist"}
-            </Badge>
+            {object.archived && <Badge variant="secondary">Archived</Badge>}
           </div>
           <ChecklistRows
             object={object}
@@ -339,12 +347,14 @@ export function ChecklistView({
   agentId,
   archived,
   onEditing,
+  active = true,
 }: {
   id: string
   store: ObjectStore
   agentId: string
   archived: boolean
   onEditing: (editing: boolean) => void
+  active?: boolean
 }) {
   const state = useObjectState(store),
     detail = state.details[id],
@@ -397,13 +407,7 @@ export function ChecklistView({
   }
   return (
     <div className="checklist-view">
-      <div className="checklist-heading">
-        <div className="min-w-0">
-          <h2>{object.title}</h2>
-        </div>
-        {object.archived && <Badge variant="secondary">Archived</Badge>}
-      </div>
-      {object.notes && <p className="checklist-notes">{object.notes}</p>}
+      <ChecklistHeading object={object} />
       <div className="checklist-summary">
         <p className="checklist-progress">
           {summary.completed} of {summary.total} complete
@@ -432,7 +436,7 @@ export function ChecklistView({
         </Alert>
       )}
       <Tabs defaultValue="tasks" className="checklist-tabs">
-        <TabsList variant="line">
+        <TabsList>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -444,12 +448,12 @@ export function ChecklistView({
             onEdit={(task) => edit(task)}
           />
           {!object.tasks.length && (
-            <p className="py-4 text-sm text-muted-foreground">
+            <p className="checklist-empty py-4 text-sm text-muted-foreground">
               Add the first task to this project.
             </p>
           )}
           {!object.archived && (
-            <div className="flex flex-wrap gap-2">
+            <div className="checklist-task-actions flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 disabled={disabled}
@@ -600,7 +604,12 @@ export function ChecklistView({
       <p className="text-xs text-muted-foreground">
         Your agent sees edits on your next message.
       </p>
-      <ChecklistOrigin object={object} agentId={agentId} id={id} />
+      <ChecklistOrigin
+        object={object}
+        agentId={agentId}
+        id={id}
+        active={active}
+      />
       {!object.archived && (
         <Button
           variant="outline"
@@ -619,6 +628,20 @@ export function ChecklistView({
     </div>
   )
 }
+function ChecklistHeading({ object }: { object: Checklist }) {
+  return (
+    <>
+      <div className="checklist-heading">
+        <div className="min-w-0">
+          <h2>{object.title}</h2>
+        </div>
+        {object.archived && <Badge variant="secondary">Archived</Badge>}
+      </div>
+      {object.notes && <p className="checklist-notes">{object.notes}</p>}
+    </>
+  )
+}
+
 function TaskEditor({
   draft,
   disabled,
@@ -673,7 +696,7 @@ function TaskEditor({
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor={`${id}-notes`}>Supporting notes</FieldLabel>
+          <FieldLabel htmlFor={`${id}-notes`}>Notes</FieldLabel>
           <Textarea
             id={`${id}-notes`}
             maxLength={task ? 2000 : 4000}
@@ -883,10 +906,12 @@ function ChecklistOrigin({
   object,
   agentId,
   id,
+  active,
 }: {
   object: Checklist
   agentId: string
   id: string
+  active: boolean
 }) {
   const dialog = useObjectOrigin(agentId, id),
     origin = dialog.origin,
@@ -913,9 +938,9 @@ function ChecklistOrigin({
         </p>
       )}
       <Dialog
-        open={dialog.open}
+        open={active && dialog.open}
         onOpenChange={(open) => {
-          if (!open) dialog.close()
+          if (active && !open) dialog.close()
         }}
       >
         <DialogContent className="max-h-[85dvh] overflow-y-auto">

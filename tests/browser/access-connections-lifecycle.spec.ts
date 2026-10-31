@@ -47,84 +47,136 @@ function errors(page: Page) {
   return values
 }
 
+function approvalStream(access: AccessState) {
+  return [
+    {
+      type: "MESSAGES_SNAPSHOT",
+      messages: chatMessages([
+        {
+          id: approval.turnId,
+          status: "running",
+          text: "Please write a note",
+          answer: "",
+          error: null,
+          created_at: "2026-10-23T00:00:00Z",
+        },
+      ]),
+    },
+    {
+      type: "CUSTOM",
+      name: "durable-pi.metadata",
+      value: {
+        model: "test",
+        connected: true,
+        memory: { messages: 1, summaries: 0, ready: true, notes: [] },
+        access,
+      },
+    },
+  ]
+    .map((frame) => `data: ${JSON.stringify(frame)}\n\n`)
+    .join("")
+}
+
 test("approval keeps exact inputs and decision identity across an uncertain acknowledgement", async ({
   page,
 }) => {
   const failures = errors(page),
     posts: unknown[] = []
-  let release!: () => void
-  await page.route("**/api/agent/events?**", (route) =>
-    route.fulfill({
+  let current: AccessState = { tools: [policy], approvals: [approval] }
+  let reads = 0,
+    release!: () => void
+  await page.route("**/api/agent/events?**", (route) => {
+    reads++
+    return route.fulfill({
       contentType: "text/event-stream",
-      body: [
-        {
-          type: "MESSAGES_SNAPSHOT",
-          messages: chatMessages([
-            {
-              id: "turn-one",
-              status: "running",
-              text: "Please write a note",
-              answer: "",
-              error: null,
-              created_at: "2026-10-23T00:00:00Z",
-            },
-          ]),
-        },
-        {
-          type: "CUSTOM",
-          name: "durable-pi.metadata",
-          value: {
-            model: "test",
-            connected: true,
-            memory: { messages: 1, summaries: 0, ready: true, notes: [] },
-            access: { tools: [policy], approvals: [approval] },
-          },
-        },
-      ]
-        .map((frame) => `data: ${JSON.stringify(frame)}\n\n`)
-        .join(""),
+      body: approvalStream(current),
     })
-  )
+  })
   await page.route("**/api/agent/access/decide?**", async (route) => {
     posts.push(route.request().postDataJSON())
-    if (posts.length === 1) {
-      await new Promise<void>((resolve) => {
-        release = resolve
-      })
-      return route.fulfill({
-        status: 503,
-        json: { error: "Acknowledgement unavailable" },
-      })
-    }
-    return route.fulfill({ json: { tools: [policy], approvals: [] } })
+    await new Promise<void>((resolve) => {
+      release = resolve
+    })
+    return route.fulfill({
+      status: 503,
+      json: { error: "Acknowledgement unavailable" },
+    })
   })
   await login(page, "/agents/home")
-  const card = page.getByRole("region", { name: "Approval for Write a note" })
-  await expect(card).toBeVisible()
-  await card.getByRole("button", { name: "Allow once", exact: true }).click()
+  const dock = page.getByRole("region", {
+    name: "Decisions awaiting approval",
+    exact: true,
+  })
+  const receipt = page.getByRole("region", {
+    name: "Approval for Write a note",
+    exact: true,
+  })
+  await expect(dock).toBeVisible()
+  await expect(receipt).toHaveCount(0)
+  await dock.getByRole("button", { name: "Review action", exact: true }).click()
+  const detail = page.getByRole("dialog", { name: "Write a note", exact: true })
+  const exactInputs = JSON.stringify(JSON.parse(approval.input), null, 2)
   await expect(
-    card.getByRole("button", { name: "Saving decision…" })
-  ).toBeDisabled()
-  await expect(
-    card.getByRole("button", { name: "Deny", exact: true })
-  ).toBeDisabled()
-  await expect(
-    card.getByText('"original exact input"', { exact: false })
+    detail.getByRole("heading", { name: "Complete action inputs", exact: true })
   ).toBeVisible()
-  release()
-  await expect(card.getByRole("alert")).toContainText("could not be confirmed")
+  await expect(detail.locator("pre")).toHaveText(exactInputs)
+  await detail.getByRole("button", { name: "Allow once", exact: true }).click()
   await expect(
-    card.getByRole("button", { name: "Deny", exact: true })
+    detail.getByRole("button", { name: "Saving decision…", exact: true })
   ).toBeDisabled()
   await expect(
-    card.getByRole("button", { name: "Always allow", exact: true })
+    detail.getByRole("button", { name: "Deny", exact: true })
   ).toBeDisabled()
-  expect(posts).toHaveLength(1)
-  await card.getByRole("button", { name: "Allow once", exact: true }).click()
-  await expect(card).toContainText("Approved for this action")
+  await expect(detail.locator("pre")).toHaveText(exactInputs)
   expect(posts).toEqual([
-    { id: approval.id, approve: true, expectedRevision: 4 },
-    { id: approval.id, approve: true, expectedRevision: 4 },
+    { id: approval.id, approve: true, expectedRevision: approval.revision },
+  ])
+  release()
+  await expect(detail.getByRole("alert")).toContainText(
+    "could not be confirmed"
+  )
+  await expect(
+    detail.getByRole("button", { name: "Allow once", exact: true })
+  ).toHaveCount(0)
+  await expect(
+    detail.getByRole("button", { name: "Deny", exact: true })
+  ).toHaveCount(0)
+  await expect(
+    detail.getByRole("button", { name: "Always allow", exact: true })
+  ).toHaveCount(0)
+  const beforeUnknownCheck = reads
+  await detail
+    .getByRole("button", { name: "Check status", exact: true })
+    .click()
+  await expect.poll(() => reads).toBeGreaterThan(beforeUnknownCheck)
+  await expect(
+    detail.getByRole("button", { name: "Check status", exact: true })
+  ).toBeVisible()
+  await expect(detail.locator("pre")).toHaveText(exactInputs)
+  expect(posts).toHaveLength(1)
+  await expect(receipt).toHaveCount(0)
+
+  // Only a read of durable status resolves the uncertainty. This does not
+  // authorize another send or claim that the approved action has executed.
+  current = {
+    tools: [policy],
+    approvals: [
+      { ...approval, status: "approved", revision: approval.revision + 1 },
+    ],
+  }
+  const beforeConfirmedCheck = reads
+  await detail
+    .getByRole("button", { name: "Check status", exact: true })
+    .click()
+  await expect.poll(() => reads).toBeGreaterThan(beforeConfirmedCheck)
+  await expect(receipt).toContainText("Approval accepted · waiting to run")
+  await expect(receipt).not.toContainText("Action completed")
+  await expect(detail).toHaveCount(0)
+  await expect(dock).toHaveCount(0)
+  await receipt.getByText("Action inputs", { exact: true }).click()
+  await expect(receipt.locator("pre")).toHaveText(exactInputs)
+  expect(posts).toEqual([
+    { id: approval.id, approve: true, expectedRevision: approval.revision },
   ])
   expect(failures).toEqual([])
 })
@@ -282,60 +334,50 @@ test("a superseded catalog response cannot replace the latest catalog", async ({
 test("a late Always allow acknowledgement cannot overwrite a newer denied policy", async ({
   page,
 }) => {
-  const failures = errors(page)
-  const posts: unknown[] = []
+  const failures = errors(page),
+    posts: unknown[] = []
   let current: AccessState = { tools: [policy], approvals: [approval] }
   let release!: () => void
   await page.route("**/api/agent/events?**", (route) =>
     route.fulfill({
       contentType: "text/event-stream",
-      body: [
-        {
-          type: "MESSAGES_SNAPSHOT",
-          messages: chatMessages([
-            {
-              id: "turn-one",
-              status: "running",
-              text: "Please write a note",
-              answer: "",
-              error: null,
-              created_at: "2026-10-23T00:00:00Z",
-            },
-          ]),
-        },
-        {
-          type: "CUSTOM",
-          name: "durable-pi.metadata",
-          value: {
-            model: "test",
-            connected: true,
-            memory: { messages: 1, summaries: 0, ready: true, notes: [] },
-            access: current,
-          },
-        },
-      ]
-        .map((frame) => `data: ${JSON.stringify(frame)}\n\n`)
-        .join(""),
+      body: approvalStream(current),
     })
+  )
+  await page.route("**/api/agent/access?**", (route) =>
+    route.fulfill({ json: current })
   )
   await page.route("**/api/agent/access/decide?**", async (route) => {
     posts.push(route.request().postDataJSON())
     await new Promise<void>((resolve) => {
       release = resolve
     })
+    current = {
+      ...current,
+      approvals: [
+        { ...approval, status: "approved", revision: approval.revision + 1 },
+      ],
+    }
     await route.fulfill({
       json: {
         tools: [{ ...policy, mode: "allow", revision: 3 }],
-        approvals: [],
+        approvals: current.approvals,
       },
     })
   })
   await login(page, "/agents/home")
-  const card = page.getByRole("region", {
-    name: "Approval for Write a note",
+  const dock = page.getByRole("region", {
+    name: "Decisions awaiting approval",
     exact: true,
   })
-  await card.getByRole("button", { name: "Always allow", exact: true }).click()
+  await dock.getByRole("button", { name: "Review action", exact: true }).click()
+  const detail = page.getByRole("dialog", { name: "Write a note", exact: true })
+  await expect(detail.locator("pre")).toHaveText(
+    JSON.stringify(JSON.parse(approval.input), null, 2)
+  )
+  await detail
+    .getByRole("button", { name: "Always allow", exact: true })
+    .click()
   await expect.poll(() => posts.length).toBe(1)
   current = {
     ...current,
@@ -348,21 +390,68 @@ test("a late Always allow acknowledgement cannot overwrite a newer denied policy
       },
     ],
   }
-  const updated = page.getByRole("region", {
+  const updatedDetail = page.getByRole("dialog", {
+    name: "Newer denied note policy",
+    exact: true,
+  })
+  await expect(updatedDetail).toBeVisible()
+  release()
+  const receipt = page.getByRole("region", {
     name: "Approval for Newer denied note policy",
     exact: true,
   })
-  await expect(updated).toBeVisible()
-  release()
-  await expect(updated).toContainText("Approved for this action")
-  await expect(updated).not.toContainText("Tool allowed for this agent")
+  await expect(receipt).toContainText("Approval accepted · waiting to run")
+  await expect(receipt).not.toContainText("Tool allowed for this agent")
+  await expect(updatedDetail).toHaveCount(0)
   expect(posts).toEqual([
     {
       id: approval.id,
-      expectedRevision: 4,
+      expectedRevision: approval.revision,
       approve: true,
-      remember: { expectedPolicyRevision: 2 },
+      remember: { expectedPolicyRevision: policy.revision },
     },
   ])
+
+  // The late reply acknowledges only that action. The next approval round must
+  // still use the newer denied policy, including its future-permission fence.
+  current = {
+    ...current,
+    approvals: [
+      {
+        ...approval,
+        id: "approval-next",
+        input: '{"note":"new approval round"}',
+        revision: 0,
+      },
+    ],
+  }
+  await expect(dock).toBeVisible()
+  await dock.getByRole("button", { name: "Review action", exact: true }).click()
+  const nextDetail = page.getByRole("dialog", {
+    name: "Newer denied note policy",
+    exact: true,
+  })
+  await expect(nextDetail.locator("pre")).toHaveText(
+    JSON.stringify({ note: "new approval round" }, null, 2)
+  )
+  await expect(
+    nextDetail.getByRole("button", { name: "Allow once", exact: true })
+  ).toBeEnabled()
+  await expect(
+    nextDetail.getByRole("button", { name: "Always allow", exact: true })
+  ).toBeDisabled()
+  expect(posts).toHaveLength(1)
+  await page.getByRole("button", { name: "Close sheet", exact: true }).click()
+  await expect(nextDetail).toHaveCount(0)
+  await page.goto("/agents/home/settings/access")
+  const group = page.getByRole("group", {
+    name: "Access for Newer denied note policy",
+    exact: true,
+  })
+  await expect(
+    group.getByRole("button", { name: "Deny", exact: true })
+  ).toHaveAttribute("aria-pressed", "true")
+  expect(current.tools[0]!.revision).toBe(4)
+  expect(posts).toHaveLength(1)
   expect(failures).toEqual([])
 })

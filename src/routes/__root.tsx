@@ -4,13 +4,15 @@ import {
   Scripts,
   createRootRoute,
 } from "@tanstack/react-router"
+import { buttonVariants } from "@workspace/ui/components/button"
 import { ThemeProvider } from "next-themes"
 
 import { WorkspaceLinkError } from "@/app/workspace-link-error"
-import { buttonVariants } from "@/components/ui/button"
+import { WorkspaceMotion } from "@/app/workspace-motion"
 import { UpdateRecovery } from "@/features/updates/update-recovery"
 
 import appCss from "../styles.css?url"
+import "../app/workspace.css"
 
 export const Route = createRootRoute({
   errorComponent: WorkspaceLinkError,
@@ -39,16 +41,20 @@ export const Route = createRootRoute({
     ],
   }),
   notFoundComponent: () => (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="container mx-auto flex flex-col items-start gap-4 p-4 pt-16"
-    >
-      <h1 className="text-xl font-semibold">Page not found</h1>
-      <p>The requested page could not be found.</p>
-      <Link to="/" className={buttonVariants()}>
-        Open workspace
-      </Link>
+    <main id="main-content" tabIndex={-1} className="workspace-recovery">
+      <div className="workspace-recovery-content">
+        <h1 className="text-lg font-semibold">Page not found</h1>
+        <p className="text-sm text-muted-foreground">
+          This page is unavailable.
+        </p>
+        <Link
+          to="/agents"
+          search={{}}
+          className={buttonVariants({ variant: "outline" })}
+        >
+          Open assistants
+        </Link>
+      </div>
     </main>
   ),
   shellComponent: RootDocument,
@@ -71,7 +77,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           storageKey="durable-pi:theme"
           disableTransitionOnChange
         >
-          <UpdateRecovery>{children}</UpdateRecovery>
+          <WorkspaceMotion>
+            <UpdateRecovery>{children}</UpdateRecovery>
+          </WorkspaceMotion>
         </ThemeProvider>
         <Scripts />
       </body>

@@ -20,7 +20,7 @@ async function openChat(page: Page) {
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: /Navi/ })
     .click()
   await expect(
@@ -120,9 +120,11 @@ test("a retired settings chunk keeps chat intact and offers full reload instead 
   })
   await offerUpdate()
   await page
-    .getByRole("button", { name: "Agent settings and tools", exact: true })
+    .getByRole("button", { name: "Actions for Navi", exact: true })
     .click()
-  await page.getByRole("menuitem", { name: "Tool access", exact: true }).click()
+  await page
+    .getByRole("menuitem", { name: "Assistant settings", exact: true })
+    .click()
   await expect(
     page.getByText("Pi has been updated", { exact: true })
   ).toBeVisible()
@@ -138,9 +140,9 @@ test("a retired settings chunk keeps chat intact and offers full reload instead 
   })
   retired = false
   await page.getByRole("button", { name: "Reload page", exact: true }).click()
-  await expect(page).toHaveURL(/\/agents\/navi\/settings\/access$/)
+  await expect(page).toHaveURL(/\/agents\/navi\/settings$/)
   await expect(
-    page.getByRole("heading", { name: "Tool access", exact: true })
+    page.getByRole("heading", { name: "Assistant settings", exact: true })
   ).toBeVisible()
   await expect(composer(page)).toHaveValue(
     "Retain the draft while settings cannot load."

@@ -1,0 +1,53 @@
+.browser-workbench {
+  width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.browser-address-bar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 2);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+}
+
+.browser-address-bar input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.browser-preview {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 3);
+}
+
+.browser-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 2);
+}
+
+.browser-preview img {
+  border-radius: var(--radius-md);
+  outline: 1px solid color-mix(in srgb, black 10%, transparent);
+  outline-offset: -1px;
+}
+
+.browser-page-detail summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.browser-page-detail pre {
+  line-height: 1.6;
+}

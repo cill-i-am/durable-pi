@@ -97,7 +97,7 @@ test("Memory import admits one immutable file read and submission", async ({
     )
   })
   await signIn(page, "/agents/home/memory")
-  await page.getByRole("tab", { name: "Export & import", exact: true }).click()
+  await page.getByRole("tab", { name: "Archive", exact: true }).click()
   const jsonl = JSON.stringify({
     kind: "user",
     text: "Synthetic history",
@@ -202,7 +202,7 @@ test("leaving Memory during a held native file read prevents its later submissio
     return route.fulfill({ json: { added: 1 } })
   })
   await signIn(page, "/agents/home/memory")
-  await page.getByRole("tab", { name: "Export & import", exact: true }).click()
+  await page.getByRole("tab", { name: "Archive", exact: true }).click()
   await page.evaluate(() => {
     File.prototype.text = () =>
       new Promise<string>((resolve) =>
@@ -222,8 +222,8 @@ test("leaving Memory during a held native file read prevents its later submissio
       page.evaluate(() => typeof Reflect.get(window, "releaseMemoryFileRead"))
     )
     .toBe("function")
-  await page.getByRole("tab", { name: "Saved notes", exact: true }).click()
-  await page.getByRole("tab", { name: "Export & import", exact: true }).click()
+  await page.getByRole("tab", { name: "Notes", exact: true }).click()
+  await page.getByRole("tab", { name: "Archive", exact: true }).click()
   await expect(
     page.getByRole("button", { name: "Import history", exact: true })
   ).toBeDisabled()

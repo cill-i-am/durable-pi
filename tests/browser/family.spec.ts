@@ -41,7 +41,7 @@ async function signIn(page: Page) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
 }
 async function assertFits(page: Page) {
   expect(
@@ -150,7 +150,9 @@ test("member family screen is read only, and a shared model outage preserves an 
     data: { connected: false },
   })
   await expect(
-    page.getByText("Cillian needs to reconnect ChatGPT.", { exact: false })
+    page
+      .locator("#main-content")
+      .getByText("Cillian needs to reconnect ChatGPT.", { exact: false })
   ).toBeVisible()
   await expect(draft).toHaveValue(
     "Keep this private draft while ChatGPT reconnects."
@@ -235,7 +237,7 @@ test("invitation creates an account, verifies email, then opens a private welcom
   await expect(page).not.toHaveURL(/token=/)
   await page.getByRole("button", { name: "Join family", exact: true }).click()
   await expect(
-    page.getByRole("heading", { name: "Your space is ready", exact: true })
+    page.getByRole("heading", { name: "Your workspace is ready", exact: true })
   ).toBeVisible()
   await assertFits(page)
 })

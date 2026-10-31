@@ -1,11 +1,11 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { ArrowLeft, KeyRound } from "lucide-react"
 
 import { CopyButton } from "@/components/copy-button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import type { Routine } from "@/routines/contracts"
 
 import { useWebhook } from "./use-webhook"
@@ -194,32 +194,37 @@ export function WebhookPanel({
             already admitted can finish; use Stop in Recent runs to end it.{" "}
             {info.accepted} events accepted.
           </p>
-          <div className="space-y-3 border-t pt-4 text-xs text-muted-foreground">
-            <h3 className="font-medium text-foreground">Send an event</h3>
-            <p>
-              Set <code>Authorization: Bearer YOUR_KEY</code>,{" "}
-              <code>X-Event-Id: UNIQUE_EVENT_ID</code> and{" "}
-              <code>Content-Type: application/json</code>. Send a JSON object up
-              to 16 KB.
-            </p>
-            <p>
-              A 202 response means accepted. Retrying the same event ID and JSON
-              returns the same run with 200. Reusing an ID with different data
-              returns 409. A 429 response means busy: wait at least 60 seconds
-              and retry with the same ID.
-            </p>
-            <p>
-              Use the canonical endpoint above. Keep the key in your
-              service&apos;s secret store; never put it in a URL or a chat
-              message. This endpoint does not verify vendor-specific signatures.
-            </p>
-            {routine.status !== "active" && (
-              <p className="text-foreground">
-                This routine is paused. Resume it in All routines to accept new
-                events.
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer text-sm font-medium text-foreground">
+              Send an event
+            </summary>
+            <div className="mt-3 flex max-w-prose flex-col gap-3 leading-relaxed">
+              <p>
+                Set <code>Authorization: Bearer YOUR_KEY</code>,{" "}
+                <code>X-Event-Id: UNIQUE_EVENT_ID</code> and{" "}
+                <code>Content-Type: application/json</code>. Send a JSON object
+                up to 16 KB.
               </p>
-            )}
-          </div>
+              <p>
+                A 202 response means accepted. Retrying the same event ID and
+                JSON returns the same run with 200. Reusing an ID with different
+                data returns 409. A 429 response means busy: wait at least 60
+                seconds and retry with the same ID.
+              </p>
+              <p>
+                Use the canonical endpoint above. Keep the key in your
+                service&apos;s secret store; never put it in a URL or a chat
+                message. This endpoint does not verify vendor-specific
+                signatures.
+              </p>
+              {routine.status !== "active" && (
+                <p className="text-foreground">
+                  This routine is paused. Resume it in All routines to accept
+                  new events.
+                </p>
+              )}
+            </div>
+          </details>
         </>
       )}
     </section>

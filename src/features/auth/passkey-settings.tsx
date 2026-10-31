@@ -1,16 +1,16 @@
-import { KeyRound } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-
-import { authClient } from "@/auth/client"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { KeyRound } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+
+import { authClient } from "@/auth/client"
 
 import { useAuthBusy } from "./auth-owner"
 import { supportsPasskeys } from "./passkey-errors"
@@ -194,7 +194,7 @@ export function PasskeySettings(props: Props) {
             ref={heading}
             tabIndex={-1}
             id="passkeys-heading"
-            className="text-xl font-semibold"
+            className="text-md font-semibold"
           >
             Passkeys
           </h2>

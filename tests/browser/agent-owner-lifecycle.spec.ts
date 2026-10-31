@@ -50,10 +50,15 @@ test("a held agent save retains newer edits and uses update after acknowledged c
     await route.fulfill({ json: created })
   })
   await signIn(page, "/agents")
-  await page.getByRole("button", { name: "New agent", exact: true }).click()
+  await page
+    .getByRole("region", { name: "Assistants", exact: true })
+    .getByRole("button", { name: "New assistant", exact: true })
+    .click()
   await page.getByLabel("Name", { exact: true }).fill("First name")
   await page.getByLabel("Purpose", { exact: true }).fill("First purpose")
-  await page.getByRole("button", { name: "Create agent", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Create assistant", exact: true })
+    .click()
   await expect.poll(() => writes.length).toBe(1)
   await page.getByLabel("Name", { exact: true }).fill("Newer name")
   await page.getByLabel("Purpose", { exact: true }).fill("Newer purpose")
@@ -117,9 +122,11 @@ test("an acknowledged agent save retries only its failed catalog refresh", async
   })
   await signIn(page)
   await page.getByLabel("Name", { exact: true }).fill("Acknowledged agent")
-  await page.getByRole("button", { name: "Create agent", exact: true }).click()
   await page
-    .getByRole("button", { name: "Refresh agent list", exact: true })
+    .getByRole("button", { name: "Create assistant", exact: true })
+    .click()
+  await page
+    .getByRole("button", { name: "Refresh assistant list", exact: true })
     .click()
   await expect(page).toHaveURL(/\/agents\/acknowledged-agent$/)
   expect(writes).toBe(1)
@@ -167,7 +174,9 @@ test("restore holds navigation until the request settles and retains capacity er
     .getByRole("button", { name: "Restore Archived agent", exact: true })
     .click()
   await expect.poll(() => writes).toBe(1)
-  await page.getByRole("link", { name: "Active agents", exact: true }).click()
+  await page
+    .getByRole("link", { name: "Active assistants", exact: true })
+    .click()
   await expect(page).toHaveURL(/\/agents\/archived$/)
   await expect(
     page.getByText("Finish or cancel the open edit before leaving this view.", {
@@ -185,6 +194,8 @@ test("restore holds navigation until the request settles and retains capacity er
     page.getByText("Keep my saved work", { exact: true })
   ).toBeVisible()
   expect(writes).toBe(1)
-  await page.getByRole("link", { name: "Active agents", exact: true }).click()
+  await page
+    .getByRole("link", { name: "Active assistants", exact: true })
+    .click()
   await expect(page).toHaveURL(/\/agents$/)
 })

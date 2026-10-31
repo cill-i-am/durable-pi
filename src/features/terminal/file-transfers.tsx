@@ -1,10 +1,12 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { send, type EffectActor } from "@xstate/effect"
 import { Cause, Effect, Exit, Fiber } from "effect"
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button, buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,8 +14,6 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { useFiles, uploadFile } from "@/features/files"
 import { agentUrl, errorMessage } from "@/http/client"
 import { nativeOperation } from "@/shared/interop"
@@ -31,7 +31,9 @@ export function FileTransfers({
   onExport,
   onRetry,
   onCancel,
+  active = true,
 }: {
+  active?: boolean
   agentId: string
   busy: boolean
   attempt: boolean
@@ -40,6 +42,13 @@ export function FileTransfers({
   onRetry: () => void
   onCancel: () => void
 }) {
+  const activeView = useRef(active)
+  useLayoutEffect(() => {
+    activeView.current = active
+    return () => {
+      activeView.current = false
+    }
+  }, [active])
   const files = useFiles(agentId)
   const { refresh } = files
   const [path, setPath] = useState("/workspace/result.txt")
@@ -66,6 +75,7 @@ export function FileTransfers({
         </Alert>
       )}
       <DropdownMenu
+        open={active ? undefined : false}
         onOpenChange={(open) => {
           if (open) void refresh()
         }}
@@ -80,7 +90,12 @@ export function FileTransfers({
         <DropdownMenuContent className="max-h-64 max-w-80 overflow-y-auto">
           <DropdownMenuGroup>
             {available.map((file) => (
-              <DropdownMenuItem key={file.id} onClick={() => onImport(file.id)}>
+              <DropdownMenuItem
+                key={file.id}
+                onClick={() => {
+                  if (activeView.current) onImport(file.id)
+                }}
+              >
                 <span className="truncate">{file.name}</span>
               </DropdownMenuItem>
             ))}

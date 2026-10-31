@@ -1,9 +1,4 @@
-import { cn } from "cn"
-import { MapPin, Navigation, ExternalLink, Calculator } from "lucide-react"
-import { useId, useState, type ReactNode } from "react"
-
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Card,
   CardAction,
@@ -11,9 +6,9 @@ import {
   CardDescription,
   CardFrame,
   CardHeader,
-  CardPanel,
+  CardFrameFooter,
   CardTitle,
-} from "@/components/ui/card"
+} from "@workspace/ui/components/card"
 import {
   Table,
   TableBody,
@@ -22,7 +17,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@workspace/ui/components/table"
+import { cn } from "cn"
+import { MapPin, Navigation, ExternalLink } from "lucide-react"
+import { useId, useState, type ReactNode } from "react"
+
 import type { AnswerProps } from "@/rich-results/catalog"
 
 import { PlacesMap } from "./places-map"
@@ -65,19 +64,19 @@ export function ResultCard({
   return (
     <CardFrame className="rich-result w-full min-w-0 whitespace-normal">
       {card}
-      <CardPanel className="justify-between">
+      <CardFrameFooter className="answer-result-footer justify-between">
         {panel}
         {provenance && (
           <>
             {provenance.source.url ? (
               <a
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:underline"
+                className="inline-flex min-w-0 items-center gap-1 text-xs break-words text-muted-foreground underline-offset-4 hover:underline"
                 href={provenance.source.url}
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 {provenance.source.label}
-                <ExternalLink className="size-3" aria-hidden="true" />
+                <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
               </a>
             ) : (
               <span className="text-xs text-muted-foreground">
@@ -89,23 +88,15 @@ export function ResultCard({
             </span>
           </>
         )}
-      </CardPanel>
+      </CardFrameFooter>
     </CardFrame>
   )
 }
 export function CalculationCard(props: AnswerProps<"Calculation">) {
   return (
-    <ResultCard
-      title={props.title}
-      action={
-        <Calculator
-          className="size-5 text-muted-foreground"
-          aria-hidden="true"
-        />
-      }
-    >
+    <ResultCard title={props.title}>
       <div className="flex flex-col gap-2">
-        <code className="text-sm text-muted-foreground">
+        <code className="text-sm break-words text-muted-foreground">
           {props.expression}
         </code>
         <p className="text-3xl font-medium tracking-tight break-words tabular-nums">
@@ -132,7 +123,6 @@ export function PlacesCard(props: AnswerProps<"Places">) {
           ? "Address and map"
           : `${props.places.length} places · Select a place to view its map`
       }
-      action={<MapPin className="size-5 text-primary" aria-hidden="true" />}
       provenance={props}
     >
       <div className="flex flex-col gap-3">
@@ -204,7 +194,6 @@ export function RouteCard(props: AnswerProps<"Route">) {
       title={props.title}
       description="Driving estimate · no live traffic"
       provenance={props}
-      action={<Navigation className="size-5 text-primary" aria-hidden="true" />}
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline gap-4">
@@ -304,9 +293,7 @@ export function ComparisonCard(props: AnswerProps<"Comparison">) {
     <ResultCard title={props.title} provenance={props}>
       <div className="flex flex-col gap-4">
         <ComparisonTable {...props} />
-        <p className="text-sm">
-          <Badge variant="secondary">The trade-off</Badge> {props.verdict}
-        </p>
+        <p className="text-sm">{props.verdict}</p>
       </div>
     </ResultCard>
   )

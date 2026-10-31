@@ -54,7 +54,7 @@ async function openObjects(page: Page, selected?: string) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
   await page.goto(`/agents/navi/objects${selected ? `/${selected}` : ""}`)
 }
 
@@ -90,9 +90,7 @@ test("uncertain creation survives reload and retries the identical mutation", as
   })
   await openObjects(page)
   await page.getByRole("button", { name: "New checklist", exact: true }).click()
-  await page
-    .getByLabel("Project title", { exact: true })
-    .fill("Retained project")
+  await page.getByLabel("Title", { exact: true }).fill("Retained project")
   await page
     .getByRole("button", { name: "Create checklist", exact: true })
     .click()

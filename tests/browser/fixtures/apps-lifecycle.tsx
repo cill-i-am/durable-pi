@@ -2,12 +2,15 @@ import { useState } from "react"
 import { createRoot } from "react-dom/client"
 
 import { AppCanvas } from "../../../src/features/apps/app-canvas"
+import { AppView } from "../../../src/features/apps/app-view"
 import { useApp } from "../../../src/features/apps/use-app"
 import { WebCanvas } from "../../../src/features/apps/web-canvas"
 
 const id = "11111111-1111-4111-8111-111111111111"
-const app = (agent: string) => ({
-  id,
+const webId = "22222222-2222-4222-8222-222222222222"
+const retained = new URLSearchParams(location.search).get("mode") === "retained"
+const app = (agent: string, web = false) => ({
+  id: web ? webId : id,
   version: 1,
   revision: 1,
   publishedVersion: 1,
@@ -17,7 +20,33 @@ const app = (agent: string) => ({
   definition: {
     title: agent,
     description: "",
-    blocks: [{ id: "text", type: "text", text: agent }],
+    blocks: retained
+      ? web
+        ? [
+            {
+              id: "web",
+              type: "web",
+              code: "export default () => null",
+              initialState: "{}",
+            },
+          ]
+        : [
+            {
+              id: "form",
+              type: "form",
+              title: "Details",
+              submitLabel: "Save form",
+              fields: [
+                {
+                  id: "name",
+                  label: "Name",
+                  required: false,
+                  multiline: false,
+                },
+              ],
+            },
+          ]
+      : [{ id: "text", type: "text", text: agent }],
   },
 })
 const proof = {
@@ -26,23 +55,26 @@ const proof = {
   offline: false,
   calls: [] as { agent: string; path: string; body: unknown }[],
   release: () => {},
+  setActive: (_active: boolean) => {},
 }
 Object.assign(window, { proof })
 window.fetch = async (input, init) => {
   const url = new URL(String(input), location.href),
     agent = url.searchParams.get("agent") ?? "one"
+  const body = init?.body ? JSON.parse(String(init.body)) : null
+  const web = url.pathname.includes(webId) || body?.id === webId
   proof.calls.push({
     agent,
     path: url.pathname,
-    body: init?.body ? JSON.parse(String(init.body)) : null,
+    body,
   })
   if (url.pathname.endsWith("/render")) {
     proof.renders++
     return Response.json({
-      id,
+      id: web ? webId : id,
       version: 1,
       revision: 1,
-      html: '<button data-action="save">Save web</button>',
+      html: '<input aria-label="Web draft"><button data-action="save">Save web</button>',
       css: "",
     })
   }
@@ -52,9 +84,13 @@ window.fetch = async (input, init) => {
   }
   if (init?.method === "POST")
     return await new Promise<Response>((resolve) => {
-      proof.release = () => resolve(Response.json(app(agent)))
+      proof.release = () => resolve(Response.json(app(agent, web)))
     })
-  return Response.json({ app: app(agent), versions: [app(agent)], events: [] })
+  return Response.json({
+    app: app(agent, web),
+    versions: [app(agent, web)],
+    events: [],
+  })
 }
 function Hook() {
   const [agent, setAgent] = useState("one"),
@@ -142,7 +178,25 @@ function Form() {
     />
   )
 }
+function RetainedView() {
+  const [active, setActive] = useState(true)
+  proof.setActive = setActive
+  return (
+    <div hidden={!active} inert={!active}>
+      <AppView agentId="one" id={id} active={active} />
+      <AppView agentId="one" id={webId} active={active} />
+    </div>
+  )
+}
 const mode = new URLSearchParams(location.search).get("mode")
 createRoot(document.getElementById("root")!).render(
-  mode === "frame" ? <Frame /> : mode === "form" ? <Form /> : <Hook />
+  mode === "retained" ? (
+    <RetainedView />
+  ) : mode === "frame" ? (
+    <Frame />
+  ) : mode === "form" ? (
+    <Form />
+  ) : (
+    <Hook />
+  )
 )

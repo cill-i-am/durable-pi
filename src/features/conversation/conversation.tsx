@@ -1,22 +1,9 @@
-import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Empty, EmptyHeader, EmptyTitle } from "@workspace/ui/components/empty"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Array as EffectArray, Option, Schema } from "effect"
-import {
-  ArrowUp,
-  ChevronDown,
-  Square,
-  RefreshCw,
-  ListTodo,
-  Compass,
-  Image,
-  ArrowRight,
-  Upload,
-  Files,
-  BookOpen,
-  Ellipsis,
-  ShieldCheck,
-  Plug,
-  Settings2,
-} from "lucide-react"
+import { ArrowUp, ChevronDown, Square, RefreshCw, Upload } from "lucide-react"
 import {
   useEffect,
   useRef,
@@ -26,36 +13,23 @@ import {
 } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
-import { ActivityBorder } from "@/components/activity-visuals"
-import { AgentStatus } from "@/components/agent-status"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-  EmptyContent,
-} from "@/components/ui/empty"
 import {
   InputGroup,
   InputGroupTextarea,
   InputGroupAddon,
   InputGroupButton,
 } from "@/components/ui/input-group"
-import { Message, MessageContent } from "@/components/ui/message"
+import { Message, MessageContent, MessageHeader } from "@/components/ui/message"
 import {
   MessageScrollerProvider,
   MessageScroller,
@@ -64,11 +38,9 @@ import {
   MessageScrollerItem,
   MessageScrollerButton,
 } from "@/components/ui/message-scroller"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Skeleton } from "@/components/ui/skeleton"
 import type { ChatState } from "@/conversations/contracts"
 import { ThinkingLevel, type SubmissionMode } from "@/conversations/turns"
-import { ApprovalCard } from "@/features/access"
+import { ApprovalCard, DecisionDock } from "@/features/access"
 import { useFamily } from "@/features/family/context"
 import {
   type FilesState,
@@ -80,6 +52,9 @@ import { markReady } from "@/features/performance"
 import { AnswerExplorer } from "@/features/rich-results/explorer"
 import type { Profile, JobType } from "@/inference/policy"
 
+import "./conversation.css"
+
+import { ChatHeader } from "./chat-header"
 import { useMessageDeliveryDefault } from "./delivery-preference"
 import { ModelMenu } from "./model-menu"
 import { QueuedTurnAnchor } from "./queued-turn-anchor"
@@ -93,18 +68,19 @@ import { useConversationCommands } from "./use-conversation-commands"
 export function Conversation({
   composerDraft,
   name,
+  userImage,
   agent,
   workbenchAction,
   files,
   conversation,
   sending,
   setSending,
-  onOpenWorkbench,
   onSettings,
   onAppPendingChange,
 }: {
   composerDraft: ComposerDraftState
   name: string
+  userImage?: string | null
   agent: AgentProfile
   workbenchAction?: ReactNode
   files: FilesState
@@ -121,7 +97,6 @@ export function Conversation({
       | "skills"
       | "model-access"
   ) => void
-  onOpenWorkbench: (value: "files" | "memory") => void
   onAppPendingChange?: (key: string, pending: boolean) => void
 }) {
   const archived = agent.status === "archived"
@@ -235,75 +210,12 @@ export function Conversation({
           <span>Images, videos and documents · up to 8 MB each</span>
         </div>
       )}
-      <header className="chat-header">
-        <div className="chat-identity">
-          <SidebarTrigger />
-          <AgentAvatar name={agent.id} label={agent.name} aria-hidden="true" />
-          <div className="chat-identity-copy">
-            <div className="chat-identity-title">
-              <h1>{agent.name}</h1>
-              <AgentStatus
-                status={
-                  archived
-                    ? "archived"
-                    : connectionError
-                      ? "unavailable"
-                      : state?.runtime?.state
-                }
-              />
-            </div>
-            <p>
-              {agent.instructions.split("\n")[0] ||
-                "Your personal thinking partner"}
-            </p>
-          </div>
-        </div>
-        <div className="chat-header-actions">
-          {workbenchAction}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Agent settings and tools"
-                />
-              }
-            >
-              <Ellipsis />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-56">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>{agent.name}</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => onSettings("agent-settings")}>
-                  <Settings2 /> Agent settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onSettings("models")}>
-                  <Plug /> Models
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onSettings("access")}>
-                  <ShieldCheck /> Tool access
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onSettings("connections")}>
-                  <Plug /> Connections
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onSettings("skills")}>
-                  <BookOpen /> Skills
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => onOpenWorkbench("files")}>
-                  <Files /> Files
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onOpenWorkbench("memory")}>
-                  <BookOpen /> Memory
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
+      <ChatHeader
+        name={name}
+        userImage={userImage}
+        agent={agent}
+        workbenchAction={workbenchAction}
+      />
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="conversation-scroller">
           <MessageScrollerViewport>
@@ -319,49 +231,8 @@ export function Conversation({
                 <MessageScrollerItem messageId="empty">
                   <Empty className="conversation-empty">
                     <EmptyHeader>
-                      <AgentAvatar
-                        name={agent.id}
-                        label={agent.name}
-                        aria-hidden="true"
-                      />
-                      <EmptyTitle>Hello, {name.split(" ")[0]}.</EmptyTitle>
-                      <EmptyDescription>
-                        What would you like to work on?
-                      </EmptyDescription>
+                      <EmptyTitle>What would you like to work on?</EmptyTitle>
                     </EmptyHeader>
-                    <EmptyContent className="conversation-starters">
-                      {[
-                        {
-                          icon: ListTodo,
-                          label: "Turn a project into a checklist",
-                          text: "Help me plan a project and create a checklist. ",
-                        },
-                        {
-                          icon: Compass,
-                          label: "Plan a slower weekend away",
-                          text: "Help me plan a slower weekend away. ",
-                        },
-                        {
-                          icon: Image,
-                          label: "Make something from a reference",
-                          text: "Help me make something from a reference. ",
-                        },
-                      ].map((suggestion) => (
-                        <Button
-                          key={suggestion.label}
-                          variant="ghost"
-                          disabled={archived || sending || !!draft}
-                          onClick={() => {
-                            void setDraft(suggestion.text)
-                            composerInput.current?.focus()
-                          }}
-                        >
-                          <suggestion.icon data-icon="inline-start" />
-                          <span>{suggestion.label}</span>
-                          <ArrowRight data-icon="inline-end" />
-                        </Button>
-                      ))}
-                    </EmptyContent>
                   </Empty>
                 </MessageScrollerItem>
               ) : (
@@ -383,6 +254,7 @@ export function Conversation({
                         data-queued={waiting}
                       >
                         <MessageContent>
+                          {human && <MessageHeader>{name}</MessageHeader>}
                           <Bubble
                             align={human ? "end" : "start"}
                             variant={human ? "secondary" : "muted"}
@@ -444,7 +316,11 @@ export function Conversation({
                           refresh={reload}
                         />
                         {state.access?.approvals
-                          .filter((value) => value.turnId === turn.id)
+                          .filter(
+                            (value) =>
+                              value.turnId === turn.id &&
+                              value.status !== "pending"
+                          )
                           .map((approval) => (
                             <ApprovalCard
                               key={approval.id}
@@ -487,6 +363,13 @@ export function Conversation({
           error={error}
           connectionError={connectionError}
           reload={reload}
+        />
+        <DecisionDock
+          agentId={agent.id}
+          agentName={agent.name}
+          access={state?.access}
+          disabled={archived || active?.status === "stopping"}
+          onRefresh={reload}
         />
         {archived ? (
           <p className="py-3 text-sm text-muted-foreground">
@@ -621,127 +504,125 @@ function Composer({
           }}
         />
       </div>
-      <ActivityBorder active={working}>
-        <InputGroup className="chat-composer">
-          <InputGroupTextarea
-            ref={inputRef}
-            aria-label={`Message ${name}`}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            maxLength={30_000}
-            placeholder={
-              active && !stopping
-                ? "Add a thought while I work…"
-                : `Message ${name}…`
+      <InputGroup className="chat-composer" data-working={working}>
+        <InputGroupTextarea
+          ref={inputRef}
+          aria-label={`Message ${name}`}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          maxLength={30_000}
+          placeholder={
+            active && !stopping
+              ? "Add a thought while I work…"
+              : `Message ${name}…`
+          }
+          rows={1}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault()
+              void send()
             }
-            rows={2}
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey &&
-                !event.nativeEvent.isComposing
-              ) {
-                event.preventDefault()
-                void send()
-              }
-            }}
-          />
-          <InputGroupAddon align="block-end" className="composer-controls">
-            {attachmentControl}
-            <div className="composer-model">{modelControl(delivery)}</div>
-            <div
-              className="composer-actions"
-              role="group"
-              aria-label="Send message and delivery"
-            >
-              {active && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <InputGroupButton
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="composer-delivery-trigger rounded-full"
-                        disabled={stopping || pending}
-                      />
-                    }
-                    aria-label={`Message delivery: ${delivery === "steer" ? "steer this reply" : "queue next reply"}`}
-                  >
-                    {delivery === "steer" ? "Steer" : "Queue"}
-                    <ChevronDown data-icon="inline-end" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    side="top"
-                    align="end"
-                    className="min-w-52"
-                  >
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>For this message</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={delivery}
-                        onValueChange={(value: unknown) => {
-                          if (value === "steer" || value === "followUp")
-                            setOverride(value)
-                        }}
-                      >
-                        <DropdownMenuRadioItem value="steer">
-                          Steer this reply
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="followUp">
-                          Queue next reply
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              {active && (
-                <InputGroupButton
-                  type="button"
-                  variant="secondary"
-                  size="icon-sm"
-                  className="composer-action rounded-full"
-                  onClick={onStop}
-                  disabled={stopping}
-                  aria-label="Stop response"
-                  title="Stop response"
+          }}
+        />
+        <InputGroupAddon align="block-end" className="composer-controls">
+          {attachmentControl}
+          <div className="composer-model">{modelControl(delivery)}</div>
+          <div
+            className="composer-actions"
+            role="group"
+            aria-label="Send message and delivery"
+          >
+            {active && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <InputGroupButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="composer-delivery-trigger"
+                      disabled={stopping || pending}
+                    />
+                  }
+                  aria-label={`Message delivery: ${delivery === "steer" ? "steer this reply" : "queue next reply"}`}
                 >
-                  <Square />
-                </InputGroupButton>
-              )}
+                  {delivery === "steer" ? "Steer" : "Queue"}
+                  <ChevronDown data-icon="inline-end" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="top"
+                  align="end"
+                  className="min-w-52"
+                >
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>For this message</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={delivery}
+                      onValueChange={(value: unknown) => {
+                        if (value === "steer" || value === "followUp")
+                          setOverride(value)
+                      }}
+                    >
+                      <DropdownMenuRadioItem value="steer">
+                        Steer this reply
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="followUp">
+                        Queue next reply
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {active && (
               <InputGroupButton
-                type="submit"
-                variant="default"
+                type="button"
+                variant="secondary"
                 size="icon-sm"
-                className="composer-action rounded-full"
-                disabled={
-                  (!draft.trim() && !hasAttachments) ||
-                  pending ||
-                  !enabled ||
-                  waitingForStop
-                }
-                aria-label={
-                  active
-                    ? delivery === "steer"
-                      ? "Steer response"
-                      : "Queue message"
-                    : "Send message"
-                }
-                title={
-                  active
-                    ? delivery === "steer"
-                      ? "Steer response"
-                      : "Queue message"
-                    : "Send message"
-                }
+                className="composer-action"
+                onClick={onStop}
+                disabled={stopping}
+                aria-label="Stop response"
+                title="Stop response"
               >
-                <ArrowUp />
+                <Square />
               </InputGroupButton>
-            </div>
-          </InputGroupAddon>
-        </InputGroup>
-      </ActivityBorder>
+            )}
+            <InputGroupButton
+              type="submit"
+              variant="default"
+              size="icon-sm"
+              className="composer-action"
+              disabled={
+                (!draft.trim() && !hasAttachments) ||
+                pending ||
+                !enabled ||
+                waitingForStop
+              }
+              aria-label={
+                active
+                  ? delivery === "steer"
+                    ? "Steer response"
+                    : "Queue message"
+                  : "Send message"
+              }
+              title={
+                active
+                  ? delivery === "steer"
+                    ? "Steer response"
+                    : "Queue message"
+                  : "Send message"
+              }
+            >
+              <ArrowUp />
+            </InputGroupButton>
+          </div>
+        </InputGroupAddon>
+      </InputGroup>
     </form>
   )
 }

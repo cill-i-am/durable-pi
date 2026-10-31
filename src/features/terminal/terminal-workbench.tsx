@@ -1,20 +1,26 @@
+import "./terminal.css"
 import { Link } from "@tanstack/react-router"
-import { Play, Square, RefreshCw, Settings2, X } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Field,
   FieldGroup,
   FieldLabel,
   FieldContent,
   FieldDescription,
-} from "@/components/ui/field"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
+} from "@workspace/ui/components/field"
+import { Switch } from "@workspace/ui/components/switch"
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@workspace/ui/components/tabs"
+import { Textarea } from "@workspace/ui/components/textarea"
+import { Play, Square, RefreshCw, Settings2, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+
 import { useReloadGuard } from "@/features/updates/update-recovery"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 import type { TerminalNetworkPolicy } from "@/terminal/contracts"
@@ -37,7 +43,9 @@ function TerminalWorkbenchView({
   onSelect,
   tab,
   onTabChange,
+  active = true,
 }: {
+  active?: boolean
   tab: "commands" | "interactive" | "transfers"
   onTabChange: (tab: "commands" | "interactive" | "transfers") => void
   selected: string | null
@@ -71,7 +79,7 @@ function TerminalWorkbenchView({
     'printf "Hello from Linux\\n"\nls -la /workspace'
   )
   const content = (
-    <>
+    <section className="terminal-workbench @container/tool flex min-h-0 min-w-0 flex-1 flex-col">
       <TerminalHeader
         terminal={terminal}
         networkSettings={networkSettings}
@@ -79,7 +87,7 @@ function TerminalWorkbenchView({
         settingsTrigger={settingsTrigger}
         pending={pending}
       />
-      <div className="workbench-body terminal-workbench-body">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-5 @max-md/tool:p-4">
         {terminal.networkPolicy === null && (
           <p role="status" className="text-xs text-muted-foreground">
             This terminal service hasn’t provided its internet settings yet.
@@ -141,7 +149,7 @@ function TerminalWorkbenchView({
                 onTabChange(value)
             }}
           >
-            <TabsList variant="line">
+            <TabsList>
               <TabsTrigger disabled={pending} value="commands">
                 Commands
               </TabsTrigger>
@@ -154,6 +162,7 @@ function TerminalWorkbenchView({
             </TabsList>
             <TabsContent value="transfers">
               <FileTransfers
+                active={active}
                 agentId={agentId}
                 busy={
                   terminal.busy ||
@@ -214,52 +223,23 @@ function TerminalWorkbenchView({
               </p>
             </details>
           </section>
-          <section
-            aria-label="Command history"
-            className="flex flex-col gap-2 border-t pt-4"
-          >
-            <h3 className="text-sm font-medium">Recent commands</h3>
-            {!terminal.runs.length && (
-              <p className="text-xs text-muted-foreground">
-                Your bot’s commands will appear here.
-              </p>
-            )}
-            {terminal.runs.map((item) => (
-              <Link
-                key={item.id}
-                {...workspaceDestination(parseAgentId(agentId), {
-                  panel: "terminal",
-                  item: item.id,
-                })}
-                aria-current={
-                  terminal.selected === item.id ? "page" : undefined
-                }
-                title={item.label}
-                className={buttonVariants({
-                  size: "sm",
-                  variant:
-                    terminal.selected === item.id ? "secondary" : "ghost",
-                  className:
-                    "h-auto w-full justify-between gap-3 py-2 text-left",
-                })}
-                disabled={pending}
-              >
-                <span className="min-w-0 truncate font-mono text-xs">
-                  {item.label}
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {item.status}
-                </span>
-              </Link>
-            ))}
-          </section>
+          <CommandHistory
+            terminal={terminal}
+            agentId={agentId}
+            pending={pending}
+          />
         </div>
       </div>
-      <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-        30 seconds per command, 64,000 output characters, 8 MiB compressed
-        checkpoint. Latest 20 commands shown.
+      <footer className="shrink-0 border-t px-5 py-3 text-xs text-muted-foreground">
+        <details>
+          <summary className="cursor-pointer">Command limits</summary>
+          <p className="mt-2 max-w-prose leading-relaxed">
+            30 seconds per command, 64,000 output characters, 8 MiB compressed
+            checkpoint. Latest 20 commands shown.
+          </p>
+        </details>
       </footer>
-    </>
+    </section>
   )
   return content
 }
@@ -280,12 +260,8 @@ function TerminalHeader({
   pending: boolean
 }) {
   return (
-    <header className="workbench-heading-row">
-      <h2
-        className={
-          networkSettings ? "workbench-title" : "workbench-section-title"
-        }
-      >
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-4 @max-md/tool:px-4">
+      <h2 className="min-w-0 text-md font-semibold wrap-anywhere">
         {networkSettings ? "Terminal internet access" : "Terminal"}
       </h2>
       <div className="flex gap-1">
@@ -507,51 +483,7 @@ function TerminalResult({
         </Alert>
       )}
       {detail && detail.kind !== "session" && (
-        <section
-          aria-label="Command output"
-          className="flex min-w-0 flex-col gap-3 border-t pt-4"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-medium">Output</h3>
-            <Badge variant="secondary">
-              {detail.status}
-              {detail.exitCode !== null ? ` · exit ${detail.exitCode}` : ""}
-            </Badge>
-          </div>
-          {detail.status === "running" && (
-            <p className="text-xs text-muted-foreground">
-              Running… You can close this panel; output and status are saved.
-            </p>
-          )}
-          {detail.error && (
-            <Alert>
-              <AlertDescription>{detail.error}</AlertDescription>
-            </Alert>
-          )}
-          {detail.transfer && (
-            <p className="text-xs break-all">{detail.transfer.path}</p>
-          )}
-          {detail.transfer?.kind === "import" &&
-            detail.status === "succeeded" && (
-              <p className="text-xs text-muted-foreground">
-                File copied and workspace saved.
-              </p>
-            )}
-          <ExportedFile key={detail.id} agentId={agentId} run={detail} />
-          {!detail.transfer && (
-            <pre className="terminal-output">
-              {detail.output || "No output yet."}
-            </pre>
-          )}
-          <details>
-            <summary className="cursor-pointer text-xs font-medium">
-              Executed command
-            </summary>
-            <pre className="mt-2 max-h-40 overflow-auto text-xs break-words whitespace-pre-wrap">
-              {detail.command}
-            </pre>
-          </details>
-        </section>
+        <CommandOutput detail={detail} agentId={agentId} />
       )}
     </>
   )
@@ -563,4 +495,107 @@ function terminalInternetLabel(policy: TerminalState["networkPolicy"]) {
     : policy
       ? "Internet off"
       : "Checking internet access…"
+}
+
+function CommandHistory({
+  terminal,
+  agentId,
+  pending,
+}: {
+  terminal: TerminalState
+  agentId: string
+  pending: boolean
+}) {
+  return (
+    <section
+      aria-label="Command history"
+      className="flex flex-col gap-2 border-t pt-4"
+    >
+      <h3 className="text-sm font-medium">Recent commands</h3>
+      {!terminal.runs.length && (
+        <p className="text-xs text-muted-foreground">
+          Run a command above to see it here.
+        </p>
+      )}
+      {terminal.runs.map((item) => (
+        <Link
+          key={item.id}
+          {...workspaceDestination(parseAgentId(agentId), {
+            panel: "terminal",
+            item: item.id,
+          })}
+          aria-current={terminal.selected === item.id ? "page" : undefined}
+          title={item.label}
+          className={buttonVariants({
+            size: "sm",
+            variant: terminal.selected === item.id ? "secondary" : "ghost",
+            className: "h-auto w-full justify-between gap-3 py-2 text-left",
+          })}
+          disabled={pending}
+        >
+          <span className="min-w-0 truncate font-mono text-xs">
+            {item.label}
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {item.status === "succeeded" ? "Completed" : item.status}
+          </span>
+        </Link>
+      ))}
+    </section>
+  )
+}
+
+function CommandOutput({
+  detail,
+  agentId,
+}: {
+  detail: NonNullable<TerminalState["detail"]>
+  agentId: string
+}) {
+  return (
+    <section
+      aria-label="Command output"
+      className="flex min-w-0 flex-col gap-3 border-t pt-4"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-medium">Output</h3>
+        <Badge variant="secondary">
+          {detail.status === "succeeded" ? "Completed" : detail.status}
+          {detail.exitCode !== null ? ` · exit ${detail.exitCode}` : ""}
+        </Badge>
+      </div>
+      {detail.status === "running" && (
+        <p className="text-xs text-muted-foreground">
+          Running… You can close this panel; output and status are saved.
+        </p>
+      )}
+      {detail.error && (
+        <Alert>
+          <AlertDescription>{detail.error}</AlertDescription>
+        </Alert>
+      )}
+      {detail.transfer && (
+        <p className="text-xs break-all">{detail.transfer.path}</p>
+      )}
+      {detail.transfer?.kind === "import" && detail.status === "succeeded" && (
+        <p className="text-xs text-muted-foreground">
+          File copied and workspace saved.
+        </p>
+      )}
+      <ExportedFile key={detail.id} agentId={agentId} run={detail} />
+      {!detail.transfer && (
+        <pre className="terminal-output">
+          {detail.output || "No output yet."}
+        </pre>
+      )}
+      <details>
+        <summary className="cursor-pointer text-xs font-medium">
+          Executed command
+        </summary>
+        <pre className="mt-2 max-h-40 overflow-auto text-xs break-words whitespace-pre-wrap">
+          {detail.command}
+        </pre>
+      </details>
+    </section>
+  )
 }

@@ -1,7 +1,7 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { useRef } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +12,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+
+import "./assistant-management.css"
 
 export function ArchiveAgentDialog({
   agent,
@@ -37,7 +39,7 @@ export function ArchiveAgentDialog({
     >
       <AlertDialogContent
         initialFocus={cancel}
-        className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto"
+        className="assistant-archive-dialog"
         aria-busy={pending}
       >
         <AlertDialogHeader>
@@ -45,8 +47,8 @@ export function ArchiveAgentDialog({
             Archive {agent.name}?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This agent will move to Archived agents. Its conversations and saved
-            work will be kept. You can restore it later from the account menu.
+            Its conversations and saved work will be kept. You can restore it
+            from Archived assistants.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error && (
@@ -59,7 +61,7 @@ export function ArchiveAgentDialog({
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction disabled={pending} onClick={onConfirm}>
-            {pending ? "Archiving…" : "Archive agent"}
+            {pending ? "Archiving…" : "Archive assistant"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

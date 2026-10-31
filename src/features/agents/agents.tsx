@@ -1,41 +1,16 @@
-import { Link } from "@tanstack/react-router"
 import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
-import {
-  Archive,
-  Activity,
-  BookOpen,
-  ChevronDown,
-  ChevronsUpDown,
-  Ellipsis,
-  LogOut,
-  Plus,
-  Search,
-  Settings2,
-  Undo2,
-} from "lucide-react"
-
-import { AgentProfile, homeAgentId } from "@/agents/contracts"
-import { authClient } from "@/auth/client"
-import { AgentMark } from "@/components/agent-mark"
-import { AgentStatusMarker, agentStatusLabel } from "@/components/agent-status"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import {
   Field,
   FieldGroup,
   FieldLabel,
   FieldDescription,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Textarea } from "@workspace/ui/components/textarea"
+
+import type { AgentProfile } from "@/agents/contracts"
 import {
   Sheet,
   SheetContent,
@@ -43,341 +18,12 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import {
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuAction,
-  SidebarInput,
-  useSidebar,
-} from "@/components/ui/sidebar"
-import { Textarea } from "@/components/ui/textarea"
-import { UserAvatar } from "@/components/user-avatar"
-import type { RuntimeStatus } from "@/conversations/status"
-import {
-  workspaceDestination,
-  type WorkspaceSearch,
-} from "@/navigation/workspace"
 
 import { useAgentEditor } from "./use-agent-editor"
 
-export { useAgentCatalog } from "./use-agent-catalog"
+import "./assistant-management.css"
 
-export function AgentSidebar({
-  disabled = false,
-  agents,
-  statuses,
-  selected,
-  query,
-  onQuery,
-  archived,
-  view,
-  onCreate,
-  onEdit,
-  onArchive,
-  onActivity,
-  onMemory,
-  onSettings,
-  name,
-  image,
-}: {
-  disabled?: boolean
-  agents: AgentProfile[]
-  statuses: Readonly<Record<string, RuntimeStatus>>
-  selected?: AgentProfile
-  query: string
-  onQuery: (query: string) => void
-  archived: boolean
-  view: WorkspaceSearch
-  onCreate: () => void
-  onEdit: (agent: AgentProfile) => void
-  onArchive: (agent: AgentProfile) => void
-  onActivity: () => void
-  onMemory: () => void
-  onSettings: () => void
-  name: string
-  image?: string | null
-}) {
-  const { setOpenMobile, isMobile } = useSidebar()
-  const shown = agents.filter(
-    (a) =>
-      (a.status === "archived") === archived &&
-      a.name.toLowerCase().includes(query.toLowerCase())
-  )
-  return (
-    <Sidebar
-      role="navigation"
-      aria-label="Agents and workspace"
-      inert={disabled}
-      className="workspace-sidebar"
-      collapsible="offcanvas"
-    >
-      <SidebarHeader inert={disabled}>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button variant="ghost" className="justify-start md:hidden" />
-            }
-          >
-            <AgentMark />
-            Pi <span className="text-muted-foreground">/ Personal</span>
-            <ChevronDown data-icon="inline-end" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => {
-                  onCreate()
-                }}
-              >
-                <Plus /> New agent
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                render={<Link to={archived ? "/agents" : "/agents/archived"} />}
-                onClick={() => setOpenMobile(false)}
-              >
-                <Archive />
-                {archived ? "Active agents" : "Archived agents"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  onSettings()
-                }}
-              >
-                <Settings2 />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void authClient.signOut()}>
-                <LogOut />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="relative">
-          <Search className="absolute top-2 left-2 size-4 text-muted-foreground" />
-          <SidebarInput
-            className="pl-8"
-            aria-label="Search agents"
-            placeholder="Search agents…"
-            maxLength={200}
-            value={query}
-            onChange={(e) => onQuery(e.target.value)}
-          />
-        </div>
-        <Button
-          variant="outline"
-          className="h-9.5 justify-start"
-          onClick={() => {
-            onCreate()
-          }}
-        >
-          <Plus data-icon="inline-start" />
-          New agent
-        </Button>
-      </SidebarHeader>
-      <SidebarContent inert={disabled}>
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            {archived ? "Archived agents" : "Your agents"}
-          </SidebarGroupLabel>
-          <SidebarMenu>
-            {shown.map((agent) => {
-              const state =
-                agent.status === "archived"
-                  ? "archived"
-                  : statuses[agent.id]?.state
-              const label = `${agent.name}: ${agentStatusLabel(state)}`
-              return (
-                <SidebarMenuItem key={agent.id}>
-                  <SidebarMenuButton
-                    size="lg"
-                    isActive={selected?.id === agent.id}
-                    aria-label={label}
-                    tooltip={{ children: label, hidden: isMobile }}
-                    render={
-                      <Link
-                        to="/agents/$agentId"
-                        params={{ agentId: agent.slug }}
-                      />
-                    }
-                    onClick={() => setOpenMobile(false)}
-                  >
-                    <span className="agent-avatar">
-                      <AgentAvatar
-                        name={agent.id}
-                        label={agent.name}
-                        aria-hidden="true"
-                      />
-                      <AgentStatusMarker status={state} />
-                    </span>
-                    <span className="agent-sidebar-copy flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate">{agent.name}</span>
-                      <span className="truncate font-normal text-muted-foreground">
-                        {agent.instructions || "Your personal assistant"}
-                      </span>
-                    </span>
-                  </SidebarMenuButton>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <SidebarMenuAction
-                          showOnHover
-                          aria-label={`Options for ${agent.name}`}
-                        />
-                      }
-                    >
-                      <Ellipsis />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            onEdit(agent)
-                          }}
-                        >
-                          <Settings2 />
-                          Edit agent
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={agent.id === homeAgentId}
-                          onClick={() => onArchive(agent)}
-                        >
-                          {agent.status === "archived" ? (
-                            <Undo2 />
-                          ) : (
-                            <Archive />
-                          )}
-                          {agent.status === "archived" ? "Restore" : "Archive"}
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
-              )
-            })}
-          </SidebarMenu>
-          {!shown.length && (
-            <p className="p-2 text-xs text-muted-foreground">
-              {query
-                ? "No matching agents."
-                : archived
-                  ? "No archived agents."
-                  : "Your agents will appear here."}
-            </p>
-          )}
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter inert={disabled}>
-        <Button
-          variant="ghost"
-          className="justify-start"
-          onClick={() => {
-            onActivity()
-          }}
-        >
-          <Activity />
-          Activity
-        </Button>
-        <Button
-          variant="ghost"
-          className="justify-start"
-          onClick={() => {
-            onMemory()
-          }}
-        >
-          <BookOpen />
-          Memory
-        </Button>
-        <SidebarMenu className="account-menu border-t pt-2">
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <SidebarMenuButton
-                    size="lg"
-                    className="account-menu-trigger aria-expanded:bg-muted"
-                  />
-                }
-                aria-label={`Settings for ${name}`}
-              >
-                <UserAvatar name={name} image={image} />
-                <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-sm font-medium">
-                    {name}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    Personal workspace
-                  </span>
-                </span>
-                <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="min-w-56"
-                side={isMobile ? "top" : "right"}
-                align="end"
-                sideOffset={8}
-              >
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-2 py-2">
-                    <span className="block truncate text-sm font-medium text-foreground">
-                      {name}
-                    </span>
-                    <span className="block font-normal">
-                      Personal workspace
-                    </span>
-                  </DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    render={
-                      selected ? (
-                        <Link
-                          {...workspaceDestination(selected.id, {
-                            ...view,
-                            settings: "settings",
-                            security: undefined,
-                            connections: undefined,
-                          })}
-                        />
-                      ) : undefined
-                    }
-                    onClick={() => {
-                      setOpenMobile(false)
-                      if (!selected) onSettings()
-                    }}
-                  >
-                    <Settings2 /> Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    render={
-                      <Link to={archived ? "/agents" : "/agents/archived"} />
-                    }
-                    onClick={() => setOpenMobile(false)}
-                  >
-                    <Archive /> {archived ? "Active agents" : "Archived agents"}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void authClient.signOut()}>
-                  <LogOut /> Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
-  )
-}
+export { useAgentCatalog } from "./use-agent-catalog"
 
 export function AgentEditor({
   agent,
@@ -405,21 +51,27 @@ export function AgentEditor({
         if (!value) editor.dismiss()
       }}
     >
-      <SheetContent className="agent-editor agent-editor-sheet">
+      <SheetContent className="assistant-editor-sheet">
         <SheetHeader>
           <SheetTitle>
-            {editor.existing ? "Agent settings" : "Create an agent"}
+            {editor.existing ? "Edit assistant" : "New assistant"}
           </SheetTitle>
-          <SheetDescription>Give it a name and a purpose.</SheetDescription>
+          <SheetDescription>
+            Choose a name and what it should help with.
+          </SheetDescription>
         </SheetHeader>
-        <form onSubmit={save}>
-          <div className="agent-editor-preview">
+        <form
+          className="assistant-editor-form"
+          onSubmit={save}
+          aria-busy={pending}
+        >
+          <div className="assistant-editor-preview">
             <AgentAvatar
               name={editor.id}
-              label={name || "New agent"}
+              label={name || "New assistant"}
               aria-hidden="true"
             />
-            <span>{name || "A new point of view"}</span>
+            <span>{name || "New assistant"}</span>
           </div>
           <FieldGroup>
             <Field>
@@ -443,20 +95,18 @@ export function AgentEditor({
                 disabled={!editor.ready}
                 value={instructions}
                 onChange={(e) => editor.change("instructions", e.target.value)}
-                placeholder="What should this agent help with?"
+                placeholder="What should this assistant help with?"
                 rows={4}
                 maxLength={8000}
               />
-              <FieldDescription>
-                You can change these later. Updates apply to new turns.
-              </FieldDescription>
+              <FieldDescription>Changes apply to new turns.</FieldDescription>
             </Field>
             {error && (
-              <Alert>
+              <Alert role="alert">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="flex justify-end gap-2">
+            <div className="assistant-editor-actions">
               <Button
                 type="button"
                 variant="outline"
@@ -467,7 +117,7 @@ export function AgentEditor({
               </Button>
               {editor.refreshFailed ? (
                 <Button type="button" onClick={editor.reconcile}>
-                  Refresh agent list
+                  Refresh assistant list
                 </Button>
               ) : (
                 <Button type="submit" disabled={pending}>
@@ -475,7 +125,7 @@ export function AgentEditor({
                     ? "Saving…"
                     : editor.existing
                       ? "Save changes"
-                      : "Create agent"}
+                      : "Create assistant"}
                 </Button>
               )}
             </div>

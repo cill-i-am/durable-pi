@@ -1,34 +1,15 @@
-import { ShieldQuestion } from "lucide-react"
-import { useId } from "react"
+import { Check, CircleAlert, Clock3, X } from "lucide-react"
 
-import { type Approval, type ToolPolicy } from "@/access/contracts"
-import { CopyButton } from "@/components/copy-button"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card"
-import {
-  CodeBlock,
-  CodeBlockHeader,
-  CodeBlockTitle,
-  CodeBlockActions,
-  CodeBlockContent,
-} from "@/components/ui/code-block"
+import type { Approval, ToolPolicy } from "@/access/contracts"
 
-import { approvalDecision, type ConfirmedDecision } from "./decision"
-import { useApproval } from "./use-approval"
+import { formatApprovalInput } from "./decision"
 
+import "./decision-dock.css"
+
+/** A transcript receipt has no command owner. Pending requests live in the dock. */
 export function ApprovalCard({
   approval,
-  agentId,
-  disabled,
   toolLabel,
-  toolPolicy,
-  agentName = "this agent",
 }: {
   approval: Approval
   agentId: string
@@ -37,137 +18,44 @@ export function ApprovalCard({
   toolPolicy?: ToolPolicy
   agentName?: string
 }) {
-  const scopeId = useId()
-  const { busy, confirmed, error, decide, blocked } = useApproval({
-    agentId,
-    approval,
-    disabled,
-    policy: toolPolicy ?? null,
-  })
-  const decided = approvalDecision(approval, confirmed)
-  const pending = approval.status === "pending" && decided === null
-  const heading = approvalHeading(approval, decided, confirmed)
+  const status = {
+    pending: "Awaiting approval",
+    approved: "Approval accepted · waiting to run",
+    running: "Approved · running",
+    done: "Action completed",
+    denied: "Declined",
+    cancelled: "Cancelled",
+    expired: "Approval expired",
+    interrupted: "Interrupted · outcome needs checking",
+  }[approval.status]
+  const Icon =
+    approval.status === "done"
+      ? Check
+      : approval.status === "interrupted"
+        ? CircleAlert
+        : approval.status === "denied" || approval.status === "cancelled"
+          ? X
+          : Clock3
   return (
-    <Card
+    <div
+      className="approval-receipt"
       role="region"
       aria-label={`Approval for ${toolLabel ?? approval.tool}`}
-      className="approval-card mt-4 min-w-0"
-      data-pending={pending}
+      data-status={approval.status}
     >
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3">
-          <ShieldQuestion className="size-5 shrink-0" />
-          {heading}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex min-w-0 flex-col gap-3">
-        {approval.status === "interrupted" && (
-          <p className="text-sm">Check the outcome before retrying.</p>
-        )}
-        <p className="text-sm">
-          <strong>{toolLabel ?? approval.tool}</strong>
-          {pending ? " · Review these inputs" : " · Action inputs"}
+      <Icon aria-hidden="true" />
+      <div>
+        <p>
+          <strong>{toolLabel ?? approval.tool}</strong> · {status}
         </p>
-        <CodeBlock size="sm">
-          <CodeBlockHeader>
-            <CodeBlockTitle>Action inputs</CodeBlockTitle>
-            <CodeBlockActions>
-              <CopyButton
-                text={formatInput(approval.input)}
-                label="Copy action inputs"
-              />
-            </CodeBlockActions>
-          </CodeBlockHeader>
-          <CodeBlockContent wrap className="max-h-64">
-            {formatInput(approval.input)}
-          </CodeBlockContent>
-        </CodeBlock>
-        {pending && (
-          <p className="text-xs text-muted-foreground">
-            This action request expires at{" "}
-            {new Date(approval.expiresAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            .
-          </p>
+        {approval.status === "interrupted" && (
+          <p>Check the outcome before trying again.</p>
         )}
-        {pending && (
-          <p id={scopeId} className="text-xs text-muted-foreground">
-            Always allow lets <strong>{agentName}</strong> use{" "}
-            <strong>{toolLabel ?? approval.tool}</strong> with any inputs until
-            you change it in Settings → Tool access. Other tools and internet
-            settings stay separate.
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-      </CardContent>
-      {pending && (
-        <CardFooter className="flex-wrap gap-2">
-          <Button
-            size="sm"
-            className="min-h-10"
-            disabled={blocked(true)}
-            onClick={() => void decide(true)}
-          >
-            {busy ? "Saving decision…" : "Allow once"}
-          </Button>
-          <Button
-            size="sm"
-            className="min-h-10"
-            variant="outline"
-            aria-describedby={scopeId}
-            disabled={blocked(true, true)}
-            onClick={() => void decide(true, true)}
-          >
-            Always allow
-          </Button>
-          <Button
-            size="sm"
-            className="min-h-10"
-            variant="outline"
-            disabled={blocked(false)}
-            onClick={() => void decide(false)}
-          >
-            Deny
-          </Button>
-        </CardFooter>
-      )}
-    </Card>
+        <details>
+          <summary>Action inputs</summary>
+          <pre>{formatApprovalInput(approval.input)}</pre>
+        </details>
+      </div>
+    </div>
   )
-}
-function formatInput(input: string) {
-  try {
-    return JSON.stringify(JSON.parse(input), null, 2)
-  } catch {
-    return input
-  }
-}
-
-function approvalHeading(
-  approval: Approval,
-  decided: boolean | null,
-  confirmed: ConfirmedDecision | null
-) {
-  return approval.status === "pending"
-    ? decided === true
-      ? confirmed?.remember
-        ? "Tool allowed for this agent"
-        : "Approved for this action"
-      : decided === false
-        ? "Denied"
-        : "Your approval is needed"
-    : {
-        approved: "Approved",
-        running: "Approved · running",
-        done: "Action completed",
-        denied: "Denied",
-        cancelled: "Cancelled",
-        expired: "Approval expired",
-        interrupted: "Interrupted",
-      }[approval.status]
 }

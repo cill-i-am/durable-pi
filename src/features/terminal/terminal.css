@@ -1,0 +1,82 @@
+.terminal-workbench {
+  width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.terminal-context {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 3);
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.terminal-context > span:first-child {
+  font-family: var(--font-mono);
+}
+
+.terminal-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 5);
+}
+
+.terminal-main[hidden] {
+  display: none;
+}
+
+.terminal-run-form {
+  padding-block-start: calc(var(--spacing) * 3);
+}
+
+.terminal-run-form [data-slot="field-group"] {
+  gap: calc(var(--spacing) * 3);
+}
+
+.terminal-command,
+.terminal-output,
+.terminal-surface {
+  background: var(--terminal);
+  color: var(--terminal-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.terminal-command,
+.terminal-output {
+  padding: calc(var(--spacing) * 4);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.terminal-output {
+  max-height: 20rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.terminal-recovery summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.terminal-recovery p {
+  max-width: 65ch;
+  margin-block-start: calc(var(--spacing) * 2);
+  line-height: 1.6;
+}
+
+@media (pointer: coarse) {
+  .terminal-command {
+    font-size: 1rem;
+  }
+}

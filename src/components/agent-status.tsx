@@ -1,3 +1,4 @@
+import { Badge } from "@workspace/ui/components/badge"
 import {
   CircleCheck,
   CircleDashed,
@@ -9,7 +10,6 @@ import {
   CircleHelp,
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import type { RuntimeStatus } from "@/conversations/status"
 
 const states = {

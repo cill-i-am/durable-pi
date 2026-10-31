@@ -103,9 +103,19 @@ for (const status of ["stopping", "unconfirmed"] as const) {
     await expect(runs).toContainText(fixture.runs[0]!.error!)
     await expect(runs).toContainText("Budget ends")
     await expect(runs.getByText(/^(done|completed|cancelled)$/i)).toHaveCount(0)
-    const runNow = page.getByRole("button", { name: "Run now", exact: true })
+    const actions = page.getByRole("button", { name: "Actions", exact: true })
+    const expectRunUnavailable = async () => {
+      await actions.click()
+      const runNow = page.getByRole("menuitem", {
+        name: "Run now",
+        exact: true,
+      })
+      await expect(runNow).toBeDisabled()
+      await page.keyboard.press("Escape")
+      await expect(runNow).not.toBeVisible()
+    }
     const stop = runs.getByRole("button", { name: "Stop run", exact: true })
-    await expect(runNow).toBeDisabled()
+    await expectRunUnavailable()
     await expect(stop).toBeEnabled()
     expect(writes).toEqual([])
     await stop.click()
@@ -114,7 +124,7 @@ for (const status of ["stopping", "unconfirmed"] as const) {
         .poll(() => writes)
         .toEqual([{ path: "/api/agent/routines/stop", body: { id: runId } }])
       await expect(stop).toBeDisabled()
-      await expect(runNow).toBeDisabled()
+      await expect(actions).toBeDisabled()
       await expect(runs.getByText(label, { exact: true })).toBeVisible()
     } finally {
       release()
@@ -123,7 +133,7 @@ for (const status of ["stopping", "unconfirmed"] as const) {
     await expect(runs.getByText(label, { exact: true })).toBeVisible()
     await page.reload()
     await expect(runs.getByText(label, { exact: true })).toBeVisible()
-    await expect(runNow).toBeDisabled()
+    await expectRunUnavailable()
     await expect(stop).toBeEnabled()
     await expect(
       runs.getByRole("button", { name: /retry|replay|run again/i })

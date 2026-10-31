@@ -14,7 +14,7 @@ async function openChat(page: Page) {
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: /Navi/ })
     .click()
   await expect(composer(page)).toBeEnabled()

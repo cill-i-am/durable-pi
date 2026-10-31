@@ -1,3 +1,19 @@
+import "./activity.css"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty"
+import { Separator } from "@workspace/ui/components/separator"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Schema } from "effect"
 import {
   ArrowLeft,
@@ -10,22 +26,11 @@ import {
 } from "lucide-react"
 
 import type { ActivityAgent } from "@/activity/contracts"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Trace,
   TraceLine,
@@ -62,7 +67,9 @@ export function ActivityWorkbench({
   onFiltersChange,
   offset,
   onOffsetChange: setOffset,
+  active = true,
 }: {
+  active?: boolean
   filters: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
   onFiltersChange: (
     value: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
@@ -98,14 +105,19 @@ export function ActivityWorkbench({
   if (!inspected)
     return (
       <Alert>
-        <AlertDescription>This agent is unavailable.</AlertDescription>
+        <AlertDescription>
+          This assistant is unavailable.
+          <Button variant="link" size="sm" onClick={() => onOpenBot(initialId)}>
+            Return to your assistant
+          </Button>
+        </AlertDescription>
       </Alert>
     )
   return (
-    <div className="workbench-body">
+    <div className="activity-workbench @container/tool flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-5 @max-md/tool:p-4">
       {!showTimeline && (
         <div className="flex items-center justify-between gap-3">
-          <h2 className="workbench-title">Activity</h2>
+          <h2 className="text-md font-semibold">Activity</h2>
           <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
             <span className="truncate">{agentName}</span>
           </Badge>
@@ -113,6 +125,7 @@ export function ActivityWorkbench({
       )}
       {showTimeline ? (
         <ActivityTimeline
+          active={active}
           filters={filters}
           onFiltersChange={onFiltersChange}
           agent={
@@ -229,7 +242,9 @@ export function PlanView({ plan }: { plan: Plan }) {
             {completed} of {plan.steps.length} steps · Revision {plan.revision}
           </span>
         </div>
-        <h3 className="text-lg font-semibold">{plan.objective}</h3>
+        <h3 className="text-md font-semibold wrap-anywhere">
+          {plan.objective}
+        </h3>
       </div>
       {plan.blocker && (
         <Alert>

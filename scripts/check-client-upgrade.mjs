@@ -136,7 +136,7 @@ async function driveUpgrade(origin, replacement) {
   try {
     await page.goto(`${origin}/agents`)
     await expect(
-      page.getByRole("heading", { name: "Welcome back.", exact: true })
+      page.getByRole("heading", { name: "Welcome back", exact: true })
     ).toBeVisible()
     await page
       .getByLabel("Email", { exact: true })
@@ -146,7 +146,7 @@ async function driveUpgrade(origin, replacement) {
       .fill("Disposable browser fixture password 2026!")
     await page.getByRole("button", { name: "Sign in", exact: true }).click()
     await page
-      .getByRole("region", { name: "Your agents" })
+      .getByRole("region", { name: "Assistants" })
       .getByRole("link", { name: /Navi/ })
       .click()
     const composer = page.getByRole("textbox", {
@@ -182,10 +182,10 @@ async function driveUpgrade(origin, replacement) {
       after
     )
     await page
-      .getByRole("button", { name: "Agent settings and tools", exact: true })
+      .getByRole("button", { name: "Actions for Navi", exact: true })
       .click()
     await page
-      .getByRole("menuitem", { name: "Tool access", exact: true })
+      .getByRole("menuitem", { name: "Assistant settings", exact: true })
       .click()
     await expect(
       page.getByText("Pi has been updated", { exact: true })
@@ -202,9 +202,9 @@ async function driveUpgrade(origin, replacement) {
       .click({ trial: true })
     await page.screenshot({ path: join(evidence, "retired-asset.png") })
     await page.getByRole("button", { name: "Reload page", exact: true }).click()
-    await expect(page).toHaveURL(/\/agents\/navi\/settings\/access$/)
+    await expect(page).toHaveURL(/\/agents\/navi\/settings$/)
     await expect(
-      page.getByRole("heading", { name: "Tool access", exact: true })
+      page.getByRole("heading", { name: "Assistant settings", exact: true })
     ).toBeVisible()
     const newEntry = await page
       .locator('script[type="module"][src]')

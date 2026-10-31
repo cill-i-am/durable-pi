@@ -1,17 +1,17 @@
-import { send, type EffectActor } from "@xstate/effect"
-import { Cause, Effect, Exit, Fiber } from "effect"
-import { useEffect, useMemo, useState } from "react"
-import type { SnapshotFrom } from "xstate"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { useEffect, useMemo, useState } from "react"
+import type { SnapshotFrom } from "xstate"
+
 import { agentApi } from "@/http/client"
 
 import {

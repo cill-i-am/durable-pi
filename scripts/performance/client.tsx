@@ -6,21 +6,19 @@ import {
   Outlet,
   useRouterState,
 } from "@tanstack/react-router"
+import { Button } from "@workspace/ui/components/button"
 import { ThemeProvider } from "next-themes"
 import { useState } from "react"
 import { createRoot } from "react-dom/client"
 
 import { ChatApp } from "../../src/app/workspace"
 import { WorkspaceLinkError } from "../../src/app/workspace-link-error"
+import { WorkspaceMotion } from "../../src/app/workspace-motion"
 import {
-  ActivityBorder,
-  ActivityOrb,
-} from "../../src/components/activity-visuals"
-import { Button } from "../../src/components/ui/button"
-import {
-  InputGroup,
-  InputGroupTextarea,
-} from "../../src/components/ui/input-group"
+  ForgotPassword,
+  ResetPassword,
+  TwoFactorChallenge,
+} from "../../src/features/auth"
 import { JoinFamily } from "../../src/features/family/join"
 import { UpdateRecovery } from "../../src/features/updates/update-recovery"
 import { workspaceNavigationContext } from "../../src/navigation/settings-stack"
@@ -28,9 +26,11 @@ import {
   workspaceView,
   validateGlobalSettingsSearch,
   validateConnectionSettingsSearch,
+  validateAuthSearch,
 } from "../../src/navigation/workspace"
 import { reportClientError } from "../../src/observability/browser"
 import { Route as PanelRoute } from "../../src/routes/_workspace.agents.$agentId.$panel.index"
+import { Route as AgentEditRoute } from "../../src/routes/_workspace.agents.$agentId.edit"
 import { Route as SettingsRoute } from "../../src/routes/_workspace.agents.$agentId.settings.$section"
 import { Route as AgentSettingsIndexRoute } from "../../src/routes/_workspace.agents.$agentId.settings.index"
 import { Route as FamilyRoute } from "../../src/routes/_workspace.family"
@@ -73,6 +73,19 @@ const router = createRouter({
           component: () => null,
         })
       ),
+      createRoute({
+        getParentRoute: () => workspace,
+        path: "/agents/new",
+        validateSearch: validateAuthSearch,
+        component: () => null,
+      }),
+      createRoute({
+        getParentRoute: () => workspace,
+        path: "/agents/$agentId/edit",
+        params: AgentEditRoute.options.params,
+        validateSearch: AgentEditRoute.options.validateSearch,
+        component: AgentEditRoute.options.component,
+      }),
       createRoute({
         getParentRoute: () => workspace,
         path: "/settings",
@@ -153,6 +166,24 @@ const router = createRouter({
     }),
     createRoute({
       getParentRoute: () => root,
+      path: "/forgot-password",
+      validateSearch: validateAuthSearch,
+      component: ForgotPassword,
+    }),
+    createRoute({
+      getParentRoute: () => root,
+      path: "/reset-password",
+      validateSearch: validateAuthSearch,
+      component: ResetPassword,
+    }),
+    createRoute({
+      getParentRoute: () => root,
+      path: "/two-factor",
+      validateSearch: validateAuthSearch,
+      component: TwoFactorChallenge,
+    }),
+    createRoute({
+      getParentRoute: () => root,
       path: "/__route-recovery",
       loader: async () => {
         const response = await fetch("/api/fixture/route-ready")
@@ -211,37 +242,12 @@ observe.observe(document.documentElement, {
   attributes: true,
   attributeFilter: ["disabled"],
 })
-function VisualsFixture() {
-  const [active, setActive] = useState(false)
-  return (
-    <main className="mx-auto flex max-w-md flex-col gap-4 p-6">
-      <Button
-        onPointerDown={(event) => event.preventDefault()}
-        onClick={() => setActive((value) => !value)}
-      >
-        Toggle activity
-      </Button>
-      <ActivityBorder active={active}>
-        <InputGroup className="chat-composer">
-          <InputGroupTextarea
-            aria-label="Synthetic draft"
-            placeholder="A synthetic draft"
-          />
-        </InputGroup>
-      </ActivityBorder>
-      {active && <ActivityOrb />}
-    </main>
-  )
-}
-
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class">
-    <UpdateRecovery>
-      {window.location.pathname === "/__visuals" ? (
-        <VisualsFixture />
-      ) : (
+    <WorkspaceMotion>
+      <UpdateRecovery>
         <RouterProvider router={router} />
-      )}
-    </UpdateRecovery>
+      </UpdateRecovery>
+    </WorkspaceMotion>
   </ThemeProvider>
 )

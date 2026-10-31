@@ -69,7 +69,6 @@ vi.mock("../src/features/agents", () => ({
     select: harness.select,
     loading: false,
   }),
-  AgentSidebar: () => <nav aria-label="Agents and workspace" />,
   AgentEditor: () => null,
   ArchiveAgentDialog: () => null,
 }))
@@ -99,15 +98,15 @@ beforeEach(() => {
 })
 
 describe.each(["/agents", "/agents/archived"])(
-  "%s is a standalone management list",
+  "%s keeps management inside the single workspace shell",
   (pathname) => {
-    it("does not render workspace commands, an agent sidebar, or a workbench", () => {
+    it("renders one navigation and no conversation workbench", () => {
       harness.pathname = pathname
       const html = renderToStaticMarkup(<ChatApp />)
-      expect(html).not.toContain('aria-label="Workspace commands"')
+      expect(html.match(/aria-label="Workspace commands"/g)).toHaveLength(1)
       expect(html).not.toContain('aria-label="Agents and workspace"')
       expect(html).not.toContain('aria-label="Workbench tool"')
-      expect(harness.choose).toBeUndefined()
+      expect(harness.choose).toBeTypeOf("function")
     })
   }
 )

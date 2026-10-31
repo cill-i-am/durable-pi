@@ -45,18 +45,17 @@ describe("approval presentation reflects durable lifecycle", () => {
     expect(html).not.toContain("Your approval is needed")
     expect(html).not.toContain("resuming")
   })
-  it("keeps the pending decision disabled while the owning turn is stopping", () => {
+  it("never creates a second command owner in the transcript while stopping", () => {
     const html = render("pending", true)
-    expect(html).toContain("Allow once")
-    expect(html.match(/<button[^>]*disabled=""/g)).toHaveLength(3)
+    expect(html).toContain("Awaiting approval")
+    expect(html).not.toContain("<button")
   })
-  it("explains the persistent tool scope and how to revoke it", () => {
-    const html = render("pending")
-    expect(html).toContain("Allow once")
-    expect(html).toContain("Always allow")
-    expect(html).toContain("Atlas")
-    expect(html).toContain("with any inputs")
-    expect(html).toContain("Settings → Tool access")
-    expect(html).not.toContain('disabled=""')
+  it("keeps complete inputs available in a compact read-only receipt", () => {
+    const html = render("approved")
+    expect(html).toContain("<details>")
+    expect(html).toContain("Action inputs")
+    expect(html).toContain("Approval accepted · waiting to run")
+    expect(html).not.toContain("Action completed")
+    expect(html).not.toContain("Allow once")
   })
 })

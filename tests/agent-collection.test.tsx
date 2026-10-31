@@ -9,6 +9,7 @@ import {
   homeAgentId,
   type AgentProfile,
 } from "../src/agents/contracts"
+import { SidebarProvider } from "../src/components/ui/sidebar"
 import { AgentCollection } from "../src/features/agents/agent-collection"
 import { parseAgentId } from "../src/navigation/workspace"
 
@@ -36,24 +37,32 @@ const agent: AgentProfile = {
 }
 function render(archived: boolean) {
   return renderToStaticMarkup(
-    <AgentCollection
-      agents={[
-        { ...agent, id: homeAgentId, slug: "personal-assistant", name: "Home" },
-        { ...agent, status: archived ? "archived" : "active" },
-      ]}
-      archived={archived}
-      query=""
-      onQuery={() => {}}
-      onCreate={() => {}}
-      onArchive={() => {}}
-    />
+    <SidebarProvider>
+      <AgentCollection
+        agents={[
+          {
+            ...agent,
+            id: homeAgentId,
+            slug: "personal-assistant",
+            name: "Home",
+          },
+          { ...agent, status: archived ? "archived" : "active" },
+        ]}
+        archived={archived}
+        query=""
+        onQuery={() => {}}
+        onCreate={() => {}}
+        onArchive={() => {}}
+      />
+    </SidebarProvider>
   )
 }
 it("lists archived agents with Restore and no link into their workspace", () => {
   const html = render(true)
   expect(html).toContain('aria-label="Restore Research"')
   expect(html).not.toContain(`/agents/${agent.id}`)
-  expect(html).toContain('href="/agents/personal-assistant"')
+  expect(html).toContain('href="/agents"')
+  expect(html).not.toContain('href="/agents/personal-assistant"')
 })
 it("offers Archive beside active agents and protects Home from archiving", () => {
   const html = render(false)
@@ -70,14 +79,16 @@ it("keeps ID links usable when a rolling-deploy catalog predates slugs", () => {
     decoded.agents[0]
   )
   const html = renderToStaticMarkup(
-    <AgentCollection
-      agents={[...decoded.agents]}
-      archived={false}
-      query=""
-      onQuery={() => {}}
-      onCreate={() => {}}
-      onArchive={() => {}}
-    />
+    <SidebarProvider>
+      <AgentCollection
+        agents={[...decoded.agents]}
+        archived={false}
+        query=""
+        onQuery={() => {}}
+        onCreate={() => {}}
+        onArchive={() => {}}
+      />
+    </SidebarProvider>
   )
   expect(html).toContain(`href="/agents/${agent.id}"`)
 })

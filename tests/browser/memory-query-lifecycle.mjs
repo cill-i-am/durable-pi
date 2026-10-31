@@ -174,7 +174,7 @@ try {
             1
           )
           await p
-            .getByRole("button", { name: "Current view", exact: true })
+            .getByRole("button", { name: "Root summaries", exact: true })
             .click()
           await p.waitForFunction(() => window.calls.length === 6)
           await p.evaluate(() =>

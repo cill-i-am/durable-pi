@@ -1,11 +1,11 @@
-import { Volume2, VolumeX } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
+import { Button } from "@workspace/ui/components/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@workspace/ui/components/tooltip"
+import { Volume2, VolumeX } from "lucide-react"
+
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 
 export function InteractionSoundToggle() {

@@ -1,9 +1,9 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Check } from "lucide-react"
 import { useCallback, useId, useRef } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectTrigger,
@@ -72,7 +72,7 @@ function ModelDefaultsView(
           </Button>
         )}
       </header>
-      <div className="settings-section-body">
+      <div className="settings-section-body settings-model-form">
         {(error || catalogError) && (
           <Alert>
             <AlertDescription>

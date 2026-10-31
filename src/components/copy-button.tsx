@@ -1,3 +1,9 @@
+import { Button } from "@workspace/ui/components/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
 import { Check, CircleAlert, Copy } from "lucide-react"
 import {
   useEffect,
@@ -7,12 +13,6 @@ import {
   type ReactNode,
 } from "react"
 
-import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
 
 export function CopyButton({

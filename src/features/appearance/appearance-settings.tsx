@@ -1,7 +1,11 @@
-import { Monitor, Moon, Sparkles, Sun } from "lucide-react"
+import { Button } from "@workspace/ui/components/button"
+import { Switch } from "@workspace/ui/components/switch"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
+import { Monitor, Moon, Sun } from "lucide-react"
 
-import { ActivityBorder, ActivityOrb } from "@/components/activity-visuals"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,8 +15,6 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
-import { Switch } from "@/components/ui/switch"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useActivityMotion } from "@/hooks/activity-motion"
 import { useAppTheme } from "@/hooks/use-app-theme"
 
@@ -72,9 +74,6 @@ export function AppearanceSettings() {
             if (selected && themes.some((item) => item.value === selected))
               setTheme(selected)
           }}
-          variant="outline"
-          size="sm"
-          spacing={0}
         >
           {themes.map((item) => (
             <ToggleGroupItem
@@ -89,11 +88,10 @@ export function AppearanceSettings() {
         </ToggleGroup>
       </div>
       <div className="settings-preference">
-        <Sparkles />
         <div>
-          <h3 id="motion-label">Activity animations</h3>
+          <h3 id="motion-label">Interface animations</h3>
           <p id="motion-description">
-            Orbs and a subtle border while your agent works.
+            Animate activity and controls.
             {motion.reduced ? " Reduced motion is on for this device." : ""}
           </p>
         </div>
@@ -104,12 +102,6 @@ export function AppearanceSettings() {
           onCheckedChange={motion.setEnabled}
         />
       </div>
-      <ActivityBorder active>
-        <div className="appearance-preview">
-          <ActivityOrb state="searching" />
-          <span>Activity preview</span>
-        </div>
-      </ActivityBorder>
     </>
   )
 }

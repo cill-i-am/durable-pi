@@ -11,7 +11,7 @@ async function signIn(page: Page) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
 }
 
 async function expectStack(page: Page, paths: readonly string[]) {
@@ -116,6 +116,7 @@ async function swipeDown(page: Page) {
 
 test("personal and agent settings indexes open their own navigation without selecting a detail", async ({
   page,
+  isMobile,
 }) => {
   await signIn(page)
   for (const [path, title, rows] of [
@@ -135,7 +136,7 @@ test("personal and agent settings indexes open their own navigation without sele
     ],
     [
       "/agents/navi/settings",
-      "Agent settings",
+      "Assistant settings",
       ["General", "Models", "Connections", "Tool access", "Skills"],
     ],
   ] as const) {
@@ -147,11 +148,16 @@ test("personal and agent settings indexes open their own navigation without sele
     await expect(
       index.getByRole("heading", { name: title, exact: true })
     ).toBeVisible()
-    await expect(
-      index
-        .getByRole("navigation", { name: "Settings sections", exact: true })
-        .getByRole("link")
-    ).toHaveText([...rows])
+    await expect
+      .poll(() =>
+        index
+          .getByRole("navigation", { name: "Settings sections", exact: true })
+          .getByRole("link")
+          .evaluateAll((links) =>
+            links.map((link) => link.getAttribute("aria-label"))
+          )
+      )
+      .toEqual([...rows])
     await expect(
       index.getByRole("heading", { name: /^(Account|General)$/, exact: true })
     ).toHaveCount(0)
@@ -160,16 +166,20 @@ test("personal and agent settings indexes open their own navigation without sele
     ).toBeEnabled()
   }
   await page.goto("/agents/navi")
+  if (isMobile)
+    await page
+      .getByRole("button", { name: "Toggle Sidebar", exact: true })
+      .click()
   await page
-    .getByRole("button", { name: "Agent settings and tools", exact: true })
+    .getByRole("button", { name: "Actions for Navi", exact: true })
     .click()
   await page
-    .getByRole("menuitem", { name: "Agent settings", exact: true })
+    .getByRole("menuitem", { name: "Assistant settings", exact: true })
     .click()
   await expect(page).toHaveURL(/\/agents\/navi\/settings$/)
   await expect(
     settingsFront(page).getByRole("heading", {
-      name: "Agent settings",
+      name: "Assistant settings",
       exact: true,
     })
   ).toBeVisible()
@@ -185,7 +195,7 @@ test("mobile settings keep native parents mounted and restore the originating co
   test.skip(!isMobile, "Native mobile drawer stack")
   await signIn(page)
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: "Navi", exact: true })
     .click()
   const composer = page.getByRole("textbox", {
@@ -196,12 +206,10 @@ test("mobile settings keep native parents mounted and restore the originating co
   await composer.fill("Keep this local draft through the settings stack.")
   const originalComposer = await composer.elementHandle()
   await page
-    .getByRole("navigation", { name: "Mobile workspace", exact: true })
-    .getByRole("button", { name: "Agents", exact: true })
+    .getByRole("button", { name: "Toggle Sidebar", exact: true })
     .click()
   await page
-    .getByRole("navigation", { name: "Agents and workspace", exact: true })
-    .getByRole("button", { name: "Settings for Bench", exact: true })
+    .getByRole("button", { name: "Account menu for Bench", exact: true })
     .click()
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click()
   await expectStack(page, ["/settings"])
@@ -536,6 +544,6 @@ test("browser Back retains an agent-backed settings page through its native exit
     )
   ).toEqual({ ending: true, retained: true })
   expect(await account!.evaluate((node) => node.isConnected)).toBe(false)
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
   await expectRootFocus(page)
 })

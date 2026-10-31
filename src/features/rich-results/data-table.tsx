@@ -10,21 +10,10 @@ import {
   type ColumnFiltersState,
   type VisibilityState,
 } from "@tanstack/react-table"
-import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from "lucide-react"
-import { useId, useMemo, useState } from "react"
-
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from "@/components/ui/select"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import {
   Table,
   TableBody,
@@ -33,7 +22,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@workspace/ui/components/table"
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from "lucide-react"
+import { useId, useMemo, useState } from "react"
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select"
 import { webUrl, type AnswerProps } from "@/rich-results/catalog"
 
 import {

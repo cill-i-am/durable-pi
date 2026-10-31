@@ -126,7 +126,7 @@ test("native pointer and keyboard sound preserve gesture, mute, preview and cont
     .fill("browser-smoke@example.invalid")
   await password.fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
   await expect
     .poll(() => page.evaluate(() => window.interactionSoundProbe.closed))
     .toBe(1)

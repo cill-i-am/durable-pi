@@ -56,9 +56,14 @@ export function useWorkbenchPresence(view: WorkbenchView) {
   useEffect(() => {
     owner.current?.send({ type: "ROUTE", panel, search, held: held ?? false })
   }, [panel, search, held])
-  const rendered = snapshot?.context ?? { ...initial.current, revision: 0 }
+  const rendered = snapshot?.context ?? {
+    ...initial.current,
+    retainedPanel: initial.current.panel,
+    revision: 0,
+  }
   return {
     panel: rendered.panel,
+    retainedPanel: rendered.retainedPanel,
     search: rendered.search,
     closed: () =>
       owner.current?.send({ type: "CLOSED", revision: rendered.revision }),

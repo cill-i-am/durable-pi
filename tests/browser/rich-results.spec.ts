@@ -14,7 +14,7 @@ async function openConversation(page: Page) {
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: /Navi/ })
     .click()
   await expect(
@@ -43,6 +43,9 @@ test("a shopping shortlist survives workspace expansion and questions append to 
       submitted = true
   })
   const gallery = await openConversation(page)
+  await expect(
+    gallery.getByText("Illustrative data. Add a sample prompt to your draft.")
+  ).toBeVisible()
   await gallery
     .getByRole("button", { name: "Shortlist Everyday wireless", exact: true })
     .click()
@@ -70,11 +73,21 @@ test("a shopping shortlist survives workspace expansion and questions append to 
       exact: true,
     })
   ).toBeVisible()
-  await workspace.getByRole("button", { name: "Close", exact: true }).click()
+  await workspace
+    .getByRole("button", { name: "Close dialog", exact: true })
+    .click()
+  await expect(
+    gallery.getByRole("button", { name: "Open workspace", exact: true })
+  ).toBeFocused()
   await expect(
     gallery.getByRole("button", { name: "Compare (2)", exact: true })
   ).toHaveAttribute("aria-pressed", "true")
-  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  await gallery
+    .getByRole("button", { name: "Close dialog", exact: true })
+    .click()
+  await expect(
+    page.getByRole("button", { name: "Explore answers", exact: true })
+  ).toBeFocused()
   const composer = page.getByRole("textbox", {
     name: "Message Navi",
     exact: true,
@@ -84,10 +97,32 @@ test("a shopping shortlist survives workspace expansion and questions append to 
     .getByRole("button", { name: "Explore answers", exact: true })
     .click()
   await gallery.getByRole("tab", { name: "Questions", exact: true }).click()
+  await expect(
+    gallery.getByRole("button", { name: "Add answer to draft", exact: true })
+  ).toBeDisabled()
+  const comfort = gallery.getByRole("button", { name: /^Comfort/ })
+  const battery = gallery.getByRole("button", { name: /^Battery life/ })
+  await comfort.focus()
+  await page.keyboard.press("ArrowDown")
+  await expect(battery).toBeFocused()
   await gallery.getByRole("button", { name: /^Comfort/ }).click()
+  await expect(comfort).toHaveAttribute("aria-pressed", "true")
+  await expect(battery).toHaveAttribute("aria-pressed", "false")
   await gallery
     .getByLabel("Add your own answer", { exact: true })
     .fill("Light enough for travelling")
+  await gallery
+    .getByRole("button", { name: "Add answer to draft", exact: true })
+    .scrollIntoViewIfNeeded()
+  await expect(
+    gallery.getByRole("heading", {
+      name: "Answers you can explore",
+      exact: true,
+    })
+  ).toBeInViewport()
+  await expect(
+    gallery.getByRole("button", { name: "Close dialog", exact: true })
+  ).toBeInViewport()
   await gallery
     .getByRole("button", { name: "Add answer to draft", exact: true })
     .click()
@@ -263,7 +298,9 @@ test("map leases survive selection, theme replacement and route teardown without
     .click()
   await gallery.getByRole("tab", { name: "Weather", exact: true }).click()
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
-  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  await gallery
+    .getByRole("button", { name: "Close dialog", exact: true })
+    .click()
   expect(errors).toEqual([])
 })
 
@@ -304,7 +341,9 @@ test("closing a map during a held style request releases it and leaves the next 
       exact: true,
     })
   ).toBeEnabled()
-  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  await gallery
+    .getByRole("button", { name: "Close dialog", exact: true })
+    .click()
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
   expect(errors).toEqual([])
 })
@@ -347,7 +386,9 @@ test("loaded syntax highlighting preserves code text and unsupported-language fa
     })
   )
   const gallery = await openConversation(page)
-  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  await gallery
+    .getByRole("button", { name: "Close dialog", exact: true })
+    .click()
   const code = page.locator(
     ".assistant-message code[data-slot=code-block-code]"
   )
@@ -398,6 +439,8 @@ test("failed map loading keeps accessible addresses and a selected-place fallbac
   await expect(
     gallery.getByRole("link", { name: "Get directions", exact: true })
   ).toBeVisible()
-  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  await gallery
+    .getByRole("button", { name: "Close dialog", exact: true })
+    .click()
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
 })

@@ -191,13 +191,13 @@ async function signIn(page: Page) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
 }
 
 async function openChat(page: Page) {
   await signIn(page)
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: "Navi", exact: true })
     .click()
   await expect(
@@ -263,7 +263,7 @@ async function expectGlobalShell(page: Page) {
   ).toHaveCount(0)
   await expect(
     shell.getByRole("button", {
-      name: "Edit agent",
+      name: "Edit assistant",
       exact: true,
       includeHidden: true,
     })
@@ -355,7 +355,7 @@ for (const path of [
         name: /^(Family|Model access|Account security|Navi)$/,
       })
     ).toHaveCount(0)
-    await expect(page.getByRole("region", { name: "Your agents" })).toHaveCount(
+    await expect(page.getByRole("region", { name: "Assistants" })).toHaveCount(
       0
     )
     await page.goBack()
@@ -525,7 +525,7 @@ test("assistant settings have only assistant controls and five scoped destinatio
         shell.getByRole("heading", { name: "General", exact: true })
       ).toBeVisible()
       await expect(
-        shell.getByRole("button", { name: "Edit agent", exact: true })
+        shell.getByRole("button", { name: "Edit assistant", exact: true })
       ).toBeEnabled()
     } else if (section === "models") {
       await expect(
@@ -907,7 +907,7 @@ test("a non-default assistant keeps its mounted composer and file draft through 
   await addResearch(page)
   await signIn(page)
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: "Research", exact: true })
     .click()
   await expectPath(page, "/agents/research")

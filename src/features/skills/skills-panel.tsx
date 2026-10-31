@@ -1,20 +1,20 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
+import { Textarea } from "@workspace/ui/components/textarea"
 import { Plus, Upload, X, ArrowUpRight } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { Markdown } from "@/components/markdown"
 import { SettingsSection } from "@/components/settings-section"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import type { SaveSkill, Skill } from "@/skills/contracts"
 
 import { HostedSkillImport, SkillSourceLabel } from "./hosted-skill-import"
@@ -94,7 +94,7 @@ function SkillLibraryPanel({
       title="Skills"
       description="Reusable instructions for your assistants."
     >
-      <div className="flex items-center justify-between gap-2 border-y px-4 py-2">
+      <div className="settings-toolbar">
         <Tabs
           value={tab}
           onValueChange={(value) => {
@@ -155,7 +155,7 @@ function SkillLibraryPanel({
           }}
         />
       </div>
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+      <div className="settings-panel-body">
         <SkillProblem state={state} view={view} />
         {state.loading && (
           <p className="text-sm text-muted-foreground">Loading skills…</p>
@@ -258,7 +258,7 @@ function SkillLibraryPanel({
           </div>
         )}
       </div>
-      <p className="border-t p-4 text-xs text-muted-foreground">
+      <p className="settings-panel-footer">
         Editing or archiving a library skill leaves pinned assistant revisions
         intact.
       </p>
@@ -291,7 +291,7 @@ function AssignedSkillsPanel({
       description={<>Choose the revisions {agentName} uses.</>}
     >
       {onManageLibrary && (
-        <div className="flex justify-end border-y px-4 py-2">
+        <div className="settings-toolbar">
           <Button
             size="sm"
             variant="ghost"
@@ -302,7 +302,7 @@ function AssignedSkillsPanel({
           </Button>
         </div>
       )}
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+      <div className="settings-panel-body">
         {state.error && (
           <Alert>
             <AlertDescription>
@@ -344,10 +344,7 @@ function AssignedSkillsPanel({
           {state.selection.skills.map((skill) => {
             const latest = state.library.find((item) => item.id === skill.id)
             return (
-              <div
-                key={skill.id}
-                className="flex items-center gap-2 rounded-md border px-3 py-2"
-              >
+              <div key={skill.id} className="settings-selected-skill">
                 <span className="min-w-0 flex-1 truncate text-sm">
                   {skill.name}{" "}
                   <span className="text-muted-foreground">
@@ -411,7 +408,7 @@ function AssignedSkillsPanel({
           )}
         </div>
       </div>
-      <p className="border-t p-4 text-xs text-muted-foreground">
+      <p className="settings-panel-footer">
         Skills apply to new replies. They never grant tool access.
       </p>
     </SettingsSection>
@@ -492,7 +489,7 @@ function SkillRow({
 }) {
   const selected = state.selection.skills.some((value) => value.id === skill.id)
   return (
-    <article className="space-y-2 py-3">
+    <article className="settings-skill-row">
       <div className="flex items-center justify-between gap-2">
         <h3 className="truncate font-medium">{skill.name}</h3>
         <span className="text-xs text-muted-foreground">v{skill.revision}</span>
@@ -582,7 +579,7 @@ function SkillEditor({
     currentDraft.revision !== draft.expectedRevision
   return (
     <form
-      className="space-y-4 rounded-lg border p-4"
+      className="settings-form"
       onSubmit={async (event) => {
         event.preventDefault()
         const saved = await state.save({

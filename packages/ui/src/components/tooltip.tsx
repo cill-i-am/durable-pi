@@ -42,6 +42,7 @@ function TooltipContent({
         className="isolate z-50"
       >
         <TooltipPrimitive.Popup
+          role="tooltip"
           data-slot="tooltip-content"
           data-motion-reduced={reducedMotion ? "true" : undefined}
           className={(state) =>

@@ -1,9 +1,9 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { useState } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import type { SaveSkill } from "@/skills/contracts"
 import type { SkillSource } from "@/skills/source"
 
@@ -20,10 +20,7 @@ export function HostedSkillImport({
   const { providers, selected, catalog, error, busy, event } =
     useHostedSkill(onPreview)
   return (
-    <section
-      className="flex flex-col gap-4 rounded-lg border p-4"
-      aria-label="Import from Executor"
-    >
+    <section className="settings-form" aria-label="Import from Executor">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-medium">From Executor</h3>
         <Button
@@ -50,7 +47,7 @@ export function HostedSkillImport({
         <p className="text-sm text-muted-foreground">
           {busy
             ? "Loading connections…"
-            : "Add an Executor server in Connect and finish signing in first. It must expose a skills tool."}
+            : "Add an Executor server in Connections and finish signing in first. It must expose a skills tool."}
         </p>
       ) : (
         <>
@@ -168,7 +165,7 @@ export function SkillSourceLabel({ source }: { source?: SkillSource }) {
               {references.length} reference{" "}
               {references.length === 1 ? "file remains" : "files remain"} on the
               provider. To let this bot read them, select the connection’s
-              skills tool in Connect and review its access in Tools.
+              skills tool in Connections and review its access in Tool access.
             </p>
             <ul className="list-inside list-disc">
               {references.map((file) => (

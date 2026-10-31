@@ -1,0 +1,14 @@
+.execution-workbench {
+  width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.execution-workbench textarea {
+  line-height: 1.7;
+}
+
+.execution-result pre {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}

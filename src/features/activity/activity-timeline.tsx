@@ -1,4 +1,16 @@
 import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
 import { Schema } from "effect"
 import { ArrowRight, ChevronDown, Clock3, RefreshCw } from "lucide-react"
 
@@ -9,9 +21,6 @@ import {
   type ActivityAgent,
   type ActivityEntry,
 } from "@/activity/contracts"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -20,8 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { WorkspaceQuery } from "@/navigation/workspace"
 import { parseAgentId } from "@/navigation/workspace"
 
@@ -65,7 +72,9 @@ export function ActivityTimeline({
   onRecordChange: setRecord,
   filters,
   onFiltersChange,
+  active = true,
 }: {
+  active?: boolean
   filters: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
   onFiltersChange: (
     value: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
@@ -93,7 +102,7 @@ export function ActivityTimeline({
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="workbench-title">Activity</h2>
+        <h2 className="text-md font-semibold">Activity</h2>
         <Select<string>
           value={scope}
           onValueChange={(value) => {
@@ -106,7 +115,10 @@ export function ActivityTimeline({
             }
           }}
         >
-          <SelectTrigger className="max-w-full" aria-label="Activity agent">
+          <SelectTrigger
+            className="w-auto max-w-1/2 min-w-0"
+            aria-label="Activity agent"
+          >
             <SelectValue>
               {scope === "all"
                 ? "All agents"
@@ -248,6 +260,7 @@ export function ActivityTimeline({
       </div>
       {record && (
         <ActivityRecord
+          active={active}
           key={`${record.agent.id}:${record.reference}`}
           entry={record}
           onClose={() => setRecord(null)}

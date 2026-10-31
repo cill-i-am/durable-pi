@@ -294,9 +294,7 @@ test("backup retry keeps the failed receipt and last complete backup until autho
   }
   const f = await recoveryPage(page, { ...initial, backup })
   try {
-    await page
-      .getByRole("tab", { name: "Export & import", exact: true })
-      .click()
+    await page.getByRole("tab", { name: "Archive", exact: true }).click()
     const panel = page.locator('[aria-label="Backup recovery"]')
     const retry = panel.getByRole("button", {
       name: "Retry backup",
@@ -386,9 +384,7 @@ test("backup scheduler exhaustion offers exact epoch recovery without starting a
     backup: { date: null, error: null, recovery: null, schedulerRecovery },
   })
   try {
-    await page
-      .getByRole("tab", { name: "Export & import", exact: true })
-      .click()
+    await page.getByRole("tab", { name: "Archive", exact: true }).click()
     const panel = page.locator('[aria-label="Backup recovery"]')
     const scheduler = panel.getByRole("button", {
       name: "Retry backup recovery",

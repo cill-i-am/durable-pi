@@ -1,3 +1,4 @@
+import { Card, CardFrame } from "@workspace/ui/components/card"
 import type { ReactNode } from "react"
 
 import {
@@ -30,7 +31,9 @@ export function SettingsSection({
           <h2>{title}</h2>
           <p>{description}</p>
         </header>
-        {children}
+        <CardFrame className="settings-panel">
+          <Card className="settings-panel-content">{children}</Card>
+        </CardFrame>
       </section>
     )
   return (
@@ -40,7 +43,9 @@ export function SettingsSection({
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
-        {children}
+        <CardFrame className="settings-panel">
+          <Card className="settings-panel-content">{children}</Card>
+        </CardFrame>
       </SheetContent>
     </Sheet>
   )

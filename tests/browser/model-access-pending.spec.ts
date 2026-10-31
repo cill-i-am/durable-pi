@@ -40,7 +40,7 @@ async function openModelAccess(page: Page) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
   await page.goto("/family/model-access")
   await expect(page.getByLabel("Return address", { exact: true })).toBeVisible()
 }

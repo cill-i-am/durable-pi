@@ -1,9 +1,8 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import { Redacted } from "effect"
 import { KeyRound } from "lucide-react"
 import { useEffect, useState } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 
 import { useAuthEntry } from "./auth-entry"
 import { useAuthBusy } from "./auth-owner"
@@ -37,11 +36,11 @@ export function PasskeySignIn({
     auth.send({ type: "SUBMIT", secret: Redacted.make({}) })
   }
   return (
-    <div className="flex flex-col gap-3">
+    <div className="auth-entry-passkey">
       <Button
         variant="outline"
-        size="lg"
-        className="min-h-11"
+        className="w-full"
+        aria-busy={pending}
         disabled={!auth.actor || disabled || pending || available !== true}
         onClick={() => void signIn()}
       >
@@ -53,7 +52,11 @@ export function PasskeySignIn({
           ? "Passkeys aren’t supported here. Use your password to sign in."
           : "Use a passkey you’ve already added to Pi."}
       </p>
-      <p role="status" className="text-sm text-muted-foreground">
+      <p
+        role="status"
+        className="text-sm text-muted-foreground"
+        hidden={!pending}
+      >
         {pending ? "Confirm sign-in on your device." : ""}
       </p>
       {error && (

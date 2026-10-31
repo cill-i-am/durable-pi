@@ -1,6 +1,10 @@
 packages:
   - "packages/*"
 
+# Validation must report dependency drift, never relink tools underneath another
+# running check. Restore the frozen lockfile explicitly before verification.
+verifyDepsBeforeRun: error
+
 allowBuilds:
   esbuild: true
   lightningcss: true

@@ -1,10 +1,10 @@
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { ArrowDown, ArrowUp, Eye, EyeOff } from "lucide-react"
 import { useState } from "react"
 
 import type { BrowserAction, BrowserState } from "@/browser/contracts"
-import { Button } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 
 import { useBrowserPreview } from "./browser-preview"
 
@@ -27,15 +27,13 @@ export function BrowserControls({
   const blocked = busy || state.status !== "ready" || !preview.ready
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm">
-        You’re in control. Bot browser tools are paused.
-      </p>
+      <p className="text-sm">You’re in control. Assistant tools are paused.</p>
       {preview.active && state.hasScreenshot && !preview.failed && (
         <button
           type="button"
           data-base-ui-swipe-ignore=""
           disabled={blocked}
-          className="block w-full overflow-hidden rounded-md border bg-white text-left focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait"
+          className="block w-full overflow-hidden rounded-md border bg-background text-left focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait"
           aria-label="Remote browser: click a point, or activate with the keyboard to focus the next field"
           onClick={(event) => {
             if (event.detail === 0) {
@@ -78,11 +76,14 @@ export function BrowserControls({
           Refresh the view to load a current preview before interacting.
         </p>
       )}
-      <p className="text-xs text-muted-foreground">
-        Click the page to focus a field. Tab field moves the remote focus; Type
-        inserts text. What you type here is not added to chat. The bot can
-        inspect the page after you return control.
-      </p>
+      <details className="text-xs text-muted-foreground">
+        <summary className="cursor-pointer">Using remote controls</summary>
+        <p className="mt-2 max-w-prose leading-relaxed">
+          Click the page to focus a field. Tab field moves the remote focus;
+          Type inserts text. What you type here is not added to chat. The bot
+          can inspect the page after you return control.
+        </p>
+      </details>
       <div className="flex flex-wrap gap-1.5">
         {(
           [

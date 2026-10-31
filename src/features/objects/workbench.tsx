@@ -1,39 +1,42 @@
 import { Link } from "@tanstack/react-router"
-import { ArrowLeft, ListTodo, Plus } from "lucide-react"
-import { useEffect, useId, useState } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-} from "@/components/ui/empty"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/empty"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { ArrowLeft, ChevronRight, ListTodo, Plus } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 
 import { ChecklistView, SaveState } from "./checklist"
 import { useObjects, useObjectState } from "./context"
 import { useObjectCreation } from "./use-object-creation"
 
+import "./checklist.css"
+
 export function ObjectsWorkbench({
   selected,
   onSelect,
   onEditing,
+  active = true,
 }: {
   selected: string | null
   onSelect: (id: string | null) => void
   onEditing: (editing: boolean) => void
+  active?: boolean
 }) {
   const context = useObjects()
   if (!context) return null
   return (
     <Workbench
       key={context.agentId}
-      {...{ selected, onSelect, onEditing, context }}
+      {...{ selected, onSelect, onEditing, context, active }}
     />
   )
 }
@@ -42,11 +45,13 @@ function Workbench({
   onSelect,
   onEditing,
   context,
+  active,
 }: {
   selected: string | null
   onSelect: (id: string | null) => void
   onEditing: (editing: boolean) => void
   context: NonNullable<ReturnType<typeof useObjects>>
+  active: boolean
 }) {
   const { store, agentId, archived } = context,
     state = useObjectState(store)
@@ -61,12 +66,10 @@ function Workbench({
     return () => onEditing(false)
   }, [editing, creating, onEditing])
   return (
-    <>
+    <section className="objects-surface">
       {!selected && (
         <header className="workbench-heading-row">
-          <h2 className="workbench-section-title flex items-center gap-2">
-            <ListTodo className="size-4" /> Checklists
-          </h2>
+          <h2 className="workbench-section-title">Checklists</h2>
           {!creating && (
             <Button
               variant="outline"
@@ -118,6 +121,7 @@ function Workbench({
             agentId={agentId}
             archived={archived}
             onEditing={setEditing}
+            active={active}
           />
         ) : creating ? (
           <form
@@ -132,10 +136,10 @@ function Workbench({
               })
             }}
           >
-            <h2 className="text-xl font-semibold">New project checklist</h2>
+            <h2 className="text-sheet font-semibold">New checklist</h2>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor={inputId}>Project title</FieldLabel>
+                <FieldLabel htmlFor={inputId}>Title</FieldLabel>
                 <Input
                   id={inputId}
                   autoFocus
@@ -188,7 +192,7 @@ function Workbench({
                 <EmptyHeader>
                   <EmptyTitle>No checklists yet</EmptyTitle>
                   <EmptyDescription>
-                    Create a checklist or ask your agent to plan a project.
+                    Create a checklist or ask your assistant.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -197,11 +201,11 @@ function Workbench({
               .filter((object) => !object.archived)
               .map((object) => (
                 <Link
+                  data-slot="button"
                   key={object.id}
                   className={buttonVariants({
                     variant: "ghost",
-                    className:
-                      "h-auto min-h-16 w-full justify-start gap-3 border-b px-0 py-3",
+                    className: "checklist-list-row",
                   })}
                   disabled={editing}
                   {...workspaceDestination(parseAgentId(agentId), {
@@ -211,12 +215,12 @@ function Workbench({
                 >
                   <ListTodo data-icon="inline-start" />
                   <span className="min-w-0 flex-1 text-left">
-                    <span className="block truncate">{object.title}</span>
+                    <span className="block break-words">{object.title}</span>
                     <span className="text-xs text-muted-foreground">
                       {object.completed} of {object.total} complete
                     </span>
                   </span>
-                  <Badge variant="secondary">r{object.revision}</Badge>
+                  <ChevronRight className="text-muted-foreground" />
                 </Link>
               ))}
             {state.list.some((object) => object.archived) && (
@@ -246,6 +250,6 @@ function Workbench({
           </>
         )}
       </div>
-    </>
+    </section>
   )
 }

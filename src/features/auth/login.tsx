@@ -1,15 +1,15 @@
 import { Link, useLocation } from "@tanstack/react-router"
-import { Redacted } from "effect"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import {
   Field,
   FieldGroup,
   FieldLabel,
   FieldDescription,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Redacted } from "effect"
+
 import { workspaceReturnPath } from "@/navigation/workspace"
 
 import { useAuthEntry } from "./auth-entry"
@@ -43,11 +43,11 @@ export function Login({ sessionError }: { sessionError?: string }) {
   }
   return (
     <AuthFrame
-      title={setup ? "Make yourself at home." : "Welcome back."}
+      title={setup ? "Create your account" : "Welcome back"}
       description={
         setup
-          ? "Create the single owner account using your private setup key."
-          : "Sign in to your personal workspace."
+          ? "Create the owner account with your private setup key."
+          : "Sign in to your private workspace."
       }
       footer={
         <Button
@@ -107,7 +107,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
             </Field>
           )}
           <Field>
-            <div className="login-password-label">
+            <div className="auth-entry-password-label">
               <FieldLabel htmlFor="password">Password</FieldLabel>
               {!setup && (
                 <Link to="/forgot-password" search={{ returnTo }}>
@@ -137,7 +137,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
           >
             {notice}
           </p>
-          <Button type="submit" size="lg" disabled={pending}>
+          <Button type="submit" disabled={pending} aria-busy={pending}>
             {pending
               ? setup
                 ? "Creating account…"

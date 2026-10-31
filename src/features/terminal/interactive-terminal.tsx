@@ -1,10 +1,10 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
 import { createEffectActor, send } from "@xstate/effect"
 import { Cause, Effect, Exit, Fiber, Semaphore } from "effect"
 import { useEffect, useRef, useState } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { agentUrl } from "@/http/client"
 import { nativeOperation } from "@/shared/interop"
 import type { InteractiveState } from "@/terminal/contracts"
@@ -92,9 +92,10 @@ export function InteractiveTerminal({
           </div>
           <p className="text-xs text-muted-foreground">
             Ends by {new Date(session.maximumAt).toLocaleTimeString()}. Closing
-            this panel, losing sign-in, or being offline for 30 seconds stops
-            the session without saving. Terminal input/output is not added to
-            the conversation.
+            this tab, switching assistants, losing sign-in, or being offline for
+            30 seconds stops the session without saving. Hiding the workbench
+            keeps this session open. Terminal input/output is not added to the
+            conversation.
           </p>
         </>
       )}

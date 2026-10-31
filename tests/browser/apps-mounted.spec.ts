@@ -14,6 +14,25 @@ test.beforeAll(async () => {
     logLevel: "error",
     define: { "process.env.NODE_ENV": JSON.stringify("production") },
     resolve: { alias: { "@": resolve("src") } },
+    plugins:
+      process.env.BREAK_FRAME_VISIBILITY === "1"
+        ? [
+            {
+              name: "negative-frame-visibility",
+              enforce: "pre",
+              transform(code, id) {
+                if (!id.endsWith("/src/features/apps/web-canvas.tsx")) return
+                const changed = code.replace(
+                  "!frameAvailable(frame.current)",
+                  "false"
+                )
+                if (changed === code)
+                  throw new Error("Visibility negative control did not match")
+                return { code: changed, map: null }
+              },
+            },
+          ]
+        : [],
     build: {
       outDir: directory,
       emptyOutDir: true,
@@ -119,6 +138,59 @@ test("form acknowledgement preserves a newer mounted draft", async ({
     "newer draft"
   )
   await expect(page.getByRole("status")).toHaveCount(0)
+})
+
+test("inactive retained app keeps form and iframe drafts without an escaped version menu", async ({
+  page,
+}) => {
+  await mount(page, "retained")
+  const name = page.getByLabel("Name", { exact: true })
+  await name.fill("Retained form draft")
+  await page
+    .frameLocator("iframe")
+    .getByLabel("Web draft")
+    .fill("Retained web draft")
+  await page
+    .getByRole("button", { name: "Version 1", exact: true })
+    .first()
+    .click()
+  await expect(page.getByRole("menu")).toBeVisible()
+  await page.evaluate(() =>
+    (
+      window as unknown as { proof: { setActive: (active: boolean) => void } }
+    ).proof.setActive(false)
+  )
+  await expect(page.getByRole("menu")).toHaveCount(0)
+  await expect(name).toBeHidden()
+  await expect(name).toBeDisabled()
+  await page.evaluate(() =>
+    (
+      window as unknown as { proof: { setActive: (active: boolean) => void } }
+    ).proof.setActive(true)
+  )
+  await expect(name).toBeEnabled()
+  await expect(name).toHaveValue("Retained form draft")
+  await expect(page.frameLocator("iframe").getByLabel("Web draft")).toHaveValue(
+    "Retained web draft"
+  )
+  await expect(page.getByRole("menu")).toHaveCount(0)
+  const proof = await page.evaluate(() => {
+    const { renders, calls } = (
+      window as unknown as {
+        proof: { renders: number; calls: { path: string; body: unknown }[] }
+      }
+    ).proof
+    return {
+      renders,
+      reads: calls.filter(
+        (call) => call.body === null && !call.path.endsWith("/render")
+      ).length,
+      writes: calls.filter(
+        (call) => call.body !== null && !call.path.endsWith("/render")
+      ).length,
+    }
+  })
+  expect(proof).toEqual({ renders: 1, reads: 2, writes: 0 })
 })
 
 test("app retry uses the same operation and immutable payload", async ({
@@ -228,4 +300,81 @@ test("sandbox frame rejects wrong sources, channels and revoked authority", asyn
       () => (window as unknown as { proof: { actions: number } }).proof.actions
     )
   ).toBe(1)
+})
+
+test("hidden or inert mounted frames reject actions and retain their draft", async ({
+  page,
+}) => {
+  await mount(page, "frame")
+  const frame = page.frameLocator("iframe")
+  await expect(frame.getByRole("button", { name: "Save web" })).toBeEnabled()
+  await frame.getByLabel("Web draft").fill("Kept while hidden")
+  const channel = await frame
+    .locator("script[data-channel]")
+    .getAttribute("data-channel")
+  for (const boundary of [
+    "display",
+    "inert",
+    "data-base-ui-inert",
+    "aria-hidden",
+  ]) {
+    await page.evaluate(
+      ({ boundary, channel }) => {
+        const frame = document.querySelector("iframe")!
+        const host = frame.closest("section")!
+        if (boundary === "display") host.style.display = "none"
+        else
+          host.setAttribute(boundary, boundary === "aria-hidden" ? "true" : "")
+        for (const data of [
+          { channel, type: "action", name: "save", values: {} },
+          { channel, type: "height", height: 450 + boundary.length },
+        ])
+          window.dispatchEvent(
+            new MessageEvent("message", {
+              origin: "null",
+              source: frame.contentWindow,
+              data,
+            })
+          )
+      },
+      { boundary, channel }
+    )
+    // The passive height event is queued after the action and proves bridge/actor delivery.
+    await expect(page.locator("iframe")).toHaveCSS(
+      "height",
+      `${450 + boundary.length}px`
+    )
+    expect(
+      await page.evaluate(() => {
+        const { actions, renders } = (
+          window as unknown as { proof: { actions: number; renders: number } }
+        ).proof
+        return { actions, renders }
+      })
+    ).toEqual({ actions: 0, renders: 1 })
+    await page.evaluate((boundary) => {
+      const host = document.querySelector("iframe")!.closest("section")!
+      if (boundary === "display") host.style.removeProperty("display")
+      else host.removeAttribute(boundary)
+    }, boundary)
+    await expect(frame.getByLabel("Web draft")).toHaveValue("Kept while hidden")
+  }
+  await frame.getByRole("button", { name: "Save web" }).click()
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { proof: { actions: number } }).proof.actions
+      )
+    )
+    .toBe(1)
+  await release(page)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { proof: { renders: number } }).proof.renders
+      )
+    )
+    .toBe(2)
 })

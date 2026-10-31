@@ -1,5 +1,6 @@
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+
 import type { Group } from "@/delegation/contracts"
 
 import { useTaskControl } from "./use-task-control"

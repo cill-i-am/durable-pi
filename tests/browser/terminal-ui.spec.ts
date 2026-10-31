@@ -43,7 +43,7 @@ async function open(page: Page, route: string) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
   await page.goto(route)
 }
 
@@ -91,9 +91,8 @@ test("uncertain terminal transfer retries its original ID and immutable path", a
   expect(requests[1]).toEqual(requests[0])
 })
 
-test("unmount during export download never begins a later Files upload", async ({
+test("closing a terminal tab during export download never begins a later Files upload", async ({
   page,
-  isMobile,
 }) => {
   let download: Route | undefined,
     uploads = 0
@@ -116,16 +115,9 @@ test("unmount during export download never begins a later Files upload", async (
     .getByRole("button", { name: "Add exported file to Files", exact: true })
     .click()
   await expect.poll(() => !!download).toBe(true)
-  if (isMobile)
-    await page
-      .getByRole("button", { name: "Hide workbench", exact: true })
-      .click()
-  else {
-    await page.getByRole("button", { name: "Tools", exact: true }).click()
-    await page
-      .getByRole("menuitem", { name: "Close tools", exact: true })
-      .click()
-  }
+  await page
+    .getByRole("button", { name: "Close Terminal tab", exact: true })
+    .click()
   await expect(
     page.getByRole("region", { name: "Command output", exact: true })
   ).not.toBeVisible()

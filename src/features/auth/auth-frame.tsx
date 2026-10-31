@@ -1,17 +1,19 @@
-import { AgentMark } from "@/components/agent-mark"
-import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
 import {
   Card,
   CardHeader,
-  CardTitle,
   CardDescription,
   CardContent,
   CardFooter,
-} from "@/components/ui/card"
+} from "@workspace/ui/components/card"
+
+import { AgentMark } from "@/components/agent-mark"
+import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
 import { ThemeMenu } from "@/features/appearance/appearance-settings"
 
+import "./auth-entry.css"
+
 export function PiMark() {
-  return <AgentMark className="pi-mark" />
+  return <AgentMark className="auth-entry-mark" />
 }
 
 export function AuthFrame({
@@ -31,42 +33,35 @@ export function AuthFrame({
     <main
       id="main-content"
       tabIndex={-1}
-      className="login-page"
+      className="auth-entry-page"
       data-family={family || undefined}
     >
-      <header className="login-header">
-        <div className="login-brand">
-          <PiMark /> <span>Pi</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <ThemeMenu />
-          <InteractionSoundToggle />
-        </div>
-      </header>
-      <div className="login-content">
-        <Card
-          className="login-panel"
-          role="region"
-          aria-labelledby="auth-title"
-        >
-          <CardHeader className="login-heading">
-            <CardTitle>
+      <div className="auth-entry-surface">
+        <header className="auth-entry-header">
+          <div className="auth-entry-brand">
+            <PiMark /> <span>Pi</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeMenu />
+            <InteractionSoundToggle />
+          </div>
+        </header>
+        <div className="auth-entry-content">
+          <Card
+            className="auth-entry-panel"
+            role="region"
+            aria-labelledby="auth-title"
+          >
+            <CardHeader className="auth-entry-heading">
               <h1 id="auth-title">{title}</h1>
-            </CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent className="login-form">{children}</CardContent>
-          {(footer || family) && (
-            <CardFooter className="login-footer">
-              {footer ?? (
-                <p className="text-sm text-muted-foreground">
-                  Your chats, agents, memory, files and connected accounts are
-                  private to you.
-                </p>
-              )}
-            </CardFooter>
-          )}
-        </Card>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent className="auth-entry-form">{children}</CardContent>
+            {footer && (
+              <CardFooter className="auth-entry-footer">{footer}</CardFooter>
+            )}
+          </Card>
+        </div>
       </div>
     </main>
   )

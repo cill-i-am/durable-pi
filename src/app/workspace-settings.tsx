@@ -1,5 +1,8 @@
 import { Link } from "@tanstack/react-router"
 import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { Card, CardFrame, CardFrameFooter } from "@workspace/ui/components/card"
+import { Switch } from "@workspace/ui/components/switch"
 import { Schema } from "effect"
 import {
   ArrowLeft,
@@ -10,7 +13,6 @@ import {
   Play,
   Settings2,
   ShieldCheck,
-  Volume2,
   X,
   Users,
   User,
@@ -20,11 +22,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { authClient } from "@/auth/client"
-import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useOverlayMobile } from "@/components/ui/responsive-overlay"
 import { useSidebar } from "@/components/ui/sidebar"
-import { Switch } from "@/components/ui/switch"
 import { UserAvatar } from "@/components/user-avatar"
 import { AccessPanel } from "@/features/access"
 import { AppearanceSettings } from "@/features/appearance/appearance-settings"
@@ -46,6 +46,8 @@ import { ThinkingLevel } from "@/inference/selection"
 import type { SettingsFrame } from "@/navigation/settings-stack"
 import { isGlobalSettingsSection } from "@/navigation/workspace"
 import type { SettingsCategory } from "@/navigation/workspace"
+
+import "./workspace-settings.css"
 
 import { useSettingsDrawers } from "./use-settings-drawers"
 import { useWorkspaceLocation } from "./use-workspace-location"
@@ -90,7 +92,7 @@ type StackContext = {
 }
 function frameTitle(frame: SettingsFrame) {
   if (frame.category === "settings") return "Settings"
-  if (frame.category === "agent-settings") return "Agent settings"
+  if (frame.category === "agent-settings") return "Assistant settings"
   return (
     [...personalSections, ...agentSections].find(
       (item) => item.id === frame.category
@@ -261,12 +263,27 @@ function SettingsNavigation({
 }) {
   const { family } = useFamily()
   const { data: session } = authClient.useSession()
+  const mobile = useOverlayMobile()
   const agent = context.props.agent
   const sections = global
     ? personalSections.filter(
         (item) => item.id !== "channels" || family.role === "owner"
       )
     : agentSections
+  const groups = global
+    ? [
+        sections.filter((item) => item.id === "account"),
+        sections.filter(
+          (item) =>
+            item.id !== "account" &&
+            item.id !== "family" &&
+            item.id !== "model-access"
+        ),
+        sections.filter(
+          (item) => item.id === "family" || item.id === "model-access"
+        ),
+      ]
+    : [sections]
   const active = context.location.settingsFrames.some(
     (frame) => frame.id === root.id
   )
@@ -306,38 +323,60 @@ function SettingsNavigation({
       <div className="settings-nav-content">
         {dialogTitle ? (
           <DialogTitle className="settings-title">
-            {global ? "Settings" : "Agent settings"}
+            {global ? "Settings" : "Assistant settings"}
           </DialogTitle>
         ) : (
           <h2 className="settings-title">
-            {global ? "Settings" : "Agent settings"}
+            {global ? "Settings" : "Assistant settings"}
           </h2>
         )}
         <nav aria-label="Settings sections">
-          {sections.map((item) => (
-            <Link
-              {...(destinations.current.get(item.id) ?? {
-                to: "/settings" as const,
-              })}
-              ref={(element) => {
-                if (element) rows?.set(item.id, element)
-                else rows?.delete(item.id)
-              }}
-              data-slot="button"
-              className={buttonVariants({
-                variant: "ghost",
-                className: "settings-nav-item",
-              })}
-              key={item.id}
-              aria-current={selected.category === item.id ? "page" : undefined}
-              disabled={context.locked || !active}
-            >
-              <item.icon />
-              <span>
-                <strong>{item.title}</strong>
-              </span>
-              <ChevronRight />
-            </Link>
+          {groups.map((group) => (
+            <div className="settings-nav-group" key={group[0]!.id}>
+              {group.map((item) => (
+                <Link
+                  {...(destinations.current.get(item.id) ?? {
+                    to: "/settings" as const,
+                  })}
+                  ref={(element) => {
+                    if (element) rows?.set(item.id, element)
+                    else rows?.delete(item.id)
+                  }}
+                  data-slot="button"
+                  data-account-row={mobile && global && item.id === "account"}
+                  className={buttonVariants({
+                    variant: "ghost",
+                    className: "settings-nav-item",
+                  })}
+                  key={item.id}
+                  aria-label={item.title}
+                  aria-current={
+                    selected.category === item.id ? "page" : undefined
+                  }
+                  disabled={context.locked || !active}
+                >
+                  {mobile && global && item.id === "account" ? (
+                    <UserAvatar
+                      name={session?.user.name ?? "Account"}
+                      image={session?.user.image}
+                    />
+                  ) : (
+                    <item.icon />
+                  )}
+                  <span>
+                    <strong>
+                      {mobile && global && item.id === "account"
+                        ? (session?.user.name ?? "Account")
+                        : item.title}
+                    </strong>
+                    {mobile && global && item.id === "account" && (
+                      <small>Account</small>
+                    )}
+                  </span>
+                  <ChevronRight />
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
       </div>
@@ -412,7 +451,7 @@ function SettingsLayer({
         ref={body}
       >
         <DialogTitle render={<span />} className="sr-only">
-          {mobile ? title : global ? "Settings" : "Agent settings"}
+          {mobile ? title : global ? "Settings" : "Assistant settings"}
         </DialogTitle>
         {!mobile && (
           <SettingsNavigation
@@ -631,31 +670,36 @@ function Preferences() {
       <header className="settings-section-heading">
         <h2>Preferences</h2>
       </header>
-      <div className="settings-section-body">
-        <AppearanceSettings />
-        <MessageDeliverySettings />
-        <div className="settings-preference">
-          <Volume2 />
-          <div>
-            <h3>Interaction sounds</h3>
-            <p>Play a click when copying or showing passwords.</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => void playInteractionSound({ preview: true })}
-            >
-              <Play data-icon="inline-start" />
-              Test sound
-            </Button>
-          </div>
-          <Switch
-            aria-label="Interaction sounds"
-            checked={sound.enabled}
-            onCheckedChange={sound.setEnabled}
-          />
-        </div>
+      <div className="settings-section-body settings-preferences-body">
+        <CardFrame className="settings-preferences-frame">
+          <Card className="settings-preferences-card">
+            <AppearanceSettings />
+            <MessageDeliverySettings />
+            <div className="settings-preference">
+              <div>
+                <h3>Interaction sounds</h3>
+                <p>Play a click when copying or showing passwords.</p>
+              </div>
+              <div className="settings-preference-actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void playInteractionSound({ preview: true })}
+                >
+                  <Play data-icon="inline-start" />
+                  Test sound
+                </Button>
+                <Switch
+                  aria-label="Interaction sounds"
+                  checked={sound.enabled}
+                  onCheckedChange={sound.setEnabled}
+                />
+              </div>
+            </div>
+          </Card>
+          <CardFrameFooter>On this device.</CardFrameFooter>
+        </CardFrame>
       </div>
     </section>
   )
@@ -691,15 +735,19 @@ function AgentSettings({
           <h2>General</h2>
         </header>
         <div className="settings-section-body">
-          <div className="settings-preference">
-            <div>
-              <h3>{agent.name}</h3>
-              <p>{agent.instructions || "Your personal assistant"}</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              Edit agent
-            </Button>
-          </div>
+          <CardFrame>
+            <Card className="settings-agent-summary">
+              <div className="settings-preference">
+                <div>
+                  <h3>{agent.name}</h3>
+                  <p>{agent.instructions || "Your personal assistant"}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  Edit assistant
+                </Button>
+              </div>
+            </Card>
+          </CardFrame>
           {family.role === "owner" && (
             <EmailSettings
               agentId={agent.id}
