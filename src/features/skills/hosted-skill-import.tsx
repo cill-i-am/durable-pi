@@ -45,7 +45,7 @@ export function HostedSkillImport({
         </Alert>
       )}
       <DataLoading
-        loading={busy && !error}
+        loading={busy && !providers.length && !error}
         label="Loading skills from Executor"
       >
         {!providers.length ? (
@@ -102,6 +102,13 @@ export function HostedSkillImport({
             >
               {busy ? "Reading…" : "Browse skills"}
             </Button>
+            {busy && (
+              <DataLoading
+                loading={!error}
+                label="Reading skills from Executor"
+                layout="line"
+              />
+            )}
             {catalog && (
               <div className="divide-y">
                 {!catalog.length && (

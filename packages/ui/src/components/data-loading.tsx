@@ -66,7 +66,7 @@ export function DataLoading({
       {loading ? (
         // Notify Skullet's sample observer when motion changes without a resize.
         <div data-motion-reduced={reduced ? "true" : undefined}>
-          {sample ?? <LoadingSample layout={layout} />}
+          {sample ?? <LoadingSample layout={layout} label={label} />}
         </div>
       ) : (
         children
@@ -75,9 +75,8 @@ export function DataLoading({
   )
 }
 
-function LoadingSample({ layout }: { layout: Layout }) {
-  if (layout === "line")
-    return <p className="text-sm">Loading your workspace</p>
+function LoadingSample({ layout, label }: { layout: Layout; label: string }) {
+  if (layout === "line") return <p className="text-sm">{label}</p>
   if (layout === "media")
     return (
       <div className="skullet-block aspect-video min-h-32 w-full rounded-md bg-muted" />
@@ -117,7 +116,7 @@ function LoadingSample({ layout }: { layout: Layout }) {
       <div className="flex flex-col gap-4 py-2">
         <h3 className="text-lg font-medium">Saved details</h3>
         <p className="text-sm">The latest information for this item.</p>
-        <LoadingSample layout="list" />
+        <LoadingSample layout="list" label={label} />
       </div>
     )
   return (

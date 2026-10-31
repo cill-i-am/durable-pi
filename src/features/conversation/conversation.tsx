@@ -227,7 +227,7 @@ export function Conversation({
               {!state ? (
                 <MessageScrollerItem messageId="loading">
                   <DataLoading
-                    loading={!error}
+                    loading={!connectionError}
                     label="Loading conversation"
                     layout="conversation"
                   />

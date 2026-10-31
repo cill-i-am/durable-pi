@@ -316,11 +316,23 @@ const cases = {
       .getByRole("button", { name: "Browse skills", exact: true })
       .click()
     await page.getByRole("button", { name: "Preview", exact: true }).waitFor()
+    const appInput = page.getByLabel("App slug", { exact: true })
+    const originalInput = await appInput.elementHandle()
     await page.evaluate(() => {
       window.skillFixture.hold = "/skills/import/read"
     })
     await page.getByRole("button", { name: "Preview", exact: true }).click()
     await page.waitForFunction(() => window.skillFixture.pending.length === 1)
+    assert.equal(await appInput.isVisible(), true)
+    assert.equal(await appInput.isDisabled(), true)
+    assert.equal(
+      await appInput.evaluate(
+        (node, original) => node === original,
+        originalInput
+      ),
+      true,
+      "a pending hosted read must retain the existing controls"
+    )
     await page.getByRole("button", { name: "Cancel", exact: true }).click()
     await page.waitForFunction(() => window.skillFixture.aborted === 1)
     await page.evaluate(() => {
