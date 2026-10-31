@@ -6,9 +6,9 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild"),
-  workerd = requireAlchemy("workerd")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild"),
+  workerd = requireRuntime("workerd")
 const directory = await mkdtemp(join(tmpdir(), "pi-whatsapp-runtime-"))
 const server = createServer()
 await new Promise((done) => server.listen(0, "127.0.0.1", done))
@@ -259,7 +259,7 @@ try {
     logLevel: "error",
   })
   const schema = join(
-    dirname(requireAlchemy.resolve("workerd")),
+    dirname(requireRuntime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )

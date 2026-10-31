@@ -38,12 +38,14 @@ import type {
 } from "../src/planning/plans"
 
 const LegacyCatalog = defineDoc({
+  checkpointWhen: () => false,
   kind: "plans.catalog",
   scope: "session",
   version: 1,
   initial: () => ({ ids: [] as string[] }),
 })
 const LegacyPlan = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.task",
   scope: "session",
   family: true,
@@ -51,6 +53,7 @@ const LegacyPlan = defineDocFamily({
   initial: (_: null) => ({ value: "" }),
 })
 const History = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.revision",
   scope: "session",
   family: true,
@@ -58,6 +61,7 @@ const History = defineDocFamily({
   initial: (_: null) => ({ value: "" }),
 })
 const LegacyBinding = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.turn",
   scope: "session",
   family: true,
@@ -65,6 +69,7 @@ const LegacyBinding = defineDocFamily({
   initial: (_: null) => ({ planId: "", cancelled: false }),
 })
 const LegacyOperation = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "plans.operation",
   scope: "session",
   family: true,

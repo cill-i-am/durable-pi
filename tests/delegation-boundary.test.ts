@@ -347,6 +347,7 @@ it.effect(
     fixture((h, ledger) =>
       Effect.gen(function* () {
         const Groups = defineDocFamily({
+          checkpointWhen: () => false,
           kind: "delegation.group",
           scope: "session",
           family: true,

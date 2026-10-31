@@ -92,3 +92,9 @@ This is direct AST/import enforcement, not whole-program dataflow analysis. Arbi
 Each migration writes its invariants first, checks caller/write paths, compares behavior except for documented defect corrections, tests deterministic races, stale events, recovery and compatible/incompatible restoration, and demonstrates at least one meaningful failure-sensitive control. Use the existing Vitest, Effect clocks/barriers, real SQLite and native workerd gates; add browser journeys for affected frontend behavior. See [evidence](../xstate-effect-evidence.md).
 
 Earlier historical review advice treating handwritten reducers as an alternative default is superseded. The standard defines ongoing requirements; the separate [release closeout](../xstate-effect-release.md) records migration completion and the bounded production proof.
+
+## Dependency upgrade, 31 October 2026
+
+The supported runtime now uses Effect 4.1.1, XState 6.0.0-alpha.71, `@xstate/effect` 1.0.0-alpha.10, Pi 1.4.0, and Agents 0.32.0. Existing application records from the versions above remain accepted under their original workflow and schema versions. New records identify the current libraries. Unknown future versions still fail explicitly; this upgrade neither resets state nor changes resource identities. Pi's own SQLite schema upgrade prevents a code-only rollback to Pi 1.3 or earlier.
+
+The Effect host now wraps routed failures in `EffectFailure`; the UI unwraps the original Cause before displaying expected errors. Effect 4.1 promotes checked failures combined with defects to defects while retaining their values and annotations. Recovery tests assert that both original failures survive and that cleanup still joins. Socket tests synchronize on acquisition completion rather than assuming an external side effect causes an actor snapshot notification.

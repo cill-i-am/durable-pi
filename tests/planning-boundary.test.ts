@@ -183,6 +183,7 @@ it("keeps corrupt plan, history and operation payloads out of expected HTTP fail
     f.plans.update(mutation, f.state.source)
   )
   const RawHistory = defineDocFamily({
+    checkpointWhen: () => false,
     kind: "plans.revision",
     scope: "session",
     family: true,
@@ -190,6 +191,7 @@ it("keeps corrupt plan, history and operation payloads out of expected HTTP fail
     initial: (_: null) => ({ value: "" }),
   })
   const RawPlan = defineDocFamily({
+    checkpointWhen: () => false,
     kind: "plans.task",
     scope: "session",
     family: true,
@@ -197,6 +199,7 @@ it("keeps corrupt plan, history and operation payloads out of expected HTTP fail
     initial: (_: null) => ({ value: "", workflowVersion: 1 }),
   })
   const RawOperation = defineDocFamily({
+    checkpointWhen: () => false,
     kind: "plans.operation",
     scope: "session",
     family: true,

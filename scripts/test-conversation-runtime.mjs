@@ -6,9 +6,9 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild"),
-  workerd = requireAlchemy("workerd")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild"),
+  workerd = requireRuntime("workerd")
 const negative = process.argv.includes("--negative-discovery")
 const directory = await mkdtemp(join(tmpdir(), "pi-conversation-runtime-"))
 const server = createServer()
@@ -187,7 +187,7 @@ try {
       : [],
   })
   const schema = join(
-    dirname(requireAlchemy.resolve("workerd")),
+    dirname(requireRuntime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )
@@ -325,9 +325,23 @@ const config :Workerd.Config = (
     assert.equal(exhausted.native.length, 0)
     assert.equal(root(exhausted).control.owner, null)
     assert.ok(root(exhausted).control.unconfirmed)
-    const checked = await call("exhaustion", "check", {
+    // A raw status read deliberately does not start Lifecycle. A cold action
+    // restores/inspects the exhausted reply and advances its revision first.
+    // Force that race instead of depending on the platform's idle eviction time.
+    await stop()
+    await start()
+    const staleCheck = await call("exhaustion", "check", {
       revision: root(exhausted).revision,
     })
+    assert.equal(staleCheck.rejected, true)
+    assert.ok(root(staleCheck).revision > root(exhausted).revision)
+    assert.equal(staleCheck.native.length, 0)
+    assert.equal(staleCheck.metrics.configureCalls, 3)
+    assert.ok(root(staleCheck).control.unconfirmed)
+    const checked = await call("exhaustion", "check", {
+      revision: root(staleCheck).revision,
+    })
+    assert.equal(checked.rejected, undefined)
     assert.equal(
       checked.native.length,
       0,

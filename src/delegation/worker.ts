@@ -173,7 +173,7 @@ export class BackgroundGroup
   )
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: async ({ storage, context }) => {
+    harness: async ({ storage, context, onWake }) => {
       const h = await Harness.open(
         storage,
         {
@@ -183,6 +183,7 @@ export class BackgroundGroup
             if (!this.pin) return undefined
             return this.models.getModel("openai", this.pin.route.model)
           }),
+          onWake,
           onReport: (error) => reportHarness(error, "background"),
         },
         context

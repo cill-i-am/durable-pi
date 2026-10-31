@@ -93,7 +93,7 @@ export function activityEntries(
               eq(chatTurns.status, "failed"),
               notExists(
                 orm
-                  .select({ value: literal(1) })
+                  .select({ value: literal(1).as("value") })
                   .from(retries)
                   .where(
                     eq(
@@ -125,9 +125,9 @@ export function activityEntries(
         .unionAll(
           orm
             .select({
-              key: concat(`${agent.id}:tool:`, toolOperations.id),
-              at: isoMillis(toolOperations.createdAt),
-              kind: literal<string>("tool"),
+              key: concat(`${agent.id}:tool:`, toolOperations.id).as("key"),
+              at: isoMillis(toolOperations.createdAt).as("at"),
+              kind: literal<string>("tool").as("kind"),
               title: toolOperations.tool,
               status: caseWhen<string>(
                 and(
@@ -136,7 +136,7 @@ export function activityEntries(
                 )!,
                 "expired",
                 toolOperations.status
-              ),
+              ).as("status"),
               attention: caseWhen<number>(
                 and(
                   eq(toolOperations.status, "pending"),
@@ -144,13 +144,13 @@ export function activityEntries(
                 )!,
                 1,
                 0
-              ),
+              ).as("attention"),
               running: caseWhen<number>(
                 eq(toolOperations.status, "running"),
                 1,
                 0
-              ),
-              target: literal<string>("conversation"),
+              ).as("running"),
+              target: literal<string>("conversation").as("target"),
               reference: toolOperations.turnId,
             })
             .from(toolOperations)
@@ -161,11 +161,11 @@ export function activityEntries(
               key: concat(
                 `${agent.id}:background:`,
                 asText(backgroundHandoffs.id)
-              ),
+              ).as("key"),
               at: isoMillis(
                 jsonField<number>(backgroundHandoffs.handoff, "$.createdAt")
-              ),
-              kind: literal<string>("background"),
+              ).as("at"),
+              kind: literal<string>("background").as("kind"),
               title: substring(
                 jsonField<string>(
                   backgroundHandoffs.handoff,
@@ -173,7 +173,7 @@ export function activityEntries(
                 ),
                 1,
                 180
-              ),
+              ).as("title"),
               status: caseWhen<string>(
                 eq(backgroundHandoffs.stop_state, "unconfirmed"),
                 literal<string>("stop-unconfirmed"),
@@ -182,7 +182,7 @@ export function activityEntries(
                   literal<string>("stopping"),
                   backgroundHandoffs.status
                 )
-              ),
+              ).as("status"),
               attention: caseWhen<number>(
                 eq(backgroundHandoffs.status, "paused"),
                 1,
@@ -191,7 +191,7 @@ export function activityEntries(
                   1,
                   0
                 )
-              ),
+              ).as("attention"),
               running: caseWhen<number>(
                 eq(backgroundHandoffs.stop_state, "pending"),
                 1,
@@ -204,9 +204,9 @@ export function activityEntries(
                   1,
                   0
                 )
-              ),
-              target: literal<string>("background"),
-              reference: asText(backgroundHandoffs.id),
+              ).as("running"),
+              target: literal<string>("background").as("target"),
+              reference: asText(backgroundHandoffs.id).as("reference"),
             })
             .from(backgroundHandoffs)
         )

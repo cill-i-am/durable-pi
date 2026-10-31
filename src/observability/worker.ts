@@ -1,4 +1,4 @@
-import { layer as CloudflareTracer } from "alchemy/Cloudflare/Workers/CloudflareTracer"
+import { layer as CloudflareTracer } from "@alchemy.run/cloudflare/Workers/CloudflareTracer"
 import { Effect, Layer } from "effect"
 
 import { OperationalLogger } from "./logger"

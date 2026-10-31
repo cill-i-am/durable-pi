@@ -51,10 +51,7 @@ const receipt = ({ turn, accepted }: TurnAdmission): SubmissionReceipt => ({
   operationId: turn.id,
   replyId: turn.parent_id ?? turn.id,
 })
-export const submissionParent = (
-  input: Submission,
-  active: Turn | undefined
-) =>
+export const submissionParent = (input: Submission, active: Turn | undefined) =>
   input.mode === "steer" && active?.status !== "stopping" ? active : undefined
 const attempt = <T>(body: () => T) =>
   Effect.try({

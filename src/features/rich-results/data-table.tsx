@@ -1,14 +1,10 @@
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
-  type VisibilityState,
+  type ColumnVisibilityState,
 } from "@tanstack/react-table"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -41,6 +37,7 @@ import {
   matchesFilter,
   type ValueFilter,
 } from "./table-controls"
+import { answerTableFeatures } from "./table-features"
 import { AnswerWorkspace } from "./workspace"
 
 type Row = AnswerProps<"DataTable">["rows"][number]
@@ -95,15 +92,13 @@ export function DataTableView({
   columns,
   rows,
 }: Pick<AnswerProps<"DataTable">, "title" | "columns" | "rows">) {
-  // TanStack Table owns mutable state that React Compiler cannot memoize.
-  "use no memo"
-
   const [sorting, setSorting] = useState<SortingState>([])
   const [search, setSearch] = useState("")
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] =
+    useState<ColumnVisibilityState>({})
   const filterId = useId()
-  const columnDefs = useMemo<ColumnDef<Row>[]>(
+  const columnDefs = useMemo<ColumnDef<typeof answerTableFeatures, Row>[]>(
     () =>
       columns.map((column) => ({
         id: column.key,
@@ -135,9 +130,8 @@ export function DataTableView({
       })),
     [columns]
   )
-  // TanStack Table intentionally exposes mutable state; this component opts out of compilation.
-  // oxlint-disable-next-line react/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features: answerTableFeatures,
     data: rows,
     columns: columnDefs,
     state: { sorting, globalFilter: search, columnFilters, columnVisibility },
@@ -152,11 +146,7 @@ export function DataTableView({
         .includes(value.toLocaleLowerCase())
     },
     getColumnCanGlobalFilter: () => true,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 8 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 8 } },
   })
   const filtered = table.getFilteredRowModel().rows.length
   function download() {
@@ -295,12 +285,12 @@ export function DataTableView({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground" aria-live="polite">
             {filtered} of {rows.length} rows · Page{" "}
-            {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.state.pagination.pageIndex + 1} of{" "}
             {Math.max(1, table.getPageCount())}
           </span>
           <div className="flex gap-1">
             <Select
-              value={String(table.getState().pagination.pageSize)}
+              value={String(table.state.pagination.pageSize)}
               onValueChange={(value) => {
                 if (value) table.setPageSize(Number(value))
               }}

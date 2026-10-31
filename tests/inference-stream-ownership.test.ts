@@ -169,12 +169,13 @@ it("one request object has one native dispatch even when start is repeated", asy
   }
 })
 
-it("a queued request cannot acquire a native source after shutdown revokes it", async () => {
+it("a revoked request cannot acquire a native source while shutdown drains it", async () => {
   const runtime = ManagedRuntime.make(piModelStreamsLayer)
   const streams = runtime.runSync(PiModelStreams)
   const dispatch = vi.fn(() => new AssistantMessageEventStream())
   const request = new PiModelRequest(model, dispatch, () => {})
   try {
+    request.interrupt()
     runtime.runSync(streams.start(request))
     await runtime.runPromise(streams.shutdown())
     expect(dispatch).not.toHaveBeenCalled()
@@ -216,14 +217,17 @@ it("result-only draining cannot be stolen by a competing iterator", async () => 
   }
 })
 
-it("runtime scope disposal joins a request queued before its actor starts", async () => {
+it("runtime scope disposal joins a just-admitted request", async () => {
   const runtime = ManagedRuntime.make(piModelStreamsLayer)
   const streams = runtime.runSync(PiModelStreams)
   const dispatch = vi.fn(() => new AssistantMessageEventStream())
   const request = new PiModelRequest(model, dispatch, () => {})
   runtime.runSync(streams.start(request))
   await runtime.dispose()
-  expect(dispatch).not.toHaveBeenCalled()
+  // The current Effect host starts admission synchronously. Disposal must join
+  // that request and revoke its signal before returning.
+  expect(dispatch).toHaveBeenCalledOnce()
+  expect(request.signal.aborted).toBe(true)
   expect((await request.stream.result()).stopReason).toBe("aborted")
 })
 

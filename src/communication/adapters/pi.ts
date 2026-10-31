@@ -17,6 +17,7 @@ import { Cause, Effect, Equal, Exit, Ref, Schema, type Scope } from "effect"
 
 import { ResolvedRoute } from "../../inference/policy"
 import { preserveFatal, observeCleanup } from "../../shared/effect"
+import { nativeExecutionVersion } from "../../shared/runtime-versions"
 import {
   type CommunicationError,
   failure,
@@ -39,6 +40,7 @@ import { communicationNative as native } from "./interop"
 export { REQUEST_BUDGET } from "../model-request.machine"
 const ExecutionJson = Schema.fromJsonString(NativeExecution)
 const Jobs = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "communication.execution",
   version: 1,
   scope: "session",
@@ -46,6 +48,7 @@ const Jobs = defineDocFamily({
   initial: (_: null) => ({ value: "" }),
 })
 const Providers = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "communication.provider",
   version: 1,
   scope: "session",
@@ -72,7 +75,7 @@ function readExecution(value: string) {
             ...Schema.decodeUnknownSync(LegacyNativeExecution)(raw),
             schemaVersion: 1,
             workflowVersion: 1,
-            nativeVersion: "pi-durable@1.3.0",
+            nativeVersion: nativeExecutionVersion,
           })
         : Schema.decodeUnknownSync(NativeExecution)(raw),
     }
@@ -225,7 +228,7 @@ export function piMailbox(
                         const saved: NativeExecution = {
                           schemaVersion: 1,
                           workflowVersion: 1,
-                          nativeVersion: "pi-durable@1.3.0",
+                          nativeVersion: nativeExecutionVersion,
                           conversation: Number(conversation.id),
                           provider: provider.sessionId,
                           route: configuration.route,

@@ -78,7 +78,11 @@ try {
       await (await api("files")).json()
     ).files.find((f) => f.id === id)!
   }
-  assert.equal(file.video?.status, "ready", file.video?.error ?? undefined)
+  assert.equal(
+    file.video?.status,
+    "ready",
+    file.video?.error ?? "Video not ready"
+  )
   assert.equal(file.video.frames, 4)
   const preview = await api(`files/${id}/video`)
   assert.equal(preview.status, 200)

@@ -1,5 +1,6 @@
 import { createEffectActor, waitFor } from "@xstate/effect"
-import { Cause, Clock, Crypto, Equal, Effect, Exit, Schema } from "effect"
+import { Cause, Clock, Equal, Effect, Exit, Schema } from "effect"
+import { Digest } from "effect/crypto"
 
 import { fatalCause } from "../shared/effect"
 import {
@@ -44,9 +45,9 @@ export const backupMemory = Effect.fn("Memory.backup")(function* (
 ) {
   const memory = yield* MemoryRepository,
     bucket = yield* BackupStore
-  const crypto = yield* Crypto.Crypto
+  const crypto = yield* Digest.Digest
   const digest = (data: string) =>
-    sha256(data).pipe(Effect.provideService(Crypto.Crypto, crypto))
+    sha256(data).pipe(Effect.provideService(Digest.Digest, crypto))
   const failures: Cause.Cause<unknown>[] = []
   const observe = <A, E>(effect: Effect.Effect<A, E>) =>
     effect.pipe(

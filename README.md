@@ -45,7 +45,7 @@ Pi Durable session-scoped document families persist the catalog, checklist state
 
 ## Run it
 
-Requires Node 24+ and pnpm 12.14.0. Install with `pnpm install --frozen-lockfile`. Type checks use TypeScript 7's native Go compiler. The `typescript` package name points to Microsoft's TypeScript 6 compatibility package for tools that still need its compiler API; `@typescript/native` supplies the TypeScript 7 `tsc` command.
+Requires Node 24+ and pnpm 12.16.1. Install with `pnpm install --frozen-lockfile`. Type checks use TypeScript 7's native Go compiler. The `typescript` package name points to Microsoft's TypeScript 6 compatibility package for tools that still need its compiler API; `@typescript/native` supplies the TypeScript 7 `tsc` command.
 
 1. Copy `.env.example` to `.env`. Set `OWNER_EMAIL`, and generate separate random values of at least 32 bytes for `BETTER_AUTH_SECRET` and `SETUP_TOKEN`. Keep `.env` private.
 2. Run `pnpm model:login`. Complete the official ChatGPT login in your browser. The script writes the credential to `.env` with mode `0600`; it never prints tokens.
@@ -66,7 +66,15 @@ CI runs the verification suites in parallel and requires the aggregate `check` r
 
 Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, Workers R2 Storage read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access. A fresh machine also needs Secrets Store read/write to retrieve remote-state credentials; an existing trusted state-credential cache avoids that additional local permission.
 
-Workers use the `2026-09-25` compatibility date. Alchemy beta.83 bundles local workerd `2026-10-02`. Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
+Workers use the `2026-09-25` compatibility date. Alchemy and its providers use beta.84; native fixtures explicitly pin workerd `1.20261031.1`. Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
+
+### Package upgrade compatibility
+
+Pi 1.4 upgrades its SQLite task table to schema version 2. Once a database opens on this release, Pi 1.3 and earlier cannot reopen it; reverting only the application bundle is not a rollback plan. Existing completed tool receipts and application workflow records remain readable without redispatch. New records identify Pi 1.4 and XState alpha.71 / Effect integration alpha.10; the existing workflow versions and durable identities remain unchanged.
+
+The Alchemy provider integrations now live in `@alchemy.run/cloudflare`, `@alchemy.run/github`, and `@alchemy.run/drizzle`. The native Sandbox migration and four-container capacity coordinator are retained. Both native and legacy rehearsal images match their respective SDK versions.
+
+Local dependency patches retain MCP credential rotation serialization and Pi/Drizzle storage coordination. A Zod packaging patch preserves schema initialization when a bundle combines static MCP imports with deferred Zod imports; the package-bundle test exercises that startup path.
 
 ## Account security
 
@@ -241,11 +249,11 @@ Each command starts from the last private R2 checkpoint of `/workspace`, saves a
 
 Limits: 30 seconds including startup and saving, 16,000 command characters, 64,000 output characters, 8 MiB compressed checkpoint, one active command per bot, four concurrent container instances for the application. The history retains 500 commands; the latest 20 summaries are listed. If cleanup cannot be confirmed, new commands stay blocked until **Retry cleanup** succeeds. Command output is decoded as UTF-8; file bytes are preserved in checkpoints.
 
-Local development requires Docker. Production uses Sandbox 1.0.1 with a native Durable Object, its own namespace, and a pinned container image. The runtime starts the supported `standard-1` size. A persistent capacity coordinator admits at most four containers across terminal commands, interactive sessions, and video extraction. It releases a permit after confirmed teardown; a timeout alone does not free a slot. Containers stop after 60 seconds of inactivity, and container logs are disabled.
+Local development requires Docker. Production uses Sandbox 1.0.3 with a native Durable Object, its own namespace, and a pinned container image. The runtime starts the supported `standard-1` size. A persistent capacity coordinator admits at most four containers across terminal commands, interactive sessions, and video extraction. It releases a permit after confirmed teardown; a timeout alone does not free a slot. Containers stop after 60 seconds of inactivity, and container logs are disabled.
 
 Run `pnpm dev:sandbox` and, in another terminal, `pnpm test:sandbox` to check the native runtime with isolated local workerd, Docker, and R2 state. The checks cover commands, UTF-8, checkpoint restoration, request replay, per-bot isolation, denied internet access, Stop/rollback, native PTY resize/Ctrl+C/reconnect, Save/Discard, and video decoding.
 
-The hosted migration fixture lives in `stacks/sandbox-hosted-rehearsal.ts`. Deploy it with a separate stage and a private `SANDBOX_REHEARSAL_TOKEN`, then set `SANDBOX_REHEARSAL_URL` to its output URL and run `node scripts/check-sandbox-migration.mjs`. Set `NATIVE_SANDBOX_URL` to that URL with `/native` appended to run `scripts/check-native-sandbox.mjs`. Both scripts read the token from the environment. Destroy the rehearsal stack after checking it. The 0.12.10 SDK alias and matching image are development fixtures for reproducing a populated migration; production agents do not use them.
+The hosted migration fixture lives in `stacks/sandbox-hosted-rehearsal.ts`. Deploy it with a separate stage and a private `SANDBOX_REHEARSAL_TOKEN`, then set `SANDBOX_REHEARSAL_URL` to its output URL and run `node scripts/check-sandbox-migration.mjs`. Set `NATIVE_SANDBOX_URL` to that URL with `/native` appended to run `scripts/check-native-sandbox.mjs`. Both scripts read the token from the environment. Destroy the rehearsal stack after checking it. The 0.12.14 SDK alias and matching image are development fixtures for reproducing a populated migration; production agents do not use them.
 
 Migration freezes new legacy work, drains active operations, and seals the source before writing bounded, checksummed pages to private R2. Resumable imports preserve authority, policy, command history, cancellation fences, checkpoints, and exported files. Verify destination row counts and file checksums before retiring source authority or changing the agent binding. Cross-check namespace listings against container history to discover legacy actors. Preserve the private workspace bucket and migration snapshots through cutover. See [Cloudflare's migration guide](https://developers.cloudflare.com/sandbox/sdk/migrate/).
 

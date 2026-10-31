@@ -1,4 +1,7 @@
-import { bindEffectRpc, fromCloudflareFetcher } from "alchemy/Cloudflare/Bridge"
+import {
+  bindEffectRpc,
+  fromCloudflareFetcher,
+} from "@alchemy.run/cloudflare/Bridge"
 import { Effect, Layer } from "effect"
 import { HttpEffect } from "effect/http"
 import { RpcSerialization, RpcServer } from "effect/rpc"

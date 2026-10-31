@@ -115,8 +115,8 @@ it("bounds frame bytes and preserves failed reader cleanup alongside the invalid
   const exit = await Effect.runPromiseExit(boundedFrame(request, 1))
   expect(reasons(exit)).toContainEqual(
     expect.objectContaining({
-      _tag: "Fail",
-      error: expect.objectContaining({ code: "invalid" }),
+      _tag: "Die",
+      defect: expect.objectContaining({ code: "invalid" }),
     })
   )
   expect(reasons(exit)).toContainEqual(
