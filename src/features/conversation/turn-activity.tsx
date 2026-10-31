@@ -60,6 +60,7 @@ import {
   type ToolItem,
   type WorkItem,
 } from "./activity-presentation"
+import { MessageTimestamp } from "./message-timestamp"
 
 const RichResult = lazy(() =>
   import("@/features/rich-results/rich-result").then((module) => ({
@@ -75,6 +76,8 @@ export function TurnActivity({
   waitingForApproval = false,
   onAppPendingChange,
   onAnswerPrompt,
+  startedAt,
+  steering,
 }: {
   toolTitles?: Record<string, string>
   items: readonly TimelineItem[]
@@ -83,6 +86,8 @@ export function TurnActivity({
   waitingForApproval?: boolean
   onAppPendingChange?: (key: string, pending: boolean) => void
   onAnswerPrompt?: (text: string) => void
+  startedAt?: string
+  steering?: ChatState["turns"][number]["steering"]
 }) {
   const sections = activitySections(items)
   return (
@@ -93,6 +98,11 @@ export function TurnActivity({
             <SteeringMessage
               key={item.id}
               text={item.text}
+              createdAt={
+                item.created_at ??
+                steering?.find((input) => `steer:${input.id}` === item.id)
+                  ?.created_at
+              }
               attachments={item.attachments}
               provenance={item.provenance}
               agentId={agentId}
@@ -100,7 +110,14 @@ export function TurnActivity({
             />
           )
         if (item.type === "text")
-          return <Markdown key={item.id} text={item.text} />
+          return (
+            <div key={item.id} className="flex min-w-0 flex-col gap-2">
+              <Markdown text={item.text} />
+              <MessageFooter>
+                <MessageTimestamp at={item.created_at} startedAt={startedAt} />
+              </MessageFooter>
+            </div>
+          )
         if (item.type === "work")
           return (
             <WorkGroup
@@ -445,12 +462,14 @@ export function SteeringMessage({
   attachments,
   agentId,
   provenance,
+  createdAt,
 }: {
   text: string
   label: string
   attachments?: readonly FileInfo[]
   agentId?: string
   provenance?: MessageProvenance
+  createdAt?: string
 }) {
   const internal = provenance && provenance.author.kind !== "human"
   return (
@@ -478,7 +497,10 @@ export function SteeringMessage({
             {agentId && (
               <FileAttachments files={attachments ?? []} agentId={agentId} />
             )}
-            <MessageFooter>{label}</MessageFooter>
+            <MessageFooter className="flex-wrap gap-2">
+              <MessageTimestamp at={createdAt} />
+              <span>{label}</span>
+            </MessageFooter>
           </BubbleContent>
         </Bubble>
       </MessageContent>

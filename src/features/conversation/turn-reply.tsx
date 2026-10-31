@@ -14,6 +14,7 @@ import {
 import type { ChatState } from "@/conversations/contracts"
 import { FileAttachments } from "@/features/files/file-attachments"
 
+import { MessageTimestamp } from "./message-timestamp"
 import { TurnActivity, SteeringMessage } from "./turn-activity"
 
 export function TurnReply({
@@ -78,6 +79,7 @@ export function TurnReply({
             <SteeringMessage
               key={input.id}
               text={input.text}
+              createdAt={input.created_at}
               attachments={input.attachments}
               provenance={input.provenance}
               agentId={agentId}
@@ -107,6 +109,11 @@ export function TurnReply({
                 </Button>
               )
           )}
+        {!turn.activity?.some((item) => item.type === "text") && (
+          <MessageFooter>
+            <MessageTimestamp startedAt={turn.created_at} />
+          </MessageFooter>
+        )}
         {(turn.answer || stopped || failed) && (
           <MessageFooter>
             {turn.answer && (
@@ -163,6 +170,8 @@ function ReplyBody({
             onAnswerPrompt={onAnswerPrompt}
             onAppPendingChange={onAppPendingChange}
             items={turn.activity}
+            startedAt={turn.created_at}
+            steering={turn.steering}
             agentId={agentId}
             toolTitles={toolTitles}
             status={turn.status}

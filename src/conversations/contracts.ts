@@ -85,6 +85,7 @@ export const TimelineItem = Schema.Union([
     id: Schema.String,
     type: Schema.Literal("text"),
     text: Schema.String,
+    created_at: Schema.optional(Schema.String),
   }),
   Schema.Struct({
     id: Schema.String,
@@ -94,6 +95,7 @@ export const TimelineItem = Schema.Union([
   Schema.Struct({
     id: Schema.String,
     type: Schema.Literal("steer"),
+    created_at: Schema.optional(Schema.String),
     provenance: Schema.optional(MessageProvenance),
     text: Schema.String,
     attachments: Schema.optional(Schema.Array(FileInfo)),
@@ -146,6 +148,7 @@ const VisibleTurn = Schema.Struct({
       Schema.Struct({
         id: Schema.String,
         text: Schema.String,
+        created_at: Schema.optional(Schema.String),
         provenance: Schema.optional(MessageProvenance),
         attachments: Schema.optional(Schema.Array(FileInfo)),
         delivery: Schema.Literals([

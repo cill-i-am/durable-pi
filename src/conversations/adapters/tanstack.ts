@@ -17,6 +17,8 @@ type MessageDetails = {
   attachments?: Extract<TimelineItem, { type: "steer" }>["attachments"]
   toolStatus?: Extract<TimelineItem, { type: "tool" }>["status"]
   copyAnswer?: string
+  created_at?: string
+  provenance?: Extract<TimelineItem, { type: "steer" }>["provenance"]
 }
 
 export type ChatMessage = UIMessage & {
@@ -106,8 +108,11 @@ export function chatMessages(turns: readonly Turn[]): ChatMessage[] {
               : [{ type: "text", content: item.text }],
             {
               ...details,
+              ...(item.type !== "thinking"
+                ? { created_at: item.created_at }
+                : {}),
               ...(item.type === "steer"
-                ? { attachments: item.attachments }
+                ? { attachments: item.attachments, provenance: item.provenance }
                 : {}),
             }
           )
@@ -177,9 +182,17 @@ function timelineMessage(
   text: string
 ): TimelineItem | undefined {
   let item: TimelineItem | undefined
-  if (details.kind === "text") item = { id, type: "text", text }
+  if (details.kind === "text")
+    item = { id, type: "text", text, created_at: details.created_at }
   if (details.kind === "steer")
-    item = { id, type: "steer", text, attachments: details.attachments }
+    item = {
+      id,
+      type: "steer",
+      text,
+      created_at: details.created_at,
+      provenance: details.provenance,
+      attachments: details.attachments,
+    }
   if (details.kind === "thinking")
     item = {
       id,
