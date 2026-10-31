@@ -26,6 +26,14 @@ export async function settingsIndex(page: Page) {
 }
 
 export async function closeSettings(page: Page) {
+  if (
+    (await settingsFront(page).getAttribute("data-overlay-mobile")) === "false"
+  ) {
+    await settingsFront(page)
+      .getByRole("button", { name: "Back to workspace", exact: true })
+      .click()
+    return
+  }
   await settingsIndex(page)
   await settingsFront(page)
     .getByRole("button", { name: "Close settings", exact: true })

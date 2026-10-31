@@ -28,14 +28,16 @@ function DialogContent({
   showCloseButton = true,
   keepMounted = false,
   overlayClassName: backdropClassName,
+  container,
   ...props
 }: React.ComponentProps<typeof Primitive.Popup> & {
   showCloseButton?: boolean
   keepMounted?: boolean
   overlayClassName?: string
+  container?: React.ComponentProps<typeof Primitive.Portal>["container"]
 }) {
   return (
-    <DialogPortal keepMounted={keepMounted}>
+    <DialogPortal keepMounted={keepMounted} container={container}>
       <DialogOverlay className={backdropClassName} />
       <Primitive.Popup
         {...props}

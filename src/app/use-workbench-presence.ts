@@ -63,6 +63,7 @@ export function useWorkbenchPresence(view: WorkbenchView) {
   }
   return {
     panel: rendered.panel,
+    held: snapshot?.matches("held") ?? false,
     retainedPanel: rendered.retainedPanel,
     search: rendered.search,
     closed: () =>

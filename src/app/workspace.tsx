@@ -34,6 +34,7 @@ import {
   AssetBoundary,
   useReloadGuard,
 } from "@/features/updates/update-recovery"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   globalSettingsSection,
   isGlobalSettingsSection,
@@ -185,6 +186,7 @@ function Workspace({
   const [settingsPending, setSettingsPending] = useState(false)
   const [settingsShown, setSettingsShown] = useState(false)
   const setSettings = location.setSettings
+  const mobile = useIsMobile()
   const setWorkbench = location.setPanel
   const { openAgent, agentId, openArchivedAgents } = location
   useEffect(() => {
@@ -248,7 +250,7 @@ function Workspace({
       setEditor({ key: catalog.selected.id, agent: catalog.selected })
     else if (action === "archive" && catalog.selected)
       void archive(catalog.selected)
-    else if (action === "settings") setSettings("settings")
+    else if (action === "settings") setSettings(mobile ? "settings" : "account")
     else if (action === "security") {
       setSecurityOpen(true)
     } else if (action === "sign-out") void authClient.signOut()
@@ -310,7 +312,9 @@ function Workspace({
             if (navigationLocked || editor !== null || archiveTarget !== null)
               return
             catalog.select(agent.id)
-            void location.openAgent(agent.id, { settings: "agent-settings" })
+            void location.openAgent(agent.id, {
+              settings: mobile ? "agent-settings" : "general",
+            })
           }}
           onEdit={(agent) => {
             if (!navigationLocked) setEditor({ key: agent.id, agent })
@@ -393,6 +397,7 @@ function Workspace({
                 />
               )}
             </div>
+            <div id="settings-page-host" />
           </main>
         </div>
         <WorkspaceSettingsOverlay
@@ -542,8 +547,7 @@ function AgentWorkspace({
     if (workbench) searchByTool.current[workbench] = toolQuery(location.search)
   }, [workbench, location.search])
   const [workbenchExpanded, setWorkbenchExpanded] = useState(false)
-  const workbenchOpen =
-    workbench !== null || (settingsShown && presence.panel !== null)
+  const workbenchOpen = workbench !== null || presence.held
   const workbenchTrigger = useRef<HTMLButtonElement>(null)
   const [toolRequests, setToolRequests] = useState<
     Partial<Record<Workbench, boolean>>

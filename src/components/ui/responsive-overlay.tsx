@@ -5,7 +5,7 @@ import { overlayClassName } from "@workspace/ui/components/responsive-overlay"
 import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import * as React from "react"
 
-type Presentation = "dialog" | "sheet" | "panel" | "alert"
+type Presentation = "dialog" | "sheet" | "panel" | "page" | "alert"
 type OverlayContextValue = {
   mobile: boolean
   desktop: Presentation
@@ -58,7 +58,8 @@ function Root({
     () => window.matchMedia(query).matches,
     () => false
   )
-  const docked = desktop === "panel" && !mobile
+  const page = desktop === "page" && !mobile
+  const docked = (desktop === "panel" || desktop === "page") && !mobile
   return (
     <OverlayContext.Provider
       value={{ mobile, desktop, layer, dismissible, reducedMotion }}
@@ -73,7 +74,7 @@ function Root({
         onOpenChange={(open, details) => {
           if (
             !open &&
-            (!dismissible || (!mobile && details.reason === "swipe"))
+            (page || !dismissible || (!mobile && details.reason === "swipe"))
           ) {
             details.cancel()
             return
@@ -91,7 +92,7 @@ function Root({
 
 function Backdrop({ className, style, ...props }: Drawer.Backdrop.Props) {
   const { mobile, desktop, layer, reducedMotion } = useOverlay()
-  if (desktop === "panel" && !mobile) return null
+  if ((desktop === "panel" || desktop === "page") && !mobile) return null
   return (
     <Drawer.Backdrop
       forceRender
@@ -114,18 +115,27 @@ function Popup({
   ...props
 }: Drawer.Popup.Props & { mobileLayout?: "content" | "panel" }) {
   const { mobile, desktop, layer, dismissible, reducedMotion } = useOverlay()
+  const page = desktop === "page" && !mobile
   return (
     <Drawer.Viewport
       className="responsive-overlay-viewport"
-      style={{ zIndex: mobile ? 51 + layer * 2 : 50 }}
+      style={{ zIndex: page ? undefined : mobile ? 51 + layer * 2 : 50 }}
       data-overlay-mobile={mobile}
       data-motion-reduced={reducedMotion ? "true" : undefined}
       data-desktop={desktop}
     >
       <Drawer.Popup
         {...props}
-        role={desktop === "alert" ? "alertdialog" : (props.role ?? "dialog")}
-        initialFocus={props.initialFocus ?? (mobile ? undefined : true)}
+        role={
+          page
+            ? "region"
+            : desktop === "alert"
+              ? "alertdialog"
+              : (props.role ?? "dialog")
+        }
+        initialFocus={
+          page ? false : (props.initialFocus ?? (mobile ? undefined : true))
+        }
         data-overlay-mobile={mobile}
         data-motion-reduced={reducedMotion ? "true" : undefined}
         data-mobile-layout={mobileLayout}

@@ -162,7 +162,10 @@ test("personal and agent settings indexes open their own navigation without sele
       index.getByRole("heading", { name: /^(Account|General)$/, exact: true })
     ).toHaveCount(0)
     await expect(
-      index.getByRole("button", { name: "Close settings", exact: true })
+      index.getByRole("button", {
+        name: isMobile ? "Close settings" : "Back to workspace",
+        exact: true,
+      })
     ).toBeEnabled()
   }
   await page.goto("/agents/navi")
@@ -176,10 +179,14 @@ test("personal and agent settings indexes open their own navigation without sele
   await page
     .getByRole("menuitem", { name: "Assistant settings", exact: true })
     .click()
-  await expect(page).toHaveURL(/\/agents\/navi\/settings$/)
+  await expect(page).toHaveURL(
+    isMobile
+      ? /\/agents\/navi\/settings$/
+      : /\/agents\/navi\/settings\/general$/
+  )
   await expect(
     settingsFront(page).getByRole("heading", {
-      name: "Assistant settings",
+      name: isMobile ? "Assistant settings" : "General",
       exact: true,
     })
   ).toBeVisible()

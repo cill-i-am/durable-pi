@@ -415,13 +415,13 @@ test("Family through Settings keeps the same unsent composer and attachment thro
   await openSettingsMenu(page, isMobile)
   await preserved()
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click()
-  await expectPath(page, "/settings")
+  await expectPath(page, isMobile ? "/settings" : "/settings/account")
   await selectSettings(page, "Family", isMobile)
   await expectPath(page, "/family")
   expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/agents/navi")
   await preserved()
   await page.goBack()
-  await expectPath(page, "/settings")
+  await expectPath(page, isMobile ? "/settings" : "/settings/account")
   await preserved()
   await page.goForward()
   await expectPath(page, "/family")
@@ -456,7 +456,7 @@ test("global Security returns through settings to the workbench", async ({
     await settingsFront(page)
       .getByRole("button", { name: "Close Account security", exact: true })
       .click()
-    await expectPath(page, "/settings")
+    await expectPath(page, isMobile ? "/settings" : "/settings/account")
   }
   await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
@@ -776,7 +776,7 @@ test("global Family remains usable while the known assistant's SSE request is pe
     ).toBeVisible()
     await expect(
       settingsFront(page).getByRole("button", {
-        name: isMobile ? "Close Family" : "Close settings",
+        name: isMobile ? "Close Family" : "Back to workspace",
         exact: true,
       })
     ).toBeEnabled()
