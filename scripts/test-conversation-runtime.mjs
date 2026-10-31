@@ -325,9 +325,23 @@ const config :Workerd.Config = (
     assert.equal(exhausted.native.length, 0)
     assert.equal(root(exhausted).control.owner, null)
     assert.ok(root(exhausted).control.unconfirmed)
-    const checked = await call("exhaustion", "check", {
+    // A raw status read deliberately does not start Lifecycle. A cold action
+    // restores/inspects the exhausted reply and advances its revision first.
+    // Force that race instead of depending on the platform's idle eviction time.
+    await stop()
+    await start()
+    const staleCheck = await call("exhaustion", "check", {
       revision: root(exhausted).revision,
     })
+    assert.equal(staleCheck.rejected, true)
+    assert.ok(root(staleCheck).revision > root(exhausted).revision)
+    assert.equal(staleCheck.native.length, 0)
+    assert.equal(staleCheck.metrics.configureCalls, 3)
+    assert.ok(root(staleCheck).control.unconfirmed)
+    const checked = await call("exhaustion", "check", {
+      revision: root(staleCheck).revision,
+    })
+    assert.equal(checked.rejected, undefined)
     assert.equal(
       checked.native.length,
       0,

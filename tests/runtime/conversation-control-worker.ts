@@ -473,8 +473,16 @@ export class ConversationControlProbe extends DurableObject<
       this.db.run("DROP TRIGGER IF EXISTS conversation_probe_release_fault")
       this.mode = "normal"
     }
-    if (action === "check")
-      await Effect.runPromise(this.check("synthetic-root", input.revision!))
+    if (action === "check") {
+      const outcome = await Effect.runPromiseExit(
+        this.check("synthetic-root", input.revision!)
+      )
+      if (rejectedConflict(outcome))
+        return Response.json({
+          ...(await this.observedSnapshot()),
+          rejected: true,
+        })
+    }
     if (action === "retry-stop") {
       const outcome = await Effect.runPromiseExit(
         this.retryStop("synthetic-root", input.revision!)
