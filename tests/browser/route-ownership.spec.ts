@@ -545,7 +545,7 @@ test("assistant settings have only assistant controls and five scoped destinatio
     } else if (section === "models") {
       await expect(
         shell.getByRole("heading", {
-          name: "Defaults for this agent",
+          name: "Default model",
           exact: true,
         })
       ).toBeVisible()

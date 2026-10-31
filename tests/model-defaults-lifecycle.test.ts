@@ -136,16 +136,10 @@ it("a failed SDK cancellation releases admission without entering HTTP or losing
   }
 })
 
-it("late acknowledgement belongs to its captured job and cannot clear a newer draft", async () => {
+it("late acknowledgement cannot clear a newer model draft", async () => {
   const held = gate<unknown>(),
     owner = open({ write: vi.fn(() => held.promise) })
   try {
-    await owner.actor.send({
-      type: "JOB",
-      job: "planning",
-      draft: { model: "gpt-6-astra", thinking: "high" },
-      settingsRevision: 0,
-    })
     await owner.actor.send({
       type: "CHANGE",
       draft: { model: "gpt-6-astra", thinking: "max" },
@@ -160,7 +154,7 @@ it("late acknowledgement belongs to its captured job and cannot clear a newer dr
     await ready(owner)
     expect(owner.ports.acknowledge).toHaveBeenCalledWith(
       expect.objectContaining({
-        job: "planning",
+        job: "conversation",
         draft: { model: "gpt-6-astra", thinking: "max" },
       }),
       receipt

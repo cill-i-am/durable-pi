@@ -13,20 +13,10 @@ import {
   SelectItem,
 } from "@/components/ui/select"
 import type { ModelSettings } from "@/conversations/turns"
-import { resolveRoute } from "@/inference/policy"
 
 import type { useModelCatalog } from "./use-model-catalog"
 import { useModelDefaults, type ModelDefaultsProps } from "./use-model-defaults"
 
-const settingsJobs = {
-  conversation: "Everyday conversation",
-  implementation: "Implementation",
-  planning: "Deep planning",
-  review: "Critical review",
-  labels: "Titles and labels",
-  extraction: "Structured extraction",
-  memory: "Memory summaries",
-} as const
 export function ModelDefaults(props: ModelDefaultsProps) {
   const agent = useRef(props.agentId)
   agent.current = props.agentId
@@ -55,7 +45,6 @@ function ModelDefaultsView(
     error,
     unconfirmed,
     busy: saving,
-    job: settingsJob,
   } = state
   return (
     <section className="settings-section" aria-label="Models">
@@ -89,44 +78,9 @@ function ModelDefaultsView(
           </Alert>
         )}
         <div>
-          <h3>Defaults for this agent</h3>
-          <p className="settings-description">
-            Used by Auto for new jobs. Running jobs keep their model.
-          </p>
+          <h3>Default model</h3>
         </div>
         <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor={`${labels}-job`}>Job</FieldLabel>
-            <Select
-              value={settingsJob}
-              disabled={saving || dirty || !catalog}
-              onValueChange={(value) => {
-                if (value) {
-                  void state.event({
-                    type: "JOB",
-                    job: value,
-                    draft: catalog?.assignments[value] ?? resolveRoute(value),
-                    settingsRevision:
-                      catalog?.selection.settingsRevision ??
-                      props.selection.settingsRevision,
-                  })
-                }
-              }}
-            >
-              <SelectTrigger id={`${labels}-job`} className="w-full">
-                <SelectValue>{settingsJobs[settingsJob]}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {Object.entries(settingsJobs).map(([value, name]) => (
-                    <SelectItem key={value} value={value}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
           <ModelChoices
             labels={labels}
             catalog={catalog}
