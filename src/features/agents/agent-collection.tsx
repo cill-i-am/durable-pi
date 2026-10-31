@@ -39,7 +39,7 @@ export function AgentCollection({
     >
       <header className="assistant-collection-header">
         <div className="assistant-collection-title">
-          <SidebarTrigger className="md:hidden" />
+          <SidebarTrigger />
           <h1>{archived ? "Archived assistants" : "Assistants"}</h1>
         </div>
         {!archived && (

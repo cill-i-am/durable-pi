@@ -82,10 +82,6 @@
   font-size: var(--text-sm);
   box-shadow: var(--shadow-xs);
 }
-.workspace-collapse {
-  flex-shrink: 0;
-  color: var(--muted-foreground);
-}
 .workspace-sidebar [data-slot="sidebar-menu"] {
   gap: 4px;
 }
@@ -122,11 +118,8 @@
   height: 24px;
 }
 [data-collapsible="icon"] .workspace-sidebar-label,
-[data-collapsible="icon"] .workspace-family {
+[data-collapsible="icon"] .workspace-family-row {
   display: none;
-}
-[data-collapsible="icon"] .workspace-collapse {
-  margin-inline: auto;
 }
 [data-collapsible="icon"] .workspace-sidebar [data-slot="sidebar-header"],
 [data-collapsible="icon"] .workspace-sidebar [data-slot="sidebar-content"],
@@ -286,8 +279,7 @@
   }
   .workspace-sidebar [data-slot="sidebar-menu-button"],
   .workspace-family,
-  .workspace-account,
-  .workspace-collapse {
+  .workspace-account {
     min-height: 44px;
   }
   .workspace-startup-sidebar {

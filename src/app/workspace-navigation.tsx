@@ -17,7 +17,6 @@ import {
   Files,
   ListTodo,
   LogOut,
-  PanelLeft,
   PanelsTopLeft,
   Plus,
   Search,
@@ -117,7 +116,7 @@ export function WorkspaceNavigation({
 }) {
   const { family } = useFamily()
   const searchTrigger = useRef<HTMLButtonElement>(null)
-  const { toggleSidebar, setOpenMobile, state, isMobile } = useSidebar()
+  const { setOpenMobile } = useSidebar()
   const search = useWorkspaceCommand({
     locked: () => locked,
     dispatch: (command) => {
@@ -195,21 +194,6 @@ export function WorkspaceNavigation({
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="workspace-collapse"
-              aria-label={
-                isMobile
-                  ? "Close sidebar"
-                  : state === "expanded"
-                    ? "Collapse sidebar"
-                    : "Expand sidebar"
-              }
-              onClick={toggleSidebar}
-            >
-              <PanelLeft />
-            </Button>
           </div>
           <SidebarMenu>
             <SidebarMenuItem>

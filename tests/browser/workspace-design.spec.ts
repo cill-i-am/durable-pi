@@ -32,6 +32,11 @@ test("settings after hiding a retained workbench keep it closed and return to th
 }) => {
   await signIn(page)
   await page.goto("/agents/navi")
+  await expect(
+    page.getByRole("button", {
+      name: /^(toggle|collapse|expand|close) sidebar$/i,
+    })
+  ).toHaveCount(1)
   if (!isMobile) {
     await page.addStyleTag({
       content: `
@@ -92,7 +97,7 @@ test("device animation preference reaches shared controls and native overlay CSS
   await signIn(page)
   if (!isMobile) {
     await page
-      .getByRole("button", { name: "Collapse sidebar", exact: true })
+      .getByRole("button", { name: "Toggle Sidebar", exact: true })
       .click()
     await expect(
       page.getByRole("button", { name: "Account menu for Bench", exact: true })
