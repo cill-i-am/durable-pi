@@ -97,12 +97,15 @@ try {
     "slow-observer",
     "past-expiry",
   ]) {
+    console.log(`Upstream control: ${mode}`)
     const response = await fetch(origin + "/observe?mode=" + mode, {
         signal: AbortSignal.timeout(mode === "past-expiry" ? 65_000 : 5000),
       }),
       reader = response.body.getReader(),
       markers = []
-    let buffer = ""
+    let buffer = "",
+      observerFailure,
+      observerEndedAt
     const consume = (async () => {
       for (;;) {
         const next = await reader.read()
@@ -118,7 +121,13 @@ try {
           buffer = buffer.slice(end + 1)
         }
       }
-    })().catch(() => {})
+    })()
+      .catch((cause) => {
+        observerFailure = cause
+      })
+      .finally(() => {
+        observerEndedAt = performance.now()
+      })
     for (let tries = 0; !markers.some((x) => x.stage === "ready"); tries++) {
       assert(tries < 400, "Observer ready deadline exceeded")
       await new Promise((r) => setTimeout(r, 10))
@@ -157,7 +166,16 @@ try {
       actorDoneMs: actorDone - start,
       markers: markers.map((x) => ({ ...x, afterSendMs: x.at - start })),
     })
-    await reader.cancel()
+    if (mode === "past-expiry") {
+      assert(observerEndedAt >= start + 59_000, "Observer expired early")
+      assert(observerEndedAt < actorDone, "Inference outlives its observer")
+    }
+    await reader.cancel().catch((cause) => {
+      // Current workerd terminates the expired diagnostic HTTP body. Cancelling
+      // an already-errored reader repeats that same error, not a new cleanup fault.
+      assert.equal(mode, "past-expiry")
+      assert.equal(cause, observerFailure)
+    })
     await consume
   }
   console.log(JSON.stringify(results, null, 2))
