@@ -278,6 +278,9 @@ test("sandbox frame rejects wrong sources, channels and revoked authority", asyn
       )
     )
     .toBe(1)
+  await expect(button).toBeDisabled()
+  await message("null", "frame", channel)
+  await message("null", "frame", channel)
   await release(page)
   await expect
     .poll(() =>

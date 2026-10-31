@@ -25,6 +25,7 @@ import {
   writeObjectDrafts,
   type ObjectStorage,
 } from "./object-storage"
+import { initialObjectStore, advanceObjectStore } from "./object-store.machine"
 
 type EditMachine = ReturnType<typeof objectEditMachine>
 type ReadMachine = ReturnType<typeof objectReadMachine>
@@ -124,9 +125,13 @@ export class ObjectStore {
   private records = new Map<string, ObjectDraft>()
   private poller?: Promise<EffectActor<ReturnType<typeof objectPollMachine>>>
   private storage?: ObjectStorage
-  private storageError = ""
-  private connected = false
-  private disposed = false
+  private host = initialObjectStore()
+  private get storageError() {
+    return this.host.context.error
+  }
+  private get disposed() {
+    return !this.host.matches("open")
+  }
   private closing?: Promise<void>
   private failures: Cause.Cause<unknown>[] = []
   constructor(
@@ -160,12 +165,13 @@ export class ObjectStore {
     this.listeners.forEach((listener) => listener())
   }
   connect(storage: ObjectStorage) {
-    if (this.connected || this.disposed) return
-    this.connected = true
+    if (!this.host.can({ type: "CONNECT" })) return
+    this.host = advanceObjectStore(this.host, { type: "CONNECT" })
     this.storage = storage
     try {
       const drafts = readObjectDrafts(storage.getItem(this.key))
       this.records = new Map(drafts.map((draft) => [draft.input.id, draft]))
+      this.host = advanceObjectStore(this.host, { type: "LOADED" })
       this.set({
         pending: Object.fromEntries(
           drafts
@@ -177,8 +183,11 @@ export class ObjectStore {
         ),
       })
     } catch {
-      this.storageError =
-        "Saved browser drafts could not be read. Keep this browser session; saving is blocked until a compatible version can recover them. Your server checklists are unchanged."
+      this.host = advanceObjectStore(this.host, {
+        type: "FAILED",
+        error:
+          "Saved browser drafts could not be read. Keep this browser session; saving is blocked until a compatible version can recover them. Your server checklists are unchanged.",
+      })
       this.set({ error: this.storageError })
     }
   }
@@ -276,7 +285,7 @@ export class ObjectStore {
     return owner
   }
   private async edit(id: string, event: (request: string) => EditEvent) {
-    if (this.disposed || this.storageError) return false
+    if (!this.host.can({ type: "EDIT" })) return false
     const actor = await this.editOwner(id)
     if (this.disposed) return false
     const request = crypto.randomUUID()
@@ -405,7 +414,7 @@ export class ObjectStore {
     )
   }
   async submit(input: ObjectMutation) {
-    if (this.disposed || this.storageError) return false
+    if (!this.host.can({ type: "EDIT" })) return false
     let valid: ObjectMutation
     try {
       valid = Schema.decodeUnknownSync(ObjectMutation)(input)
@@ -481,8 +490,8 @@ export class ObjectStore {
       await Effect.runPromise(send(actor, { type: "REFRESH" }))
   }
   dispose() {
-    if (this.closing) return this.closing
-    this.disposed = true
+    if (!this.host.can({ type: "CLOSE" })) return this.closing!
+    this.host = advanceObjectStore(this.host, { type: "CLOSE" })
     this.closing = Promise.allSettled([
       ...this.edits.values(),
       ...this.reads.values(),
@@ -491,6 +500,7 @@ export class ObjectStore {
       const exit = await Effect.runPromiseExit(
         Scope.close(this.scope, Exit.void)
       )
+      this.host = advanceObjectStore(this.host, { type: "JOINED" })
       if (Exit.isFailure(exit)) throw exit.cause
     })
     return this.closing

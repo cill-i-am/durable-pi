@@ -146,6 +146,12 @@ F10/F11 retain their owners during hiding and expansion: resource identity is in
 
 The [current-main integration review](xstate-effect-settings-integration.md) records the source delta through `1f800d4`, revised library/assignment authority, global WhatsApp target retention, heartbeat preservation, and new F10 drawer/agent/workbench retention ownership. It narrows the earlier `workspace-settings` presentation exclusion: native presentation remains native, while application close-to-navigation and retained-owner progression is now machine-owned. Focused/local checks pass as recorded there; all fifteen native suites pass; the isolated complete browser gate passes 322 journeys (eight intentional skips), components, passkeys and upgrade recovery. Drawer ownership and the source census are published in [draft #231](https://github.com/cill-i-am/durable-pi/pull/231); all final PR checks subsequently passed, followed by the verified production release. Historical per-row CI must not be represented as checks on the newly rebased commits.
 
+## Application and host boundary follow-up, 31 October 2026
+
+The current-main audit at `9d4ec7c` found six smaller protocols around existing owners: browser diagnostic admission, sandbox iframe submission, checklist-store bootstrap/disposal, OAuth SDK identity binding, joined release receipts, and Memory controller persistence acknowledgement. The [boundary follow-up](xstate-effect-boundary-lifecycles.md) records their explicit owners, removed flags, compatibility and verification. Conversation and Communication share the release-receipt family. The iframe now delegates admission entirely to its existing parent machine.
+
+These additions narrow the earlier observability and SDK-adapter exclusions for application-owned admission. Native resource registries, joins, transport buffers, parsers and presentation feedback retain their stated exclusions. Historical release/CI results above are not evidence for this new change.
+
 ## Closure evidence
 
 For each completed item record: implementation commit and machine paths; removed/reduced controls; state schema/workflow/native versions and migration; preserved characterization traces and intentional defect changes; race, restoration and failure-sensitive test commands/results; native/browser proof as applicable. Only then change its status. Close the goal only after every in-scope row is implemented, every exclusion remains justified, obsolete competing controls are gone and all prescribed repository/CI checks pass.
