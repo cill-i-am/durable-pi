@@ -37,7 +37,7 @@ export function ChatHeader({
     <header className="chat-header">
       <div className="chat-identity">
         <SidebarTrigger />
-        <h1 title={agent.name}>{agent.name}</h1>
+        <h1 className="sr-only">{agent.name}</h1>
         {agent.status === "archived" && (
           <Badge variant="secondary">Archived</Badge>
         )}
