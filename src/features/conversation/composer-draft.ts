@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 
 import { SendInput } from "@/conversations/contracts"
-import { Profile, JobType } from "@/inference/policy"
+import { Profile } from "@/inference/policy"
 import { FileInfo } from "@/workspace/files"
 
 const DraftFile = Schema.Struct({
@@ -19,7 +19,6 @@ export const ComposerDraft = Schema.Struct({
   text: Schema.String.check(Schema.isMaxLength(30_000)),
   files: Schema.Array(DraftFile).check(Schema.isMaxLength(4)),
   profile: Profile,
-  job: JobType,
   attempt: Schema.NullOr(SendInput),
 })
 export type ComposerDraft = typeof ComposerDraft.Type
@@ -28,6 +27,5 @@ export const emptyDraft = (): ComposerDraft => ({
   text: "",
   files: [],
   profile: "auto",
-  job: "conversation",
   attempt: null,
 })

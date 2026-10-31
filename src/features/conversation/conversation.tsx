@@ -50,7 +50,7 @@ import {
 import { MessageFileControls } from "@/features/files/message-file-controls"
 import { markReady } from "@/features/performance"
 import { AnswerExplorer } from "@/features/rich-results/explorer"
-import type { Profile, JobType } from "@/inference/policy"
+import type { Profile } from "@/inference/policy"
 
 import "./conversation.css"
 
@@ -100,13 +100,12 @@ export function Conversation({
   onAppPendingChange?: (key: string, pending: boolean) => void
 }) {
   const archived = agent.status === "archived"
-  const { text: draft, profile, job } = composerDraft.value
+  const { text: draft, profile } = composerDraft.value
   const setDraft = (change: string | ((text: string) => string)) =>
     composerDraft.update((current) => ({
       text: typeof change === "function" ? change(current.text) : change,
     }))
   const setProfile = (profile: Profile) => composerDraft.update({ profile })
-  const setJob = (job: JobType) => composerDraft.update({ job })
   const composerInput = useRef<HTMLTextAreaElement>(null)
   const answerPrompt = archived
     ? undefined
@@ -155,7 +154,7 @@ export function Conversation({
       mode,
       files: files.selected.map((file) => file.id),
       profile,
-      job,
+      job: "conversation",
     })
   }
   function retry(id: string) {
@@ -418,12 +417,9 @@ export function Conversation({
                 </span>
               ) : (
                 <ModelMenu
-                  onOpenSettings={() => onSettings("models")}
                   agentId={agent.id}
                   profile={profile}
                   onProfile={setProfile}
-                  job={job}
-                  onJob={setJob}
                   disabled={sending || !!commands.pending}
                   selection={{
                     model: state?.model ?? "",
