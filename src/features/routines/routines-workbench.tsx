@@ -1,7 +1,9 @@
-import "./routines.css"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+
+import "./routines.css"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -320,9 +322,11 @@ function RoutinesWorkbenchOwner({
         {selected && !selectedRoutine ? (
           <Alert>
             <AlertDescription>
-              {actions.loading
-                ? "Loading routine…"
-                : "This routine is unavailable."}
+              {actions.loading && !actions.error ? (
+                <DataLoading loading label="Loading routine" layout="form" />
+              ) : (
+                "This routine is unavailable."
+              )}
               <Button variant="link" onClick={() => onSelect(null)}>
                 All routines
               </Button>
@@ -368,9 +372,7 @@ function RoutinesWorkbenchOwner({
               Tool approvals still apply.
             </p>
             {actions.loading ? (
-              <p className="text-sm text-muted-foreground" role="status">
-                Loading routines…
-              </p>
+              <DataLoading loading={!actions.error} label="Loading routines" />
             ) : actions.data.routines.length === 0 ? (
               <Empty>
                 <EmptyHeader>

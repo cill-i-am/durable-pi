@@ -15,6 +15,7 @@ allowBuilds:
   core-js-pure: false
   protobufjs: false
 minimumReleaseAgeExclude:
+  - skullet@0.0.3
   - "@yielded/effect-tsrs@0.2.2 || 0.2.3"
   - "@yielded/effect-tsrs-darwin-arm64@0.2.2 || 0.2.3"
   - "@yielded/effect-tsrs-darwin-x64@0.2.2 || 0.2.3"

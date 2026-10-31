@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router"
 import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
 import { Card, CardFrame, CardFrameFooter } from "@workspace/ui/components/card"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Switch } from "@workspace/ui/components/switch"
 import { Schema } from "effect"
 import {
@@ -836,7 +837,12 @@ function AgentSettings({
         onModelAccess={onModelAccess}
       />
     ) : (
-      <p className="p-6 text-sm">Loading model settings…</p>
+      <DataLoading
+        loading
+        label="Loading model settings"
+        layout="form"
+        className="p-6"
+      />
     )
   if (category === "connections")
     return (

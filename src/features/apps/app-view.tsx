@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import { Skeleton } from "@workspace/ui/components/skeleton"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { ArrowLeft, ChevronDown, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -82,7 +82,7 @@ function AppViewContent({
             </AlertDescription>
           </Alert>
         ) : (
-          <Skeleton className="h-32 w-full" />
+          <DataLoading loading label="Loading app" layout="detail" />
         )}
       </div>
     )

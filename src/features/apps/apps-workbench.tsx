@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
 } from "@workspace/ui/components/empty"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import { ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -74,7 +74,7 @@ function AppsWorkbenchView({
           />
         ) : (
           <>
-            {loading && <Skeleton className="h-24 w-full" />}
+            {loading && <DataLoading loading={!error} label="Loading apps" />}
             {!loading && !apps.length && !error && (
               <Empty>
                 <EmptyHeader>

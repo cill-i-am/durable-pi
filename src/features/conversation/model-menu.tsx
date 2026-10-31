@@ -1,4 +1,5 @@
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { ChevronDown, Sparkles } from "lucide-react"
 
 import {
@@ -35,7 +36,7 @@ export function ModelMenu({
   onProfile: (value: Profile) => void
   disabled: boolean
 }) {
-  const { catalog, refresh, unavailable } = useModelCatalog(
+  const { catalog, catalogError, refresh, unavailable } = useModelCatalog(
     agentId,
     selection.settingsRevision
   )
@@ -71,42 +72,47 @@ export function ModelMenu({
         side="top"
         className="max-h-[70dvh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto"
       >
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Model</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={profile}
-            onValueChange={(value) => onProfile(value as Profile)}
-          >
-            {(["auto", "fast", "balanced", "deep"] as const).map((value) => {
-              const option = resolveRoute(
-                "conversation",
-                catalog?.assignments.conversation ?? selection,
-                value
-              )
-              const reason = unavailable(option)
-              return (
-                <DropdownMenuRadioItem
-                  key={value}
-                  value={value}
-                  disabled={!!reason}
-                  className="items-start whitespace-normal"
-                >
-                  <span className="flex flex-col gap-1">
-                    <span>{names[value]}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {option.model} · {option.thinking}
-                    </span>
-                    {reason && (
+        <DataLoading
+          loading={!catalog && !catalogError}
+          label="Loading available models"
+        >
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Model</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={profile}
+              onValueChange={(value) => onProfile(value as Profile)}
+            >
+              {(["auto", "fast", "balanced", "deep"] as const).map((value) => {
+                const option = resolveRoute(
+                  "conversation",
+                  catalog?.assignments.conversation ?? selection,
+                  value
+                )
+                const reason = unavailable(option)
+                return (
+                  <DropdownMenuRadioItem
+                    key={value}
+                    value={value}
+                    disabled={!!reason}
+                    className="items-start whitespace-normal"
+                  >
+                    <span className="flex flex-col gap-1">
+                      <span>{names[value]}</span>
                       <span className="text-xs text-muted-foreground">
-                        {reason}
+                        {option.model} · {option.thinking}
                       </span>
-                    )}
-                  </span>
-                </DropdownMenuRadioItem>
-              )
-            })}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuGroup>
+                      {reason && (
+                        <span className="text-xs text-muted-foreground">
+                          {reason}
+                        </span>
+                      )}
+                    </span>
+                  </DropdownMenuRadioItem>
+                )
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
+        </DataLoading>
         {catalog?.error && (
           <p role="alert" className="px-2 pb-2 text-xs text-destructive">
             {catalog.error}

@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -113,6 +114,9 @@ export function ConnectionsPanel({
           <Alert>
             <AlertDescription>{notice}</AlertDescription>
           </Alert>
+        )}
+        {!state.ready && !state.error && (
+          <DataLoading loading label="Loading connections" />
         )}
         {assignment && onManageLibrary && (
           <Button

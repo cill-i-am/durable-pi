@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Schema } from "effect"
 import { ChevronDown } from "lucide-react"
 
@@ -50,7 +51,10 @@ export function InferenceRuns({ agentId }: { agentId: string }) {
             </AlertDescription>
           </Alert>
         )}
-        {!attempts.length && !error && (
+        {!data && !error && (
+          <DataLoading loading label="Loading model activity" />
+        )}
+        {data && !attempts.length && !error && (
           <p className="text-sm text-muted-foreground">
             Model requests will appear here as your agent works.
           </p>

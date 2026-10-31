@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { useState } from "react"
@@ -43,105 +44,110 @@ export function HostedSkillImport({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      {!providers.length ? (
-        <p className="text-sm text-muted-foreground">
-          {busy
-            ? "Loading connections…"
-            : "Add an Executor server in Connections and finish signing in first. It must expose a skills tool."}
-        </p>
-      ) : (
-        <>
-          <FieldGroup>
-            <Field>
-              <FieldLabel>Connection</FieldLabel>
-              <div
-                className="flex flex-wrap gap-2"
-                role="group"
-                aria-label="Skill provider"
-              >
-                {providers.map((tool) => (
-                  <Button
-                    key={tool.name}
-                    variant={selected === tool.name ? "secondary" : "outline"}
-                    size="sm"
-                    aria-pressed={selected === tool.name}
-                    disabled={busy}
-                    onClick={() => {
-                      event({ type: "PROVIDER", name: tool.name })
-                    }}
+      <DataLoading
+        loading={busy && !error}
+        label="Loading skills from Executor"
+      >
+        {!providers.length ? (
+          <p className="text-sm text-muted-foreground">
+            {busy
+              ? "Loading connections…"
+              : "Add an Executor server in Connections and finish signing in first. It must expose a skills tool."}
+          </p>
+        ) : (
+          <>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>Connection</FieldLabel>
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="group"
+                  aria-label="Skill provider"
+                >
+                  {providers.map((tool) => (
+                    <Button
+                      key={tool.name}
+                      variant={selected === tool.name ? "secondary" : "outline"}
+                      size="sm"
+                      aria-pressed={selected === tool.name}
+                      disabled={busy}
+                      onClick={() => {
+                        event({ type: "PROVIDER", name: tool.name })
+                      }}
+                    >
+                      {tool.connectionName}
+                    </Button>
+                  ))}
+                </div>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="skill-source-app">App slug</FieldLabel>
+                <Input
+                  id="skill-source-app"
+                  value={app}
+                  maxLength={160}
+                  disabled={busy}
+                  onChange={(change) => {
+                    setApp(change.target.value)
+                    event({ type: "CLEAR_CATALOG" })
+                  }}
+                />
+              </Field>
+            </FieldGroup>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy || !app.trim()}
+              onClick={() => event({ type: "BROWSE", app: app.trim() })}
+            >
+              {busy ? "Reading…" : "Browse skills"}
+            </Button>
+            {catalog && (
+              <div className="divide-y">
+                {!catalog.length && (
+                  <p className="py-3 text-sm text-muted-foreground">
+                    No skills are available in this app.
+                  </p>
+                )}
+                {catalog.map((skill) => (
+                  <article
+                    key={JSON.stringify([
+                      skill.app.id,
+                      skill.name,
+                      skill.deployment,
+                      skill.revision,
+                      skill.profile,
+                    ])}
+                    className="flex items-start gap-3 py-3"
                   >
-                    {tool.connectionName}
-                  </Button>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-medium break-words">
+                        {skill.name}
+                      </h4>
+                      <p className="line-clamp-3 text-xs text-muted-foreground">
+                        {skill.description}
+                      </p>
+                      <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                        Revision {skill.revision.slice(0, 12)}
+                      </p>
+                    </div>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() =>
+                        event({ type: "READ", skill, id: crypto.randomUUID() })
+                      }
+                    >
+                      Preview
+                    </Button>
+                  </article>
                 ))}
               </div>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="skill-source-app">App slug</FieldLabel>
-              <Input
-                id="skill-source-app"
-                value={app}
-                maxLength={160}
-                disabled={busy}
-                onChange={(change) => {
-                  setApp(change.target.value)
-                  event({ type: "CLEAR_CATALOG" })
-                }}
-              />
-            </Field>
-          </FieldGroup>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy || !app.trim()}
-            onClick={() => event({ type: "BROWSE", app: app.trim() })}
-          >
-            {busy ? "Reading…" : "Browse skills"}
-          </Button>
-          {catalog && (
-            <div className="divide-y">
-              {!catalog.length && (
-                <p className="py-3 text-sm text-muted-foreground">
-                  No skills are available in this app.
-                </p>
-              )}
-              {catalog.map((skill) => (
-                <article
-                  key={JSON.stringify([
-                    skill.app.id,
-                    skill.name,
-                    skill.deployment,
-                    skill.revision,
-                    skill.profile,
-                  ])}
-                  className="flex items-start gap-3 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-medium break-words">
-                      {skill.name}
-                    </h4>
-                    <p className="line-clamp-3 text-xs text-muted-foreground">
-                      {skill.description}
-                    </p>
-                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                      Revision {skill.revision.slice(0, 12)}
-                    </p>
-                  </div>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() =>
-                      event({ type: "READ", skill, id: crypto.randomUUID() })
-                    }
-                  >
-                    Preview
-                  </Button>
-                </article>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+            )}
+          </>
+        )}
+      </DataLoading>
     </section>
   )
 }

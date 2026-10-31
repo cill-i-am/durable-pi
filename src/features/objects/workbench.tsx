@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -187,7 +188,10 @@ function Workbench({
                   <SaveState store={store} id={input.id} />
                 </section>
               ))}
-            {!state.list.length && (
+            {!state.loaded && !state.error && (
+              <DataLoading loading label="Loading checklists" />
+            )}
+            {state.loaded && !state.error && !state.list.length && (
               <Empty>
                 <EmptyHeader>
                   <EmptyTitle>No checklists yet</EmptyTitle>

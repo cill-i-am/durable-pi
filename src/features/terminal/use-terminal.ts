@@ -138,6 +138,7 @@ function historyProjection(
 ) {
   const history = current?.history
   return {
+    loaded: !!history,
     networkPolicy: history ? (history.networkPolicy ?? null) : undefined,
     runs: history?.runs ?? [],
     session: history?.session ?? null,

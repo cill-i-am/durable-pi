@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -8,7 +9,6 @@ import {
 } from "@workspace/ui/components/empty"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import {
   Tabs,
   TabsContent,
@@ -37,6 +37,7 @@ import "./memory.css"
 
 export function MemoryWorkbench({
   state,
+  stateError,
   agentId,
   refresh,
   tab,
@@ -49,6 +50,7 @@ export function MemoryWorkbench({
   tab: "notes" | "history" | "tree" | "files"
   onTabChange: (tab: "notes" | "history" | "tree" | "files") => void
   state: ChatState | null
+  stateError?: string
   refresh: () => void
   agentId: string
 }) {
@@ -130,22 +132,32 @@ export function MemoryWorkbench({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="notes">
-            <div className="memory-notes">
-              {state?.memory.notes.length ? (
-                state.memory.notes.map((note) => (
-                  <MemoryNote key={note.path} note={note} agentId={agentId} />
-                ))
-              ) : (
-                <Empty>
-                  <EmptyHeader>
-                    <EmptyTitle>No saved notes</EmptyTitle>
-                    <EmptyDescription>
-                      Ask your agent to save a preference or useful fact.
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-            </div>
+            {stateError && (
+              <Alert>
+                <AlertDescription>{stateError}</AlertDescription>
+              </Alert>
+            )}
+            <DataLoading
+              loading={!state && !stateError}
+              label="Loading saved notes"
+            >
+              <div className="memory-notes">
+                {state?.memory.notes.length ? (
+                  state.memory.notes.map((note) => (
+                    <MemoryNote key={note.path} note={note} agentId={agentId} />
+                  ))
+                ) : !stateError && state ? (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyTitle>No saved notes</EmptyTitle>
+                      <EmptyDescription>
+                        Ask your agent to save a preference or useful fact.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                ) : null}
+              </div>
+            </DataLoading>
           </TabsContent>
           <TabsContent value="history">
             {error && (
@@ -158,34 +170,36 @@ export function MemoryWorkbench({
                 </AlertDescription>
               </Alert>
             )}
-            <div className="memory-notes">
-              <p role="status" className="text-sm text-muted-foreground">
-                {loading
-                  ? "Searching…"
-                  : !query.trim()
-                    ? "Search for a message or phrase."
-                    : !error && !results.length
-                      ? "No matching messages."
-                      : ""}
-              </p>
-              {!loading && !error && query.trim() && !results.length && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setQuery("")}
-                >
-                  Clear search
-                </Button>
-              )}
-              {results.map((result) => (
-                <article key={result.id}>
-                  <h3>
-                    {result.kind} · message {result.id}
-                  </h3>
-                  <p className="message-text">{result.text}</p>
-                </article>
-              ))}
-            </div>
+            <DataLoading loading={loading && !error} label="Searching memory">
+              <div className="memory-notes">
+                <p role="status" className="text-sm text-muted-foreground">
+                  {loading
+                    ? "Searching…"
+                    : !query.trim()
+                      ? "Search for a message or phrase."
+                      : !error && !results.length
+                        ? "No matching messages."
+                        : ""}
+                </p>
+                {!loading && !error && query.trim() && !results.length && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuery("")}
+                  >
+                    Clear search
+                  </Button>
+                )}
+                {results.map((result) => (
+                  <article key={result.id}>
+                    <h3>
+                      {result.kind} · message {result.id}
+                    </h3>
+                    <p className="message-text">{result.text}</p>
+                  </article>
+                ))}
+              </div>
+            </DataLoading>
           </TabsContent>
           <TabsContent value="tree">
             <MemoryTree agentId={agentId} />
@@ -260,7 +274,11 @@ function NoteSource({ agentId, source }: { agentId: string; source: number }) {
           <p className="message-text">{original.text}</p>
         </>
       ) : (
-        <p role="status">Loading source…</p>
+        <DataLoading
+          loading
+          label="Loading source message"
+          layout="conversation"
+        />
       )}
     </div>
   )
@@ -306,7 +324,13 @@ function MemoryTree({ agentId }: { agentId: string }) {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      {pending && <Skeleton className="h-16 w-full" />}
+      {pending && (
+        <DataLoading
+          loading={!error}
+          label="Loading conversation history"
+          layout="conversation"
+        />
+      )}
       {selected && (
         <article>
           <h3>

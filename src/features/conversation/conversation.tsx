@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Empty, EmptyHeader, EmptyTitle } from "@workspace/ui/components/empty"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Array as EffectArray, Option, Schema } from "effect"
 import { ArrowUp, ChevronDown, Square, RefreshCw, Upload } from "lucide-react"
 import {
@@ -226,10 +226,11 @@ export function Conversation({
             <MessageScrollerContent className="conversation-content">
               {!state ? (
                 <MessageScrollerItem messageId="loading">
-                  <div className="flex flex-col gap-4 py-12">
-                    <Skeleton className="h-6 w-48" />
-                    <Skeleton className="h-4 w-72" />
-                  </div>
+                  <DataLoading
+                    loading={!error}
+                    label="Loading conversation"
+                    layout="conversation"
+                  />
                 </MessageScrollerItem>
               ) : state.turns.length === 0 ? (
                 <MessageScrollerItem messageId="empty">

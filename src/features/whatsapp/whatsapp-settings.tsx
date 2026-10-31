@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { MessageCircle } from "lucide-react"
 import { useEffect, useId, useState } from "react"
@@ -111,16 +112,22 @@ export function WhatsAppSettings({
   }
   return (
     <section aria-label="WhatsApp connection" className="settings-channel">
-      <WhatsAppRouting
-        view={view}
-        agents={activeAgents}
-        selectedAgentId={selectedAgentId}
-        onAgentChange={setChosenAgentId}
-        onCancelRouting={() => setChosenAgentId(null)}
-        routingDirty={routingDirty}
-        disabled={busy || !!attempt || !!resend}
-        configure={configure}
-      />
+      <DataLoading
+        loading={!view && !error}
+        label="Loading WhatsApp"
+        layout="form"
+      >
+        <WhatsAppRouting
+          view={view}
+          agents={activeAgents}
+          selectedAgentId={selectedAgentId}
+          onAgentChange={setChosenAgentId}
+          onCancelRouting={() => setChosenAgentId(null)}
+          routingDirty={routingDirty}
+          disabled={busy || !!attempt || !!resend}
+          configure={configure}
+        />
+      </DataLoading>
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

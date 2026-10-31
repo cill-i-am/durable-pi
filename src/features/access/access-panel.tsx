@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -69,9 +70,7 @@ export function AccessPanel({
           </Alert>
         )}
         {!policies && !error && (
-          <p className="py-4 text-sm text-muted-foreground">
-            Loading tool access…
-          </p>
+          <DataLoading loading label="Loading tool access" layout="form" />
         )}
         <div className="divide-y">
           {policies?.map((tool) => (

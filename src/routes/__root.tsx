@@ -5,6 +5,7 @@ import {
   createRootRoute,
 } from "@tanstack/react-router"
 import { buttonVariants } from "@workspace/ui/components/button"
+import { DataLoadingProvider } from "@workspace/ui/components/data-loading"
 import { ThemeProvider } from "next-themes"
 
 import { WorkspaceLinkError } from "@/app/workspace-link-error"
@@ -78,7 +79,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           disableTransitionOnChange
         >
           <WorkspaceMotion>
-            <UpdateRecovery>{children}</UpdateRecovery>
+            <DataLoadingProvider>
+              <UpdateRecovery>{children}</UpdateRecovery>
+            </DataLoadingProvider>
           </WorkspaceMotion>
         </ThemeProvider>
         <Scripts />

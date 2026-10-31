@@ -31,10 +31,12 @@ it("unchanged empty refreshes preserve the external-store snapshot and recover a
     if (offline) throw new Error("Offline")
     return { objects: [] } as T
   }, "unchanged")
-  const initial = store.getSnapshot()
+  expect(store.getSnapshot().loaded).toBe(false)
   await store.refresh()
+  const ready = store.getSnapshot()
+  expect(ready.loaded).toBe(true)
   await store.refresh()
-  expect(store.getSnapshot()).toBe(initial)
+  expect(store.getSnapshot()).toBe(ready)
   offline = true
   await store.refresh()
   expect(store.getSnapshot().error).toBe("Offline")

@@ -86,6 +86,8 @@
 }
 
 :root {
+  --skullet-base: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --skullet-highlight: color-mix(in oklch, var(--background) 60%, transparent);
   /* dithercn avatar palette (MIT). */
   --dither-ink: var(--primary);
   --dither-color-blue: oklch(0.56 0.18 248);
@@ -177,6 +179,8 @@
 }
 
 .dark {
+  --skullet-base: color-mix(in oklch, var(--foreground) 8%, transparent);
+  --skullet-highlight: color-mix(in oklch, var(--foreground) 10%, transparent);
   /* dithercn avatar palette (MIT). */
   --dither-ink: var(--primary);
   --dither-color-blue: oklch(0.72 0.14 240);
@@ -270,4 +274,15 @@
 html[data-ui-motion="reduced"] [data-slot="agent-avatar-group"] > span {
   transition: none;
   translate: none;
+}
+
+.data-loading {
+  min-width: 0;
+  width: 100%;
+}
+.data-loading > [skullet-pane] {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
 }

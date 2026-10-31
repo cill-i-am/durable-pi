@@ -27,6 +27,7 @@
     "effect": "4.1.1",
     "lucide-react": "1.66.0",
     "motion": "14.9.0",
+    "skullet": "0.0.3",
     "xstate": "6.0.0-alpha.71"
   },
   "devDependencies": {

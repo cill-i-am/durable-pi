@@ -1,6 +1,7 @@
 import { Link, useSearch } from "@tanstack/react-router"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Field,
   FieldDescription,
@@ -167,7 +168,7 @@ function ResetLink({ token }: { token: string | null }) {
       {done ? (
         <div role="status">Sign in with your new password.</div>
       ) : token === null ? (
-        <p role="status">Opening your reset link…</p>
+        <DataLoading loading label="Opening your reset link" layout="form" />
       ) : unavailable ? (
         <Link
           to="/forgot-password"

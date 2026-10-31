@@ -4,8 +4,8 @@ import {
   AlertTitle,
 } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Separator } from "@workspace/ui/components/separator"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Schema } from "effect"
 import { Brain, Wrench } from "lucide-react"
 
@@ -100,7 +100,13 @@ export function ActivityRecord({
             </AlertDescription>
           </Alert>
         )}
-        {!record && !error && <Skeleton className="h-32 w-full" />}
+        {!record && !error && (
+          <DataLoading
+            loading
+            label="Loading activity details"
+            layout="detail"
+          />
+        )}
         {record && (
           <div className="flex min-w-0 flex-col gap-4 wrap-anywhere">
             {record.run && (

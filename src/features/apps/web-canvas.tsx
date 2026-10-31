@@ -1,6 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
-import { Skeleton } from "@workspace/ui/components/skeleton"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { send } from "@xstate/effect"
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect"
 import { useEffect, useRef, useState } from "react"
@@ -160,7 +160,7 @@ function OwnedWebCanvas({
           }}
         />
       ) : loading ? (
-        <Skeleton className="h-60 w-full" />
+        <DataLoading loading label="Loading app preview" layout="media" />
       ) : null}
     </section>
   )

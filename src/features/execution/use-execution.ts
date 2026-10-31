@@ -98,6 +98,7 @@ export function useExecution(
       Effect.runFork(send(actor, event))
   }
   return {
+    loaded: current?.context.loaded ?? false,
     runs: current?.context.runs ?? [],
     detail:
       current?.context.detail?.id === selected ? current.context.detail : null,
