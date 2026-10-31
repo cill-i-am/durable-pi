@@ -41,15 +41,25 @@ test("merged raw query keys cannot replace a global setting's workbench backdrop
   await expect(
     page.getByRole("heading", { name: "Family", exact: true })
   ).toBeVisible()
-  const picker = page.getByRole("combobox", {
-    name: "Workbench tool",
+  const filesTab = page.getByRole("tab", {
+    name: "Files",
+    exact: true,
     includeHidden: true,
   })
-  await expect(picker).toContainText("Files")
+  const filesPanel = page.getByRole("tabpanel", {
+    name: "Files",
+    exact: true,
+    includeHidden: true,
+  })
+  await expect(filesTab).toHaveAttribute("aria-selected", "true")
+  await expect(filesPanel).toHaveCount(1)
+  await expect(filesPanel).not.toHaveAttribute("hidden")
+  await expect(filesPanel).toHaveAttribute("inert", "")
   await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
-  await expect(picker).toBeVisible()
-  await expect(picker).toContainText("Files")
+  await expect(filesPanel).toBeVisible()
+  await expect(filesPanel).not.toHaveAttribute("inert")
+  await expect(filesTab).toHaveAttribute("aria-selected", "true")
 })
 const research = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -208,16 +218,12 @@ async function openChat(page: Page) {
 async function openSettingsMenu(page: Page, mobile: boolean) {
   if (mobile) {
     await page
-      .getByRole("navigation", { name: "Mobile workspace", exact: true })
-      .getByRole("button", { name: "Agents", exact: true })
+      .getByRole("button", { name: "Toggle Sidebar", exact: true })
       .click()
-    await page
-      .getByRole("navigation", { name: "Agents and workspace", exact: true })
-      .getByRole("button", { name: "Settings for Bench", exact: true })
-      .click()
-  } else {
-    await page.getByRole("button", { name: /Pi.*Fixture family/ }).click()
   }
+  await page
+    .getByRole("button", { name: "Account menu for Bench", exact: true })
+    .click()
 }
 
 async function selectSettings(page: Page, name: string, mobile: boolean) {
@@ -333,8 +339,11 @@ for (const path of [
     await signIn(page)
     await page.goto(workbench)
     await expect(
-      page.getByRole("combobox", { name: "Workbench tool" })
-    ).toContainText("Files")
+      page.getByRole("tab", { name: "Files", exact: true, includeHidden: true })
+    ).toHaveAttribute("aria-selected", "true")
+    await expect(
+      page.getByRole("tabpanel", { name: "Files", exact: true })
+    ).toBeVisible()
     await page.goto(`${path}?panel=files&tab=trash&connections=connected`)
     await expect(
       page.getByRole("heading", {
@@ -361,8 +370,11 @@ for (const path of [
     await page.goBack()
     await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
     await expect(
-      page.getByRole("combobox", { name: "Workbench tool" })
-    ).toContainText("Files")
+      page.getByRole("tab", { name: "Files", exact: true, includeHidden: true })
+    ).toHaveAttribute("aria-selected", "true")
+    await expect(
+      page.getByRole("tabpanel", { name: "Files", exact: true })
+    ).toBeVisible()
   })
 }
 
@@ -449,8 +461,11 @@ test("global Security returns through settings to the workbench", async ({
   await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
   await expect(
-    page.getByRole("combobox", { name: "Workbench tool" })
-  ).toContainText("Files")
+    page.getByRole("tab", { name: "Files", exact: true, includeHidden: true })
+  ).toHaveAttribute("aria-selected", "true")
+  await expect(
+    page.getByRole("tabpanel", { name: "Files", exact: true })
+  ).toBeVisible()
 })
 
 test("global settings reject external, action, overlay and invalid resource return paths", async ({
