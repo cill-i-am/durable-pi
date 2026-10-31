@@ -307,14 +307,10 @@ function InlineChecklist({
           />
           <SaveState store={store} id={id} />
         </>
+      ) : state.error ? (
+        <p role="alert">{state.error}</p>
       ) : (
-        <>
-          {state.error ? (
-            <p role="alert">{state.error}</p>
-          ) : (
-            <DataLoading loading label="Loading saved checklist" />
-          )}
-        </>
+        <DataLoading loading label="Loading saved checklist" />
       )}
       <footer className="inline-checklist-footer">
         <Button variant="link" size="sm" onClick={open}>

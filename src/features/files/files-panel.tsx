@@ -126,12 +126,11 @@ export function FilesWorkbench({
             </AlertDescription>
           </Alert>
         )}
-        {state.loading && !state.files.length && !state.error && (
-          <DataLoading loading label="Loading files" />
-        )}
-        {!state.loading && !state.error && !visible.length && (
-          <EmptyFileCollection collection={tab} />
-        )}
+        <FileCollectionStatus
+          state={state}
+          collection={tab}
+          visible={visible.length}
+        />
         {!!visible.length && (
           <div className="file-explorer" data-selected={!!preview}>
             <nav className="file-explorer-list" aria-label="Agent files">
@@ -523,7 +522,7 @@ function FilePreview({
     <figure className="file-preview">
       <figcaption className="sr-only">Preview of {file.name}</figcaption>
       <DataLoading
-        loading={file.kind !== "image" && !loaded && !error}
+        loading={file.kind !== "image" && !loaded}
         label="Loading file preview"
         layout="code"
       >
@@ -650,4 +649,21 @@ function EmptyFileCollection({
       </EmptyHeader>
     </Empty>
   )
+}
+
+function FileCollectionStatus({
+  state,
+  collection,
+  visible,
+}: {
+  state: FilesState
+  collection: "files" | "trash"
+  visible: number
+}) {
+  if (state.error) return null
+  if (state.loading)
+    return state.files.length ? null : (
+      <DataLoading loading label="Loading files" />
+    )
+  return visible ? null : <EmptyFileCollection collection={collection} />
 }

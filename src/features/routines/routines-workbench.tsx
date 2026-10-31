@@ -322,8 +322,12 @@ function RoutinesWorkbenchOwner({
         {selected && !selectedRoutine ? (
           <Alert>
             <AlertDescription>
-              {actions.loading && !actions.error ? (
-                <DataLoading loading label="Loading routine" layout="form" />
+              {actions.loading ? (
+                <DataLoading
+                  loading={!actions.error}
+                  label="Loading routine"
+                  layout="form"
+                />
               ) : (
                 "This routine is unavailable."
               )}

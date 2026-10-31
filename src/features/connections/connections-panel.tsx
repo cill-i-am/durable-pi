@@ -110,14 +110,7 @@ export function ConnectionsPanel({
         </Button>
       </div>
       <div className="settings-panel-body">
-        {notice && (
-          <Alert>
-            <AlertDescription>{notice}</AlertDescription>
-          </Alert>
-        )}
-        {!state.ready && !state.error && (
-          <DataLoading loading label="Loading connections" />
-        )}
+        <ConnectionStatus notice={notice} ready={state.ready} />
         {assignment && onManageLibrary && (
           <Button
             variant="outline"
@@ -513,4 +506,20 @@ function ConnectionForm({
       Add connection
     </Button>
   )
+}
+
+function ConnectionStatus({
+  notice,
+  ready,
+}: {
+  notice: string | false
+  ready: boolean
+}) {
+  if (notice)
+    return (
+      <Alert>
+        <AlertDescription>{notice}</AlertDescription>
+      </Alert>
+    )
+  return ready ? null : <DataLoading loading label="Loading connections" />
 }

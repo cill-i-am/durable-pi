@@ -349,7 +349,7 @@ function Workspace({
             )}
             {collection ? (
               <AgentCollection
-                loading={catalog.loading && !catalog.error}
+                loading={catalog.loading}
                 agents={catalog.agents}
                 archived={archived}
                 query={location.search.q ?? ""}

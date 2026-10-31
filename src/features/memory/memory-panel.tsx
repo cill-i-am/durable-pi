@@ -146,7 +146,7 @@ export function MemoryWorkbench({
                   state.memory.notes.map((note) => (
                     <MemoryNote key={note.path} note={note} agentId={agentId} />
                   ))
-                ) : !stateError && state ? (
+                ) : !stateError ? (
                   <Empty>
                     <EmptyHeader>
                       <EmptyTitle>No saved notes</EmptyTitle>

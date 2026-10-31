@@ -151,7 +151,7 @@ export function ExecutionWorkbench({
           {!execution.loaded && !execution.error && (
             <DataLoading loading label="Loading code runs" />
           )}
-          {execution.loaded && !execution.error && !execution.runs.length && (
+          {execution.loaded && !execution.runs.length && (
             <p className="text-xs text-muted-foreground">
               Run code above to see the result here.
             </p>
