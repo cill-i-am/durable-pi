@@ -305,7 +305,6 @@ function Workspace({
           locked={navigationLocked || editor !== null || archiveTarget !== null}
           onAction={act}
           onSelect={selectAgent}
-          onSettings={setSettings}
           onCollection={location.openAgents}
           onAgentSettings={(agent) => {
             if (navigationLocked || editor !== null || archiveTarget !== null)

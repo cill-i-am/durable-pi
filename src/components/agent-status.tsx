@@ -64,7 +64,7 @@ export function AgentStatusMarker({
       data-agent-status={state}
       aria-hidden="true"
     >
-      <Icon />
+      <Icon className="size-full" />
     </span>
   )
 }

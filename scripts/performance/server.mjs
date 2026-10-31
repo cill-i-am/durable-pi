@@ -328,6 +328,11 @@ async function journeyPost(req, res, path, sessionId, session) {
             status: "done",
             error: null,
             created_at: new Date().toISOString(),
+            provenance: {
+              author: { kind: "human", id: "benchmark-owner" },
+              conversationId: "fixture-conversation",
+              recipients: [{ kind: "agent", id: profile.id }],
+            },
             attachments: images,
             replyFiles: images.filter((file) => file.kind === "image"),
           },
