@@ -65,12 +65,6 @@ try {
     format: "esm",
     target: "es2022",
     external: ["cloudflare:*", "node:*"],
-    alias: {
-      "@alchemy.run/cloudflare/Workers": join(
-        dirname(requireRuntime.resolve("alchemy")),
-        "Cloudflare/Workers/DurableObjectState.js"
-      ),
-    },
     logLevel: "error",
   })
   const sourceHashes = Object.fromEntries(

@@ -1,7 +1,7 @@
 import {
   DurableObjectState as AlchemyDurableObjectState,
   fromDurableObjectState,
-} from "@alchemy.run/cloudflare/Workers"
+} from "@alchemy.run/cloudflare/Workers/DurableObjectState"
 import * as AlchemyDrizzle from "@alchemy.run/drizzle/Cloudflare"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import { createModels } from "@earendil-works/pi-ai"
@@ -93,6 +93,14 @@ const microtasks = async (rounds = 200) => {
 }
 const reasonTags = <TValue, TError>(exit: Exit.Exit<TValue, TError>) =>
   Exit.isFailure(exit) ? exit.cause.reasons.map((reason) => reason._tag) : []
+
+const rollbackSettlementFailure = <TValue, TError>(
+  mode: string,
+  exit: Exit.Exit<TValue, TError>
+) =>
+  mode === "rollback-settlement" && Exit.isFailure(exit)
+    ? Cause.pretty(exit.cause)
+    : undefined
 
 const conversationMembersProbe = Effect.fn("Test.conversationMembers")(
   function* (db: Sqlite) {
@@ -599,21 +607,36 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         return { reasons: reasonTags(exit), finalized, rows: yield* read() }
       }
       if (mode === "stock-suspension") {
+        const entered = yield* Deferred.make<void>()
         const gate = yield* Deferred.make<void>()
         let resumed = false
-        const exit = yield* Effect.exit(
-          db.transaction(() =>
-            Effect.gen(function* () {
-              yield* insert(1, "rolled-back")
-              yield* Deferred.await(gate)
-              resumed = true
-              yield* insert(2, "orphan")
-            })
-          )
+        // Drizzle now delegates to the asynchronous Effect SQL transaction.
+        // Release from a sibling fiber, then prove post-suspension writes roll back.
+        const task = yield* Effect.forkScoped(
+          db
+            .transaction(() =>
+              Effect.gen(function* () {
+                yield* insert(1, "rolled-back")
+                yield* Deferred.succeed(entered, undefined)
+                yield* Deferred.await(gate)
+                resumed = true
+                yield* insert(2, "also-rolled-back")
+                return yield* Effect.fail("rollback after suspension")
+              })
+            )
+            .pipe(Effect.provideService(Scheduler.Scheduler, scheduler))
         )
+        yield* Deferred.await(entered)
+        const pendingBeforeRelease = task.pollUnsafe() === undefined
         yield* Deferred.succeed(gate, undefined)
+        const exit = yield* Fiber.await(task)
         yield* Effect.promise(() => microtasks())
-        return { reasons: reasonTags(exit), resumed, rows: yield* read() }
+        return {
+          reasons: reasonTags(exit),
+          pendingBeforeRelease,
+          resumed,
+          rows: yield* read(),
+        }
       }
       if (mode === "app-rollback-lifecycle-write") {
         const lifecycle = new Lifecycle(this)
@@ -855,6 +878,7 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         admitted: beforeCommit,
         finalized,
         reasons: reasonTags(exit),
+        failure: rollbackSettlementFailure(mode, exit),
         outsideRows,
         rows: yield* read(),
       }
