@@ -100,11 +100,8 @@ effectIt.effect(
         expect.objectContaining({
           _tag: "Die",
           defect: expect.objectContaining({
-            _tag: "Fail",
-            error: expect.objectContaining({
-              _tag: "TerminalFailure",
-              message: expect.stringContaining("observation window"),
-            }),
+            _tag: "TerminalFailure",
+            message: expect.stringContaining("observation window"),
           }),
         })
       )
@@ -213,7 +210,7 @@ for (const phase of ["start", "read", "state"] as const) {
         expect(reasons(exit)).toContainEqual(
           expect.objectContaining({
             _tag: "Die",
-            defect: expect.objectContaining({ _tag: "Fail", error: failure }),
+            defect: failure,
           })
         )
         expect(admissions).toBe(1)

@@ -45,6 +45,7 @@ const receipt: MutationReceipt = {
   eventId: "00000000-0000-4000-8000-000000000001:1",
 }
 const LegacyOperation = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "working-objects.operation",
   scope: "session",
   family: true,
@@ -56,6 +57,7 @@ const LegacyOperation = defineDocFamily({
   }),
 })
 const CurrentOperation = defineDocFamily({
+  checkpointWhen: () => false,
   kind: "working-objects.operation",
   scope: "session",
   family: true,
@@ -135,6 +137,21 @@ it.each(["open", "applied", "cancelled"] as const)(
       ).toBe(value === "open" ? "admit" : "replay")
   }
 )
+
+it("retains pre-upgrade cancellation fencing and saved versions", () => {
+  const saved = {
+    ...newObjectOperation(),
+    libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
+    piVersion: "1.3.0",
+    value: "cancelled",
+  }
+  expect(() =>
+    decideObjectOperation(saved, { type: "INSPECT", digest: "same" })
+  ).toThrow("cancelled")
+  const repeated = decideObjectOperation(saved, { type: "CANCEL" })
+  expect(repeated.changed).toBe(false)
+  expect(repeated.state).toEqual(saved)
+})
 
 it("rejects unknown versions, impossible records, malformed events and illegal commits", () => {
   for (const field of [
@@ -251,6 +268,7 @@ it("rejects future native document versions without replacing their saved facts"
   const f = await fixture(),
     operationId = crypto.randomUUID()
   const FutureOperation = defineDocFamily({
+    checkpointWhen: () => false,
     kind: "working-objects.operation",
     scope: "session",
     family: true,
@@ -533,6 +551,7 @@ it.each([
       mutation = input()
     await Effect.runPromise(f.objects.mutate(mutation, user))
     const RawOperation = defineDocFamily({
+      checkpointWhen: () => false,
       kind: "working-objects.operation",
       scope: "session",
       family: true,
@@ -571,6 +590,7 @@ it("rejects partially versioned legacy control without dropping its unknown fiel
   const f = await fixture(),
     operationId = crypto.randomUUID()
   const UnknownLegacy = defineDocFamily({
+    checkpointWhen: () => false,
     kind: "working-objects.operation",
     scope: "session",
     family: true,

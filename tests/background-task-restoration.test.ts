@@ -34,6 +34,7 @@ import { DelegationFailure } from "../src/delegation/contracts"
 import { resolveRoute } from "../src/inference/policy"
 
 const LegacyDocument = defineDoc({
+  checkpointWhen: () => false,
   kind: "delegation.background",
   version: 1,
   scope: "session",
@@ -183,8 +184,8 @@ it("cold reopens a v1 document, commits its migration, and preserves native iden
     expect(migrated).toMatchObject({
       schemaVersion: 2,
       workflowVersion: 1,
-      libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
-      piVersion: "1.3.0",
+      libraryVersion: "6.0.0-alpha.71/1.0.0-alpha.10",
+      piVersion: "1.4.0",
       handoff: old.handoff,
       revision: old.revision,
       controls: old.controls,
@@ -239,6 +240,17 @@ it("cold reopens a v1 document, commits its migration, and preserves native iden
   } finally {
     await h.close(context)
   }
+})
+
+it("restores pre-upgrade library versions without changing native child or submission identities", () => {
+  const saved = {
+    ...migrateBackgroundState(legacy()),
+    libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
+    piVersion: "1.3.0",
+  }
+  expect(restoreBackgroundState(JSON.parse(JSON.stringify(saved)))).toEqual(
+    saved
+  )
 })
 
 it("preserves an empty v1 document without manufacturing a group", async () => {

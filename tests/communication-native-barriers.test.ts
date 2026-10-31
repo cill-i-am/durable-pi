@@ -413,7 +413,7 @@ it("migrates legacy execution data in place and retains its exhausted budget on 
     expect(migrated).toMatchObject({
       schemaVersion: 1,
       workflowVersion: 1,
-      nativeVersion: "pi-durable@1.3.0",
+      nativeVersion: "pi-durable@1.4.0",
       conversation: 91,
       provider: "pinned-provider",
       requests: 2,

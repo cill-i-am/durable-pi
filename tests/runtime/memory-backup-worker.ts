@@ -4,7 +4,8 @@ import {
   type LifecycleJobContext,
 } from "agents/lifecycle"
 import { DurableObject } from "cloudflare:workers"
-import { Effect, Exit, Layer, Scope, type Crypto } from "effect"
+import { Effect, Exit, Layer, Scope } from "effect"
+import type { Digest } from "effect/crypto"
 
 import { BackupRunner } from "../../src/memory/adapters/backup-lifecycle"
 import { SqliteBackupStatus } from "../../src/memory/adapters/backup-status"
@@ -40,7 +41,7 @@ type Requirements =
   | MemoryRepository
   | MemoryBackupStatus
   | BackupStore
-  | Crypto.Crypto
+  | Digest.Digest
 const pause = (ms: number) => new Promise<void>((done) => setTimeout(done, ms))
 
 /** Local durable R2-equivalent: one atomic conditional write in a separate DO.

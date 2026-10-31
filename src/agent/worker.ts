@@ -2913,7 +2913,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   private piStorage?: Storage
   readonly harness: PiHarness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: async ({ storage, context }) => {
+    harness: async ({ storage, context, onWake }) => {
       this.piStorage = storage
       await this.run(this.active())
       this.installRemoteTools(
@@ -3248,6 +3248,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 }
               : undefined
           }),
+          onWake,
           onReport: (error) => reportHarness(error, "personal"),
         },
         context

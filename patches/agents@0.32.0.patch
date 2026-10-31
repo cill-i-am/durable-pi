@@ -1,29 +1,25 @@
 diff --git a/dist/harness/pi/index.d.ts b/dist/harness/pi/index.d.ts
-index 32a6fab..ba8bbeb 100644
 --- a/dist/harness/pi/index.d.ts
 +++ b/dist/harness/pi/index.d.ts
-@@ -145,6 +145,10 @@ type PiSessionDefaults = {
+@@ -156,6 +156,8 @@
  };
  /** `PiHarness`'s options. Only `harness`, which opens pi, is required. */
  type PiHarnessOptions = {
-+  /** Coordinates every prepared storage operation with other clients sharing
-+   * the object's SQLite connection. The same decorated store is retained by
-+   * PiHarness and passed to the harness factory. Journal ownership is unchanged. */
++  /** Coordinates Pi storage with clients sharing the object SQLite connection. */
 +  readonly coordinateStorage?: (storage: SqliteStorage) => SqliteStorage;
    /** Opens pi's `Harness` over the storage this object prepared. */ readonly harness: PiHarnessFactory /** What a new session starts with. */;
    readonly defaults?: PiSessionDefaults;
  };
 diff --git a/dist/harness/pi/index.js b/dist/harness/pi/index.js
-index 9fceb9c..9722aec 100644
 --- a/dist/harness/pi/index.js
 +++ b/dist/harness/pi/index.js
-@@ -527,7 +527,8 @@ async function _open() {
- 	return _classPrivateFieldGet2(_opening, this);
+@@ -447,7 +447,8 @@
  }
- async function _doOpen() {
+ async function _doOpen(onClose) {
+ 	await _classPrivateFieldGet2(_lastClose, this);
 -	const storage = await openPiSessionStore(this.lifecycle.storage);
 +	const prepared = await openPiSessionStore(this.lifecycle.storage);
 +	const storage = _classPrivateFieldGet2(_options, this).coordinateStorage?.(prepared) ?? prepared;
  	const pi = await _classPrivateFieldGet2(_options, this).harness({
  		storage,
- 		context: BG
+ 		context: BG,

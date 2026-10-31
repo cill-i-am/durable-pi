@@ -25,6 +25,7 @@ import type { BackgroundTaskLedger } from "../background-task-ledger"
 import { delegationCommit, delegationNative, backgroundNative } from "./interop"
 
 export const BackgroundDocument = defineDoc({
+  checkpointWhen: () => false,
   kind: "delegation.background",
   version: 2,
   migrate: (raw, version) => {

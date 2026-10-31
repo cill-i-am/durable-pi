@@ -7,9 +7,9 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild")
-const workerd = requireAlchemy("workerd")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild")
+const workerd = requireRuntime("workerd")
 const dir = await mkdtemp(join(tmpdir(), "durable-pi-mailbox-"))
 let process,
   output = ""
@@ -93,7 +93,7 @@ try {
     logLevel: "error",
   })
   const schema = join(
-    dirname(requireAlchemy.resolve("workerd")),
+    dirname(requireRuntime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )

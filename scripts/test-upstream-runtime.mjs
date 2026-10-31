@@ -6,9 +6,9 @@ import { createServer } from "node:net"
 import { dirname, join } from "node:path"
 const root = process.cwd(),
   req = createRequire(root + "/package.json"),
-  alchemy = createRequire(req.resolve("alchemy"))
-const { build } = alchemy("esbuild"),
-  workerd = alchemy("workerd")
+  runtime = req
+const { build } = runtime("esbuild"),
+  workerd = runtime("workerd")
 const dir = await mkdtemp("/tmp/upstream-rpc-control-")
 let child,
   output = ""
@@ -28,7 +28,7 @@ try {
     logLevel: "error",
   })
   const schema = join(
-    dirname(alchemy.resolve("workerd")),
+    dirname(runtime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )

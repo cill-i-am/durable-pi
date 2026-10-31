@@ -1,14 +1,14 @@
+import {
+  DurableObjectState as AlchemyDurableObjectState,
+  fromDurableObjectState,
+} from "@alchemy.run/cloudflare/Workers"
+import * as AlchemyDrizzle from "@alchemy.run/drizzle/Cloudflare"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import { createModels } from "@earendil-works/pi-ai"
 import { Harness, createRegistry, defineDoc } from "@earendil-works/pi-durable"
 import * as SqliteDriver from "@effect/sql-sqlite-do/SqliteClient"
 import { PiHarness, openPiSessionStore } from "agents/harness/pi"
 import { Lifecycle } from "agents/lifecycle"
-import {
-  DurableObjectState as AlchemyDurableObjectState,
-  fromDurableObjectState,
-} from "alchemy/Cloudflare/Workers"
-import * as AlchemyDrizzle from "alchemy/Drizzle/Cloudflare"
 import { RuntimeContext as AlchemyRuntimeContext } from "alchemy/RuntimeContext"
 import { DurableObject } from "cloudflare:workers"
 import { count, eq } from "drizzle-orm"
@@ -75,6 +75,7 @@ class Invocation extends Context.Service<Invocation, { marker: string }>()(
   "DrizzleProbeInvocation"
 ) {}
 const ProbeDocument = defineDoc({
+  checkpointWhen: () => false,
   kind: "drizzle.probe",
   scope: "session",
   version: 1,
@@ -285,7 +286,7 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
               set: (id) => Effect.succeed(id),
             })
           )
-        : yield* DrizzleEffect.makeWithDefaults({ storage })
+        : yield* DrizzleEffect.makeWithDefaults({})
       const guarded = guardedMode
         ? yield* makeDurableObjectSqlite(nativeFault ? wrapped : storage)
         : undefined

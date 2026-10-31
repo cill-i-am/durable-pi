@@ -7,6 +7,12 @@ import {
 } from "xstate"
 import { standardSchemaValidator } from "xstate/validation"
 
+import {
+  runtimeLibraryVersion,
+  nativePiVersion,
+  StoredLibraryVersion,
+  StoredPiVersion,
+} from "../shared/runtime-versions"
 import { MutationReceipt, ObjectFailure } from "./contracts"
 
 const Context = Schema.Struct({
@@ -103,8 +109,8 @@ export const objectOperationMachine = setupEffect({
 export const ObjectOperationRecord = Schema.Struct({
   schemaVersion: Schema.Literal(2),
   workflowVersion: Schema.Literal(1),
-  libraryVersion: Schema.Literal("6.0.0-alpha.68/1.0.0-alpha.8"),
-  piVersion: Schema.Literal("1.3.0"),
+  libraryVersion: StoredLibraryVersion,
+  piVersion: StoredPiVersion,
   value: Schema.Literals(["open", "applied", "cancelled"]),
   ...Context.fields,
 }).check(
@@ -134,8 +140,8 @@ export function restoreObjectOperation(saved: unknown) {
   if (
     versions.schemaVersion !== 2 ||
     versions.workflowVersion !== 1 ||
-    versions.libraryVersion !== "6.0.0-alpha.68/1.0.0-alpha.8" ||
-    versions.piVersion !== "1.3.0"
+    !Schema.is(StoredLibraryVersion)(versions.libraryVersion) ||
+    !Schema.is(StoredPiVersion)(versions.piVersion)
   )
     throw incompatibleObjectOperation()
   return Schema.decodeUnknownSync(ObjectOperationRecord)(saved)
@@ -144,8 +150,8 @@ export function restoreObjectOperation(saved: unknown) {
 export const newObjectOperation = (): ObjectOperationRecord => ({
   schemaVersion: 2,
   workflowVersion: 1,
-  libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
-  piVersion: "1.3.0",
+  libraryVersion: runtimeLibraryVersion,
+  piVersion: nativePiVersion,
   value: "open",
   digest: "",
   receipt: null,

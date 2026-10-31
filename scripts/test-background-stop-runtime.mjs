@@ -6,9 +6,9 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild")
-const workerd = requireAlchemy("workerd")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild")
+const workerd = requireRuntime("workerd")
 const directory = await mkdtemp(join(tmpdir(), "durable-pi-background-stop-"))
 const server = createServer()
 await new Promise((done) => server.listen(0, "127.0.0.1", done))
@@ -64,15 +64,15 @@ try {
     target: "es2022",
     external: ["cloudflare:*", "node:*"],
     alias: {
-      "alchemy/Cloudflare/Workers": join(
-        dirname(requireAlchemy.resolve("alchemy")),
+      "@alchemy.run/cloudflare/Workers": join(
+        dirname(requireRuntime.resolve("alchemy")),
         "Cloudflare/Workers/DurableObjectState.js"
       ),
     },
     logLevel: "error",
   })
   const schema = join(
-    dirname(requireAlchemy.resolve("workerd")),
+    dirname(requireRuntime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )

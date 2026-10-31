@@ -7,9 +7,9 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
-const { build } = requireAlchemy("esbuild")
-const workerd = requireAlchemy("workerd")
+const requireRuntime = createRequire(import.meta.url)
+const { build } = requireRuntime("esbuild")
+const workerd = requireRuntime("workerd")
 const directory = await mkdtemp(join(tmpdir(), "durable-pi-routines-"))
 const server = createServer()
 await new Promise((done) => server.listen(0, "127.0.0.1", done))
@@ -66,8 +66,8 @@ try {
     target: "es2022",
     external: ["cloudflare:*", "node:*"],
     alias: {
-      "alchemy/Cloudflare/Workers": join(
-        dirname(requireAlchemy.resolve("alchemy")),
+      "@alchemy.run/cloudflare/Workers": join(
+        dirname(requireRuntime.resolve("alchemy")),
         "Cloudflare/Workers/DurableObjectState.js"
       ),
     },
@@ -98,7 +98,7 @@ try {
     })
   )
   const schema = join(
-    dirname(requireAlchemy.resolve("workerd")),
+    dirname(requireRuntime.resolve("workerd")),
     "..",
     "workerd.capnp"
   )
@@ -313,7 +313,7 @@ const config :Workerd.Config = (
     }
   }
   const version = JSON.parse(
-    await readFile(requireAlchemy.resolve("workerd/package.json"), "utf8")
+    await readFile(requireRuntime.resolve("workerd/package.json"), "utf8")
   ).version
   console.log(
     `PASS B11 actual RoutineRunner/Routines/Webhooks/Conversation/SQLite/Pi ${authorityOnly ? "Pause/Stop authority" : "retained discovery, original run/event/turn and native receipt identities, dedupe, Pause/Stop and two SIGKILL/restarts"}; workerd ${version}. Synthetic authority/provider; no live external execution or full PersonalAgent authorization claim.`

@@ -1,4 +1,4 @@
-import * as Drizzle from "alchemy/Drizzle/D1"
+import * as Drizzle from "@alchemy.run/drizzle/D1"
 import { eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 

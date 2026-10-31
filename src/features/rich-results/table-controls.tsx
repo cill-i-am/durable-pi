@@ -1,4 +1,4 @@
-import type { Table } from "@tanstack/react-table"
+import type { ReactTable } from "@tanstack/react-table"
 import { Button } from "@workspace/ui/components/button"
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
@@ -30,6 +30,8 @@ import {
   SelectItem,
 } from "@/components/ui/select"
 import type { AnswerProps } from "@/rich-results/catalog"
+
+import type { answerTableFeatures } from "./table-features"
 
 type Row = AnswerProps<"DataTable">["rows"][number]
 type Column = AnswerProps<"DataTable">["columns"][number]
@@ -77,7 +79,7 @@ export function TableControls({
   columns,
   rows,
 }: {
-  table: Table<Row>
+  table: ReactTable<typeof answerTableFeatures, Row>
   columns: Column[]
   rows: Row[]
 }) {
@@ -321,9 +323,9 @@ export function TableControls({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {!!table.getState().columnFilters.length && (
+      {!!table.state.columnFilters.length && (
         <div className="flex flex-wrap gap-2" aria-label="Active table filters">
-          {table.getState().columnFilters.map((filter) => {
+          {table.state.columnFilters.map((filter) => {
             const value = filter.value as ValueFilter
             const label = columns.find(
               (column) => column.key === filter.id

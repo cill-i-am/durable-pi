@@ -159,18 +159,23 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const release = yield* Deferred.make<void>()
+      const firstOpen = yield* Deferred.make<void>()
+      const secondOpen = yield* Deferred.make<void>()
       let opens = 0
       const actor = yield* createEffectActor(
         terminalSocketMachine({
           open: () => {
             opens++
-            return Effect.never
+            return Deferred.succeed(
+              opens === 1 ? firstOpen : secondOpen,
+              undefined
+            ).pipe(Effect.andThen(Effect.never))
           },
           close: () => Deferred.await(release),
         })
       )
       yield* send(actor, { type: "CONNECT" })
-      yield* waitFor(actor, () => opens === 1)
+      yield* Deferred.await(firstOpen)
       yield* send(actor, { type: "DISCONNECT" })
       yield* waitFor(actor, (value) => value.matches("closing"))
       yield* send(actor, { type: "CONNECT" })
@@ -178,7 +183,7 @@ it.effect(
       yield* Deferred.succeed(release, undefined)
       yield* waitFor(actor, (value) => value.matches("idle"))
       yield* send(actor, { type: "CONNECT" })
-      yield* waitFor(actor, () => opens === 2)
+      yield* Deferred.await(secondOpen)
     }).pipe(Effect.scoped)
 )
 it.effect(

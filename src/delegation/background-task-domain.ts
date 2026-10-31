@@ -1,5 +1,11 @@
 import { Schema } from "effect"
 
+import {
+  runtimeLibraryVersion,
+  nativePiVersion,
+  StoredLibraryVersion,
+  StoredPiVersion,
+} from "../shared/runtime-versions"
 import { BackgroundHandoff } from "./background"
 import { backgroundRejected } from "./background-domain"
 import { Control, NativeId, type Group, type TaskBrief } from "./contracts"
@@ -56,8 +62,8 @@ export const BackgroundSubmission = Schema.Struct({
 export const BackgroundState = Schema.Struct({
   schemaVersion: Schema.Literal(2),
   workflowVersion: Schema.Literal(1),
-  libraryVersion: Schema.Literal("6.0.0-alpha.68/1.0.0-alpha.8"),
-  piVersion: Schema.Literal("1.3.0"),
+  libraryVersion: StoredLibraryVersion,
+  piVersion: StoredPiVersion,
   handoff: BackgroundHandoff,
   outcome: Schema.Literals(["working", "completed", "cancelled"]),
   authority: Schema.Literals(["active", "revoked"]),
@@ -86,8 +92,8 @@ export function migrateBackgroundState(raw: unknown): BackgroundState {
   return restoreBackgroundState({
     schemaVersion: 2,
     workflowVersion: 1,
-    libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
-    piVersion: "1.3.0",
+    libraryVersion: runtimeLibraryVersion,
+    piVersion: nativePiVersion,
     handoff: old.handoff,
     outcome: old.stopped ? "cancelled" : old.sealed ? "completed" : "working",
     authority: old.stopped || old.sealed ? "revoked" : "active",

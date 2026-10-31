@@ -283,7 +283,7 @@ it("keeps compound native failures when releasing the joined owner also fails", 
   expect(Cause.hasInterrupts(exit.cause)).toBe(true)
   expect(
     exit.cause.reasons.filter(
-      (reason) => reason._tag === "Fail" && reason.error === releaseFailure
+      (reason) => reason._tag === "Die" && reason.defect === releaseFailure
     )
   ).toHaveLength(1)
   const native = exit.cause.reasons.flatMap((reason) =>

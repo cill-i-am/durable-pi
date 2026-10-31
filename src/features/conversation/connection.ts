@@ -14,11 +14,9 @@ import {
   closeConversationResponse,
 } from "./connection-response"
 
-export function conversationConnection(
-  agentId: string
-): SubscribeConnectionAdapter {
+export function conversationConnection(agentId: string) {
   return {
-    subscribe(signal) {
+    subscribe(signal?: AbortSignal) {
       return subscribeConversation(
         async function* (cursor, owned) {
           let responseOwner:
@@ -76,9 +74,13 @@ export function conversationConnection(
         markReady
       )
     },
-    async send(_messages, data, signal) {
+    async send(
+      _messages: Parameters<SubscribeConnectionAdapter["send"]>[0],
+      data: Parameters<SubscribeConnectionAdapter["send"]>[1],
+      signal?: AbortSignal
+    ) {
       const input = Schema.decodeUnknownSync(SendInput)(data)
       await api(agentUrl(agentId, "send"), input, signal)
     },
-  }
+  } satisfies SubscribeConnectionAdapter
 }

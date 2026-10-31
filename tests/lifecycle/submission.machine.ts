@@ -9,6 +9,13 @@ import {
 } from "xstate"
 import { standardSchemaValidator } from "xstate/validation"
 
+import {
+  runtimeLibraryVersion,
+  nativePiVersion,
+  StoredLibraryVersion,
+  StoredPiVersion,
+} from "../../src/shared/runtime-versions"
+
 const counter = Schema.Number.check(
   Schema.isInt(),
   Schema.isGreaterThanOrEqualTo(0)
@@ -117,8 +124,8 @@ function owns(
 export const SubmissionState = Schema.Struct({
   schemaVersion: Schema.Literal(1),
   workflowVersion: Schema.Literal(1),
-  libraryVersion: Schema.Literal("6.0.0-alpha.68/1.0.0-alpha.8"),
-  piVersion: Schema.Literal("1.3.0"),
+  libraryVersion: StoredLibraryVersion,
+  piVersion: StoredPiVersion,
   value: Schema.Literals(["ready", "pending", "complete", "unconfirmed"]),
   context: Context,
 }).check(
@@ -147,8 +154,8 @@ export function newSubmission(
   return {
     schemaVersion: 1,
     workflowVersion: 1,
-    libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
-    piVersion: "1.3.0",
+    libraryVersion: runtimeLibraryVersion,
+    piVersion: nativePiVersion,
     value: "ready",
     context: snapshot.context,
   }

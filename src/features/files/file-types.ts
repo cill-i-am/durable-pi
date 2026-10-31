@@ -1,3 +1,4 @@
+import { EffectFailure } from "@xstate/effect"
 import { Cause, Schema } from "effect"
 
 export const UploadRequest = Schema.Struct({
@@ -18,6 +19,7 @@ export type UploadAttempt = typeof UploadAttempt.Type
 export type FileAction = "trash" | "restore" | "rename" | "extract"
 
 export function fileFailure(error: unknown, fallback: string): string {
+  if (EffectFailure.is(error)) return fileFailure(error.cause, fallback)
   if (Cause.isCause(error)) {
     const reason = error.reasons.find(
       (value) => value._tag === "Fail" || value._tag === "Die"

@@ -616,7 +616,17 @@ it("retains both target lookup failure and a CDP cleanup defect", async () => {
   f.detach.mockRejectedValue(new Error("Private CDP release failure"))
   const exit = await Effect.runPromiseExit(implementation.capture(session, []))
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
-  expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(true)
+  if (Exit.isFailure(exit)) {
+    const defects = exit.cause.reasons.flatMap((reason) =>
+      reason._tag === "Die" ? [reason.defect] : []
+    )
+    expect(defects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ _tag: "BrowserUnavailable" }),
+        expect.objectContaining({ message: "Private CDP release failure" }),
+      ])
+    )
+  }
   expect(f.browser.disconnect).toHaveBeenCalledOnce()
 })
 

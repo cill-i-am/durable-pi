@@ -78,7 +78,7 @@ function fixture(bucket = new Bucket()) {
       | MemoryRepository
       | MemoryBackupStatus
       | import("../src/memory/backup-store").BackupStore
-      | import("effect").Crypto.Crypto
+      | import("effect/crypto").Digest.Digest
     >
   ) => Effect.runPromise(work.pipe(Effect.provide(layer)))
   return { db, memory, status, bucket, layer, run }
@@ -365,11 +365,8 @@ it("a checkpoint transport failure joins a late snapshot cleanup defect and pres
         expect.objectContaining({
           _tag: "Die",
           defect: expect.objectContaining({
-            _tag: "Fail",
-            error: expect.objectContaining({
-              _tag: "BackupFailure",
-              reason: "transport",
-            }),
+            _tag: "BackupFailure",
+            reason: "transport",
           }),
         }),
       ])
