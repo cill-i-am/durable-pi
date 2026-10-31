@@ -46,7 +46,6 @@ export function modelDefaultsMachine(work: ModelDefaultsWork) {
       context: ModelDefaultDraft,
       events: {
         SOURCE: ModelDefaultSource,
-        JOB: ModelDefaultSource,
         CHANGE: Schema.Struct({ draft: ModelSettings }),
         CANCEL: Schema.Struct({}),
         SAVE: Schema.Struct({}),
@@ -108,22 +107,6 @@ export function modelDefaultsMachine(work: ModelDefaultsWork) {
     states: {
       ready: {
         on: {
-          JOB: ({ context, event }) =>
-            !context.dirty
-              ? {
-                  context: {
-                    ...context,
-                    job: event.job,
-                    draft: event.draft,
-                    baseline: event.draft,
-                    settingsRevision: event.settingsRevision,
-                    editRevision: context.editRevision + 1,
-                    saved: false,
-                    error: "",
-                    failure: null,
-                  },
-                }
-              : undefined,
           CANCEL: ({ context }) => ({
             context: {
               ...discardModelDefaultDraft(context),
