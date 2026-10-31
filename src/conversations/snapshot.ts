@@ -80,13 +80,16 @@ export function conversationSnapshot<TError, TRequirements>(
         activity: saved,
         steering: (members.get(turn.id) ?? [])
           .filter((member) => member.parent_id)
-          .map(({ id, text, delivery, attachments, provenance }) => ({
-            id,
-            text,
-            delivery,
-            attachments,
-            provenance,
-          })),
+          .map(
+            ({ id, text, created_at, delivery, attachments, provenance }) => ({
+              id,
+              text,
+              created_at,
+              delivery,
+              attachments,
+              provenance,
+            })
+          ),
       }
     })
     return {

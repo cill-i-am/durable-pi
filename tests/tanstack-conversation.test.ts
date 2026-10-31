@@ -34,6 +34,27 @@ const text = (value: string) => ({
 const projection = (processor: StreamProcessor) =>
   conversationView(processor.getMessages(), metadata)
 const clients: ChatClient[] = []
+it("retains reply and steering timestamps and authors through the client projection", () => {
+  const activity = [
+    { ...text("First response"), created_at: "2026-10-12T00:01:00Z" },
+    {
+      id: "steer:two",
+      type: "steer" as const,
+      text: "Correction",
+      created_at: "2026-10-12T00:02:00Z",
+      provenance: {
+        author: { kind: "agent" as const, id: "helper" },
+        conversationId: "private",
+        recipients: [{ kind: "agent" as const, id: "main" }],
+      },
+    },
+  ]
+  const restored = conversationView(
+    chatMessages([{ ...base, activity }]),
+    metadata
+  )
+  expect(restored.turns[0]?.activity).toEqual(activity)
+})
 afterEach(() => {
   for (const client of clients.splice(0)) client.dispose()
   vi.unstubAllGlobals()

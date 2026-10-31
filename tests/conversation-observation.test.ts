@@ -264,6 +264,7 @@ it("normalizes historical archive identities, steering, consumed inputs and live
     id: "steer:child",
     type: "steer",
     text: "use blue",
+    created_at: child.created_at,
     attachments: [],
   })
   expect(
