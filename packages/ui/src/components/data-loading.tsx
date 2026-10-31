@@ -2,7 +2,7 @@
 
 import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import { cn } from "@workspace/ui/lib/utils"
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { Skeleton, SkulletProvider } from "skullet/react"
 
 // Keep loading policy here so the rollout can be tuned or reverted in one place.
@@ -53,13 +53,24 @@ export function DataLoading({
   sample?: ReactNode
   className?: string
 }) {
+  const reduced = useUIReducedMotion()
   return (
     <Skeleton
       loading={loading}
+      style={
+        { "--skullet-animation": reduced ? "none" : "shimmer" } as CSSProperties
+      }
       label={label}
       className={cn("data-loading", className)}
     >
-      {loading ? (sample ?? <LoadingSample layout={layout} />) : children}
+      {loading ? (
+        // Notify Skullet's sample observer when motion changes without a resize.
+        <div data-motion-reduced={reduced ? "true" : undefined}>
+          {sample ?? <LoadingSample layout={layout} />}
+        </div>
+      ) : (
+        children
+      )}
     </Skeleton>
   )
 }

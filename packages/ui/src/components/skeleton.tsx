@@ -16,6 +16,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
       {...props}
     >
       <SkeletonBox
+        key={reduced ? "reduced" : "animated"}
         width="100%"
         height="100%"
         radius="inherit"

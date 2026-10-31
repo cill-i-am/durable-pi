@@ -36,14 +36,33 @@ for (const theme of ["light", "dark"] as const) {
       .toBeGreaterThan(0)
     await expect(loading.getByRole("button")).toHaveCount(0)
     await expect(page.getByText("No files yet", { exact: true })).toHaveCount(0)
-    expect(
-      await loading.evaluate(
-        (node) =>
-          node
-            .getAnimations({ subtree: true })
-            .filter((animation) => animation.playState === "running").length
-      )
-    ).toBe(0)
+    const animations = () =>
+      loading
+        .locator("[skullet-rect]")
+        .evaluateAll((nodes) =>
+          nodes.reduce(
+            (count, node) =>
+              count +
+              node
+                .getAnimations()
+                .filter((animation) => animation.playState === "running")
+                .length,
+            0
+          )
+        )
+    expect(await animations()).toBe(0)
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    expect(await animations()).toBe(0)
+    await page.evaluate(() => {
+      localStorage.setItem("durable-pi:activity-motion", "on")
+      window.dispatchEvent(new Event("durable-pi:activity-motion-change"))
+    })
+    await expect.poll(animations).toBeGreaterThan(0)
+    await page.evaluate(() => {
+      localStorage.setItem("durable-pi:activity-motion", "off")
+      window.dispatchEvent(new Event("durable-pi:activity-motion-change"))
+    })
+    await expect.poll(animations).toBe(0)
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth
