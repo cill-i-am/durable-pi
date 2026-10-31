@@ -177,7 +177,12 @@ export function Conversation({
     <section
       className="chat-workspace"
       onDragEnter={(event) => {
-        if (archived || !event.dataTransfer.types.includes("Files")) return
+        if (
+          archived ||
+          !files.ready ||
+          !event.dataTransfer.types.includes("Files")
+        )
+          return
         event.preventDefault()
         dragDepth.current++
         setDragging(true)
@@ -195,7 +200,7 @@ export function Conversation({
         event.preventDefault()
         dragDepth.current = 0
         setDragging(false)
-        if (!archived && !sending && !files.uploading)
+        if (!archived && files.ready && !sending && !files.uploading)
           void files.upload(Array.from(event.dataTransfer.files), true)
       }}
     >

@@ -66,6 +66,7 @@ export function useFiles(
   )
   return {
     agentId,
+    ready: owner !== null,
     ...data,
     uploads: view?.uploads ?? [],
     error: view?.error ?? "",

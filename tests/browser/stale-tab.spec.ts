@@ -102,6 +102,7 @@ test("an explicit update reload preserves unsent text and original file referenc
 
 test("a retired settings chunk keeps chat intact and offers full reload instead of repeating navigation", async ({
   page,
+  isMobile,
 }) => {
   const offerUpdate = await updates(page)
   await openChat(page)
@@ -119,6 +120,10 @@ test("a retired settings chunk keeps chat intact and offers full reload instead 
     } else await route.continue()
   })
   await offerUpdate()
+  if (isMobile)
+    await page
+      .getByRole("button", { name: "Toggle Sidebar", exact: true })
+      .click()
   await page
     .getByRole("button", { name: "Actions for Navi", exact: true })
     .click()

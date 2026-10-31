@@ -18,24 +18,27 @@ export function FilePicker({
   const input = useRef<HTMLInputElement>(null)
   return (
     <>
-      <input
-        ref={input}
-        type="file"
-        multiple
-        hidden
-        tabIndex={-1}
-        aria-label="Choose files"
-        onChange={(event) => {
-          const files = Array.from(event.target.files ?? [])
-          event.target.value = ""
-          void state.upload(files, attach)
-        }}
-      />
+      {state.ready && (
+        <input
+          ref={input}
+          type="file"
+          multiple
+          hidden
+          tabIndex={-1}
+          aria-label="Choose files"
+          disabled={disabled || state.uploading}
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? [])
+            event.target.value = ""
+            void state.upload(files, attach)
+          }}
+        />
+      )}
       <Button
         type="button"
         variant={attach ? "ghost" : "outline"}
         size={attach ? "icon-sm" : "sm"}
-        disabled={disabled || state.uploading}
+        disabled={disabled || !state.ready || state.uploading}
         aria-label={attach ? "Attach files" : "Upload files"}
         onClick={() => input.current?.click()}
       >

@@ -68,3 +68,13 @@ Declared-token contrast checks (not claims about every runtime pair): foreground
 At 320px the actual generated-app surface and document had no horizontal overflow. Scoped axe 4.12.1 returned zero violations, with three color-contrast nodes incomplete because of textured gradients or overlap; these are not reported as a blanket contrast pass.
 
 Physical-device keyboard, safe-area and gesture behavior remain unverified without a phone. No production message, upload, approval, invitation or provider command was sent.
+
+## Upload-owner readiness follow-up
+
+The final full-browser run exposed a mobile startup gap: the native chooser existed before `useFiles` had published its scoped command owner. The trace recorded a file selection and only the initial file-list GET, with no upload POST. The hook's unowned upload closure returned without dispatching.
+
+`FilesState.ready` now projects the existing correct-cache owner identity. File and voice controls remain disabled until that owner exists; the native chooser is exposed only then. Composer drag/drop admission uses the same projection. No production delay, pending-command queue, test hook or new lifecycle state/machine was added.
+
+The standard browser suite discovers `tests/browser/file-controls-readiness.spec.ts`. Its test-only esbuild seam holds actual Effect owner publication, proving initial readiness, late pending-owner cancellation, and rebinding from an already published/uploaded alpha owner to a held beta owner. All six desktop/mobile readiness cases pass. The original PDF pending-extraction/durable-preparing reload test passes unchanged on both widths (two cases); all twelve file lifecycle unit tests pass.
+
+Both negative controls fail at the intended disabled-control assertion: forcing readiness true exposes the startup gap; deriving readiness from any published live owner allows the former alpha owner to enable beta's controls. Production source is not mutated by these test-build controls. Final scoped lint, formatting, typecheck and diff checks pass.
