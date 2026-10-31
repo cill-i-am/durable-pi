@@ -16,6 +16,7 @@ type AudioWindow = Window & {
   __soundMetrics: AudioMetrics
   __releaseSoundClose: () => void
   __STORYBOOK_ADDONS_CHANNEL__: { emit: (name: string, value: unknown) => void }
+  __STORYBOOK_PREVIEW__: { currentRender?: { phase: string } }
 }
 
 /** All browser tests stay physically silent. These stubs exercise the real
@@ -260,6 +261,13 @@ test.describe("sound audition", () => {
       .getByRole("button", { name: "Play Complete", exact: true })
       .click()
     await expect.poll(async () => (await metrics(page)).started).toBe(2)
+    // Storybook reloads the document if a forced remount interrupts its
+    // unfinished render. Wait for that owner before testing component teardown.
+    await page.waitForFunction(
+      () =>
+        (window as unknown as AudioWindow).__STORYBOOK_PREVIEW__.currentRender
+          ?.phase === "finished"
+    )
     await page.evaluate(() =>
       (window as unknown as AudioWindow).__STORYBOOK_ADDONS_CHANNEL__.emit(
         "forceRemount",
