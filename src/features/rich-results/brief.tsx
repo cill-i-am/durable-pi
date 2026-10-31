@@ -13,11 +13,9 @@ export function BriefLayout({
       className="rich-brief @container flex min-w-0 flex-col gap-5 whitespace-normal"
       aria-label={props.title}
     >
-      <header className="flex flex-col gap-2 border-b pb-5">
-        <p className="font-mono text-xs tracking-wide text-primary">
-          {props.date}
-        </p>
-        <h2 className="text-2xl font-semibold tracking-tight">{props.title}</h2>
+      <header className="flex flex-col gap-2">
+        <p className="text-sm text-muted-foreground">{props.date}</p>
+        <h2 className="text-xl font-semibold tracking-tight">{props.title}</h2>
         <p className="max-w-2xl text-sm text-muted-foreground">
           {props.summary}
         </p>

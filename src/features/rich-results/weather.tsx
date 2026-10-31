@@ -1,3 +1,5 @@
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
 import { cn } from "cn"
 import {
   ChevronDown,
@@ -16,8 +18,6 @@ import {
 } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,

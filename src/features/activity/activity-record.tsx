@@ -1,11 +1,17 @@
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Separator } from "@workspace/ui/components/separator"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Schema } from "effect"
 import { Brain, Wrench } from "lucide-react"
 
 import { ActivityConversation, type ActivityEntry } from "@/activity/contracts"
 import { CopyButton } from "@/components/copy-button"
 import { Markdown } from "@/components/markdown"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import {
   CodeBlock,
   CodeBlockHeader,
@@ -20,8 +26,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Trace,
   TraceLine,
@@ -42,7 +46,9 @@ export function ActivityRecord({
   entry,
   onClose,
   onOpenBot,
+  active = true,
 }: {
+  active?: boolean
   entry: Pick<ActivityEntry, "agent" | "reference">
   onClose: () => void
   onOpenBot: () => void
@@ -67,9 +73,9 @@ export function ActivityRecord({
   })
   return (
     <Dialog
-      open
+      open={active}
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (active && !open) onClose()
       }}
     >
       <DialogContent className="flex max-h-[85dvh] flex-col overflow-y-auto sm:max-w-2xl">

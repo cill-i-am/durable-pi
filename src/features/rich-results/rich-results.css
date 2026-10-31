@@ -1,0 +1,117 @@
+.answer-explorer[data-overlay-mobile="false"] {
+  width: min(72rem, calc(100vw - 3rem));
+  max-width: 72rem;
+  max-height: 85dvh;
+}
+
+.answer-explorer .answer-explorer-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  gap: 0.25rem;
+  padding-inline-end: 0;
+  padding-block-end: 0.75rem;
+  background: var(--canvas, var(--background));
+}
+
+.answer-categories {
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.answer-categories [data-slot="tabs-list"] {
+  width: max-content;
+  max-width: none;
+  flex-wrap: nowrap;
+}
+
+.answer-categories [data-slot="tabs-trigger"] {
+  flex: none;
+}
+
+.answer-sample-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.answer-result-footer {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
+.answer-question-options[data-slot="toggle-group"] {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.answer-question-option[data-slot="toggle-group-item"] {
+  width: 100%;
+  min-height: 4rem;
+  flex: none;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: none;
+  text-align: start;
+  white-space: normal;
+}
+
+.answer-question-option[data-pressed] {
+  border-color: var(--foreground);
+  background: var(--muted);
+}
+
+.answer-question-option:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+.answer-question-option > span:has(.answer-question-copy) {
+  width: 100%;
+  justify-content: space-between;
+  white-space: normal;
+}
+
+.answer-question-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.answer-question-option [data-slot="toggle-group-indicator"] {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .answer-sample-header {
+    align-items: stretch;
+  }
+
+  .answer-sample-header > p {
+    width: 100%;
+  }
+
+  .answer-sample-header > button {
+    width: 100%;
+  }
+}

@@ -1,9 +1,9 @@
+import { Button } from "@workspace/ui/components/button"
 import { send, type EffectActor } from "@xstate/effect"
 import { Cause, Effect, Exit, Fiber } from "effect"
 import { useEffect, useMemo, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
-import { Button } from "@/components/ui/button"
 import type {
   BackupRecovery as Recovery,
   CompactionRecovery,

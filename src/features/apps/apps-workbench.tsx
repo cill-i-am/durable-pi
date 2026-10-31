@@ -1,21 +1,23 @@
 import { Link } from "@tanstack/react-router"
-import { PanelsTopLeft, ListTodo } from "lucide-react"
-import { useEffect, useState } from "react"
-
-import { type AppDocument } from "@/apps/contracts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-} from "@/components/ui/empty"
-import { Skeleton } from "@/components/ui/skeleton"
+} from "@workspace/ui/components/empty"
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import { ChevronRight } from "lucide-react"
+import { useEffect, useState } from "react"
+
+import { type AppDocument } from "@/apps/contracts"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 
 import { AppView } from "./app-view"
 import { useAppList } from "./use-app-list"
+
+import "./apps.css"
 
 export function AppsWorkbench(props: Parameters<typeof AppsWorkbenchView>[0]) {
   return <AppsWorkbenchView key={props.agentId} {...props} />
@@ -25,11 +27,13 @@ function AppsWorkbenchView({
   onPendingChange,
   selected,
   onSelect: setSelected,
+  active = true,
 }: {
   selected: string | null
   onSelect: (id: string | null) => void
   agentId: string
   onPendingChange: (pending: boolean) => void
+  active?: boolean
 }) {
   const { apps, error, loading, refresh } = useAppList(agentId)
   const [interactionPending, setInteractionPending] = useState(false)
@@ -38,21 +42,10 @@ function AppsWorkbenchView({
     return () => onPendingChange(false)
   }, [interactionPending, onPendingChange])
   const content = (
-    <>
+    <section className="apps-surface">
       {!selected && (
         <header className="workbench-heading-row">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <PanelsTopLeft className="size-4" />
-            <h2 className="workbench-section-title">Apps</h2>
-          </div>
-          <Link
-            {...workspaceDestination(parseAgentId(agentId), {
-              panel: "objects",
-            })}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            <ListTodo /> Checklists
-          </Link>
+          <h2 className="workbench-section-title">Apps</h2>
         </header>
       )}
       <div className="workbench-body apps-workbench-body">
@@ -77,6 +70,7 @@ function AppsWorkbenchView({
             id={selected}
             onBack={() => setSelected(null)}
             onPendingChange={setInteractionPending}
+            active={active}
           />
         ) : (
           <>
@@ -86,7 +80,7 @@ function AppsWorkbenchView({
                 <EmptyHeader>
                   <EmptyTitle>No apps yet</EmptyTitle>
                   <EmptyDescription>
-                    Ask your agent to build an app.
+                    Ask your assistant to build an app.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -113,7 +107,7 @@ function AppsWorkbenchView({
           </>
         )}
       </div>
-    </>
+    </section>
   )
   return content
 }
@@ -121,6 +115,7 @@ function AppsWorkbenchView({
 function AppRow({ app, agentId }: { app: AppDocument; agentId: string }) {
   return (
     <Link
+      data-slot="button"
       {...workspaceDestination(parseAgentId(agentId), {
         panel: "apps",
         item: app.id,
@@ -130,16 +125,17 @@ function AppRow({ app, agentId }: { app: AppDocument; agentId: string }) {
         className: "app-list-row",
       })}
     >
-      <span className="max-w-full truncate font-medium">
-        {app.definition.title}
+      <span className="app-list-identity">
+        <span className="font-medium break-words">{app.definition.title}</span>
+        <span className="text-xs text-muted-foreground">
+          {app.archived
+            ? "Archived"
+            : app.publishedVersion
+              ? `Published · version ${app.publishedVersion}`
+              : "Draft"}
+        </span>
       </span>
-      <span className="text-xs text-muted-foreground">
-        {app.archived
-          ? "Archived"
-          : app.publishedVersion
-            ? `Published · version ${app.publishedVersion}`
-            : "Draft"}
-      </span>
+      <ChevronRight className="text-muted-foreground" />
     </Link>
   )
 }

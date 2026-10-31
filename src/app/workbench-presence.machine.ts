@@ -30,13 +30,17 @@ export type WorkbenchView = {
   held?: boolean
 }
 
-/** Router owns the requested view. This actor only retains the rendered view
- * until its matching native exit-animation acknowledgement. */
+/** Router owns the requested view. Native exit acknowledgement releases the
+ * visible view; the last panel keeps its local tab session mounted per agent. */
 export const workbenchPresenceMachine = setupEffect({
   validator: standardSchemaValidator(),
   schemas: {
     input: route,
-    context: Schema.Struct({ ...route.fields, revision: Schema.Number }),
+    context: Schema.Struct({
+      ...route.fields,
+      retainedPanel: Schema.NullOr(panel),
+      revision: Schema.Number,
+    }),
     events: {
       ROUTE: route,
       CLOSED: Schema.Struct({ revision: Schema.Number }),
@@ -45,7 +49,11 @@ export const workbenchPresenceMachine = setupEffect({
 }).createMachine({
   id: "workbench-presence",
   initial: "restored",
-  context: ({ input }) => ({ ...input, revision: 0 }),
+  context: ({ input }) => ({
+    ...input,
+    retainedPanel: input.panel,
+    revision: 0,
+  }),
   on: {
     ROUTE: ({ context, event }) =>
       event.panel
@@ -53,6 +61,7 @@ export const workbenchPresenceMachine = setupEffect({
             target: ".open",
             context: {
               panel: event.panel,
+              retainedPanel: event.panel,
               search: event.search,
               held: event.held,
               revision: context.revision + 1,
@@ -77,6 +86,28 @@ export const workbenchPresenceMachine = setupEffect({
     held: {},
     closing: {
       on: {
+        ROUTE: ({ context, event }) =>
+          event.panel
+            ? {
+                target: "open",
+                context: {
+                  panel: event.panel,
+                  retainedPanel: event.panel,
+                  search: event.search,
+                  held: event.held,
+                  revision: context.revision + 1,
+                },
+              }
+            : {
+                // A settings overlay cannot revoke an accepted hide request.
+                // Release its overlay placement while the same native exit
+                // keeps its acknowledgement identity and mounted resources.
+                context: {
+                  ...context,
+                  panel: event.held ? null : context.panel,
+                  held: event.held,
+                },
+              },
         CLOSED: ({ context, event }) =>
           event.revision === context.revision
             ? { target: "closed", context: { ...context, panel: null } }

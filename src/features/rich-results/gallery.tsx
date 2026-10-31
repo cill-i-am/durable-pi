@@ -1,10 +1,16 @@
+import { Button } from "@workspace/ui/components/button"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@workspace/ui/components/tabs"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
 import { ArrowUpRight } from "lucide-react"
 import { useState } from "react"
-
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 import { answerExamples, weatherExamples } from "./examples"
 import { RichResult } from "./rich-result"
@@ -16,9 +22,9 @@ export function AnswerGallery({
 }) {
   const [weatherRange, setWeatherRange] = useState(["weekend"])
   return (
-    <Tabs defaultValue="shopping" className="min-w-0">
-      <div className="overflow-x-auto pb-2">
-        <TabsList>
+    <Tabs defaultValue="shopping" className="answer-gallery min-w-0">
+      <div className="answer-categories">
+        <TabsList aria-label="Answer formats">
           {answerExamples.map((example) => (
             <TabsTrigger key={example.id} value={example.id}>
               {example.label}
@@ -37,14 +43,9 @@ export function AnswerGallery({
             value={example.id}
             className="flex min-w-0 flex-col gap-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-col gap-2">
-                <Badge variant="outline">
-                  Interactive sample · illustrative data
-                </Badge>
-                <p className="text-lg font-medium">{active.question}</p>
-              </div>
-              <Button onClick={() => onPrompt(active.prompt)}>
+            <div className="answer-sample-header">
+              <p className="text-base font-medium">{active.question}</p>
+              <Button variant="outline" onClick={() => onPrompt(active.prompt)}>
                 Use this prompt
                 <ArrowUpRight data-icon="inline-end" />
               </Button>
@@ -56,7 +57,6 @@ export function AnswerGallery({
                   value.length && setWeatherRange(value)
                 }
                 aria-label="Forecast range"
-                variant="outline"
               >
                 {weatherExamples.map((item) => (
                   <ToggleGroupItem key={item.id} value={item.id}>

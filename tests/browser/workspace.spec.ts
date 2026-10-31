@@ -21,7 +21,7 @@ test("sign in, open an agent, receive a fixture reply and reload it", async ({
   })
   await page.goto("/agents")
   await expect(
-    page.getByRole("heading", { name: "Welcome back." })
+    page.getByRole("heading", { name: "Welcome back" })
   ).toBeVisible()
   await page
     .getByLabel("Email", { exact: true })
@@ -37,7 +37,7 @@ test("sign in, open an agent, receive a fixture reply and reload it", async ({
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  const collection = page.getByRole("region", { name: "Your agents" })
+  const collection = page.getByRole("region", { name: "Assistants" })
   await expect(collection).toBeVisible()
   await collection.getByRole("link", { name: /Navi/ }).click()
   await expect(page).toHaveURL(/\/agents\/navi/)
@@ -171,7 +171,7 @@ test("send a PDF while extraction is pending and keep its durable preparing stat
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: /Navi/ })
     .click()
   await page.getByLabel("Choose files", { exact: true }).setInputFiles({

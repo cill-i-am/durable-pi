@@ -70,14 +70,18 @@ export function useApproval(view: ApprovalView) {
     ? current.context.request
     : null
   const confirmed = current?.context.confirmed ?? null
+  const ready = current !== null && owner !== null
   return {
+    ready,
     busy,
+    uncertain: uncertain !== null,
     confirmed:
       confirmed?.remember && !futurePermissionCurrent(confirmed, view.policy)
         ? { ...confirmed, remember: false }
         : confirmed,
     error: current?.context.error ?? "",
     blocked: (approve: boolean, remember = false) =>
+      !ready ||
       approvalBlocked(currentView, busy, uncertain, approve, remember),
     decide: (approve: boolean, remember = false) => {
       if (owner)

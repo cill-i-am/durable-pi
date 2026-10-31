@@ -1,9 +1,10 @@
+import { Button } from "@workspace/ui/components/button"
 import { Plus, Upload, X } from "lucide-react"
 import { useRef } from "react"
 
-import { Button } from "@/components/ui/button"
-
 import type { FilesState } from "./use-files"
+
+import "./files.css"
 
 export function FilePicker({
   state,
@@ -17,24 +18,27 @@ export function FilePicker({
   const input = useRef<HTMLInputElement>(null)
   return (
     <>
-      <input
-        ref={input}
-        type="file"
-        multiple
-        hidden
-        tabIndex={-1}
-        aria-label="Choose files"
-        onChange={(event) => {
-          const files = Array.from(event.target.files ?? [])
-          event.target.value = ""
-          void state.upload(files, attach)
-        }}
-      />
+      {state.ready && (
+        <input
+          ref={input}
+          type="file"
+          multiple
+          hidden
+          tabIndex={-1}
+          aria-label="Choose files"
+          disabled={disabled || state.uploading}
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? [])
+            event.target.value = ""
+            void state.upload(files, attach)
+          }}
+        />
+      )}
       <Button
         type="button"
         variant={attach ? "ghost" : "outline"}
         size={attach ? "icon-sm" : "sm"}
-        disabled={disabled || state.uploading}
+        disabled={disabled || !state.ready || state.uploading}
         aria-label={attach ? "Attach files" : "Upload files"}
         onClick={() => input.current?.click()}
       >
@@ -52,14 +56,11 @@ export function FilePicker({
 }
 export function UploadStatus({ state }: { state: FilesState }) {
   return (
-    <div aria-live="polite" className="flex flex-col gap-2">
+    <div aria-live="polite" className="file-uploads">
       {state.uploads.map((item) => (
-        <div
-          key={item.id}
-          className="flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-xs"
-        >
+        <div key={item.id} className="file-upload">
           <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{item.file.name}</p>
+            <p className="font-medium break-words">{item.file.name}</p>
             <p className="text-muted-foreground">
               {item.status === "uploading"
                 ? "Preparing and uploading…"

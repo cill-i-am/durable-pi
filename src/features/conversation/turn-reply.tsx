@@ -1,11 +1,10 @@
 import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 
-import { ActivityOrb } from "@/components/activity-visuals"
 import { CopyButton } from "@/components/copy-button"
 import { Markdown } from "@/components/markdown"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
-import { Button } from "@/components/ui/button"
 import {
   Message,
   MessageContent,
@@ -45,13 +44,14 @@ export function TurnReply({
   return (
     <Message align="start" className="assistant-message">
       <MessageContent>
-        <MessageHeader className="sr-only">
+        <MessageHeader>
           <AgentAvatar
             name={agentId ?? "home"}
             label={agentName}
+            size={24}
             aria-hidden="true"
           />
-          <span className="assistant-label">{agentName}</span>
+          <span>{agentName}</span>
         </MessageHeader>
         {!!turn.skills?.length && (
           <p className="text-xs text-muted-foreground">
@@ -174,10 +174,6 @@ function ReplyBody({
             turn.status
           ) ? (
           <span className="working-indicator" role="status">
-            <ActivityOrb
-              state={turn.status === "preparing" ? "searching" : "breathing"}
-              active={turn.status !== "stopping"}
-            />
             {turn.status === "stopping"
               ? "Stopping…"
               : turn.status === "queued"

@@ -3,9 +3,9 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from "@tanstack/react-router"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import { useEffect, useState } from "react"
 
-import { Button, buttonVariants } from "@/components/ui/button"
 import { importFailure } from "@/features/updates/recovery"
 import { ReloadRecovery } from "@/features/updates/update-recovery"
 import { reportClientError } from "@/observability/browser"
@@ -31,33 +31,38 @@ export function WorkspaceLinkError({ reset, error }: ErrorComponentProps) {
   }, [error])
   if (importFailure(error))
     return (
-      <main id="main-content" tabIndex={-1} className="loading-view">
-        <ReloadRecovery />
+      <main id="main-content" tabIndex={-1} className="workspace-recovery">
+        <div className="workspace-recovery-content">
+          <ReloadRecovery />
+        </div>
       </main>
     )
   return (
-    <main id="main-content" tabIndex={-1} className="loading-view">
-      <h1 className="text-lg font-semibold">Couldn’t open this workspace.</h1>
-      <p className="text-sm text-muted-foreground">
-        Try opening this page again. Your saved conversations are still
-        available.
-      </p>
-      {reference && (
-        <p className="text-xs text-muted-foreground">
-          Error reference: <code>{reference}</code>
+    <main id="main-content" tabIndex={-1} className="workspace-recovery">
+      <div className="workspace-recovery-content">
+        <h1 className="text-lg font-semibold">Couldn’t open this workspace.</h1>
+        <p className="text-sm text-muted-foreground">
+          Try again, or return to your assistants.
         </p>
-      )}
-      <Button disabled={retrying} onClick={retry}>
-        {retrying ? "Opening…" : "Try again"}
-      </Button>
-      <Link
-        to="/"
-        search={{}}
-        data-slot="button"
-        className={buttonVariants({})}
-      >
-        Open workspace
-      </Link>
+        {reference && (
+          <p className="text-xs text-muted-foreground">
+            Error reference: <code>{reference}</code>
+          </p>
+        )}
+        <div className="workspace-recovery-actions">
+          <Button disabled={retrying} onClick={retry}>
+            {retrying ? "Opening…" : "Try again"}
+          </Button>
+          <Link
+            to="/agents"
+            search={{}}
+            data-slot="button"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Open assistants
+          </Link>
+        </div>
+      </div>
     </main>
   )
 }

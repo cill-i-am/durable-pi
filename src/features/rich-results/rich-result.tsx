@@ -1,9 +1,13 @@
 import { defineRegistry, JSONUIProvider, Renderer } from "@json-render/react"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import { Component, useMemo, type ReactNode } from "react"
 import { useContext } from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import { answerCatalog, parseAnswerResult } from "@/rich-results/catalog"
 
 import { BriefLayout } from "./brief"
@@ -20,6 +24,8 @@ import { DataTableView } from "./data-table"
 import { ProductsCard } from "./products"
 import { AnswerDraftContext, QuestionCard } from "./question"
 import { WeatherCard } from "./weather"
+
+import "./rich-results.css"
 
 const { registry } = defineRegistry(answerCatalog, {
   components: {

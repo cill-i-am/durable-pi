@@ -1,8 +1,10 @@
 import type { Table } from "@tanstack/react-table"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { Columns3, ListFilter, Plus, X } from "lucide-react"
 import { useId, useState } from "react"
 
-import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -19,8 +21,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectTrigger,

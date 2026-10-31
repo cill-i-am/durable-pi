@@ -1,12 +1,13 @@
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { createEffectActor, send, type EffectActor } from "@xstate/effect"
 import { Cause, Effect, Exit, Fiber } from "effect"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url"
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
-import type { SnapshotFrom } from "xstate"
 
 import "maplibre-gl/dist/maplibre-gl.css"
-import { Skeleton } from "@/components/ui/skeleton"
+import type { SnapshotFrom } from "xstate"
+
 import type { AnswerProps } from "@/rich-results/catalog"
 
 import { openPlacesMap } from "./places-map-resource"

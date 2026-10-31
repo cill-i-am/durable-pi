@@ -1,12 +1,12 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
 import { createEffectActor } from "@xstate/effect"
 import { Effect, Fiber } from "effect"
 import { LockKeyhole, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { useModelCatalog } from "@/features/conversation/use-model-catalog"
 
 import { ChatGPTReconnect } from "./chatgpt-sign-in"

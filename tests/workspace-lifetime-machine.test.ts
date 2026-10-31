@@ -1,10 +1,11 @@
 import { it } from "@effect/vitest"
-import { send, waitFor } from "@xstate/effect"
+import { createEffectActor, send, waitFor } from "@xstate/effect"
 import { Effect } from "effect"
 import { expect } from "vitest"
 
 import { makeWorkbenchPresence } from "../src/app/use-workbench-presence"
 import { makeWorkspaceGuard } from "../src/app/use-workspace-guard"
+import { workbenchPresenceMachine } from "../src/app/workbench-presence.machine"
 
 it.effect(
   "a workbench keeps its view until exit acknowledgement and fences a stale close after reopening",
@@ -25,6 +26,11 @@ it.effect(
         panel: "files",
         search: { tab: "trash" },
       })
+      yield* send(owner, { type: "ROUTE", panel: null, search: {}, held: true })
+      yield* waitFor(
+        owner,
+        (state) => state.matches("closing") && state.context.panel === null
+      )
       yield* send(owner, {
         type: "ROUTE",
         held: false,
@@ -47,6 +53,51 @@ it.effect(
       yield* send(owner, { type: "CLOSED", revision: next.context.revision })
       yield* waitFor(owner, (state) => state.matches("closed"))
       expect(owner.getSnapshot().context.panel).toBeNull()
+      expect(owner.getSnapshot().context.retainedPanel).toBe("memory")
+    }).pipe(Effect.scoped)
+)
+
+it.effect(
+  "a cold conversation has no retained tool, while a closed session restores its retained panel without reopening",
+  () =>
+    Effect.gen(function* () {
+      const cold = yield* makeWorkbenchPresence({ panel: null, search: {} })
+      expect(cold.getSnapshot().context.retainedPanel).toBeNull()
+      const owner = yield* makeWorkbenchPresence({
+        panel: "files",
+        search: { tab: "trash" },
+      })
+      yield* send(owner, {
+        type: "ROUTE",
+        panel: null,
+        search: {},
+        held: false,
+      })
+      const closing = yield* waitFor(owner, (state) => state.matches("closing"))
+      yield* send(owner, { type: "CLOSED", revision: closing.context.revision })
+      yield* waitFor(owner, (state) => state.matches("closed"))
+      const restored = yield* createEffectActor(workbenchPresenceMachine, {
+        input: { panel: null, search: {}, held: false },
+        snapshot: JSON.parse(JSON.stringify(owner.getPersistedSnapshot())),
+      })
+      expect(restored.getSnapshot().matches("closed")).toBe(true)
+      expect(restored.getSnapshot().context).toMatchObject({
+        panel: null,
+        retainedPanel: "files",
+        search: { tab: "trash" },
+      })
+      yield* send(restored, {
+        type: "CLOSED",
+        revision: closing.context.revision,
+      })
+      yield* send(restored, {
+        type: "ROUTE",
+        panel: "memory",
+        search: { scope: "all" },
+        held: false,
+      })
+      yield* waitFor(restored, (state) => state.matches("open"))
+      expect(restored.getSnapshot().context.retainedPanel).toBe("memory")
     }).pipe(Effect.scoped)
 )
 
@@ -103,5 +154,39 @@ it.effect(
       expect(owner.getSnapshot().context.panel).toBe("files")
       yield* send(owner, { type: "CLOSED", revision: closing.context.revision })
       yield* waitFor(owner, (state) => state.matches("closed"))
+    }).pipe(Effect.scoped)
+)
+
+it.effect(
+  "settings opened before a pending workbench close acknowledgement cannot revive its closed route",
+  () =>
+    Effect.gen(function* () {
+      const owner = yield* makeWorkbenchPresence({
+        panel: "files",
+        search: { tab: "trash" },
+      })
+      yield* send(owner, {
+        type: "ROUTE",
+        panel: null,
+        search: {},
+        held: false,
+      })
+      const closing = yield* waitFor(owner, (state) => state.matches("closing"))
+
+      // Hold the native CLOSED event until settings has become visible.
+      yield* send(owner, { type: "ROUTE", panel: null, search: {}, held: true })
+      const settings = yield* waitFor(owner, (state) => state.context.held)
+      expect(settings.matches("closing")).toBe(true)
+      expect(settings.context).toMatchObject({
+        panel: null,
+        retainedPanel: "files",
+        search: { tab: "trash" },
+        revision: closing.context.revision,
+      })
+
+      yield* send(owner, { type: "CLOSED", revision: closing.context.revision })
+      const closed = yield* waitFor(owner, (state) => state.matches("closed"))
+      expect(closed.context.panel).toBeNull()
+      expect(closed.context.retainedPanel).toBe("files")
     }).pipe(Effect.scoped)
 )

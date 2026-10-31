@@ -1,4 +1,20 @@
 import { Link } from "@tanstack/react-router"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty"
+import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@workspace/ui/components/tabs"
 import {
   Plus,
   ChevronDown,
@@ -11,27 +27,17 @@ import {
   Pencil,
   RotateCcw,
   Trash2,
+  ArrowLeft,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { Markdown } from "@/components/markdown"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button, buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { agentUrl } from "@/http/client"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 import type { FileInfo } from "@/workspace/files"
@@ -44,21 +50,26 @@ import { useFileDetails } from "./use-file-details"
 import { useFilePreview } from "./use-file-preview"
 import type { FilesState } from "./use-files"
 
+import "./files.css"
+
 export { FilePicker, UploadStatus } from "./upload-controls"
 export function FilesWorkbench({
   state,
   selectionDisabled = false,
   onAttached,
   selected: previewId,
+  onSelect,
   collection: tab,
   previewView,
   onPreviewViewChange,
   onCollectionChange,
   onPendingChange,
+  active = true,
 }: {
   selected: string | null
   onSelect: (id: string | null) => void
   onPendingChange: (pending: boolean) => void
+  active?: boolean
   previewView: "preview" | "source"
   onPreviewViewChange: (view: "preview" | "source") => void
   collection: "files" | "trash"
@@ -81,37 +92,15 @@ export function FilesWorkbench({
   )
   const preview = visible.find((file) => file.id === previewId)
   return (
-    <>
+    <section className="files-surface">
       <header className="workbench-heading-row">
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant="ghost" className="workbench-title-menu" />}
-            disabled={detailLocked}
-            aria-label="File collection"
-          >
-            <h2 className="workbench-section-title">
-              {tab === "trash" ? "Trash" : "Files"}
-            </h2>
-            <ChevronDown />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem
-              onClick={() => {
-                onCollectionChange("files")
-              }}
-            >
-              <Files /> Files
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                onCollectionChange("trash")
-              }}
-            >
-              <Trash2 /> Trash
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <FilePicker state={state} attach={false} />
+        <FileCollectionMenu
+          active={active}
+          tab={tab}
+          locked={detailLocked}
+          onCollectionChange={onCollectionChange}
+        />
+        <FilePicker state={state} attach={false} disabled={detailLocked} />
       </header>
       <div className="workbench-body files-workbench-body">
         {state.error && (
@@ -143,7 +132,7 @@ export function FilesWorkbench({
           <EmptyFileCollection collection={tab} />
         )}
         {!!visible.length && (
-          <div className="file-explorer">
+          <div className="file-explorer" data-selected={!!preview}>
             <nav className="file-explorer-list" aria-label="Agent files">
               <span className="file-list-caption">
                 {visible.length} {visible.length === 1 ? "file" : "files"}
@@ -172,7 +161,7 @@ export function FilesWorkbench({
                     disabled={detailLocked}
                   >
                     <Icon data-icon="inline-start" />
-                    <span className="truncate">{file.name}</span>
+                    <span className="file-row-name">{file.name}</span>
                   </Link>
                 )
               })}
@@ -182,9 +171,19 @@ export function FilesWorkbench({
                 className="file-explorer-detail"
                 aria-label={`Details for ${preview.name}`}
               >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="file-back"
+                  disabled={detailLocked}
+                  onClick={() => onSelect(null)}
+                >
+                  <ArrowLeft /> All files
+                </Button>
                 <FileDetails
                   key={`details-${state.agentId}-${preview.id}`}
                   file={preview}
+                  active={active}
                   onPendingChange={setDetailLocked}
                   state={state}
                   onAttach={() => {
@@ -221,7 +220,7 @@ export function FilesWorkbench({
           </div>
         )}
       </div>
-      <footer className="text-xs text-muted-foreground">
+      <footer className="files-formats text-xs text-muted-foreground">
         <details>
           <summary className="cursor-pointer">
             Supported formats and limits
@@ -233,7 +232,43 @@ export function FilesWorkbench({
           </p>
         </details>
       </footer>
-    </>
+    </section>
+  )
+}
+function FileCollectionMenu({
+  active,
+  tab,
+  locked,
+  onCollectionChange,
+}: {
+  active: boolean
+  tab: "files" | "trash"
+  locked: boolean
+  onCollectionChange: (tab: "files" | "trash") => void
+}) {
+  return (
+    <DropdownMenu key={active ? "active" : "inactive"}>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" className="workbench-title-menu" />}
+        disabled={locked}
+        aria-label="File collection"
+      >
+        <h2 className="workbench-section-title">
+          {tab === "trash" ? "Trash" : "Files"}
+        </h2>
+        <ChevronDown />
+      </DropdownMenuTrigger>
+      {active && (
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => onCollectionChange("files")}>
+            <Files /> Files
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onCollectionChange("trash")}>
+            <Trash2 /> Trash
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      )}
+    </DropdownMenu>
   )
 }
 function FileDetails({
@@ -242,12 +277,14 @@ function FileDetails({
   state,
   onAttach,
   disabled,
+  active,
 }: {
   onPendingChange: (pending: boolean) => void
   file: FileInfo
   state: FilesState
   onAttach: () => void
   disabled: boolean
+  active: boolean
 }) {
   const detail = useFileDetails(file.name, (action, name) =>
     state.mutate(file.id, action, name)
@@ -265,7 +302,7 @@ function FileDetails({
   }, [editing, busy, onPendingChange])
   const mutate = detail.submit
   return (
-    <div className="py-3">
+    <div className="file-detail-controls">
       {detail.failed && (
         <p role="alert" className="text-xs text-destructive">
           Could not update this file. Reload and try again.
@@ -310,9 +347,7 @@ function FileDetails({
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Files className="size-5 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium" title={file.name}>
-                {file.name}
-              </p>
+              <p className="file-detail-name font-medium">{file.name}</p>
               <p className="text-xs text-muted-foreground">
                 {fileSize(file.size)} ·{" "}
                 {file.status === "uploading"
@@ -321,7 +356,7 @@ function FileDetails({
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center justify-end gap-1">
+          <div className="file-detail-actions">
             {file.trashed ? (
               <Button
                 size="xs"
@@ -379,7 +414,7 @@ function FileDetails({
                     </a>
                   </>
                 )}
-                <DropdownMenu>
+                <DropdownMenu key={active ? "active" : "inactive"}>
                   <DropdownMenuTrigger
                     disabled={busy}
                     render={
@@ -393,20 +428,22 @@ function FileDetails({
                   >
                     <Ellipsis />
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-40">
-                    {file.status === "ready" && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          detail.edit()
-                        }}
-                      >
-                        <Pencil /> Rename
+                  {active && (
+                    <DropdownMenuContent align="end" className="min-w-40">
+                      {file.status === "ready" && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            detail.edit()
+                          }}
+                        >
+                          <Pencil /> Rename
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => void mutate("trash")}>
+                        <Trash2 /> Move to Trash
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => void mutate("trash")}>
-                      <Trash2 /> Move to Trash
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
+                    </DropdownMenuContent>
+                  )}
                 </DropdownMenu>
               </>
             )}
@@ -445,6 +482,22 @@ function FilePreview({
     resource.value && "text" in resource.value ? resource.value.text : ""
   const error = resource.failed ? "Could not open this preview." : ""
   const loaded = resource.loaded
+  if (resource.failed)
+    return (
+      <Alert appearance="panel">
+        <AlertDescription className="flex flex-col gap-3">
+          <p>{error}</p>
+          <Button
+            className="self-start"
+            variant="outline"
+            size="sm"
+            onClick={() => resource.toggle(true)}
+          >
+            Retry preview
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
   if (file.kind === "video" && file.video?.status === "ready")
     return <VideoPreview file={file} agentId={agentId} />
   if (file.kind === "audio")
@@ -482,7 +535,7 @@ function FilePreview({
           }}
           className="file-text-preview"
         >
-          <TabsList variant="line" aria-label="File view">
+          <TabsList aria-label="File view">
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="source">Source</TabsTrigger>
           </TabsList>
@@ -578,14 +631,12 @@ function EmptyFileCollection({
     <Empty>
       <EmptyHeader>
         <EmptyTitle>
-          {collection === "trash"
-            ? "Trash is empty"
-            : "A place for the context"}
+          {collection === "trash" ? "Trash is empty" : "No files yet"}
         </EmptyTitle>
         <EmptyDescription>
           {collection === "trash"
             ? "Removed files can be restored here."
-            : "Upload images, notes, documents, or a video. Attach up to four files to a message."}
+            : "Upload a file to use it in chat."}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

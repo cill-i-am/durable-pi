@@ -9,7 +9,8 @@ export function MessageFileControls({
   files: FilesState
   sending: boolean
 }) {
-  const disabled = sending || files.uploading || files.selected.length >= 4
+  const disabled =
+    !files.ready || sending || files.uploading || files.selected.length >= 4
   return (
     <>
       <FilePicker state={files} disabled={disabled} />

@@ -9,6 +9,23 @@ export type ConfirmedDecision = {
   remember?: boolean
   policy?: ToolPolicy | null
 }
+
+export function formatApprovalInput(input: string) {
+  try {
+    return JSON.stringify(JSON.parse(input), null, 2)
+  } catch {
+    return input
+  }
+}
+
+export function approvalToolLabel(
+  approval: Approval,
+  tools: readonly ToolPolicy[] = []
+) {
+  return (
+    tools.find((tool) => tool.name === approval.tool)?.title ?? approval.tool
+  )
+}
 /** An older acknowledgement can confirm its action without superseding a
  * newer observed policy. Equal revisions must agree on the permission. */
 export function futurePermissionCurrent(

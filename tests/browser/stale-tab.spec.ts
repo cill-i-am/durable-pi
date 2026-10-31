@@ -20,7 +20,7 @@ async function openChat(page: Page) {
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: /Navi/ })
     .click()
   await expect(
@@ -102,6 +102,7 @@ test("an explicit update reload preserves unsent text and original file referenc
 
 test("a retired settings chunk keeps chat intact and offers full reload instead of repeating navigation", async ({
   page,
+  isMobile,
 }) => {
   const offerUpdate = await updates(page)
   await openChat(page)
@@ -119,10 +120,16 @@ test("a retired settings chunk keeps chat intact and offers full reload instead 
     } else await route.continue()
   })
   await offerUpdate()
+  if (isMobile)
+    await page
+      .getByRole("button", { name: "Toggle Sidebar", exact: true })
+      .click()
   await page
-    .getByRole("button", { name: "Agent settings and tools", exact: true })
+    .getByRole("button", { name: "Actions for Navi", exact: true })
     .click()
-  await page.getByRole("menuitem", { name: "Tool access", exact: true }).click()
+  await page
+    .getByRole("menuitem", { name: "Assistant settings", exact: true })
+    .click()
   await expect(
     page.getByText("Pi has been updated", { exact: true })
   ).toBeVisible()
@@ -138,9 +145,9 @@ test("a retired settings chunk keeps chat intact and offers full reload instead 
   })
   retired = false
   await page.getByRole("button", { name: "Reload page", exact: true }).click()
-  await expect(page).toHaveURL(/\/agents\/navi\/settings\/access$/)
+  await expect(page).toHaveURL(/\/agents\/navi\/settings$/)
   await expect(
-    page.getByRole("heading", { name: "Tool access", exact: true })
+    page.getByRole("heading", { name: "Assistant settings", exact: true })
   ).toBeVisible()
   await expect(composer(page)).toHaveValue(
     "Retain the draft while settings cannot load."

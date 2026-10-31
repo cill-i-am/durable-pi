@@ -1,6 +1,13 @@
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Textarea } from "@workspace/ui/components/textarea"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
 import { createEffectActor, send, type EffectActor } from "@xstate/effect"
 import { Cause, Effect, Exit, Fiber } from "effect"
-import { ArrowUpRight, MessageCircleQuestion } from "lucide-react"
+import { ArrowUpRight, Check } from "lucide-react"
 import {
   createContext,
   useContext,
@@ -11,10 +18,6 @@ import {
 } from "react"
 import type { SnapshotFrom } from "xstate"
 
-import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Textarea } from "@/components/ui/textarea"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { AnswerProps } from "@/rich-results/catalog"
 
 import { ResultCard } from "./cards"
@@ -111,15 +114,10 @@ export function QuestionCard(props: AnswerProps<"Question">) {
     <ResultCard
       title={props.question}
       description={props.description}
-      action={
-        <MessageCircleQuestion
-          aria-hidden="true"
-          className="size-5 text-primary"
-        />
-      }
       panel={
         <div className="flex w-full flex-wrap items-center gap-3">
           <Button
+            variant={added ? "outline" : "default"}
             disabled={
               busy || added || !onPrompt || (!chosen.length && !other.trim())
             }
@@ -134,7 +132,8 @@ export function QuestionCard(props: AnswerProps<"Question">) {
                 )
             }}
           >
-            Add answer to draft <ArrowUpRight data-icon="inline-end" />
+            {added ? "Added to draft" : "Add answer to draft"}
+            {!added && <ArrowUpRight data-icon="inline-end" />}
           </Button>
           <p role="status" className="text-xs text-muted-foreground">
             {snapshot?.context.failure
@@ -150,6 +149,7 @@ export function QuestionCard(props: AnswerProps<"Question">) {
     >
       <div className="flex flex-col gap-4">
         <ToggleGroup
+          orientation="vertical"
           multiple={props.multiple}
           value={chosen}
           onValueChange={(value) => {
@@ -157,21 +157,30 @@ export function QuestionCard(props: AnswerProps<"Question">) {
             edited()
           }}
           aria-label={props.question}
-          variant="outline"
-          className="flex flex-wrap justify-start gap-2"
+          className="answer-question-options"
         >
           {props.options.map((option) => (
             <ToggleGroupItem
               key={option.label}
               value={option.label}
-              className="h-auto min-h-10 flex-col items-start gap-1 py-3 text-left whitespace-normal"
+              className="answer-question-option"
             >
-              <span>{option.label}</span>
-              {option.description && (
-                <span className="text-xs font-normal text-muted-foreground">
-                  {option.description}
-                </span>
-              )}
+              <span className="answer-question-copy">
+                <span>{option.label}</span>
+                {option.description && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {option.description}
+                  </span>
+                )}
+              </span>
+              <Check
+                aria-hidden="true"
+                className={
+                  chosen.includes(option.label)
+                    ? "shrink-0"
+                    : "invisible shrink-0"
+                }
+              />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

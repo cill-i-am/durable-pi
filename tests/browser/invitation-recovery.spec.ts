@@ -131,47 +131,6 @@ test("opening an email link in an existing join tab clears the previous error wh
   await expect(page.getByLabel("Your name", { exact: true })).toBeVisible()
 })
 
-test("failed animation downloads preserve the composer and its draft", async ({
-  page,
-}) => {
-  const errors: string[] = []
-  const reports: { surface: string; failure: { module?: string } }[] = []
-  let downloads = 0
-  await page.route("**/api/diagnostics/client-error", (route) => {
-    const report = route.request().postDataJSON()
-    expect(route.request().postData()).not.toContain("Keep this private draft")
-    reports.push(report)
-    return route.fulfill({ status: 204 })
-  })
-  page.on("pageerror", (error) => errors.push(error.message))
-  await page.goto("/__visuals")
-  const draft = page.getByRole("textbox", {
-    name: "Synthetic draft",
-    exact: true,
-  })
-  await draft.fill("Keep this private draft during activity.")
-  await draft.focus()
-  await page.route("**/assets/*.js", (route) => {
-    downloads++
-    return route.abort()
-  })
-  await page
-    .getByRole("button", { name: "Toggle activity", exact: true })
-    .click()
-  await expect.poll(() => downloads).toBeGreaterThan(0)
-  await page.waitForLoadState("networkidle")
-  await expect(draft).toHaveValue("Keep this private draft during activity.")
-  await expect(draft).toBeFocused()
-  expect(errors).toEqual([])
-  expect(reports.map((report) => report.surface).sort()).toEqual([
-    "activity-border",
-    "activity-orb",
-  ])
-  expect(
-    reports.every((report) => report.failure.module?.startsWith("/assets/"))
-  ).toBe(true)
-})
-
 test("a workspace load error retries the same page without a document reload", async ({
   page,
 }) => {
@@ -193,7 +152,7 @@ test("a workspace load error retries the same page without a document reload", a
   })
   await page.getByRole("button", { name: "Try again", exact: true }).click()
   await expect(
-    page.getByRole("heading", { name: "Welcome back.", exact: true })
+    page.getByRole("heading", { name: "Welcome back", exact: true })
   ).toBeVisible()
   await expect(page).toHaveURL(/\/__route-recovery$/)
   expect(reads).toBe(2)

@@ -1,12 +1,19 @@
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldLabel, FieldGroup } from "@workspace/ui/components/field"
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import { Textarea } from "@workspace/ui/components/textarea"
 import { Schema } from "effect"
 import { GitBranch, Square } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { CopyButton } from "@/components/copy-button"
 import { Markdown } from "@/components/markdown"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   CodeBlock,
   CodeBlockHeader,
@@ -14,9 +21,6 @@ import {
   CodeBlockActions,
   CodeBlockContent,
 } from "@/components/ui/code-block"
-import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Trace,
   TraceLine,
@@ -62,11 +66,11 @@ export function DelegatedWork({
   if (!page.groups.length && !error && offset === 0) return null
   return (
     <section
-      className="flex min-w-0 flex-col gap-[18px]"
+      className="flex min-w-0 flex-col gap-4"
       aria-label={background ? "Background work" : "Delegated work"}
     >
       <div className="flex flex-col gap-2">
-        <h3 className="flex items-center gap-2 text-lg font-semibold">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
           <GitBranch className="size-4" />{" "}
           {background ? "In the background" : "Working together"}
         </h3>

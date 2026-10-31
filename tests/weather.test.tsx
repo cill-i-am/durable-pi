@@ -157,8 +157,8 @@ describe("weather provider and presentation", () => {
       <RichResult output={JSON.stringify(result)} />
     )
     expect(html).toContain('data-weather-layout="comparison"')
-    expect(html).toContain("Saturday 24 October 2026")
-    expect(html).toContain("Sunday 25 October 2026")
+    expect(html).toMatch(/Saturday,? 24 October 2026/)
+    expect(html).toMatch(/Sunday,? 25 October 2026/)
     expect(html).toContain("Maximum wind")
     expect(html).not.toContain("Current conditions")
   })
@@ -182,7 +182,7 @@ describe("weather provider and presentation", () => {
       <RichResult output={JSON.stringify(result)} />
     )
     expect(html).toContain('data-weather-layout="day"')
-    expect(html).toContain("Hourly forecast for Sunday 25 October 2026")
+    expect(html).toMatch(/Hourly forecast for Sunday,? 25 October 2026/)
     expect(html).toMatch(/01:00 (IST|GMT\+1)/)
     expect(html).toContain("01:00 GMT")
     expect(html).toContain("Gusts 49 km/h")

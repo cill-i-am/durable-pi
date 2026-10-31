@@ -1,22 +1,36 @@
-import { ArrowLeft, Clock3, Plus } from "lucide-react"
-import { useEffect, useState } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import "./routines.css"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-} from "@/components/ui/empty"
+} from "@workspace/ui/components/empty"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Textarea } from "@workspace/ui/components/textarea"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
+import { ArrowLeft, ChevronDown, Clock3, Plus } from "lucide-react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -25,8 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { Routine, RoutineRun, SaveRoutine } from "@/routines/contracts"
 
 import { useRoutines } from "./use-routines"
@@ -37,12 +49,15 @@ const time = (at: number) =>
     dateStyle: "medium",
     timeStyle: "short",
   })
-const schedule = (routine: Routine) =>
-  routine.schedule.type === "once"
+const schedule = (routine: Routine) => {
+  const chosen = routine.schedule
+  return chosen.type === "once"
     ? "Once"
-    : routine.schedule.type === "webhook"
+    : chosen.type === "webhook"
       ? "On incoming events"
-      : `Every ${routine.schedule.minutes} minutes`
+      : (intervals.find((item) => item.value === chosen.minutes)?.label ??
+        `Every ${chosen.minutes} minutes`)
+}
 export function RoutinesWorkbench(
   props: Parameters<typeof RoutinesWorkbenchOwner>[0]
 ) {
@@ -54,13 +69,22 @@ function RoutinesWorkbenchOwner({
   selected,
   webhook,
   onSelect,
+  active = true,
 }: {
+  active?: boolean
   selected: string | null
   webhook: boolean
   onSelect: (id: string | null, webhook?: boolean) => void
   agentId: string
   onPendingChange: (pending: boolean) => void
 }) {
+  const activeView = useRef(active)
+  useLayoutEffect(() => {
+    activeView.current = active
+    return () => {
+      activeView.current = false
+    }
+  }, [active])
   const [newEditor, setNewEditor] = useState<{
     key: string
     routine?: Routine
@@ -89,8 +113,9 @@ function RoutinesWorkbenchOwner({
       if (selected) onSelect(null)
     }
   }
-  const setHook = (value: Routine | null) =>
-    onSelect(value?.id ?? null, !!value)
+  const setHook = (value: Routine | null) => {
+    if (activeView.current) onSelect(value?.id ?? null, !!value)
+  }
   const [hookPending, setHookPending] = useState(false)
   const locked = routinesLocked(actions, hookPending)
   const editing = editor !== null
@@ -98,7 +123,8 @@ function RoutinesWorkbenchOwner({
     onPendingChange(mutationPending || locked || editing)
     return () => onPendingChange(false)
   }, [mutationPending, locked, editing, onPendingChange])
-  const setStatus = (routine: Routine, status: Routine["status"]) =>
+  const setStatus = (routine: Routine, status: Routine["status"]) => {
+    if (!activeView.current) return
     void actions.send({
       path: "status",
       body: {
@@ -108,11 +134,9 @@ function RoutinesWorkbenchOwner({
         status,
       },
     })
+  }
   const row = (routine: Routine) => (
-    <div
-      key={routine.id}
-      className="flex flex-col gap-3 border-b py-4 last:border-b-0"
-    >
+    <div key={routine.id} className="routine-row">
       <div className="flex items-start justify-between gap-3">
         <h3 className="min-w-0 text-sm font-medium break-words">
           {routine.title}
@@ -130,7 +154,7 @@ function RoutinesWorkbenchOwner({
             : " · Schedule complete"
           : ""}
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center justify-between gap-2">
         {routine.status !== "archived" ? (
           <>
             <Button
@@ -141,59 +165,69 @@ function RoutinesWorkbenchOwner({
             >
               Edit
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={locked}
-              onClick={() =>
-                setStatus(
-                  routine,
-                  routine.status === "active" ? "paused" : "active"
-                )
-              }
-            >
-              {routine.status === "active" ? "Pause" : "Resume"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={
-                locked ||
-                actions.data.runs.some((run) =>
-                  ["pending", "queued", "stopping", "unconfirmed"].includes(
-                    run.status
-                  )
-                )
-              }
-              onClick={() =>
-                void actions.send({
-                  path: "run",
-                  body: {
-                    id: routine.id,
-                    operationId: crypto.randomUUID(),
-                    expectedRevision: routine.revision,
-                  },
-                })
-              }
-            >
-              Run now
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={locked}
-              onClick={() => setHook(routine)}
-            >
-              Webhook
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={locked}
-              onClick={() => setStatus(routine, "archived")}
-            >
-              Archive
-            </Button>
+            <DropdownMenu open={active ? undefined : false}>
+              <DropdownMenuTrigger
+                render={
+                  <Button size="sm" variant="outline" disabled={locked} />
+                }
+              >
+                Actions <ChevronDown />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" mobileTitle={routine.title}>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() =>
+                      setStatus(
+                        routine,
+                        routine.status === "active" ? "paused" : "active"
+                      )
+                    }
+                  >
+                    {routine.status === "active" ? "Pause" : "Resume"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={
+                      locked ||
+                      actions.data.runs.some((run) =>
+                        [
+                          "pending",
+                          "queued",
+                          "stopping",
+                          "unconfirmed",
+                        ].includes(run.status)
+                      )
+                    }
+                    onClick={() => {
+                      if (!activeView.current) return
+                      void actions.send({
+                        path: "run",
+                        body: {
+                          id: routine.id,
+                          operationId: crypto.randomUUID(),
+                          expectedRevision: routine.revision,
+                        },
+                      })
+                    }}
+                  >
+                    Run now
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() => setHook(routine)}
+                  >
+                    Webhook
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() => setStatus(routine, "archived")}
+                  >
+                    Archive
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         ) : (
           <Button
@@ -209,9 +243,9 @@ function RoutinesWorkbenchOwner({
     </div>
   )
   return (
-    <>
-      <header className="workbench-heading-row">
-        <h2 className="workbench-section-title flex items-center gap-2">
+    <section className="routines-workbench @container/tool flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-4 @max-md/tool:px-4">
+        <h2 className="flex min-w-0 items-center gap-2 text-md font-semibold">
           <Clock3 className="size-4" /> Routines
         </h2>
         {!editor && (
@@ -225,7 +259,7 @@ function RoutinesWorkbenchOwner({
           </Button>
         )}
       </header>
-      <div className="workbench-body">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-5 @max-md/tool:p-4">
         {actions.error && (
           <Alert>
             <AlertDescription>
@@ -331,8 +365,7 @@ function RoutinesWorkbenchOwner({
         ) : (
           <>
             <p className="text-xs text-muted-foreground">
-              Routines continue when you close the app. Tool approvals still
-              apply.
+              Tool approvals still apply.
             </p>
             {actions.loading ? (
               <p className="text-sm text-muted-foreground" role="status">
@@ -343,13 +376,12 @@ function RoutinesWorkbenchOwner({
                 <EmptyHeader>
                   <EmptyTitle>No routines yet</EmptyTitle>
                   <EmptyDescription>
-                    Schedule a task review, prepare a brief or pick up a project
-                    at a chosen time.
+                    Create a routine to run instructions on a schedule or event.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
             ) : null}
-            <div>
+            <div className="flex flex-col gap-4">
               {actions.data.routines
                 .filter((r) => r.status !== "archived")
                 .map(row)}
@@ -364,37 +396,25 @@ function RoutinesWorkbenchOwner({
                   .map(row)}
               </details>
             )}
-            <section
-              aria-label="Recent routine runs"
-              className="flex flex-col gap-3"
-            >
-              <h3 className="text-sm font-medium">Recent runs</h3>
-              {actions.data.runs.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Completed work and interrupted runs appear here.
-                </p>
-              ) : (
-                actions.data.runs
-                  .slice(0, 30)
-                  .map((run) => (
-                    <RunRow
-                      key={run.id}
-                      run={run}
-                      disabled={locked}
-                      onStop={() => void actions.stop(run.id)}
-                    />
-                  ))
-              )}
-            </section>
+            <RoutineHistory
+              runs={actions.data.runs}
+              disabled={locked}
+              onStop={(id) => void actions.stop(id)}
+            />
           </>
         )}
       </div>
-      <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-        One routine runs at a time, with a ten-minute budget. Missed intervals
-        become one run. Pause stops future work; use Stop to end a run already
-        in progress.
+      <footer className="shrink-0 border-t px-5 py-3 text-xs text-muted-foreground">
+        <details>
+          <summary className="cursor-pointer">How routines run</summary>
+          <p className="mt-2 max-w-prose leading-relaxed">
+            Routines continue when you close the app. One routine runs at a
+            time, with a ten-minute budget. Missed intervals become one run.
+            Pause stops future work; use Stop to end a run already in progress.
+          </p>
+        </details>
       </footer>
-    </>
+    </section>
   )
 }
 function RunRow({
@@ -410,7 +430,7 @@ function RunRow({
     run.status
   )
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-3">
+    <div className="routine-run-row">
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0 text-sm font-medium break-words">
           {run.title}
@@ -632,9 +652,6 @@ function RoutineEditor({
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Review my saved project notes and tell me what needs attention."
             />
-            <FieldDescription>
-              Be specific about what to check and what would be worth reporting.
-            </FieldDescription>
           </Field>
           <Field>
             <FieldLabel>Schedule</FieldLabel>
@@ -651,8 +668,6 @@ function RoutineEditor({
                   setChangedTime(true)
                 }
               }}
-              variant="outline"
-              size="sm"
             >
               <ToggleGroupItem value="once">Once</ToggleGroupItem>
               <ToggleGroupItem value="interval">Repeat</ToggleGroupItem>
@@ -724,8 +739,6 @@ function RoutineEditor({
                 if (values[0] === "active" || values[0] === "paused")
                   setStatus(values[0])
               }}
-              variant="outline"
-              size="sm"
             >
               <ToggleGroupItem value="active">Active</ToggleGroupItem>
               <ToggleGroupItem value="paused">Paused</ToggleGroupItem>
@@ -777,4 +790,36 @@ function routinesLocked(
   hookPending: boolean
 ) {
   return actions.busy || !!actions.attempt || !!actions.stopId || hookPending
+}
+
+function RoutineHistory({
+  runs,
+  disabled,
+  onStop,
+}: {
+  runs: readonly RoutineRun[]
+  disabled: boolean
+  onStop: (id: string) => void
+}) {
+  return (
+    <section aria-label="Recent routine runs" className="flex flex-col gap-3">
+      <h3 className="text-sm font-medium">Recent runs</h3>
+      {runs.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Completed work and interrupted runs appear here.
+        </p>
+      ) : (
+        runs
+          .slice(0, 30)
+          .map((run) => (
+            <RunRow
+              key={run.id}
+              run={run}
+              disabled={disabled}
+              onStop={() => onStop(run.id)}
+            />
+          ))
+      )}
+    </section>
+  )
 }

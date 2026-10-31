@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { expect, it } from "vitest"
 
 const stylesheet = readFileSync(
-  new URL("../src/styles.css", import.meta.url),
+  new URL("../packages/ui/src/styles/globals.css", import.meta.url),
   "utf8"
 )
 function declarations(selector: string) {
@@ -22,7 +22,11 @@ function resolve(tokens: Record<string, string>, role: string): string {
   return value.startsWith("var(") ? resolve(tokens, value.slice(4, -1)) : value
 }
 function luminance(hex: string) {
-  const channels = hex
+  const full =
+    hex.length === 4
+      ? `#${[...hex.slice(1)].map((value) => value + value).join("")}`
+      : hex
+  const channels = full
     .slice(1)
     .match(/../g)!
     .map((channel) => parseInt(channel, 16) / 255)

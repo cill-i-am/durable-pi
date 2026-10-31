@@ -1,11 +1,11 @@
 import { Link, useSearch } from "@tanstack/react-router"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { Redacted } from "effect"
 import { useState } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { authReturnPath, workspaceReturnLink } from "@/navigation/workspace"
 
 import { useAuthEntry } from "./auth-entry"
@@ -94,7 +94,7 @@ export function TwoFactorChallenge() {
           )}
           <Button
             type="submit"
-            size="lg"
+            aria-busy={pending}
             disabled={pending || (recovery ? !code.trim() : code.length !== 6)}
           >
             {pending

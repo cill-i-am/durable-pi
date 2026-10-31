@@ -1,8 +1,11 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { MessageCircle } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,9 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -110,7 +110,7 @@ export function WhatsAppSettings({
     })
   }
   return (
-    <section aria-label="WhatsApp connection" className="flex flex-col gap-4">
+    <section aria-label="WhatsApp connection" className="settings-channel">
       <WhatsAppRouting
         view={view}
         agents={activeAgents}

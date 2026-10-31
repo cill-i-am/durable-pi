@@ -1,6 +1,6 @@
+import { Button } from "@workspace/ui/components/button"
 import { ChevronDown, Settings2, Sparkles } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -212,9 +212,6 @@ importers:
       '@fontsource-variable/geist-mono':
         specifier: ^5.3.0
         version: 5.3.0
-      '@fontsource-variable/inter':
-        specifier: 5.3.0
-        version: 5.3.0
       '@json-render/core':
         specifier: 0.21.1
         version: 0.21.1(zod@4.6.5)
@@ -284,9 +281,6 @@ importers:
       better-auth:
         specifier: 1.7.10
         version: 1.7.10(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.12)(supports-color@10.2.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261016.1)(@effect/sql-d1@4.0.1(effect@4.0.5))(@effect/sql-sqlite-do@4.0.5(effect@4.0.5))(@effect/sql-sqlite-node@4.0.5(effect@4.0.5))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(effect@4.0.5)(typebox@1.3.27)(valibot@1.2.0(@typescript/typescript6@6.0.2))(zod@4.6.5))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.16)(vitest@5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
-      border-beam:
-        specifier: 1.4.1
-        version: 1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       chat:
         specifier: 4.42.0
         version: 4.42.0(supports-color@10.2.2)(zod@4.6.5)
@@ -356,9 +350,6 @@ importers:
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
-      thinking-orbs:
-        specifier: 0.3.2
-        version: 0.3.2(react@19.3.1)
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
@@ -1856,9 +1847,6 @@ packages:
 
   '@fontsource-variable/geist@5.3.0':
     resolution: {integrity: sha512-j0m+vLQuG5XAYoHtGCVu0spvlGreR3EzpECUVzkFmI1mTVnAO38l/NEPDCFgZ177JxzYJCLSmTQibIiYPilGrA==}
-
-  '@fontsource-variable/inter@5.3.0':
-    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
 
   '@google/genai@2.21.0':
     resolution: {integrity: sha512-+PDtco2/Z0ONdzCGekCoCT+O1VJS9xJQNN4XzQpXG/t3El/SWWMkCWlFRO1KmivOHPa4Q0VjUYu1HBKCZ/v33Q==}
@@ -5046,12 +5034,6 @@ packages:
     resolution: {integrity: sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==}
     engines: {node: '>=18'}
 
-  border-beam@1.4.1:
-    resolution: {integrity: sha512-YyugmKjrhkg1PBC1ZKX7JvFo/zYzha6NXOq24VWrnvBYmDRvGCgFS9oxZoKJ+oS9Kn436l1etYGlAdGiWK+3ag==}
-    peerDependencies:
-      react: '>=18.0.0'
-      react-dom: '>=18.0.0'
-
   bowser@2.14.1:
     resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
 
@@ -7866,11 +7848,6 @@ packages:
   text-decoder@1.2.7:
     resolution: {integrity: sha512-vlLytXkeP4xvEq2otHeJfSQIRyWxo/oZGEbXrtEEF9Hnmrdly59sUbzZ/QgyWuLYHctCHxFF4tRQZNQ9k60ExQ==}
 
-  thinking-orbs@0.3.2:
-    resolution: {integrity: sha512-QZFeBaPEzqhjiZoXy961EvDgaXk2WgXacF3Rbz+Sj5IfzDzBvTC86vdREUHniBffYibJFKSwbfllxLUdI/Xv6g==}
-    peerDependencies:
-      react: '>=18.0.0'
-
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
 
@@ -9810,8 +9787,6 @@ snapshots:
   '@fontsource-variable/geist-mono@5.3.0': {}
 
   '@fontsource-variable/geist@5.3.0': {}
-
-  '@fontsource-variable/inter@5.3.0': {}
 
   '@google/genai@2.21.0(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@4.6.5))(supports-color@10.2.2)':
     dependencies:
@@ -12489,11 +12464,6 @@ snapshots:
       type-is: 2.1.0
     transitivePeerDependencies:
       - supports-color
-
-  border-beam@1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
-    dependencies:
-      react: 19.3.1
-      react-dom: 19.3.1(react@19.3.1)
 
   bowser@2.14.1: {}
 
@@ -15712,10 +15682,6 @@ snapshots:
       b4a: 1.9.0
     transitivePeerDependencies:
       - react-native-b4a
-
-  thinking-orbs@0.3.2(react@19.3.1):
-    dependencies:
-      react: 19.3.1
 
   through@2.3.8: {}
 

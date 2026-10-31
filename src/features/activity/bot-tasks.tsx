@@ -1,25 +1,29 @@
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty"
+import { Separator } from "@workspace/ui/components/separator"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Schema } from "effect"
 import { ArrowRight, RotateCw, Square } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import type { ActivityAgent } from "@/activity/contracts"
 import { MailboxView, terminal, type Task } from "@/communication/contracts"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
 
 import { ActivityRecord } from "./activity-record"
 import { activityJsonRequest } from "./query-owner"

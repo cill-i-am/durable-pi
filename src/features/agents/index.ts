@@ -1,2 +1,2 @@
-export { useAgentCatalog, AgentSidebar, AgentEditor } from "./agents"
+export { useAgentCatalog, AgentEditor } from "./agents"
 export { ArchiveAgentDialog } from "./archive-agent-dialog"

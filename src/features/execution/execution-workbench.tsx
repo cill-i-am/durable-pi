@@ -1,12 +1,19 @@
+import "./execution.css"
 import { Link } from "@tanstack/react-router"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
+import {
+  CardFrame,
+  Card,
+  CardContent,
+  CardFrameFooter,
+} from "@workspace/ui/components/card"
+import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { Textarea } from "@workspace/ui/components/textarea"
 import { Code2, Play, Square, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Textarea } from "@/components/ui/textarea"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 
 import { useExecution } from "./use-execution"
@@ -34,9 +41,9 @@ export function ExecutionWorkbench({
   const [data, setData] = useState("[1, 2, 3]")
   const run = execution.detail
   const content = (
-    <>
-      <header className="workbench-heading-row">
-        <h2 className="workbench-section-title flex items-center gap-2">
+    <section className="execution-workbench @container/tool flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-4 @max-md/tool:px-4">
+        <h2 className="flex min-w-0 items-center gap-2 text-md font-semibold">
           <Code2 className="size-4" /> Code{" "}
           <Badge variant="secondary">JavaScript</Badge>
         </h2>
@@ -52,16 +59,12 @@ export function ExecutionWorkbench({
           </Button>
         </div>
       </header>
-      <div className="workbench-body">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-5 @max-md/tool:p-4">
         {execution.error && (
           <Alert>
             <AlertDescription>{execution.error}</AlertDescription>
           </Alert>
         )}
-        <p className="text-xs text-muted-foreground">
-          Run calculations and transform JSON in a private sandbox. No network,
-          files or app credentials. 1 second of CPU, 10 seconds elapsed.
-        </p>
         <ExecutionEditor
           execution={execution}
           code={code}
@@ -73,70 +76,75 @@ export function ExecutionWorkbench({
           <p className="text-sm text-muted-foreground">Loading run…</p>
         )}
         {run && (
-          <section
-            aria-label="Run output"
-            className="min-w-0 space-y-3 border-t pt-4"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-medium">Result</h3>
-              <Badge variant="secondary">{run.status}</Badge>
-            </div>
-            {run.status === "running" && (
-              <p className="text-sm text-muted-foreground">
-                Running… You can close this panel; the result will be saved.
-              </p>
-            )}
-            {run.status === "interrupted" && (
-              <p className="text-sm">
-                This run was interrupted. It has not been repeated. Review its
-                code before starting a new run.
-              </p>
-            )}
-            {run.status === "cancelled" && (
-              <p className="text-sm text-muted-foreground">
-                Run cancelled. Late output will not replace this result.
-              </p>
-            )}
-            {run.output?.error && (
-              <Alert>
-                <AlertDescription>{run.output.error}</AlertDescription>
-              </Alert>
-            )}
-            {run.output?.result && (
-              <pre className="max-h-72 overflow-auto rounded-md border bg-muted/30 p-3 text-xs break-words whitespace-pre-wrap">
-                {run.output.result}
-              </pre>
-            )}
-            {run.output?.logs && (
+          <CardFrame aria-label="Run output" className="execution-result">
+            <Card>
+              <CardContent className="flex flex-col gap-3 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-medium">Result</h3>
+                  <Badge variant="secondary">
+                    {run.status === "succeeded" ? "Completed" : run.status}
+                  </Badge>
+                </div>
+                {run.status === "running" && (
+                  <p className="text-sm text-muted-foreground">
+                    Running… You can close this panel; the result will be saved.
+                  </p>
+                )}
+                {run.status === "interrupted" && (
+                  <p className="text-sm">
+                    This run was interrupted. It has not been repeated. Review
+                    its code before starting a new run.
+                  </p>
+                )}
+                {run.status === "cancelled" && (
+                  <p className="text-sm text-muted-foreground">
+                    Run cancelled. Late output will not replace this result.
+                  </p>
+                )}
+                {run.output?.error && (
+                  <Alert>
+                    <AlertDescription>{run.output.error}</AlertDescription>
+                  </Alert>
+                )}
+                {run.output?.result && (
+                  <pre className="max-h-72 overflow-auto rounded-md border bg-muted/30 p-3 text-xs break-words whitespace-pre-wrap">
+                    {run.output.result}
+                  </pre>
+                )}
+              </CardContent>
+            </Card>
+            <CardFrameFooter className="flex-col items-stretch gap-3">
+              {run.output?.logs && (
+                <details>
+                  <summary className="cursor-pointer text-xs font-medium">
+                    Console output
+                  </summary>
+                  <pre className="mt-2 max-h-40 overflow-auto text-xs break-words whitespace-pre-wrap">
+                    {run.output.logs}
+                  </pre>
+                </details>
+              )}
               <details>
                 <summary className="cursor-pointer text-xs font-medium">
-                  Console output
+                  Executed code and input
                 </summary>
-                <pre className="mt-2 max-h-40 overflow-auto text-xs break-words whitespace-pre-wrap">
-                  {run.output.logs}
+                <pre className="mt-2 max-h-60 overflow-auto text-xs break-words whitespace-pre-wrap">
+                  {run.input.code}
+                  {"\n\nInput: "}
+                  {run.input.data}
                 </pre>
               </details>
-            )}
-            <details>
-              <summary className="cursor-pointer text-xs font-medium">
-                Executed code and input
-              </summary>
-              <pre className="mt-2 max-h-60 overflow-auto text-xs break-words whitespace-pre-wrap">
-                {run.input.code}
-                {"\n\nInput: "}
-                {run.input.data}
-              </pre>
-            </details>
-          </section>
+            </CardFrameFooter>
+          </CardFrame>
         )}
         <section
-          className="space-y-2 border-t pt-4"
+          className="flex flex-col gap-2 border-t pt-4"
           aria-label="Code run history"
         >
           <h3 className="text-sm font-medium">Recent runs</h3>
           {!execution.runs.length && (
             <p className="text-xs text-muted-foreground">
-              Your bot’s runs will appear here.
+              Run code above to see the result here.
             </p>
           )}
           {execution.runs.map((item) => (
@@ -159,16 +167,25 @@ export function ExecutionWorkbench({
                 {item.label}
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">
-                {item.status}
+                {item.status === "succeeded" ? "Completed" : item.status}
               </span>
             </Link>
           ))}
         </section>
       </div>
-      <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-        Code, input and results are saved. Latest 50 runs shown.
+      <footer className="shrink-0 border-t px-5 py-3 text-xs text-muted-foreground">
+        <details>
+          <summary className="cursor-pointer">
+            Sandbox limits &amp; storage
+          </summary>
+          <p className="mt-2 max-w-prose leading-relaxed">
+            Private JavaScript sandbox. No network, files or app credentials. 1
+            second of CPU, 10 seconds elapsed. Code, input and results are
+            saved; the latest 50 runs are shown.
+          </p>
+        </details>
       </footer>
-    </>
+    </section>
   )
   return content
 }
@@ -220,8 +237,8 @@ function ExecutionEditor({
         />
       </Field>
       <p className="text-xs text-muted-foreground">
-        Use <code>input</code> for parsed JSON, <code>console.log</code> for
-        notes, and <code>return</code> for the result.
+        Use <code>input</code> for parsed JSON and <code>return</code> for the
+        result.
       </p>
       <div className="flex gap-2">
         <Button

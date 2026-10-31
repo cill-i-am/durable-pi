@@ -1,0 +1,91 @@
+.apps-surface {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  container: apps / inline-size;
+}
+.apps-workbench-body,
+.app-view {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1rem;
+}
+.app-list-row[data-slot="button"] {
+  justify-content: space-between;
+  width: 100%;
+  height: auto;
+  min-height: 3.5rem;
+  padding: 0.75rem;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: start;
+  white-space: normal;
+}
+.app-list-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.25rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.app-view-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.app-view-toolbar > :last-child {
+  margin-inline-start: auto;
+}
+.app-canvas {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.app-canvas > header p,
+.app-canvas > p {
+  max-width: 70ch;
+}
+.app-canvas [data-slot="field-legend"] {
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+.app-canvas [data-slot="field-group"] {
+  gap: 1rem;
+}
+.app-canvas [data-slot="field"][data-orientation="horizontal"] {
+  min-height: 2.75rem;
+}
+.app-canvas [data-slot="table-container"] {
+  max-width: 100%;
+}
+.app-canvas iframe {
+  min-width: 0;
+  max-width: 100%;
+}
+@container apps (width < 25rem) {
+  .app-canvas {
+    padding: 0.75rem;
+  }
+}
+@media (pointer: coarse) {
+  .app-canvas input,
+  .app-canvas textarea {
+    font-size: 1rem;
+  }
+}

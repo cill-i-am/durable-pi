@@ -1,6 +1,14 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/components/button"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@workspace/ui/components/field"
 import { Copy, Mail } from "lucide-react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,14 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
 import {
   InputGroup,
   InputGroupInput,
@@ -82,7 +82,7 @@ export function EmailSettings({
       body: { id, operationId: crypto.randomUUID(), acknowledgeDuplicateRisk },
     })
   return (
-    <div className="flex flex-col gap-4">
+    <div className="settings-channel">
       <FieldGroup>
         <Field>
           <FieldLabel>Email this agent</FieldLabel>

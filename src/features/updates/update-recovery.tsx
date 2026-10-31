@@ -1,3 +1,9 @@
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import { Effect, Fiber } from "effect"
 import {
   Component,
@@ -11,8 +17,6 @@ import {
   type ReactNode,
 } from "react"
 
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import { Toaster, createToastManager } from "@/components/ui/toast"
 import { buildRevision } from "@/deployment/revision"
 import { reportClientError } from "@/observability/browser"

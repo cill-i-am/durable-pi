@@ -1,9 +1,9 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import { Monitor, ShieldCheck } from "lucide-react"
 import { useEffect, useRef, type ReactNode } from "react"
 
 import { authClient } from "@/auth/client"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -166,7 +166,7 @@ export function AccountSecurity({
           >
             <header className="space-y-1">
               <div className="flex items-center justify-between gap-4">
-                <h2 id="sessions-heading" className="text-xl font-semibold">
+                <h2 id="sessions-heading" className="text-md font-semibold">
                   Browser sessions
                 </h2>
                 <Button
@@ -249,8 +249,8 @@ export function AccountSecurity({
                   : `Sign out ${sessionLabel(confirm.session.userAgent)}?`}
               </h3>
               <p className="text-sm leading-6 text-muted-foreground">
-                Those sessions will need to sign in again. Your agents and saved
-                work will keep running.
+                Those sessions will need to sign in again. Your assistants and
+                saved work will keep running.
               </p>
               <div className="flex justify-end gap-2">
                 <Button
@@ -293,7 +293,7 @@ export function AccountSecurity({
           )}
           <footer className="flex flex-wrap items-center justify-between gap-4 border-t pt-5">
             <p className="text-xs text-muted-foreground">
-              Your agents and saved work keep running.
+              Your assistants and saved work keep running.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -305,9 +305,11 @@ export function AccountSecurity({
               >
                 Sign out other browsers
               </Button>
-              <Button variant="outline" disabled={locked} onClick={close}>
-                Done
-              </Button>
+              {!embedded && (
+                <Button variant="outline" disabled={locked} onClick={close}>
+                  Done
+                </Button>
+              )}
             </div>
           </footer>
         </>
@@ -343,11 +345,7 @@ function AccountSecurityFrame({
     </>
   )
   if (embedded) {
-    return (
-      <section className="account-security flex flex-col gap-6 p-6 sm:p-8">
-        {content}
-      </section>
-    )
+    return <section className="account-security">{content}</section>
   }
   return (
     <Dialog

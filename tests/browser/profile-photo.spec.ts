@@ -47,7 +47,7 @@ test("upload, reload, replace and remove a profile photo", async ({
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
   await page.goto("/settings/account")
   await expect(
     page.getByRole("heading", { name: "Account", exact: true })
@@ -55,7 +55,7 @@ test("upload, reload, replace and remove a profile photo", async ({
   await expect(page.locator(".workspace-settings .agent-mark")).toHaveCount(0)
   await expect(
     page.locator(".workspace-settings").getByRole("button", {
-      name: "Edit agent",
+      name: "Edit assistant",
       exact: true,
       includeHidden: true,
     })

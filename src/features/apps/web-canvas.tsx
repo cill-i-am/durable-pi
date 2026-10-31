@@ -1,12 +1,12 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { send } from "@xstate/effect"
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect"
 import { useEffect, useRef, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
 import type { AppAction } from "@/apps/contracts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
 
 import { frameWork, makeFrameOwner, type FrameActor } from "./web-canvas-owner"
 import type { webCanvasMachine } from "./web-canvas.machine"
@@ -63,7 +63,11 @@ function OwnedWebCanvas({
               version,
               blockId,
               frame: () => frame.current,
-              current: () => current.current,
+              current: () => ({
+                ...current.current,
+                disabled:
+                  current.current.disabled || !frameAvailable(frame.current),
+              }),
             },
             Deferred.await(ready)
           )
@@ -115,10 +119,7 @@ function OwnedWebCanvas({
       className="flex min-w-0 flex-col gap-3"
       aria-label="Cloudflare app"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          Code runs on Cloudflare. Changes stay in this app.
-        </p>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -162,5 +163,13 @@ function OwnedWebCanvas({
         <Skeleton className="h-60 w-full" />
       ) : null}
     </section>
+  )
+}
+
+function frameAvailable(frame: HTMLIFrameElement | null) {
+  return (
+    !!frame &&
+    frame.getClientRects().length > 0 &&
+    !frame.closest('[inert], [data-base-ui-inert], [aria-hidden="true"]')
   )
 }

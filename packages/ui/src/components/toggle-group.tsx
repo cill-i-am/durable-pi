@@ -25,7 +25,7 @@ function ToggleGroup<Value extends string>({
           multiple={multiple}
           className={(state) =>
             cn(
-              "rounded-control inline-flex w-fit max-w-full flex-wrap items-center gap-0.5 border border-input bg-muted p-[3px] data-[orientation=vertical]:flex-col data-disabled:opacity-50",
+              "inline-flex w-fit max-w-full flex-wrap items-center gap-0.5 rounded-control border border-input bg-muted p-[3px] data-[orientation=vertical]:flex-col data-disabled:opacity-50",
               typeof className === "function" ? className(state) : className
             )
           }
@@ -84,7 +84,9 @@ function ToggleElement({
               <ToggleIndicator key="selection" disabled={state.disabled} />
             )}
           </AnimatePresence>
-          <span className="relative">{baseProps.children}</span>
+          <span className="relative inline-flex items-center justify-center gap-2 whitespace-nowrap">
+            {baseProps.children}
+          </span>
         </>
       ) : (
         baseProps.children

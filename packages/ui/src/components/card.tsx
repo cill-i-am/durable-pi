@@ -7,7 +7,7 @@ function CardFrame({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-frame"
       className={cn(
-        "bg-surface-underlay rounded-frame @container/card-frame flex min-w-0 flex-col gap-[3px] border border-border p-[3px] text-card-foreground shadow-(--shadow-card-frame)",
+        "@container/card-frame flex min-w-0 flex-col gap-[3px] rounded-frame border border-border bg-surface-underlay p-[3px] text-card-foreground shadow-(--shadow-card-frame)",
         className
       )}
       {...props}
@@ -127,7 +127,7 @@ function CardFooter({
       data-variant={variant}
       className={cn(
         footerVariants({ variant }),
-        "bg-surface-underlay rounded-b-[inherit] border-t border-border",
+        "rounded-b-[inherit] border-t border-border bg-surface-underlay",
         className
       )}
       {...props}

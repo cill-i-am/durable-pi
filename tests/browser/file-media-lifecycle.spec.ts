@@ -27,11 +27,12 @@ test.beforeAll(async () => {
       useEffect(()=>{window.mediaApp={setAgent,setShown,setKind}},[]);
       return <><button onClick={()=>setAgent('beta')}>Switch agent</button><button onClick={()=>setShown(false)}>Unmount media</button>
       {shown&&<><VoiceRecorder key={agent} disabled={false} onRecorded={async(file)=>{window.recorded.push({name:file.name,text:await file.text()})}}/>
-      <FileDetails key={'detail-'+agent} file={file} state={{agentId:agent,mutate:(id,action,name)=>new Promise(resolve=>window.mutations.push({agent,id,action,name,resolve}))}} onPendingChange={pending=>{window.detailPending=pending}} onAttach={()=>{}} disabled={false}/>
+      <FileDetails key={'detail-'+agent} active={true} file={file} state={{agentId:agent,mutate:(id,action,name)=>new Promise(resolve=>window.mutations.push({agent,id,action,name,resolve}))}} onPendingChange={pending=>{window.detailPending=pending}} onAttach={()=>{}} disabled={false}/>
       <AudioPlayer file={{...file,kind:'audio'}} agentId={agent}/><FilePreview file={file} agentId={agent} view='source' onViewChange={()=>{}}/></>}</>}
       createRoot(document.getElementById('root')).render(<App/>);`,
     },
     bundle: true,
+    loader: { ".css": "empty" },
     write: false,
     platform: "browser",
     format: "iife",

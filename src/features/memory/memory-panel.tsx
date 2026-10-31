@@ -1,24 +1,29 @@
-import { Search, ChevronDown } from "lucide-react"
-import { useMemo, useState } from "react"
-
-import { Markdown } from "@/components/markdown"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button, buttonVariants } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-} from "@/components/ui/empty"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@workspace/ui/components/empty"
+import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@workspace/ui/components/tabs"
+import { Search, ChevronDown } from "lucide-react"
+import { useMemo, useState } from "react"
+
+import { Markdown } from "@/components/markdown"
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"
 import type { ChatState } from "@/conversations/contracts"
 import { agentUrl } from "@/http/client"
 
@@ -27,6 +32,8 @@ import { MemoryImport } from "./memory-import"
 import type { MemoryQuery } from "./query.machine"
 import { SummaryRecovery } from "./summary-recovery"
 import { useMemoryQuery } from "./use-memory-query"
+
+import "./memory.css"
 
 export function MemoryWorkbench({
   state,
@@ -59,139 +66,139 @@ export function MemoryWorkbench({
     setTab("history")
   }
   return (
-    <section className="workbench-body memory-workbench">
-      <header className="workbench-heading">
-        <h2 className="workbench-title">Memory</h2>
-        <p>
-          {state?.memory.messages ?? 0} archived messages ·{" "}
-          {state?.memory.notes.length ?? 0} memory notes
-        </p>
+    <section className="memory-surface">
+      <header className="workbench-heading-row">
+        <h2 className="workbench-section-title">Memory</h2>
       </header>
-      <SummaryRecovery
-        agentId={agentId}
-        issues={state?.memory.issues ?? []}
-        recovery={state?.memory.compactionRecovery}
-        refresh={refresh}
-      />
-      <form onSubmit={search} className="memory-search">
-        <Field>
-          <FieldLabel htmlFor="memory-search" className="sr-only">
-            Search the archive
-          </FieldLabel>
-          <div className="flex gap-2">
-            <Input
-              id="memory-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search conversation history…"
-              maxLength={500}
-            />
-            <Button
-              type="submit"
-              variant="outline"
-              size="icon"
-              aria-label="Search memory"
-              disabled={!query.trim()}
-            >
-              <Search />
-            </Button>
-          </div>
-        </Field>
-      </form>
-      <Tabs
-        value={tab}
-        onValueChange={(value: unknown) => {
-          if (
-            value === "notes" ||
-            value === "history" ||
-            value === "tree" ||
-            value === "files"
-          )
-            setTab(value)
-        }}
-      >
-        <TabsList
-          variant="line"
-          className="h-auto max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto"
-        >
-          <TabsTrigger value="notes" className="min-h-11 md:min-h-0">
-            Saved notes
-          </TabsTrigger>
-          <TabsTrigger value="history" className="min-h-11 md:min-h-0">
-            History
-          </TabsTrigger>
-          <TabsTrigger value="tree" className="min-h-11 md:min-h-0">
-            Summaries
-          </TabsTrigger>
-          <TabsTrigger value="files" className="min-h-11 md:min-h-0">
-            Export & import
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="notes">
-          <div className="memory-notes">
-            {state?.memory.notes.length ? (
-              state.memory.notes.map((note) => (
-                <MemoryNote key={note.path} note={note} agentId={agentId} />
-              ))
-            ) : (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyTitle>No saved notes</EmptyTitle>
-                  <EmptyDescription>
-                    Ask your agent to save a preference or useful fact.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            )}
-          </div>
-        </TabsContent>
-        <TabsContent value="history">
-          {error && (
-            <Alert>
-              <AlertDescription>
-                {error}
-                <Button variant="link" size="sm" onClick={searchQuery.retry}>
-                  Retry search
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-          <div className="memory-notes">
-            <p role="status" className="text-sm text-muted-foreground">
-              {loading
-                ? "Searching…"
-                : !query.trim()
-                  ? "Search for a message or phrase."
-                  : !error && !results.length
-                    ? "No matching messages."
-                    : ""}
-            </p>
-            {!loading && !error && query.trim() && !results.length && (
-              <Button variant="outline" size="sm" onClick={() => setQuery("")}>
-                Clear search
+      <div className="workbench-body memory-workbench">
+        <SummaryRecovery
+          agentId={agentId}
+          issues={state?.memory.issues ?? []}
+          recovery={state?.memory.compactionRecovery}
+          refresh={refresh}
+        />
+        <form onSubmit={search} className="memory-search">
+          <Field>
+            <FieldLabel htmlFor="memory-search" className="sr-only">
+              Search the archive
+            </FieldLabel>
+            <div className="flex gap-2">
+              <Input
+                id="memory-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search conversation history…"
+                maxLength={500}
+              />
+              <Button
+                type="submit"
+                variant="outline"
+                size="icon"
+                aria-label="Search memory"
+                disabled={!query.trim()}
+              >
+                <Search />
               </Button>
+            </div>
+          </Field>
+        </form>
+        <Tabs
+          className="memory-tabs"
+          value={tab}
+          onValueChange={(value: unknown) => {
+            if (
+              value === "notes" ||
+              value === "history" ||
+              value === "tree" ||
+              value === "files"
+            )
+              setTab(value)
+          }}
+        >
+          <TabsList className="h-auto max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
+            <TabsTrigger value="notes" className="min-h-11 md:min-h-0">
+              Notes
+            </TabsTrigger>
+            <TabsTrigger value="history" className="min-h-11 md:min-h-0">
+              History
+            </TabsTrigger>
+            <TabsTrigger value="tree" className="min-h-11 md:min-h-0">
+              Summaries
+            </TabsTrigger>
+            <TabsTrigger value="files" className="min-h-11 md:min-h-0">
+              Archive
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="notes">
+            <div className="memory-notes">
+              {state?.memory.notes.length ? (
+                state.memory.notes.map((note) => (
+                  <MemoryNote key={note.path} note={note} agentId={agentId} />
+                ))
+              ) : (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>No saved notes</EmptyTitle>
+                    <EmptyDescription>
+                      Ask your agent to save a preference or useful fact.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
+            </div>
+          </TabsContent>
+          <TabsContent value="history">
+            {error && (
+              <Alert>
+                <AlertDescription>
+                  {error}
+                  <Button variant="link" size="sm" onClick={searchQuery.retry}>
+                    Retry search
+                  </Button>
+                </AlertDescription>
+              </Alert>
             )}
-            {results.map((result) => (
-              <article key={result.id}>
-                <h3>
-                  {result.kind} · message {result.id}
-                </h3>
-                <p className="message-text">{result.text}</p>
-              </article>
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="tree">
-          <MemoryTree agentId={agentId} />
-        </TabsContent>
-        <TabsContent value="files">
-          <MemoryFiles
-            memory={state?.memory}
-            agentId={agentId}
-            refresh={refresh}
-          />
-        </TabsContent>
-      </Tabs>
+            <div className="memory-notes">
+              <p role="status" className="text-sm text-muted-foreground">
+                {loading
+                  ? "Searching…"
+                  : !query.trim()
+                    ? "Search for a message or phrase."
+                    : !error && !results.length
+                      ? "No matching messages."
+                      : ""}
+              </p>
+              {!loading && !error && query.trim() && !results.length && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuery("")}
+                >
+                  Clear search
+                </Button>
+              )}
+              {results.map((result) => (
+                <article key={result.id}>
+                  <h3>
+                    {result.kind} · message {result.id}
+                  </h3>
+                  <p className="message-text">{result.text}</p>
+                </article>
+              ))}
+            </div>
+          </TabsContent>
+          <TabsContent value="tree">
+            <MemoryTree agentId={agentId} />
+          </TabsContent>
+          <TabsContent value="files">
+            <MemoryFiles
+              memory={state?.memory}
+              agentId={agentId}
+              refresh={refresh}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
     </section>
   )
 }
@@ -274,9 +281,6 @@ function MemoryTree({ agentId }: { agentId: string }) {
   const selected = trail.at(-1)
   return (
     <div className="memory-notes">
-      <p className="text-sm text-muted-foreground">
-        Open a summary to see its two children, then the original message.
-      </p>
       <div className="flex items-center gap-2">
         <Button
           variant="outline"
@@ -284,7 +288,7 @@ function MemoryTree({ agentId }: { agentId: string }) {
           disabled={pending}
           onClick={() => void open([])}
         >
-          Current view
+          Root summaries
         </Button>
         {selected && (
           <Button
@@ -351,10 +355,9 @@ function MemoryFiles({
   return (
     <div className="memory-notes">
       <article>
-        <h3>Download your memory</h3>
+        <h3>Download memory</h3>
         <p className="text-sm text-muted-foreground">
-          Includes original messages, the summary tree, and note revisions. Keep
-          downloaded files private.
+          Includes messages, summaries and notes. Keep exports private.
         </p>
         <div className="flex flex-wrap gap-2">
           <a
@@ -392,14 +395,14 @@ function MemoryFiles({
       </article>
       <MemoryImport key={agentId} agentId={agentId} refresh={refresh} />
       {!!memory?.usage?.requests && (
-        <article>
-          <h3>Model cache</h3>
+        <details className="memory-diagnostics">
+          <summary>Model cache</summary>
           <p className="text-sm text-muted-foreground">
             {memory.usage.cached.toLocaleString()} of{" "}
             {memory.usage.input.toLocaleString()} input tokens read from cache
             across {memory.usage.requests.toLocaleString()} requests.
           </p>
-        </article>
+        </details>
       )}
     </div>
   )

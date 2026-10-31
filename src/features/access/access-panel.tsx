@@ -1,10 +1,13 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@workspace/ui/components/toggle-group"
 import { Check, RefreshCw } from "lucide-react"
 import { useEffect } from "react"
 
 import { SettingsSection } from "@/components/settings-section"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 import { useAccess } from "./use-access"
 
@@ -42,10 +45,13 @@ export function AccessPanel({
       onOpenChange={setOpen}
       title="Tool access"
       description={
-        <>Choose what {agentName} can do. Permissions apply to this bot only.</>
+        <>
+          Choose what {agentName} can do. Permissions apply to this assistant
+          only.
+        </>
       }
     >
-      <div className="min-h-0 flex-1 overflow-y-auto px-4">
+      <div className="settings-panel-body">
         {error && (
           <Alert className="my-3">
             <AlertDescription>
@@ -71,7 +77,7 @@ export function AccessPanel({
           {policies?.map((tool) => (
             <section
               key={tool.name}
-              className="flex flex-col gap-3 py-4"
+              className="settings-access-row"
               aria-label={tool.title ?? tool.name}
             >
               <div>
@@ -83,8 +89,6 @@ export function AccessPanel({
                 </p>
               </div>
               <ToggleGroup
-                variant="outline"
-                size="sm"
                 value={[tool.mode]}
                 disabled={!!busy || loading}
                 aria-label={`Access for ${tool.title ?? tool.name}`}
@@ -118,7 +122,7 @@ export function AccessPanel({
           ))}
         </div>
       </div>
-      <div className="flex flex-col gap-2 border-t p-4 text-xs text-muted-foreground">
+      <div className="settings-panel-footer space-y-2">
         <p>
           <strong>Allow</strong> runs automatically with any inputs and stays
           saved until you change it. <strong>Ask</strong> pauses for your

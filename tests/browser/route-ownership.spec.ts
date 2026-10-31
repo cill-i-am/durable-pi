@@ -41,15 +41,25 @@ test("merged raw query keys cannot replace a global setting's workbench backdrop
   await expect(
     page.getByRole("heading", { name: "Family", exact: true })
   ).toBeVisible()
-  const picker = page.getByRole("combobox", {
-    name: "Workbench tool",
+  const filesTab = page.getByRole("tab", {
+    name: "Files",
+    exact: true,
     includeHidden: true,
   })
-  await expect(picker).toContainText("Files")
+  const filesPanel = page.getByRole("tabpanel", {
+    name: "Files",
+    exact: true,
+    includeHidden: true,
+  })
+  await expect(filesTab).toHaveAttribute("aria-selected", "true")
+  await expect(filesPanel).toHaveCount(1)
+  await expect(filesPanel).not.toHaveAttribute("hidden")
+  await expect(filesPanel).toHaveAttribute("inert", "")
   await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
-  await expect(picker).toBeVisible()
-  await expect(picker).toContainText("Files")
+  await expect(filesPanel).toBeVisible()
+  await expect(filesPanel).not.toHaveAttribute("inert")
+  await expect(filesTab).toHaveAttribute("aria-selected", "true")
 })
 const research = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -191,13 +201,13 @@ async function signIn(page: Page) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page.getByRole("region", { name: "Your agents" })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
 }
 
 async function openChat(page: Page) {
   await signIn(page)
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: "Navi", exact: true })
     .click()
   await expect(
@@ -208,16 +218,12 @@ async function openChat(page: Page) {
 async function openSettingsMenu(page: Page, mobile: boolean) {
   if (mobile) {
     await page
-      .getByRole("navigation", { name: "Mobile workspace", exact: true })
-      .getByRole("button", { name: "Agents", exact: true })
+      .getByRole("button", { name: "Toggle Sidebar", exact: true })
       .click()
-    await page
-      .getByRole("navigation", { name: "Agents and workspace", exact: true })
-      .getByRole("button", { name: "Settings for Bench", exact: true })
-      .click()
-  } else {
-    await page.getByRole("button", { name: /Pi.*Fixture family/ }).click()
   }
+  await page
+    .getByRole("button", { name: "Account menu for Bench", exact: true })
+    .click()
 }
 
 async function selectSettings(page: Page, name: string, mobile: boolean) {
@@ -263,7 +269,7 @@ async function expectGlobalShell(page: Page) {
   ).toHaveCount(0)
   await expect(
     shell.getByRole("button", {
-      name: "Edit agent",
+      name: "Edit assistant",
       exact: true,
       includeHidden: true,
     })
@@ -333,8 +339,11 @@ for (const path of [
     await signIn(page)
     await page.goto(workbench)
     await expect(
-      page.getByRole("combobox", { name: "Workbench tool" })
-    ).toContainText("Files")
+      page.getByRole("tab", { name: "Files", exact: true, includeHidden: true })
+    ).toHaveAttribute("aria-selected", "true")
+    await expect(
+      page.getByRole("tabpanel", { name: "Files", exact: true })
+    ).toBeVisible()
     await page.goto(`${path}?panel=files&tab=trash&connections=connected`)
     await expect(
       page.getByRole("heading", {
@@ -355,14 +364,17 @@ for (const path of [
         name: /^(Family|Model access|Account security|Navi)$/,
       })
     ).toHaveCount(0)
-    await expect(page.getByRole("region", { name: "Your agents" })).toHaveCount(
+    await expect(page.getByRole("region", { name: "Assistants" })).toHaveCount(
       0
     )
     await page.goBack()
     await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
     await expect(
-      page.getByRole("combobox", { name: "Workbench tool" })
-    ).toContainText("Files")
+      page.getByRole("tab", { name: "Files", exact: true, includeHidden: true })
+    ).toHaveAttribute("aria-selected", "true")
+    await expect(
+      page.getByRole("tabpanel", { name: "Files", exact: true })
+    ).toBeVisible()
   })
 }
 
@@ -449,8 +461,11 @@ test("global Security returns through settings to the workbench", async ({
   await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
   await expect(
-    page.getByRole("combobox", { name: "Workbench tool" })
-  ).toContainText("Files")
+    page.getByRole("tab", { name: "Files", exact: true, includeHidden: true })
+  ).toHaveAttribute("aria-selected", "true")
+  await expect(
+    page.getByRole("tabpanel", { name: "Files", exact: true })
+  ).toBeVisible()
 })
 
 test("global settings reject external, action, overlay and invalid resource return paths", async ({
@@ -525,7 +540,7 @@ test("assistant settings have only assistant controls and five scoped destinatio
         shell.getByRole("heading", { name: "General", exact: true })
       ).toBeVisible()
       await expect(
-        shell.getByRole("button", { name: "Edit agent", exact: true })
+        shell.getByRole("button", { name: "Edit assistant", exact: true })
       ).toBeEnabled()
     } else if (section === "models") {
       await expect(
@@ -907,7 +922,7 @@ test("a non-default assistant keeps its mounted composer and file draft through 
   await addResearch(page)
   await signIn(page)
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: "Research", exact: true })
     .click()
   await expectPath(page, "/agents/research")

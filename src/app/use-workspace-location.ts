@@ -251,6 +251,10 @@ export function useWorkspaceLocation(
     },
     [href, navigate, agents]
   )
+  const openAgents = useCallback(
+    () => navigate({ to: "/agents", search: {} }),
+    [navigate]
+  )
   const openArchivedAgents = useCallback(
     (replace = false) =>
       navigate({
@@ -343,6 +347,7 @@ export function useWorkspaceLocation(
     update,
     openAgent,
     openArchivedAgents,
+    openAgents,
     setPanel,
     setSettings,
     settingsFrames: frames,

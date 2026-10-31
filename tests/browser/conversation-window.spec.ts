@@ -52,7 +52,7 @@ test("new replies stay in view when the recent history window rolls forward", as
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   await page
-    .getByRole("region", { name: "Your agents" })
+    .getByRole("region", { name: "Assistants" })
     .getByRole("link", { name: /Navi/ })
     .click()
   await expect(

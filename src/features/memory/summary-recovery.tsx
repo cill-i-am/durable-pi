@@ -1,10 +1,14 @@
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
 import { send, type EffectActor } from "@xstate/effect"
 import { Cause, Effect, Exit, Fiber } from "effect"
 import { useEffect, useMemo, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import type { CompactionRecovery } from "@/conversations/contracts"
 import { agentApi } from "@/http/client"
 import type { SummaryIssue } from "@/memory/domain"

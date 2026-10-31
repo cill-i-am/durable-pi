@@ -853,6 +853,42 @@ test("keyboard: checkbox, indeterminate, switch and single selection", async ({
   ).toHaveAttribute("aria-pressed", "false")
 })
 
+test("toggle group: icons and labels stay on one line", async ({
+  page,
+}, info) => {
+  await openStory(page, info, "components-togglegroup--icon-labels", {
+    autoplay: false,
+  })
+  const group = page.getByRole("group", { name: "Theme", exact: true })
+  for (const label of ["Light", "Dark", "System"]) {
+    const geometry = await group
+      .getByRole("button", { name: label, exact: true })
+      .evaluate((button, text) => {
+        const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT)
+        let node = walker.nextNode()
+        while (node && node.textContent?.trim() !== text)
+          node = walker.nextNode()
+        if (!node) throw new Error(`Missing label: ${text}`)
+        const range = document.createRange()
+        range.selectNodeContents(node)
+        const lines = [...range.getClientRects()]
+        const labelBounds = range.getBoundingClientRect()
+        const icon = button.querySelector("svg")!.getBoundingClientRect()
+        return {
+          lines: lines.length,
+          centerDifference: Math.abs(
+            icon.y + icon.height / 2 - labelBounds.y - labelBounds.height / 2
+          ),
+        }
+      }, label)
+    expect(geometry.lines, `${label} stays on one line`).toBe(1)
+    expect(
+      geometry.centerDifference,
+      `${label} aligns beside its icon`
+    ).toBeLessThan(2)
+  }
+})
+
 test("keyboard: select opens, chooses an option and restores focus", async ({
   page,
 }, info) => {

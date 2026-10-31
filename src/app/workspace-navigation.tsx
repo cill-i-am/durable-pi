@@ -1,8 +1,16 @@
+import { Link } from "@tanstack/react-router"
 import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
+import { Button } from "@workspace/ui/components/button"
 import {
   Activity,
   BookOpen,
   ChevronDown,
+  Archive,
+  MoreHorizontal,
+  Pencil,
+  LayoutGrid,
+  Plug,
+  Users,
   Clock3,
   Code2,
   Globe,
@@ -10,7 +18,6 @@ import {
   ListTodo,
   LogOut,
   PanelLeft,
-  PanelRight,
   PanelsTopLeft,
   Plus,
   Search,
@@ -20,8 +27,8 @@ import {
 } from "lucide-react"
 import { useRef } from "react"
 
-import type { AgentProfile } from "@/agents/contracts"
-import { Button } from "@/components/ui/button"
+import { homeAgentId, type AgentProfile } from "@/agents/contracts"
+import { AgentStatusMarker, agentStatusLabel } from "@/components/agent-status"
 import {
   Command,
   CommandInput,
@@ -45,10 +52,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { useSidebar } from "@/components/ui/sidebar"
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuAction,
+  SidebarMenuButton,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { UserAvatar } from "@/components/user-avatar"
+import type { RuntimeStatus } from "@/conversations/status"
 import { useFamily } from "@/features/family/context"
-import type { Workbench } from "@/navigation/workspace"
 
 export type { Workbench } from "@/navigation/workspace"
 export type { WorkspaceAction } from "./workspace-command.machine"
@@ -71,24 +88,36 @@ export function WorkspaceNavigation({
   name,
   image,
   agents,
+  collection,
+  statuses,
   selected,
   locked,
-  workbench,
   onAction,
   onSelect,
+  onSettings,
+  onCollection,
+  onAgentSettings,
+  onEdit,
+  onArchive,
 }: {
   name: string
   image?: string | null
   agents: readonly AgentProfile[]
+  collection: boolean
+  statuses: Record<string, RuntimeStatus>
   selected?: AgentProfile
   locked: boolean
-  workbench: Workbench | null
   onAction: (action: WorkspaceAction) => void
   onSelect: (id: AgentProfile["id"]) => void
+  onSettings: (category: "connection-library" | "family") => void
+  onCollection: () => void
+  onAgentSettings: (agent: AgentProfile) => void
+  onEdit: (agent: AgentProfile) => void
+  onArchive: (agent: AgentProfile) => void
 }) {
   const { family } = useFamily()
   const searchTrigger = useRef<HTMLButtonElement>(null)
-  const { toggleSidebar, setOpenMobile } = useSidebar()
+  const { toggleSidebar, setOpenMobile, state, isMobile } = useSidebar()
   const search = useWorkspaceCommand({
     locked: () => locked,
     dispatch: (command) => {
@@ -119,135 +148,200 @@ export function WorkspaceNavigation({
       return () => window.removeEventListener("keydown", shortcut)
     },
   })
-  const run = (action: WorkspaceAction) =>
+  const run = (action: WorkspaceAction) => {
+    setOpenMobile(false)
     search.choose({ kind: "action", id: action })
+  }
   const commands = [
     { id: "security", label: "Account security", icon: ShieldCheck },
-    { id: "create", label: "New agent", icon: Plus },
+    { id: "create", label: "New assistant", icon: Plus },
     { id: "settings", label: "Settings", icon: Settings2 },
     ...destinations,
   ] as const
   return (
     <>
-      <header className="workspace-bar">
-        <div className="workspace-brand">
+      <Sidebar variant="inset" collapsible="icon" className="workspace-sidebar">
+        <SidebarHeader className="workspace-sidebar-header">
+          <div className="workspace-family-row">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={locked}
+                render={<Button variant="ghost" className="workspace-family" />}
+              >
+                <span className="workspace-family-mark" aria-hidden="true">
+                  {family.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="workspace-sidebar-label">{family.name}</span>
+                <ChevronDown className="workspace-sidebar-label ms-auto" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>{family.name}</DropdownMenuLabel>
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() => {
+                      setOpenMobile(false)
+                      onSettings("family")
+                    }}
+                  >
+                    <Users /> Family
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() => run("settings")}
+                  >
+                    <Settings2 /> Settings
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="workspace-collapse"
+              aria-label={
+                isMobile
+                  ? "Close sidebar"
+                  : state === "expanded"
+                    ? "Collapse sidebar"
+                    : "Expand sidebar"
+              }
+              onClick={toggleSidebar}
+            >
+              <PanelLeft />
+            </Button>
+          </div>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="New assistant"
+                disabled={locked}
+                onClick={() => {
+                  setOpenMobile(false)
+                  run("create")
+                }}
+                className="workspace-new-assistant"
+              >
+                <Plus />
+                <span>New assistant</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                ref={searchTrigger}
+                tooltip="Search"
+                disabled={locked}
+                aria-label="Search assistants and commands"
+                onClick={() => {
+                  setOpenMobile(false)
+                  search.change(true)
+                }}
+              >
+                <Search />
+                <span>Search</span>
+                <kbd className="workspace-sidebar-label ms-auto text-xs text-muted-foreground">
+                  ⌘ K
+                </kbd>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Connections"
+                disabled={locked}
+                onClick={() => {
+                  setOpenMobile(false)
+                  onSettings("connection-library")
+                }}
+              >
+                <Plug />
+                <span>Connections</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent className="workspace-sidebar-content">
+          <p className="workspace-sidebar-label workspace-sidebar-heading">
+            Assistants
+          </p>
+          <SidebarMenu aria-label="Assistants">
+            {agents
+              .filter((agent) => agent.status === "active")
+              .map((agent) => (
+                <AssistantNavigationItem
+                  key={agent.id}
+                  agent={agent}
+                  status={statuses[agent.id]?.state}
+                  selected={selected?.id === agent.id}
+                  locked={locked}
+                  onSelect={onSelect}
+                  onSettings={onAgentSettings}
+                  onEdit={onEdit}
+                  onArchive={onArchive}
+                />
+              ))}
+          </SidebarMenu>
+          <SidebarMenu className="mt-4">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="All assistants"
+                isActive={collection}
+                disabled={locked}
+                onClick={() => {
+                  setOpenMobile(false)
+                  onCollection()
+                }}
+              >
+                <LayoutGrid />
+                <span>All assistants</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter className="workspace-sidebar-footer">
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={locked}
               render={
-                <Button variant="ghost" className="workspace-brand-button" />
+                <Button
+                  variant="ghost"
+                  className="workspace-account"
+                  aria-label={`Account menu for ${name}`}
+                />
               }
             >
-              <UserAvatar name={name} image={image} />
-              <strong>Pi</strong>
-              <span>/ {family.name}</span>
-              <ChevronDown />
+              <UserAvatar name={name} image={image} className="size-6" />
+              <span className="workspace-sidebar-label min-w-0 flex-1 truncate text-start">
+                {name}
+              </span>
+              <ChevronDown className="workspace-sidebar-label" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-68">
+            <DropdownMenuContent align="start" side="top">
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="flex items-center gap-3 py-3">
-                  <UserAvatar name={name} image={image} />
-                  <span>
-                    Personal workspace
-                    <span className="block text-xs font-normal text-muted-foreground">
-                      {name} · private
-                    </span>
-                  </span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  disabled={locked}
-                  onClick={() => run("create")}
-                >
-                  <Plus />
-                  New agent
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={locked}
-                  onClick={() => search.change(true)}
-                >
-                  <Search />
-                  Search agents and commands
-                </DropdownMenuItem>
+                <DropdownMenuLabel>{name}</DropdownMenuLabel>
                 <DropdownMenuItem
                   disabled={locked}
                   onClick={() => run("settings")}
                 >
-                  <Settings2 />
-                  Settings
+                  <Settings2 /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={locked}
+                  onClick={() => run("security")}
+                >
+                  <ShieldCheck /> Account security
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={locked}
                   onClick={() => run("sign-out")}
                 >
-                  <LogOut />
-                  Sign out
+                  <LogOut /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            disabled={locked || !selected}
-            render={<Button variant="ghost" className="workspace-tools" />}
-          >
-            <PanelsTopLeft />
-            Tools
-            <ChevronDown />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Workspace tools</DropdownMenuLabel>
-              {destinations.map((item) => (
-                <DropdownMenuItem
-                  key={item.id}
-                  disabled={locked || !selected}
-                  onClick={() => run(item.id)}
-                >
-                  <item.icon />
-                  {item.label}
-                  {workbench === item.id && (
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      Open
-                    </span>
-                  )}
-                </DropdownMenuItem>
-              ))}
-              {workbench && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => run("hide-workbench")}>
-                    <PanelRight /> Close tools
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          ref={searchTrigger}
-          variant="outline"
-          disabled={locked}
-          className="workspace-search"
-          onClick={() => search.change(true)}
-          aria-label="Search agents and commands"
-        >
-          <Search />
-          <span>Search agents and commands</span>
-          <kbd>⌘ K</kbd>
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="workspace-sidebar-toggle"
-          aria-label="Toggle sidebar"
-          onClick={toggleSidebar}
-        >
-          <PanelLeft />
-        </Button>
-      </header>
+        </SidebarFooter>
+      </Sidebar>
       <Dialog
         open={search.open && !locked}
         onOpenChange={search.change}
@@ -267,20 +361,20 @@ export function WorkspaceNavigation({
           }
         >
           <DialogTitle className="sr-only">
-            Search agents and commands
+            Search assistants and commands
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Find an active agent or open a workspace tool. Conversations are
-            searchable in each agent&apos;s memory.
+            Find an assistant or open a workbench tool. Conversations are
+            searchable in each assistant&apos;s memory.
           </DialogDescription>
           <Command loop>
             <CommandInput
-              placeholder="Search agents and commands…"
-              aria-label="Search agents and commands"
+              placeholder="Search assistants and commands…"
+              aria-label="Search assistants and commands"
             />
             <CommandList>
-              <CommandEmpty>No matching agents or commands.</CommandEmpty>
-              <CommandGroup heading="Your agents">
+              <CommandEmpty>No matching assistants or commands.</CommandEmpty>
+              <CommandGroup heading="Assistants">
                 {agents
                   .filter((agent) => agent.status === "active")
                   .map((agent) => (
@@ -344,5 +438,114 @@ export function WorkspaceNavigation({
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+function AssistantNavigationItem({
+  agent,
+  status,
+  selected,
+  locked,
+  onSelect,
+  onSettings,
+  onEdit,
+  onArchive,
+}: {
+  agent: AgentProfile
+  status: RuntimeStatus["state"] | undefined
+  selected: boolean
+  locked: boolean
+  onSelect: (id: AgentProfile["id"]) => void
+  onSettings: (agent: AgentProfile) => void
+  onEdit: (agent: AgentProfile) => void
+  onArchive: (agent: AgentProfile) => void
+}) {
+  const { setOpenMobile } = useSidebar()
+  const current = useRef({ locked, onSettings, onEdit, onArchive })
+  current.current = { locked, onSettings, onEdit, onArchive }
+  const run = (action: "onSettings" | "onEdit" | "onArchive") => {
+    if (current.current.locked) return
+    setOpenMobile(false)
+    current.current[action](agent)
+  }
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        tooltip={agent.name}
+        isActive={selected}
+        aria-disabled={locked}
+        aria-label={`${agent.name}, ${agentStatusLabel(status)}`}
+        render={
+          <Link
+            to="/agents/$agentId"
+            params={{ agentId: agent.slug }}
+            search={{}}
+            onClick={(event) => {
+              if (locked) {
+                event.preventDefault()
+                return
+              }
+              if (
+                !event.metaKey &&
+                !event.ctrlKey &&
+                !event.shiftKey &&
+                !event.altKey &&
+                event.button === 0
+              ) {
+                event.preventDefault()
+                setOpenMobile(false)
+                onSelect(agent.id)
+              }
+            }}
+          />
+        }
+      >
+        <span className="relative flex size-5 shrink-0">
+          <AgentAvatar
+            name={agent.id}
+            label={agent.name}
+            size={20}
+            aria-hidden="true"
+          />
+          <AgentStatusMarker status={status} />
+        </span>
+        <span>{agent.name}</span>
+      </SidebarMenuButton>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          disabled={locked}
+          render={
+            <SidebarMenuAction
+              showOnHover
+              aria-label={`Actions for ${agent.name}`}
+            />
+          }
+        >
+          <MoreHorizontal />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="right">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{agent.name}</DropdownMenuLabel>
+            <DropdownMenuItem
+              disabled={locked}
+              onClick={() => run("onSettings")}
+            >
+              <Settings2 /> Assistant settings
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={locked} onClick={() => run("onEdit")}>
+              <Pencil /> Edit assistant
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={locked || agent.id === homeAgentId}
+              variant="destructive"
+              onClick={() => run("onArchive")}
+            >
+              <Archive /> Archive assistant…
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarMenuItem>
   )
 }

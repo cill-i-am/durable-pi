@@ -1,6 +1,10 @@
+import {
+  Field,
+  FieldDescription,
+  FieldLabel,
+} from "@workspace/ui/components/field"
 import { useId } from "react"
 
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -24,9 +28,9 @@ export function MessageDeliverySettings() {
   const id = useId()
   const mode = useMessageDeliveryDefault()
   return (
-    <div className="settings-preference">
+    <div className="settings-preference settings-delivery-preference">
       <Field>
-        <FieldLabel htmlFor={id}>Default message delivery</FieldLabel>
+        <FieldLabel htmlFor={id}>During a reply</FieldLabel>
         <FieldDescription id={`${id}-description`}>
           Choose what a message does during a reply. You can change this in the
           composer.

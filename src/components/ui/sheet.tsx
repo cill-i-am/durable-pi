@@ -1,47 +1,25 @@
-import { cn } from "cn"
-import { XIcon } from "lucide-react"
+"use client"
+
+import { Button } from "@workspace/ui/components/button"
+import { cn } from "@workspace/ui/lib/utils"
+import { ArrowLeftIcon, XIcon } from "lucide-react"
 import * as React from "react"
 
-import { Button } from "@/components/ui/button"
+import {
+  overlayClassName,
+  ResponsiveOverlay as Primitive,
+} from "./responsive-overlay"
 
-import { ResponsiveOverlay as SheetPrimitive } from "./responsive-overlay"
-
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" desktop="sheet" {...props} />
+function Sheet(props: React.ComponentProps<typeof Primitive.Root>) {
+  return <Primitive.Root desktop="sheet" {...props} />
 }
 
-function SheetTrigger({
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
-}
+const SheetTrigger = Primitive.Trigger
+const SheetClose = Primitive.Close
+const SheetPortal = Primitive.Portal
 
-function SheetClose({
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Close>) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
-}
-
-function SheetPortal({
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Portal>) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
-}
-
-function SheetOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Backdrop>) {
-  return (
-    <SheetPrimitive.Backdrop
-      data-slot="sheet-overlay"
-      className={cn(
-        "fixed inset-0 z-50 bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
-        className
-      )}
-      {...props}
-    />
-  )
+function SheetOverlay(props: React.ComponentProps<typeof Primitive.Backdrop>) {
+  return <Primitive.Backdrop data-slot="sheet-overlay" {...props} />
 }
 
 function SheetContent({
@@ -50,47 +28,37 @@ function SheetContent({
   side = "right",
   showCloseButton = true,
   showOverlay = true,
+  keepMounted = false,
   portalContainer,
-  mobileLayout,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Popup> & {
+}: React.ComponentProps<typeof Primitive.Popup> & {
   side?: "top" | "right" | "bottom" | "left"
-  showOverlay?: boolean
-  portalContainer?: React.ComponentProps<
-    typeof SheetPrimitive.Portal
-  >["container"]
   showCloseButton?: boolean
+  showOverlay?: boolean
+  keepMounted?: boolean
+  portalContainer?: React.ComponentProps<typeof Primitive.Portal>["container"]
 }) {
   return (
-    <SheetPortal container={portalContainer}>
+    <SheetPortal container={portalContainer} keepMounted={keepMounted}>
       {showOverlay && <SheetOverlay />}
-      <SheetPrimitive.Popup
-        mobileLayout={mobileLayout}
+      <Primitive.Popup
+        {...props}
         data-slot="sheet-content"
         data-side={side}
-        className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-(--shadow-dialog) transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
-          className
-        )}
-        {...props}
+        className={overlayClassName("ui-sheet", className)}
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close
-            data-slot="sheet-close"
+          <SheetClose
             render={
-              <Button
-                variant="ghost"
-                className="absolute top-3 right-3"
-                size="icon-sm"
-              />
+              <Button variant="ghost" size="icon" className="overlay-close" />
             }
+            aria-label="Close sheet"
           >
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </SheetPrimitive.Close>
+            <XIcon aria-hidden="true" />
+          </SheetClose>
         )}
-      </SheetPrimitive.Popup>
+      </Primitive.Popup>
     </SheetPortal>
   )
 }
@@ -99,7 +67,17 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-0.5 p-4", className)}
+      className={cn("sheet-header", className)}
+      {...props}
+    />
+  )
+}
+
+function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="sheet-body"
+      className={cn("sheet-body", className)}
       {...props}
     />
   )
@@ -109,7 +87,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn("sheet-footer", className)}
       {...props}
     />
   )
@@ -118,14 +96,11 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
 function SheetTitle({
   className,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Title>) {
+}: React.ComponentProps<typeof Primitive.Title>) {
   return (
-    <SheetPrimitive.Title
+    <Primitive.Title
       data-slot="sheet-title"
-      className={cn(
-        "font-heading text-base font-medium text-foreground",
-        className
-      )}
+      className={overlayClassName("overlay-title", className)}
       {...props}
     />
   )
@@ -134,13 +109,63 @@ function SheetTitle({
 function SheetDescription({
   className,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Description>) {
+}: React.ComponentProps<typeof Primitive.Description>) {
   return (
-    <SheetPrimitive.Description
+    <Primitive.Description
       data-slot="sheet-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={overlayClassName("overlay-description", className)}
       {...props}
     />
+  )
+}
+
+function SheetNavigation({
+  title,
+  backLabel,
+  onBack,
+  closeLabel = "Close sheet",
+  showCloseButton = true,
+}: {
+  title: React.ReactNode
+  backLabel?: string
+  onBack?: () => void
+  closeLabel?: string
+  showCloseButton?: boolean
+}) {
+  const back = (
+    <>
+      <ArrowLeftIcon aria-hidden="true" />
+      <span>{backLabel}</span>
+    </>
+  )
+  return (
+    <header className="sheet-navigation" data-has-back={!!backLabel}>
+      <div className="sheet-navigation-leading">
+        {backLabel &&
+          (onBack ? (
+            <Button variant="ghost" onClick={onBack} className="sheet-back">
+              {back}
+            </Button>
+          ) : (
+            <SheetClose
+              render={<Button variant="ghost" className="sheet-back" />}
+            >
+              {back}
+            </SheetClose>
+          ))}
+      </div>
+      <SheetTitle className="sheet-navigation-title">{title}</SheetTitle>
+      <div className="sheet-navigation-trailing">
+        {showCloseButton && (
+          <SheetClose
+            render={<Button variant="ghost" size="icon" />}
+            aria-label={closeLabel}
+          >
+            <XIcon aria-hidden="true" />
+          </SheetClose>
+        )}
+      </div>
+    </header>
   )
 }
 
@@ -148,9 +173,13 @@ export {
   Sheet,
   SheetTrigger,
   SheetClose,
+  SheetPortal,
+  SheetOverlay,
   SheetContent,
   SheetHeader,
+  SheetBody,
   SheetFooter,
   SheetTitle,
   SheetDescription,
+  SheetNavigation,
 }

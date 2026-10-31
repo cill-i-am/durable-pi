@@ -8,7 +8,11 @@ import { expect, test } from "@playwright/test"
 type ProbeWindow = Window & {
   calls: { agent: string; path: string; body: unknown; aborted: boolean }[]
   pending: ((mode?: "fail" | "newer") => void)[]
-  probe: { setAgent: (agent: string) => void; setView: (view: string) => void }
+  probe: {
+    setAgent: (agent: string) => void
+    setView: (view: string) => void
+    setActive: (active: boolean) => void
+  }
 }
 
 const root = fileURLToPath(new URL("../../", import.meta.url))
@@ -23,17 +27,44 @@ let server: Server, address: string
 test.beforeAll(async () => {
   const result = await build({
     stdin: {
-      contents: `import{useState,useEffect}from'react';import{createRoot}from'react-dom/client';import{useRoutines}from'./src/features/routines/use-routines';import{useWebhook}from'./src/features/routines/use-webhook';import{RoutinesWorkbench}from'./src/features/routines/routines-workbench';const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';function App(){const[agent,setAgent]=useState('alpha'),[view,setView]=useState('A'),[applied,setApplied]=useState(0);const routines=useRoutines(agent,()=>setApplied(n=>n+1),()=>{},view),hook=useWebhook(agent,id,()=>{});const change={path:'status',body:{id,operationId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',expectedRevision:1,status:'paused'}};const configure={routineId:id,operationId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',expectedRevision:1,key:'rpwh_'+'a'.repeat(64)};useEffect(()=>{window.probe={routines,hook,setAgent,setView,change,configure}},[routines,hook,view]);return <><button onClick={()=>routines.send(change)}>Save</button><button onClick={()=>routines.retry()} disabled={!routines.attempt||routines.busy}>Retry same change</button><button onClick={()=>routines.stop(id)}>Stop</button><button onClick={()=>hook.send(configure)}>Configure</button><button onClick={()=>hook.retry()} disabled={!hook.attempt||hook.busy}>Retry webhook</button><button onClick={()=>hook.resolve()} disabled={!hook.attempt||hook.busy}>Resolve webhook</button><pre id='value'>{JSON.stringify({agent,view,applied,routines:{data:routines.data,busy:routines.busy,attempt:routines.attempt,stopId:routines.stopId,error:routines.error},hook:{info:hook.info,key:hook.key,attempt:hook.attempt,busy:hook.busy}})}</pre></>}function UIApp(){const[selected,setSelected]=useState(null),[webhook,setWebhook]=useState(false);return <RoutinesWorkbench agentId='alpha' selected={selected} webhook={webhook} onSelect={(id,hook=false)=>{setSelected(id);setWebhook(hook)}} onPendingChange={()=>{}}/>}createRoot(document.getElementById('root')).render(location.search.includes('ui')?<UIApp/>:<App/>);`,
+      contents: `import{useState,useEffect}from'react';import{createRoot}from'react-dom/client';import{useRoutines}from'./src/features/routines/use-routines';import{useWebhook}from'./src/features/routines/use-webhook';import{RoutinesWorkbench}from'./src/features/routines/routines-workbench';const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';function App(){const[agent,setAgent]=useState('alpha'),[view,setView]=useState('A'),[applied,setApplied]=useState(0);const routines=useRoutines(agent,()=>setApplied(n=>n+1),()=>{},view),hook=useWebhook(agent,id,()=>{});const change={path:'status',body:{id,operationId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',expectedRevision:1,status:'paused'}};const configure={routineId:id,operationId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',expectedRevision:1,key:'rpwh_'+'a'.repeat(64)};useEffect(()=>{window.probe={routines,hook,setAgent,setView,change,configure}},[routines,hook,view]);return <><button onClick={()=>routines.send(change)}>Save</button><button onClick={()=>routines.retry()} disabled={!routines.attempt||routines.busy}>Retry same change</button><button onClick={()=>routines.stop(id)}>Stop</button><button onClick={()=>hook.send(configure)}>Configure</button><button onClick={()=>hook.retry()} disabled={!hook.attempt||hook.busy}>Retry webhook</button><button onClick={()=>hook.resolve()} disabled={!hook.attempt||hook.busy}>Resolve webhook</button><pre id='value'>{JSON.stringify({agent,view,applied,routines:{data:routines.data,busy:routines.busy,attempt:routines.attempt,stopId:routines.stopId,error:routines.error},hook:{info:hook.info,key:hook.key,attempt:hook.attempt,busy:hook.busy}})}</pre></>}function UIApp(){const[selected,setSelected]=useState(null),[webhook,setWebhook]=useState(false),[active,setActive]=useState(true);useEffect(()=>{window.probe={setActive}},[]);return <RoutinesWorkbench active={active} agentId='alpha' selected={selected} webhook={webhook} onSelect={(id,hook=false)=>{setSelected(id);setWebhook(hook)}} onPendingChange={()=>{}}/>}createRoot(document.getElementById('root')).render(location.search.includes('ui')?<UIApp/>:<App/>);`,
       resolveDir: root,
       loader: "tsx",
     },
     bundle: true,
+    loader: { ".css": "empty" },
     write: false,
     platform: "browser",
     format: "iife",
     tsconfig: `${root}/tsconfig.json`,
-    plugins:
-      process.env.F12_BREAK_VIEW_FENCE === "1"
+    plugins: [
+      ...(process.env.F12_BREAK_ACTIVE_FENCE === "1"
+        ? [
+            {
+              name: "negative-active-fence",
+              setup(plugin: {
+                onLoad: (
+                  options: { filter: RegExp },
+                  callback: (input: {
+                    path: string
+                  }) => Promise<{ contents: string; loader: string }>
+                ) => void
+              }) {
+                plugin.onLoad(
+                  { filter: /routines-workbench\.tsx$/ },
+                  async ({ path }) => ({
+                    contents: (await readFile(path, "utf8")).replaceAll(
+                      "if (!activeView.current) return",
+                      "if (false) return"
+                    ),
+                    loader: "tsx",
+                  })
+                )
+              },
+            },
+          ]
+        : []),
+      ...(process.env.F12_BREAK_VIEW_FENCE === "1"
         ? [
             {
               name: "negative-view-fence",
@@ -58,7 +89,8 @@ test.beforeAll(async () => {
               },
             },
           ]
-        : [],
+        : []),
+    ],
   })
   server = createServer((request, response) => {
     response.setHeader(
@@ -68,7 +100,7 @@ test.beforeAll(async () => {
     response.end(
       request.url === "/bundle.js"
         ? result.outputFiles[0]!.text
-        : '<div id="root"></div><script src="/bundle.js"></script>'
+        : '<meta name="viewport" content="width=device-width, initial-scale=1"><div id="root"></div><script src="/bundle.js"></script>'
     )
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
@@ -376,7 +408,8 @@ test("actual webhook controls retry the same generated key and hide it after a n
   page,
 }) => {
   await page.goto(`${address}/?ui=1`)
-  await page.getByRole("button", { name: "Webhook", exact: true }).click()
+  await page.getByRole("button", { name: "Actions", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Webhook", exact: true }).click()
   await page
     .getByRole("button", { name: "Enable and create key", exact: true })
     .click()
@@ -409,4 +442,51 @@ test("actual webhook controls retry the same generated key and hide it after a n
     page.getByRole("status").filter({ hasText: "changed again" })
   ).toBeVisible()
   await expect(page.getByLabel("New key · copy before leaving")).toHaveCount(0)
+})
+
+test("inactive retained routines cannot dispatch a mobile menu action after its drawer closes", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, "Only the mobile menu defers actions until drawer close")
+  await page.goto(`${address}/?ui=1`)
+  await page.addStyleTag({
+    content: `
+    @keyframes hold-menu-close { from { opacity: 1; } to { opacity: 0; } }
+    .responsive-popup-shell[data-ending-style] { animation: hold-menu-close 30s linear; }
+  `,
+  })
+  await page.getByRole("button", { name: "Actions", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Pause", exact: true }).click()
+  await expect(
+    page.locator(".responsive-popup-shell[data-ending-style]")
+  ).toHaveCount(1)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as ProbeWindow).calls.filter((call) =>
+            call.path.endsWith("/status")
+          ).length
+      )
+    )
+    .toBe(0)
+  await page.evaluate(() =>
+    (window as unknown as ProbeWindow).probe.setActive(false)
+  )
+  await expect(
+    page.getByRole("button", { name: "Actions", exact: true })
+  ).toHaveAttribute("aria-expanded", "false")
+  await page.evaluate(() =>
+    document.getAnimations().forEach((animation) => animation.finish())
+  )
+  await expect(page.locator(".responsive-popup-shell")).toHaveCount(0)
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as ProbeWindow).calls.filter((call) =>
+          call.path.endsWith("/status")
+        ).length
+    )
+  ).toBe(0)
 })

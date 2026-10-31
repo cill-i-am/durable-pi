@@ -1,16 +1,19 @@
-import { Sparkles } from "lucide-react"
+import { Button } from "@workspace/ui/components/button"
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import { Sparkles, X } from "lucide-react"
 import { lazy, Suspense, useState } from "react"
 
-import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Skeleton } from "@/components/ui/skeleton"
+
+import "./rich-results.css"
 
 const AnswerGallery = lazy(() =>
   import("./gallery").then((module) => ({ default: module.AnswerGallery }))
@@ -32,11 +35,21 @@ export function AnswerExplorer({
         <Sparkles data-icon="inline-start" />
         Explore answers
       </DialogTrigger>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>Answers you can explore</DialogTitle>
+      <DialogContent className="answer-explorer" showCloseButton={false}>
+        <DialogHeader className="answer-explorer-header">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <DialogTitle>Answers you can explore</DialogTitle>
+            <DialogClose
+              render={
+                <Button variant="ghost" size="icon" className="shrink-0" />
+              }
+              aria-label="Close dialog"
+            >
+              <X aria-hidden="true" />
+            </DialogClose>
+          </div>
           <DialogDescription>
-            Try a sample, then ask Pi to work with your question.
+            Illustrative data. Add a sample prompt to your draft.
           </DialogDescription>
         </DialogHeader>
         <Suspense

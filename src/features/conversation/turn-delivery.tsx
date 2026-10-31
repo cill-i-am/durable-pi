@@ -1,6 +1,6 @@
+import { Button } from "@workspace/ui/components/button"
 import { useMemo } from "react"
 
-import { Button } from "@/components/ui/button"
 import { MessageFooter } from "@/components/ui/message"
 import type { ChatState } from "@/conversations/contracts"
 

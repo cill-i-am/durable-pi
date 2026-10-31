@@ -98,7 +98,7 @@ function SelectTrigger({
         data-slot="select-trigger"
         className={(state) =>
           cn(
-            "rounded-control flex min-h-11 w-full min-w-0 items-center justify-between gap-2 border border-input bg-card px-3 py-2 text-md text-card-foreground outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5 md:pointer-fine:not-any-pointer-coarse:text-base md:pointer-fine:not-any-pointer-coarse:leading-5 [&_svg]:size-4 [&_svg]:shrink-0",
+            "flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-control border border-input bg-card px-3 py-2 text-md text-card-foreground outline-none focus-visible:border-ring focus-visible:shadow-(--shadow-focus) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground md:pointer-fine:not-any-pointer-coarse:min-h-9 md:pointer-fine:not-any-pointer-coarse:py-1.5 md:pointer-fine:not-any-pointer-coarse:text-base md:pointer-fine:not-any-pointer-coarse:leading-5 [&_svg]:size-4 [&_svg]:shrink-0",
             typeof className === "function" ? className(state) : className
           )
         }

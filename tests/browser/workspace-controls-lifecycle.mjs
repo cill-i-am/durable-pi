@@ -17,7 +17,6 @@ const server = await createServer({
     alias: [
       ...[
         "@/features/family/context",
-        "@/components/ui/sidebar",
         "@/features/updates/recovery",
         "@/features/updates/update-recovery",
         "@/observability/browser",
@@ -102,22 +101,28 @@ try {
   ]) {
     await page.setViewportSize(viewport)
     await page.goto(`http://127.0.0.1:${port}/?search`)
+    // The shortcut must start from mounted content at the real sidebar breakpoint.
+    const content = page.locator(
+      `main[data-sidebar-mobile="${viewport.width < 768}"]`
+    )
+    await content.waitFor()
+    await content.focus()
     const trigger = page.getByRole("button", {
-      name: "Search agents and commands",
+      name: "Search assistants and commands",
       exact: true,
     })
     const open = () =>
       viewport.width < 768 ? page.keyboard.press("Control+k") : trigger.click()
     await open()
     await page
-      .getByRole("combobox", { name: "Search agents and commands" })
+      .getByRole("combobox", { name: "Search assistants and commands" })
       .waitFor()
     await page.keyboard.press("Escape")
     if (viewport.width >= 768)
       await page.waitForFunction(
         () =>
           document.activeElement?.getAttribute("aria-label") ===
-          "Search agents and commands"
+          "Search assistants and commands"
       )
     else
       await page.waitForFunction(
@@ -133,7 +138,7 @@ try {
     record(`exact current agent ${viewport.width}`)
     await page.keyboard.press("Control+k")
     await page
-      .getByRole("combobox", { name: "Search agents and commands" })
+      .getByRole("combobox", { name: "Search assistants and commands" })
       .waitFor()
     await page.evaluate(() => window.fixture.lock(true))
     await page.waitForFunction(
@@ -144,7 +149,7 @@ try {
     assert.deepEqual(await page.evaluate(() => window.fixture.actions), [])
     assert.equal(
       await page
-        .getByRole("combobox", { name: "Search agents and commands" })
+        .getByRole("combobox", { name: "Search assistants and commands" })
         .count(),
       0
     )

@@ -1,19 +1,19 @@
-import { ArrowUpRight, Globe, RefreshCw, Settings2, X } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import "./browser.css"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Field,
   FieldGroup,
   FieldLabel,
   FieldDescription,
   FieldContent,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Switch } from "@workspace/ui/components/switch"
+import { Textarea } from "@workspace/ui/components/textarea"
+import { ArrowUpRight, Globe, RefreshCw, Settings2, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 import { BrowserControls } from "./browser-controls"
 import { BrowserScreenshot } from "./browser-preview"
@@ -43,7 +43,7 @@ export function BrowserWorkbench({
   }, [browser.busy, settings, onPendingChange])
   const state = browser.state
   const content = (
-    <>
+    <section className="browser-workbench @container/tool flex min-h-0 min-w-0 flex-1 flex-col">
       <BrowserHeader
         browser={browser}
         agentName={agentName}
@@ -51,7 +51,7 @@ export function BrowserWorkbench({
         setSettings={setSettings}
         settingsTrigger={settingsTrigger}
       />
-      <div className="workbench-body">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-5 @max-md/tool:p-4">
         {(browser.error || state?.error) && (
           <Alert>
             <AlertDescription>
@@ -132,11 +132,14 @@ export function BrowserWorkbench({
           </>
         )}
       </div>
-      <p className="border-t p-4 text-xs text-muted-foreground">
-        Sessions expire after two idle minutes or ten minutes total. Hiding this
-        panel leaves the session running until it expires.
-      </p>
-    </>
+      <details className="shrink-0 border-t px-5 py-3 text-xs text-muted-foreground">
+        <summary className="cursor-pointer">Session limits</summary>
+        <p className="mt-2 max-w-prose leading-relaxed">
+          Sessions expire after two idle minutes or ten minutes total. Hiding
+          this panel leaves the session running until it expires.
+        </p>
+      </details>
+    </section>
   )
   return content
 }
@@ -163,13 +166,9 @@ function BrowserHeader({
 }) {
   const state = browser.state
   return (
-    <div className="workbench-heading-row">
-      <h2 className={settings ? "workbench-title" : "browser-title"}>
-        {settings
-          ? "Browser internet access"
-          : state?.controller === "owner"
-            ? "You’re in control"
-            : `${agentName}’s browser`}
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-4 @max-md/tool:px-4">
+      <h2 className="min-w-0 text-md font-semibold wrap-anywhere">
+        {settings ? "Browser internet access" : "Browser"}
       </h2>
       <div className="flex shrink-0 items-center gap-2">
         {!settings && (
@@ -372,11 +371,9 @@ function BrowserAddress({
       {state && !state.policy.unrestricted && !state.policy.hosts.length && (
         <div className="flex flex-col items-start gap-3 rounded-lg border p-5">
           <Globe className="size-6 text-muted-foreground" />
-          <h3 className="font-medium">Give this bot somewhere to browse</h3>
+          <h3 className="font-medium">Choose where to browse</h3>
           <p className="text-sm text-muted-foreground">
-            Choose allowed sites or enable unrestricted internet access. Browser
-            tools ask for your approval unless you change their tool
-            permissions.
+            Allow sites or enable internet access. Tool approvals still apply.
           </p>
           <Button
             size="sm"
@@ -481,7 +478,7 @@ function BrowserPreview({
               <li key={index}>
                 <button
                   type="button"
-                  className="max-w-full truncate text-left text-xs text-primary underline underline-offset-2"
+                  className="max-w-full text-left text-sm break-words text-primary underline underline-offset-2"
                   onClick={() => setUrl(link.url)}
                 >
                   {link.text}

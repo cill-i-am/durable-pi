@@ -1,12 +1,12 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Input } from "@workspace/ui/components/input"
+import { Label } from "@workspace/ui/components/label"
 import { Effect, Fiber, Redacted } from "effect"
 import { ExternalLink } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { agentApi } from "@/http/client"
 
 import { useFamily } from "./context"

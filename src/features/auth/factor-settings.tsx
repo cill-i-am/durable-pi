@@ -1,17 +1,17 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from "@workspace/ui/components/field"
 import { Redacted } from "effect"
 import { QRCodeSVG } from "qrcode.react"
 import { useEffect, useState } from "react"
 
 import { authClient } from "@/auth/client"
 import { CopyButton } from "@/components/copy-button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldDescription,
-} from "@/components/ui/field"
 
 import { useAuthBusy } from "./auth-owner"
 import { useFactor } from "./factor-owner"
@@ -80,8 +80,8 @@ export function FactorSettings({
   }
   const title = factorTitle(view)
   return (
-    <section className="space-y-6">
-      <h2 className="text-xl font-semibold">{title}</h2>
+    <section className="settings-factor space-y-6">
+      <h2 className="text-md font-semibold">{title}</h2>
       {view.kind === "manage" ? (
         <div className="space-y-4">
           <p className="text-sm leading-6 text-muted-foreground">

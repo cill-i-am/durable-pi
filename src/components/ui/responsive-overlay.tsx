@@ -1,7 +1,8 @@
 "use client"
 
 import { Drawer } from "@base-ui/react/drawer"
-import { cn } from "cn"
+import { overlayClassName } from "@workspace/ui/components/responsive-overlay"
+import { useUIReducedMotion } from "@workspace/ui/hooks/use-ui-reduced-motion"
 import * as React from "react"
 
 type Presentation = "dialog" | "sheet" | "panel" | "alert"
@@ -10,6 +11,7 @@ type OverlayContextValue = {
   desktop: Presentation
   layer: number
   dismissible: boolean
+  reducedMotion: boolean
 }
 
 const OverlayContext = React.createContext<OverlayContextValue | null>(null)
@@ -40,6 +42,7 @@ function Root({
   dismissible?: boolean
 }) {
   const parent = React.useContext(OverlayContext)
+  const reducedMotion = useUIReducedMotion()
   const layer = (parent?.layer ?? -1) + 1
   const query = `(max-width: ${breakpoint === "lg" ? 1023 : 767}px)`
   const subscribe = React.useCallback(
@@ -57,7 +60,9 @@ function Root({
   )
   const docked = desktop === "panel" && !mobile
   return (
-    <OverlayContext.Provider value={{ mobile, desktop, layer, dismissible }}>
+    <OverlayContext.Provider
+      value={{ mobile, desktop, layer, dismissible, reducedMotion }}
+    >
       <Drawer.Root
         {...props}
         modal={desktop === "alert" || (!docked && modal)}
@@ -85,18 +90,19 @@ function Root({
 }
 
 function Backdrop({ className, style, ...props }: Drawer.Backdrop.Props) {
-  const { mobile, desktop, layer } = useOverlay()
+  const { mobile, desktop, layer, reducedMotion } = useOverlay()
   if (desktop === "panel" && !mobile) return null
   return (
     <Drawer.Backdrop
       forceRender
       {...props}
       data-overlay-mobile={mobile}
+      data-motion-reduced={reducedMotion ? "true" : undefined}
       style={(state) => ({
         ...(typeof style === "function" ? style(state) : style),
-        ...(mobile ? { zIndex: 50 + layer * 2 } : {}),
+        zIndex: mobile ? 50 + layer * 2 : 50,
       })}
-      className={cn(className, "responsive-overlay-backdrop")}
+      className={overlayClassName("responsive-overlay-backdrop", className)}
     />
   )
 }
@@ -107,12 +113,13 @@ function Popup({
   mobileLayout = "content",
   ...props
 }: Drawer.Popup.Props & { mobileLayout?: "content" | "panel" }) {
-  const { mobile, desktop, layer, dismissible } = useOverlay()
+  const { mobile, desktop, layer, dismissible, reducedMotion } = useOverlay()
   return (
     <Drawer.Viewport
       className="responsive-overlay-viewport"
-      style={mobile ? { zIndex: 51 + layer * 2 } : undefined}
+      style={{ zIndex: mobile ? 51 + layer * 2 : 50 }}
       data-overlay-mobile={mobile}
+      data-motion-reduced={reducedMotion ? "true" : undefined}
       data-desktop={desktop}
     >
       <Drawer.Popup
@@ -120,10 +127,11 @@ function Popup({
         role={desktop === "alert" ? "alertdialog" : (props.role ?? "dialog")}
         initialFocus={props.initialFocus ?? (mobile ? undefined : true)}
         data-overlay-mobile={mobile}
+        data-motion-reduced={reducedMotion ? "true" : undefined}
         data-mobile-layout={mobileLayout}
         data-desktop={desktop}
         data-base-ui-swipe-ignore={!mobile || !dismissible ? "" : undefined}
-        className={cn(className, "responsive-overlay")}
+        className={overlayClassName("responsive-overlay", className)}
       >
         <div className="responsive-overlay-handle" aria-hidden="true">
           <span />
@@ -146,3 +154,5 @@ export const ResponsiveOverlay = {
   Title: Drawer.Title,
   Description: Drawer.Description,
 }
+
+export { overlayClassName }

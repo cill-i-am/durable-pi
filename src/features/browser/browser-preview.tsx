@@ -122,7 +122,7 @@ export function BrowserScreenshot({
       onLoad={preview.loaded}
       onError={preview.failedToLoad}
       alt={alt}
-      className="w-full rounded-md border bg-white"
+      className="w-full rounded-md border bg-background"
     />
   ) : null
 }

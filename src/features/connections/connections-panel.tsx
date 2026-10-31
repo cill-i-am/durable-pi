@@ -1,3 +1,14 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty"
+import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { ArrowUpRight, Plug, RefreshCw, X } from "lucide-react"
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
 
@@ -7,17 +18,6 @@ import {
   isExecutorConnection,
 } from "@/access/executor"
 import { SettingsSection } from "@/components/settings-section"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 
 import { useConnections } from "./use-connections"
 
@@ -94,7 +94,7 @@ export function ConnectionsPanel({
         )
       }
     >
-      <div className="flex items-center justify-between gap-2 border-y px-4 py-2">
+      <div className="settings-toolbar">
         <span className="text-sm text-muted-foreground">
           {assignment ? "Available tools" : "Your connections"}
         </span>
@@ -108,7 +108,7 @@ export function ConnectionsPanel({
           {state.loading ? "Loading…" : "Reload"}
         </Button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
+      <div className="settings-panel-body">
         {notice && (
           <Alert>
             <AlertDescription>{notice}</AlertDescription>
@@ -150,7 +150,7 @@ export function ConnectionsPanel({
           />
         )}
       </div>
-      <p className="border-t p-4 text-xs text-muted-foreground">
+      <p className="settings-panel-footer">
         {assignment
           ? "Executor tools are included automatically. New selections ask for approval before each call."
           : "Executor is included for every assistant. Choose other connected tools and their permissions in assistant settings."}{" "}
@@ -284,10 +284,7 @@ function ConnectionCatalog({
       }
     >
       {state.connections.map((connection) => (
-        <article
-          key={connection.id}
-          className="flex flex-col gap-3 rounded-lg border p-4"
-        >
+        <article key={connection.id} className="settings-connection-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="min-w-0 truncate font-medium">{connection.name}</h3>
             <Badge variant="secondary">{statusLabel[connection.status]}</Badge>
@@ -439,6 +436,7 @@ function ConnectionForm({
   const draftDisabled = state.busy || state.uncertain?.action === "add"
   return draft ? (
     <form
+      className="settings-form"
       onSubmit={async (event) => {
         event.preventDefault()
         if (

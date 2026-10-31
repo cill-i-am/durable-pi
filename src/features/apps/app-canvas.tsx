@@ -1,3 +1,23 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import { Checkbox } from "@workspace/ui/components/checkbox"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+  FieldLegend,
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@workspace/ui/components/table"
+import { Textarea } from "@workspace/ui/components/textarea"
 import { useId } from "react"
 
 import type {
@@ -6,30 +26,11 @@ import type {
   AppDefinition,
   AppState,
 } from "@/apps/contracts"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldSet,
-  FieldLegend,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Textarea } from "@/components/ui/textarea"
 
 import { useAppForm } from "./use-app-form"
 import { WebCanvas } from "./web-canvas"
+
+import "./apps.css"
 
 export function AppCanvas(props: Parameters<typeof AppCanvasView>[0]) {
   return (
@@ -60,12 +61,9 @@ function AppCanvasView({
 }) {
   const prefix = useId()
   return (
-    <article
-      className="flex min-w-0 flex-col gap-6"
-      aria-label={definition.title}
-    >
+    <article className="app-canvas" aria-label={definition.title}>
       <header className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold break-words">
+        <h2 className="text-sheet font-semibold break-words">
           {definition.title}
         </h2>
         {definition.description && (
@@ -74,7 +72,6 @@ function AppCanvasView({
           </p>
         )}
       </header>
-      <Separator />
       {definition.blocks.map((block) => {
         if (block.type === "web")
           return (
@@ -220,6 +217,7 @@ function AppForm({
                 </FieldLabel>
                 <Control
                   id={`${prefix}-${field.id}`}
+                  className={field.multiline ? "min-h-16" : undefined}
                   value={values[field.id] ?? ""}
                   maxLength={1000}
                   required={field.required}
@@ -257,7 +255,11 @@ function AppForm({
               </AlertDescription>
             </Alert>
           )}
-          <Button type="submit" disabled={disabled || conflict || form.saving}>
+          <Button
+            className="self-start"
+            type="submit"
+            disabled={disabled || conflict || form.saving}
+          >
             {block.submitLabel}
           </Button>
           {submitted && (

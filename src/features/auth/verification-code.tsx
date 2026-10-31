@@ -1,4 +1,5 @@
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldLabel } from "@workspace/ui/components/field"
+
 import {
   InputOTP,
   InputOTPGroup,
@@ -29,12 +30,12 @@ export function VerificationCode({
         disabled={disabled}
         required
       >
-        <InputOTPGroup className="w-full">
+        <InputOTPGroup className="auth-entry-code-group">
           {Array.from({ length: 6 }, (_, index) => (
             <InputOTPSlot
               key={index}
               index={index}
-              className="h-11 min-w-0 flex-1 text-xl sm:h-12"
+              className="auth-entry-code-slot"
             />
           ))}
         </InputOTPGroup>

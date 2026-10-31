@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router"
+import { Badge } from "@workspace/ui/components/badge"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Option, Schema } from "effect"
 import {
   Brain,
@@ -18,7 +20,6 @@ import { lazy, Suspense, useState } from "react"
 
 import { AgentId } from "@/agents/contracts"
 import { CopyButton } from "@/components/copy-button"
-import { Badge } from "@/components/ui/badge"
 import {
   CodeBlock,
   CodeBlockHeader,
@@ -26,7 +27,6 @@ import {
   CodeBlockActions,
   CodeBlockContent,
 } from "@/components/ui/code-block"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Trace,
   TraceLine,

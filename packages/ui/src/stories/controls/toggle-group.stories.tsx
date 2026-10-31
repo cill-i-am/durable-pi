@@ -3,6 +3,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
+import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
 import { useState, type ComponentProps } from "react"
 
 function Example(args: ComponentProps<typeof ToggleGroup>) {
@@ -50,6 +51,21 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 export const Default: Story = {}
+export const IconLabels: Story = {
+  render: (args) => (
+    <ToggleGroup {...args}>
+      <ToggleGroupItem value="light">
+        <SunIcon aria-hidden="true" /> Light
+      </ToggleGroupItem>
+      <ToggleGroupItem value="dark">
+        <MoonIcon aria-hidden="true" /> Dark
+      </ToggleGroupItem>
+      <ToggleGroupItem value="system">
+        <MonitorIcon aria-hidden="true" /> System
+      </ToggleGroupItem>
+    </ToggleGroup>
+  ),
+}
 export const Focus: Story = {
   parameters: {
     pseudo: {

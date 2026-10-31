@@ -8,23 +8,25 @@ const PopupContext = React.createContext<{
   mobile: boolean
   trigger: React.RefObject<HTMLElement | null>
   afterClose: React.RefObject<(() => void) | null>
+  onTabOut?: () => void
 } | null>(null)
 
 function Root({
   open,
   onOpenChange,
   children,
+  onTabOut,
 }: Pick<
   React.ComponentProps<typeof ResponsiveOverlay.Root>,
   "open" | "onOpenChange" | "children"
->) {
+> & { onTabOut?: () => void }) {
   const mobile = useIsMobile()
   const trigger = React.useRef<HTMLElement>(null)
   const parent = React.useContext(PopupContext)
   const localAction = React.useRef<(() => void) | null>(null)
   const afterClose = parent?.afterClose ?? localAction
   return (
-    <PopupContext.Provider value={{ mobile, trigger, afterClose }}>
+    <PopupContext.Provider value={{ mobile, trigger, afterClose, onTabOut }}>
       <ResponsiveOverlay.Root
         open={mobile && open}
         onOpenChange={onOpenChange}
@@ -49,26 +51,49 @@ function Trigger({ children }: { children: React.ReactElement }) {
 function Content({
   title,
   children,
+  finalFocus,
 }: {
   title: string
   children: React.ReactNode
+  finalFocus?: React.ComponentProps<
+    typeof ResponsiveOverlay.Popup
+  >["finalFocus"]
 }) {
   const context = React.useContext(PopupContext)
   const popup = React.useRef<HTMLDivElement>(null)
   return (
     <ResponsiveOverlay.Portal>
-      <ResponsiveOverlay.Backdrop className="fixed inset-0 bg-black/30" />
+      <ResponsiveOverlay.Backdrop />
       <ResponsiveOverlay.Popup
-        className="bg-popover text-popover-foreground shadow-(--shadow-drawer)"
+        className="responsive-popup-shell"
         ref={popup}
         initialFocus={() =>
           popup.current?.querySelector<HTMLElement>(
+            '[role="option"][tabindex="0"]'
+          ) ??
+          popup.current?.querySelector<HTMLElement>(
+            '[role="option"]:not([aria-disabled="true"])'
+          ) ??
+          popup.current?.querySelector<HTMLElement>(
             '[role="menu"], [role="listbox"]'
-          ) ?? popup.current
+          ) ??
+          popup.current
         }
-        finalFocus={() =>
-          context?.afterClose.current ? false : context?.trigger.current
+        finalFocus={
+          finalFocus ??
+          (() =>
+            context?.afterClose.current ? false : context?.trigger.current)
         }
+        onKeyDown={(event) => {
+          if (
+            event.key !== "Tab" ||
+            event.defaultPrevented ||
+            !context?.onTabOut
+          )
+            return
+          event.preventDefault()
+          context.onTabOut()
+        }}
       >
         <ResponsiveOverlay.Title className="sr-only">
           {title}
@@ -90,4 +115,8 @@ export function usePopupAction() {
     if (context?.mobile) context.afterClose.current = action
     else action()
   }
+}
+
+export function usePopupClose() {
+  return React.useContext(PopupContext)?.onTabOut
 }

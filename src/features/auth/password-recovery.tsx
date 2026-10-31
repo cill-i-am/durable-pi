@@ -1,16 +1,16 @@
 import { Link, useSearch } from "@tanstack/react-router"
-import { Redacted } from "effect"
-import { useEffect, useRef, useState } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
+import { Redacted } from "effect"
+import { useEffect, useRef, useState } from "react"
+
 import { workspaceReturnLink } from "@/navigation/workspace"
 
 import { useAuthEntry } from "./auth-entry"
@@ -46,11 +46,11 @@ export function ForgotPassword() {
   }
   return (
     <AuthFrame
-      title={sent ? "Check your inbox." : "Forgot your password?"}
+      title={sent ? "Check your inbox" : "Forgot your password?"}
       description={
         sent
           ? "If this email belongs to your Pi account, a reset link is on its way. It expires in 15 minutes."
-          : "Enter your owner email and we'll send a link to choose a new password."
+          : "Enter your owner email to get a password reset link."
       }
       footer={<BackToSignIn />}
     >
@@ -88,7 +88,7 @@ export function ForgotPassword() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" size="lg" disabled={pending}>
+            <Button type="submit" disabled={pending} aria-busy={pending}>
               {pending ? "Sending…" : "Send reset link"}
             </Button>
           </FieldGroup>
@@ -150,17 +150,17 @@ function ResetLink({ token }: { token: string | null }) {
     <AuthFrame
       title={
         done
-          ? "You're ready to return."
+          ? "Your password is reset"
           : unavailable
-            ? "This link isn't available."
-            : "Choose a new password."
+            ? "This link isn’t available"
+            : "Choose a new password"
       }
       description={
         done
           ? "Your password has been changed and your other sessions have been signed out."
           : unavailable
             ? "The link may have expired or already been used. Request a fresh one to continue."
-            : "Use at least 12 characters. A long, unique password works best."
+            : "Use a unique password with at least 12 characters."
       }
       footer={<BackToSignIn />}
     >
@@ -211,7 +211,7 @@ function ResetLink({ token }: { token: string | null }) {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" size="lg" disabled={pending}>
+            <Button type="submit" disabled={pending} aria-busy={pending}>
               {pending ? "Saving…" : "Reset password"}
             </Button>
           </FieldGroup>

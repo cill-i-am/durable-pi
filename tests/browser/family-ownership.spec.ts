@@ -51,9 +51,7 @@ test("an older family read cannot restore owner controls after a newer access de
       .getByLabel("Password", { exact: true })
       .fill("Disposable browser fixture password 2026!")
     await page.getByRole("button", { name: "Sign in", exact: true }).click()
-    await expect(
-      page.getByRole("region", { name: "Your agents" })
-    ).toBeVisible()
+    await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
     checking = true
     await page.evaluate(() => window.dispatchEvent(new Event("focus")))
     await expect.poll(() => reads).toBe(1)
@@ -72,7 +70,7 @@ test("an older family read cannot restore owner controls after a newer access de
         exact: true,
       })
     ).toBeVisible()
-    await expect(page.getByRole("region", { name: "Your agents" })).toHaveCount(
+    await expect(page.getByRole("region", { name: "Assistants" })).toHaveCount(
       0
     )
   } finally {
@@ -190,7 +188,7 @@ test("a late invitation acceptance cannot clear a newer invitation URL", async (
     ).toBeVisible()
     await expect(page).toHaveURL(/#invitation=new$/)
     await expect(
-      page.getByRole("heading", { name: "Your space is ready" })
+      page.getByRole("heading", { name: "Your workspace is ready" })
     ).toHaveCount(0)
     expect(accepted).toBe(1)
   } finally {
@@ -237,9 +235,7 @@ test("model exchange completion is fenced after family role revocation", async (
       .getByLabel("Password", { exact: true })
       .fill("Disposable browser fixture password 2026!")
     await page.getByRole("button", { name: "Sign in", exact: true }).click()
-    await expect(
-      page.getByRole("region", { name: "Your agents" })
-    ).toBeVisible()
+    await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
     await page.goto("/family/model-access")
     await page
       .getByLabel("Return address", { exact: true })

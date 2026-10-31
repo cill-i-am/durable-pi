@@ -1,19 +1,18 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Button } from "@workspace/ui/components/button"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@workspace/ui/components/field"
+import { Input } from "@workspace/ui/components/input"
 import { Effect, Fiber, Redacted, Schema } from "effect"
 import { Check, LockKeyhole } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
 import { authClient } from "@/auth/client"
-import { AgentMark } from "@/components/agent-mark"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { InvitationPreview } from "@/family/contracts"
 import { AuthFrame } from "@/features/auth/auth-frame"
 import { PasskeySignIn } from "@/features/auth/passkey-sign-in"
@@ -26,6 +25,8 @@ import {
   type JoinInvitation,
 } from "./family-join.machine"
 import { invitationRecord } from "./invitation-record"
+
+import "./family-entry.css"
 
 type Invitation = JoinInvitation
 type Session = NonNullable<ReturnType<typeof authClient.useSession>["data"]>
@@ -292,7 +293,7 @@ function joinTitle(step: Step, familyName: string, signin: boolean) {
     case "loading":
       return "Opening your invitation"
     case "welcome":
-      return "Your space is ready"
+      return "Your workspace is ready"
     case "unavailable":
       return "This invitation is unavailable"
     case "error":
@@ -309,7 +310,7 @@ export function JoinFamily() {
   const flow = useJoinFlow()
   const description =
     flow.step === "welcome"
-      ? "A fresh start, with your own personal assistant."
+      ? "Your personal assistant is ready."
       : flow.invitation
         ? `${flow.invitation.inviterName} invited you to a private workspace on Pi.`
         : "Your own space, with access to your family’s ChatGPT connection."
@@ -322,9 +323,16 @@ export function JoinFamily() {
         flow.signin
       )}
       description={description}
+      footer={
+        ["account", "verify", "wrong-account"].includes(flow.step) ? (
+          <p>
+            Your chats, memory, files and connected accounts are private to you.
+          </p>
+        ) : undefined
+      }
     >
       {flow.notice && (
-        <p role="status" className="family-notice">
+        <p role="status" className="family-entry-notice">
           <Check />
           {flow.notice}
         </p>
@@ -350,7 +358,7 @@ function JoinContent({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
     case "unavailable":
       return (
         <>
-          <p className="settings-description">
+          <p className="family-entry-description">
             Ask your family admin for a new invitation.
           </p>
           <Button
@@ -380,7 +388,7 @@ function JoinContent({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
             We sent a verification link to <strong>{invitation?.email}</strong>.
             Open it to finish joining.
           </p>
-          <p className="settings-description">
+          <p className="family-entry-description">
             The link expires in one hour. Check your spam folder if it hasn’t
             arrived.
           </p>
@@ -396,11 +404,15 @@ function JoinContent({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
     case "accept":
       return (
         <>
-          <div className="family-invited-email">
+          <div className="family-entry-email">
             Joining as<strong>{invitation?.email}</strong>
           </div>
           <PrivateWork />
-          <Button size="lg" disabled={pending} onClick={() => void flow.join()}>
+          <Button
+            aria-busy={pending}
+            disabled={pending}
+            onClick={() => void flow.join()}
+          >
             {pending ? "Joining…" : "Join family"}
           </Button>
         </>
@@ -413,7 +425,7 @@ function JoinAccount({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
   const { invitation, signin, name, password, pending } = flow
   return (
     <>
-      <div className="family-invited-email">
+      <div className="family-entry-email">
         Invited email<strong>{invitation?.email}</strong>
       </div>
       <form onSubmit={flow.submit}>
@@ -451,7 +463,7 @@ function JoinAccount({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
               <FieldDescription>At least 12 characters.</FieldDescription>
             )}
           </Field>
-          <Button type="submit" size="lg" disabled={pending}>
+          <Button type="submit" aria-busy={pending} disabled={pending}>
             {pending ? "Continuing…" : signin ? "Sign in" : "Create account"}
           </Button>
         </FieldGroup>
@@ -472,7 +484,7 @@ function JoinAccount({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
           Forgot password?
         </a>
       )}
-      <p className="family-auth-switch">
+      <p className="family-entry-switch">
         {signin ? "New to Pi?" : "Already have an account?"}
         <Button variant="link" disabled={pending} onClick={flow.toggleSignin}>
           {signin ? "Create an account" : "Sign in"}
@@ -483,7 +495,7 @@ function JoinAccount({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
 }
 function PrivateWork() {
   return (
-    <div className="family-privacy">
+    <div className="family-entry-privacy">
       <LockKeyhole />
       <p>
         Your work stays private. Your family admin manages access, and can’t
@@ -495,13 +507,8 @@ function PrivateWork() {
 function Welcome() {
   return (
     <>
-      <div className="family-welcome">
-        <AgentMark />
-        <h2>Your personal assistant</h2>
-        <p>Ready to help with whatever’s on your mind.</p>
-      </div>
       <PrivateWork />
-      <Button size="lg" onClick={() => window.location.assign("/agents/home")}>
+      <Button onClick={() => window.location.assign("/agents/home")}>
         Open my workspace
       </Button>
     </>

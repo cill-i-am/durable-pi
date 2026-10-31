@@ -1,12 +1,12 @@
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+import { Badge } from "@workspace/ui/components/badge"
+import { Button, buttonVariants } from "@workspace/ui/components/button"
 import { Schema } from "effect"
 import { ArrowUpRight, ChevronDown } from "lucide-react"
 
 import { ActivityConversation } from "@/activity/contracts"
 import type { RunActivity, RunEvent, RunCursor } from "@/activity/run"
 import { CopyButton } from "@/components/copy-button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleTrigger,
