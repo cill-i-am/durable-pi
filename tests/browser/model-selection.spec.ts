@@ -38,18 +38,8 @@ test("model selection has four choices and new messages ignore a retired job pre
   await expect(menu).not.toContainText(
     /Advanced|explicit job|Everyday conversation|Think harder|job defaults|ChatGPT plan usage/
   )
-  await page.evaluate(() =>
-    Promise.allSettled(
-      document
-        .getAnimations()
-        .filter(
-          (animation) =>
-            animation.effect?.getComputedTiming().iterations !== Infinity
-        )
-        .map((animation) => animation.finished)
-    )
-  )
   await page.screenshot({
+    animations: "disabled",
     path: `test-results/model-selection-${test.info().project.name}.png`,
   })
   await page.keyboard.press("Escape")
