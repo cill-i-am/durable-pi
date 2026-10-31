@@ -9,8 +9,6 @@ import {
   MoreHorizontal,
   Pencil,
   LayoutGrid,
-  Plug,
-  Users,
   Clock3,
   Code2,
   Globe,
@@ -20,7 +18,6 @@ import {
   PanelsTopLeft,
   Plus,
   Search,
-  ShieldCheck,
   Settings2,
   TerminalSquare,
 } from "lucide-react"
@@ -93,7 +90,6 @@ export function WorkspaceNavigation({
   locked,
   onAction,
   onSelect,
-  onSettings,
   onCollection,
   onAgentSettings,
   onEdit,
@@ -108,7 +104,6 @@ export function WorkspaceNavigation({
   locked: boolean
   onAction: (action: WorkspaceAction) => void
   onSelect: (id: AgentProfile["id"]) => void
-  onSettings: (category: "connection-library" | "family") => void
   onCollection: () => void
   onAgentSettings: (agent: AgentProfile) => void
   onEdit: (agent: AgentProfile) => void
@@ -152,7 +147,6 @@ export function WorkspaceNavigation({
     search.choose({ kind: "action", id: action })
   }
   const commands = [
-    { id: "security", label: "Account security", icon: ShieldCheck },
     { id: "create", label: "New assistant", icon: Plus },
     { id: "settings", label: "Settings", icon: Settings2 },
     ...destinations,
@@ -162,38 +156,12 @@ export function WorkspaceNavigation({
       <Sidebar variant="inset" collapsible="icon" className="workspace-sidebar">
         <SidebarHeader className="workspace-sidebar-header">
           <div className="workspace-family-row">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                disabled={locked}
-                render={<Button variant="ghost" className="workspace-family" />}
-              >
-                <span className="workspace-family-mark" aria-hidden="true">
-                  {family.name.slice(0, 1).toUpperCase()}
-                </span>
-                <span className="workspace-sidebar-label">{family.name}</span>
-                <ChevronDown className="workspace-sidebar-label ms-auto" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>{family.name}</DropdownMenuLabel>
-                  <DropdownMenuItem
-                    disabled={locked}
-                    onClick={() => {
-                      setOpenMobile(false)
-                      onSettings("family")
-                    }}
-                  >
-                    <Users /> Family
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={locked}
-                    onClick={() => run("settings")}
-                  >
-                    <Settings2 /> Settings
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="workspace-family min-h-9">
+              <span className="workspace-family-mark" aria-hidden="true">
+                {family.name.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="workspace-sidebar-label">{family.name}</span>
+            </div>
           </div>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -226,19 +194,6 @@ export function WorkspaceNavigation({
                 <kbd className="workspace-sidebar-label ms-auto text-xs text-muted-foreground">
                   ⌘ K
                 </kbd>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip="Connections"
-                disabled={locked}
-                onClick={() => {
-                  setOpenMobile(false)
-                  onSettings("connection-library")
-                }}
-              >
-                <Plug />
-                <span>Connections</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -307,12 +262,6 @@ export function WorkspaceNavigation({
                   onClick={() => run("settings")}
                 >
                   <Settings2 /> Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={locked}
-                  onClick={() => run("security")}
-                >
-                  <ShieldCheck /> Account security
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -396,8 +345,7 @@ export function WorkspaceNavigation({
                       locked ||
                       (!selected &&
                         item.id !== "create" &&
-                        item.id !== "settings" &&
-                        item.id !== "security")
+                        item.id !== "settings")
                     }
                     onSelect={() => run(item.id)}
                   >
@@ -484,7 +432,7 @@ function AssistantNavigationItem({
           />
         }
       >
-        <span className="relative flex size-5 shrink-0">
+        <span className="relative -mx-0.5 flex size-5 shrink-0">
           <AgentAvatar
             name={agent.id}
             label={agent.name}

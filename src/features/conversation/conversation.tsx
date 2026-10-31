@@ -265,11 +265,12 @@ export function Conversation({
                             variant={human ? "secondary" : "muted"}
                           >
                             <BubbleContent className="message-text">
-                              {turn.provenance && (
-                                <span className="mb-1 block text-xs text-muted-foreground">
-                                  {authorLabels[turn.provenance.author.kind]}
-                                </span>
-                              )}
+                              {turn.provenance &&
+                                turn.provenance.author.kind !== "human" && (
+                                  <span className="mb-1 block text-xs text-muted-foreground">
+                                    {authorLabels[turn.provenance.author.kind]}
+                                  </span>
+                                )}
                               {messageText(turn)}
                               <FileAttachments
                                 files={turn.attachments ?? []}
@@ -728,7 +729,6 @@ function ComposerAttachments({
 }
 
 const authorLabels = {
-  human: "Human message",
   agent: "Agent message",
   service: "Automated message",
 }

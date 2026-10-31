@@ -65,6 +65,8 @@ test("sign in, open an agent, receive a fixture reply and reload it", async ({
   await expect(
     page.getByText("Fixture reply received.", { exact: true })
   ).toBeVisible()
+  await expect(page.getByText("Human message", { exact: true })).toHaveCount(0)
+  await expect(page.locator(".owner-message")).toContainText("Bench")
   await expect(
     page
       .locator(".assistant-message")
