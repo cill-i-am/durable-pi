@@ -156,7 +156,7 @@ export function WorkspaceNavigation({
       <Sidebar variant="inset" collapsible="icon" className="workspace-sidebar">
         <SidebarHeader className="workspace-sidebar-header">
           <div className="workspace-family-row">
-            <div className="workspace-family min-h-9">
+            <div className="workspace-family min-h-9 wrap-anywhere">
               <span className="workspace-family-mark" aria-hidden="true">
                 {family.name.slice(0, 1).toUpperCase()}
               </span>
