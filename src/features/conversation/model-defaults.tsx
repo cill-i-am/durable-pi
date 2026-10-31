@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Check } from "lucide-react"
 import { useCallback, useId, useRef } from "react"
@@ -80,17 +81,23 @@ function ModelDefaultsView(
         <div>
           <h3>Default model</h3>
         </div>
-        <FieldGroup>
-          <ModelChoices
-            labels={labels}
-            catalog={catalog}
-            draft={draft}
-            saving={saving}
-            onChange={(next) => {
-              void state.change(next)
-            }}
-          />
-        </FieldGroup>
+        <DataLoading
+          loading={!catalog && !catalogError}
+          label="Loading model defaults"
+          layout="form"
+        >
+          <FieldGroup>
+            <ModelChoices
+              labels={labels}
+              catalog={catalog}
+              draft={draft}
+              saving={saving}
+              onChange={(next) => {
+                void state.change(next)
+              }}
+            />
+          </FieldGroup>
+        </DataLoading>
 
         {unavailable(draft) && (
           <p role="status" className="settings-description">

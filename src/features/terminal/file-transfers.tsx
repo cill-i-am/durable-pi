@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { send, type EffectActor } from "@xstate/effect"
@@ -88,25 +89,30 @@ export function FileTransfers({
           <ArrowDownToLine data-icon="inline-start" /> Copy from Files
         </DropdownMenuTrigger>
         <DropdownMenuContent className="max-h-64 max-w-80 overflow-y-auto">
-          <DropdownMenuGroup>
-            {available.map((file) => (
-              <DropdownMenuItem
-                key={file.id}
-                onClick={() => {
-                  if (activeView.current) onImport(file.id)
-                }}
-              >
-                <span className="truncate">{file.name}</span>
-              </DropdownMenuItem>
-            ))}
-            {!available.length && (
-              <DropdownMenuItem disabled>
-                {files.loading
-                  ? "Loading files…"
-                  : "Upload a file using Files first"}
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuGroup>
+          <DataLoading
+            loading={files.loading && !files.files.length && !files.error}
+            label="Loading files to copy"
+          >
+            <DropdownMenuGroup>
+              {available.map((file) => (
+                <DropdownMenuItem
+                  key={file.id}
+                  onClick={() => {
+                    if (activeView.current) onImport(file.id)
+                  }}
+                >
+                  <span className="truncate">{file.name}</span>
+                </DropdownMenuItem>
+              ))}
+              {!available.length && (
+                <DropdownMenuItem disabled>
+                  {files.loading
+                    ? "Loading files…"
+                    : "Upload a file using Files first"}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuGroup>
+          </DataLoading>
         </DropdownMenuContent>
       </DropdownMenu>
       <form

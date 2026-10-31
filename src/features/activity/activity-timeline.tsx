@@ -6,7 +6,7 @@ import {
 } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
-import { Skeleton } from "@workspace/ui/components/skeleton"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -295,7 +295,7 @@ function TimelineAvailability({
           </AlertDescription>
         </Alert>
       )}
-      {!page && !error && <Skeleton className="h-32 w-full" />}
+      {!page && !error && <DataLoading loading label="Loading activity" />}
       {!!page?.unavailable.length && (
         <Alert>
           <AlertTitle>Some agents could not be reached</AlertTitle>

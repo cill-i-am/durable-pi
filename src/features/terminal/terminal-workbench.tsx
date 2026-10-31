@@ -1,8 +1,10 @@
-import "./terminal.css"
 import { Link } from "@tanstack/react-router"
+
+import "./terminal.css"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Field,
   FieldGroup,
@@ -467,7 +469,11 @@ function TerminalResult({
   return (
     <>
       {terminal.selected && !detail && (
-        <p className="text-sm text-muted-foreground">Loading command…</p>
+        <DataLoading
+          loading={!terminal.error}
+          label="Loading command"
+          layout="code"
+        />
       )}
       {detail?.kind === "session" && detail.status !== "running" && (
         <Alert>
@@ -512,7 +518,10 @@ function CommandHistory({
       className="flex flex-col gap-2 border-t pt-4"
     >
       <h3 className="text-sm font-medium">Recent commands</h3>
-      {!terminal.runs.length && (
+      {!terminal.loaded && !terminal.error && (
+        <DataLoading loading label="Loading terminal commands" />
+      )}
+      {terminal.loaded && !terminal.error && !terminal.runs.length && (
         <p className="text-xs text-muted-foreground">
           Run a command above to see it here.
         </p>

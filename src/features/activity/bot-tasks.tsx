@@ -5,6 +5,7 @@ import {
 } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -12,7 +13,6 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty"
 import { Separator } from "@workspace/ui/components/separator"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Schema } from "effect"
 import { ArrowRight, RotateCw, Square } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -104,7 +104,7 @@ export function BotTasks({
           </AlertDescription>
         </Alert>
       )}
-      {!state && !error && <Skeleton className="h-24 w-full" />}
+      {!state && !error && <DataLoading loading label="Loading bot tasks" />}
       {state && !state.tasks.length && (
         <Empty>
           <EmptyHeader>

@@ -1,5 +1,6 @@
-import "./execution.css"
 import { Link } from "@tanstack/react-router"
+
+import "./execution.css"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
@@ -9,6 +10,7 @@ import {
   CardContent,
   CardFrameFooter,
 } from "@workspace/ui/components/card"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
 import { Textarea } from "@workspace/ui/components/textarea"
 import { Code2, Play, Square, RefreshCw } from "lucide-react"
@@ -73,7 +75,11 @@ export function ExecutionWorkbench({
           onDataChange={setData}
         />
         {execution.selected && !run && (
-          <p className="text-sm text-muted-foreground">Loading run…</p>
+          <DataLoading
+            loading={!execution.error}
+            label="Loading run"
+            layout="code"
+          />
         )}
         {run && (
           <CardFrame aria-label="Run output" className="execution-result">
@@ -142,7 +148,10 @@ export function ExecutionWorkbench({
           aria-label="Code run history"
         >
           <h3 className="text-sm font-medium">Recent runs</h3>
-          {!execution.runs.length && (
+          {!execution.loaded && !execution.error && (
+            <DataLoading loading label="Loading code runs" />
+          )}
+          {execution.loaded && !execution.runs.length && (
             <p className="text-xs text-muted-foreground">
               Run code above to see the result here.
             </p>

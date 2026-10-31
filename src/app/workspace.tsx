@@ -1,6 +1,7 @@
 import { useBlocker } from "@tanstack/react-router"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Tooltip,
   TooltipContent,
@@ -348,6 +349,7 @@ function Workspace({
             )}
             {collection ? (
               <AgentCollection
+                loading={catalog.loading}
                 agents={catalog.agents}
                 archived={archived}
                 query={location.search.q ?? ""}
@@ -467,9 +469,17 @@ function WorkspaceUnavailable({
   if (globalSettings) return null
   return (
     <div className="loading-view">
-      <p className="text-sm text-muted-foreground">
-        This assistant is unavailable.
-      </p>
+      {loading ? (
+        <DataLoading
+          loading
+          label="Opening your workspace"
+          layout="conversation"
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          This assistant is unavailable.
+        </p>
+      )}
       {!loading && (
         <Button variant="outline" onClick={onOpen}>
           Open personal assistant
@@ -975,6 +985,7 @@ function WorkspaceTool({
           query={renderedSearch.query ?? ""}
           onQueryChange={(query) => update({ query: query || undefined }, true)}
           state={conversation.state}
+          stateError={conversation.error}
           agentId={agent.id}
           tab={memoryTab}
           onTabChange={setTab}

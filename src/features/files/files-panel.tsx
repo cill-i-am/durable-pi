@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -125,12 +126,11 @@ export function FilesWorkbench({
             </AlertDescription>
           </Alert>
         )}
-        {state.loading && (
-          <p className="text-sm text-muted-foreground">Loading files…</p>
-        )}
-        {!state.loading && !visible.length && (
-          <EmptyFileCollection collection={tab} />
-        )}
+        <FileCollectionStatus
+          state={state}
+          collection={tab}
+          visible={visible.length}
+        />
         {!!visible.length && (
           <div className="file-explorer" data-selected={!!preview}>
             <nav className="file-explorer-list" aria-label="Agent files">
@@ -521,40 +521,44 @@ function FilePreview({
   return (
     <figure className="file-preview">
       <figcaption className="sr-only">Preview of {file.name}</figcaption>
-      {file.kind === "image" ? (
-        <img
-          className="max-h-80 w-full rounded-md object-contain"
-          src={agentUrl(agentId, `files/${file.id}/content`)}
-          alt={file.name}
-        />
-      ) : /\.md(?:own)?$/i.test(file.name) && loaded && !error ? (
-        <Tabs
-          value={view}
-          onValueChange={(value: unknown) => {
-            if (value === "preview" || value === "source") onViewChange(value)
-          }}
-          className="file-text-preview"
-        >
-          <TabsList aria-label="File view">
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="source">Source</TabsTrigger>
-          </TabsList>
-          <TabsContent value="preview">
-            <Markdown text={text} />
-          </TabsContent>
-          <TabsContent value="source">
-            <pre className="text-xs break-words whitespace-pre-wrap">
-              {text}
-            </pre>
-          </TabsContent>
-        </Tabs>
-      ) : (
-        <pre className="max-h-80 overflow-auto text-xs break-words whitespace-pre-wrap">
-          {error ||
-            text ||
-            (loaded ? "No readable text in this file." : "Loading…")}
-        </pre>
-      )}
+      <DataLoading
+        loading={file.kind !== "image" && !loaded}
+        label="Loading file preview"
+        layout="code"
+      >
+        {file.kind === "image" ? (
+          <img
+            className="max-h-80 w-full rounded-md object-contain"
+            src={agentUrl(agentId, `files/${file.id}/content`)}
+            alt={file.name}
+          />
+        ) : /\.md(?:own)?$/i.test(file.name) && loaded && !error ? (
+          <Tabs
+            value={view}
+            onValueChange={(value: unknown) => {
+              if (value === "preview" || value === "source") onViewChange(value)
+            }}
+            className="file-text-preview"
+          >
+            <TabsList aria-label="File view">
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+              <TabsTrigger value="source">Source</TabsTrigger>
+            </TabsList>
+            <TabsContent value="preview">
+              <Markdown text={text} />
+            </TabsContent>
+            <TabsContent value="source">
+              <pre className="text-xs break-words whitespace-pre-wrap">
+                {text}
+              </pre>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <pre className="max-h-80 overflow-auto text-xs break-words whitespace-pre-wrap">
+            {error || text || "No readable text in this file."}
+          </pre>
+        )}
+      </DataLoading>
     </figure>
   )
 }
@@ -582,9 +586,13 @@ function VideoPreview({ file, agentId }: { file: FileInfo; agentId: string }) {
         transcribed.
       </p>
       {!video ? (
-        <p className="text-xs" role="status">
-          {error || "Loading frames…"}
-        </p>
+        error ? (
+          <p className="text-xs" role="alert">
+            {error}
+          </p>
+        ) : (
+          <DataLoading loading label="Loading video frames" layout="media" />
+        )
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2">
@@ -641,4 +649,21 @@ function EmptyFileCollection({
       </EmptyHeader>
     </Empty>
   )
+}
+
+function FileCollectionStatus({
+  state,
+  collection,
+  visible,
+}: {
+  state: FilesState
+  collection: "files" | "trash"
+  visible: number
+}) {
+  if (state.error) return null
+  if (state.loading)
+    return state.files.length ? null : (
+      <DataLoading loading label="Loading files" />
+    )
+  return visible ? null : <EmptyFileCollection collection={collection} />
 }

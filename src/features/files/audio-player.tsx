@@ -1,3 +1,4 @@
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { useEffect, useRef } from "react"
 
 import { agentUrl } from "@/http/client"
@@ -53,11 +54,17 @@ export function AudioPlayer({
             Could not load the transcript. Close and reopen it to retry.
           </p>
         ) : (
-          <p className="whitespace-pre-wrap">
-            {transcript.value && "text" in transcript.value
-              ? transcript.value.text
-              : "Loading transcript…"}
-          </p>
+          <DataLoading
+            loading={!transcript.value}
+            label="Loading transcript"
+            layout="conversation"
+          >
+            <p className="whitespace-pre-wrap">
+              {transcript.value && "text" in transcript.value
+                ? transcript.value.text
+                : ""}
+            </p>
+          </DataLoading>
         )}
       </details>
     </div>

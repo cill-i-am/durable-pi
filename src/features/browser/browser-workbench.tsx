@@ -1,7 +1,9 @@
-import "./browser.css"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
+
+import "./browser.css"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Field,
   FieldGroup,
@@ -67,70 +69,76 @@ export function BrowserWorkbench({
             </AlertDescription>
           </Alert>
         )}
-        {settings ? (
-          <BrowserInternetSettings
-            browser={browser}
-            agentName={agentName}
-            settings={settings}
-            setSettings={setSettings}
-          />
-        ) : (
-          <>
-            <BrowserAddress
+        <DataLoading
+          loading={!state && !browser.error}
+          label="Loading browser"
+          layout="media"
+        >
+          {settings ? (
+            <BrowserInternetSettings
               browser={browser}
-              url={url}
-              setUrl={setUrl}
+              agentName={agentName}
+              settings={settings}
               setSettings={setSettings}
             />
-            {state?.page && (
-              <BrowserPreview
+          ) : (
+            <>
+              <BrowserAddress
                 browser={browser}
-                state={state}
-                page={state.page}
-                agentId={agentId}
+                url={url}
                 setUrl={setUrl}
+                setSettings={setSettings}
               />
-            )}
-            {state &&
-              (state.expiresAt ||
-                browser.busy ||
-                state.status === "loading") && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      browser.busy ||
-                      !state.expiresAt ||
-                      state.status === "expired"
-                    }
-                    onClick={() =>
-                      void browser.command("refresh", {
-                        generation: state.policy.generation,
-                      })
-                    }
-                  >
-                    <RefreshCw />
-                    Refresh view
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={browser.pending === "close"}
-                    onClick={() =>
-                      void browser.command(
-                        "close",
-                        { generation: state.policy.generation },
-                        true
-                      )
-                    }
-                  >
-                    Close session
-                  </Button>
-                </div>
+              {state?.page && (
+                <BrowserPreview
+                  browser={browser}
+                  state={state}
+                  page={state.page}
+                  agentId={agentId}
+                  setUrl={setUrl}
+                />
               )}
-          </>
-        )}
+              {state &&
+                (state.expiresAt ||
+                  browser.busy ||
+                  state.status === "loading") && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        browser.busy ||
+                        !state.expiresAt ||
+                        state.status === "expired"
+                      }
+                      onClick={() =>
+                        void browser.command("refresh", {
+                          generation: state.policy.generation,
+                        })
+                      }
+                    >
+                      <RefreshCw />
+                      Refresh view
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={browser.pending === "close"}
+                      onClick={() =>
+                        void browser.command(
+                          "close",
+                          { generation: state.policy.generation },
+                          true
+                        )
+                      }
+                    >
+                      Close session
+                    </Button>
+                  </div>
+                )}
+            </>
+          )}
+        </DataLoading>
       </div>
       <details className="shrink-0 border-t px-5 py-3 text-xs text-muted-foreground">
         <summary className="cursor-pointer">Session limits</summary>

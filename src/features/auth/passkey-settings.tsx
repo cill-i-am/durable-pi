@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Field,
   FieldDescription,
@@ -211,9 +212,7 @@ export function PasskeySettings(props: Props) {
           remains available.
         </p>
       </header>
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading passkeys…</p>
-      )}
+      {loading && <DataLoading loading={!error} label="Loading passkeys" />}
       {!loading && !error && keys.length === 0 && (
         <p className="text-sm leading-6 text-muted-foreground">
           No passkeys yet. Add a passkey to sign in with your device.

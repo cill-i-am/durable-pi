@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Monitor, ShieldCheck } from "lucide-react"
 import { useEffect, useRef, type ReactNode } from "react"
 
@@ -182,9 +183,7 @@ export function AccountSecurity({
               </p>
             </header>
             {loading && (
-              <p role="status" className="text-sm text-muted-foreground">
-                Loading sessions…
-              </p>
+              <DataLoading loading label="Loading browser sessions" />
             )}
             <ul className="divide-y">
               {[...sessions]

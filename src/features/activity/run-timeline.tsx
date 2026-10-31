@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Schema } from "effect"
 import { ArrowUpRight, ChevronDown } from "lucide-react"
 
@@ -151,6 +152,13 @@ export function RunTimeline({
           </li>
         ))}
       </ol>
+      {busy && (
+        <DataLoading
+          loading
+          label="Loading earlier run records"
+          layout="line"
+        />
+      )}
       {error && (
         <Alert>
           <AlertDescription>{error}</AlertDescription>

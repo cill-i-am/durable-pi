@@ -7,6 +7,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoadingProvider } from "@workspace/ui/components/data-loading"
 import { ThemeProvider } from "next-themes"
 import { useState } from "react"
 import { createRoot } from "react-dom/client"
@@ -245,9 +246,11 @@ observe.observe(document.documentElement, {
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class">
     <WorkspaceMotion>
-      <UpdateRecovery>
-        <RouterProvider router={router} />
-      </UpdateRecovery>
+      <DataLoadingProvider>
+        <UpdateRecovery>
+          <RouterProvider router={router} />
+        </UpdateRecovery>
+      </DataLoadingProvider>
     </WorkspaceMotion>
   </ThemeProvider>
 )

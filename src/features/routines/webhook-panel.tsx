@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { ArrowLeft, KeyRound } from "lucide-react"
@@ -112,7 +113,7 @@ export function WebhookPanel({
         </div>
       )}
       {!info ? (
-        <p className="text-sm text-muted-foreground">Loading webhook…</p>
+        <DataLoading loading={!error} label="Loading webhook" layout="form" />
       ) : (
         <>
           <Field>

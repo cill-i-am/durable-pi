@@ -880,10 +880,12 @@ test.describe("motion contracts", () => {
     }, info) => {
       await openStory(page, info, `components-${kind}--default`)
       const target = page.locator(`[data-slot="${kind}"]`).first()
+      const visual =
+        kind === "skeleton" ? target.locator("[skullet-bar]") : target
       const original = await target.elementHandle()
       expect(
         new Set(
-          (await sampleVisual(target, 12)).map((value) => value.signature)
+          (await sampleVisual(visual, 12)).map((value) => value.signature)
         ).size,
         "Normal preference must run the actual loading animation"
       ).toBeGreaterThan(1)
@@ -894,7 +896,7 @@ test.describe("motion contracts", () => {
         .poll(
           async () =>
             new Set(
-              (await sampleVisual(target)).map((value) => value.signature)
+              (await sampleVisual(visual)).map((value) => value.signature)
             ).size
         )
         .toBe(1)
@@ -907,7 +909,7 @@ test.describe("motion contracts", () => {
         .poll(
           async () =>
             new Set(
-              (await sampleVisual(target)).map((value) => value.signature)
+              (await sampleVisual(visual)).map((value) => value.signature)
             ).size
         )
         .toBeGreaterThan(1)
@@ -922,6 +924,8 @@ test.describe("motion contracts", () => {
         motion: "reduced",
       })
       const target = page.locator(`[data-slot="${kind}"]`).first()
+      const visual =
+        kind === "skeleton" ? target.locator("[skullet-bar]") : target
       await expect(target).toHaveAttribute("data-motion-reduced", "true")
       await page.emulateMedia({ reducedMotion: "reduce" })
       await page.emulateMedia({ reducedMotion: "no-preference" })
@@ -931,7 +935,7 @@ test.describe("motion contracts", () => {
         .poll(
           async () =>
             new Set(
-              (await sampleVisual(target)).map((value) => value.signature)
+              (await sampleVisual(visual)).map((value) => value.signature)
             ).size
         )
         .toBe(1)
@@ -1214,6 +1218,7 @@ async function sampleVisual(locator: Locator, frames = 8) {
           style.rotate,
           style.filter,
           style.opacity,
+          style.backgroundPosition,
         ].join("|"),
       })
     }

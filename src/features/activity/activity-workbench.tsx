@@ -1,11 +1,13 @@
-import "./activity.css"
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@workspace/ui/components/alert"
+
+import "./activity.css"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -13,7 +15,6 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty"
 import { Separator } from "@workspace/ui/components/separator"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Schema } from "effect"
 import {
   ArrowLeft,
@@ -476,6 +477,13 @@ function PlanInspector({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          {busy && (
+            <DataLoading
+              loading
+              label="Loading earlier plan revisions"
+              layout="line"
+            />
+          )}
           {cursor !== null && (
             <Button
               variant="outline"
@@ -526,12 +534,14 @@ function PlanBrowser({
               detail={state.detail}
             />
           ) : state.loading ? (
-            <Skeleton className="h-32 w-full" />
+            <DataLoading loading label="Loading task plan" layout="detail" />
           ) : null}
         </>
       ) : (
         <>
-          {state.loading && <Skeleton className="h-24 w-full" />}
+          {state.loading && (
+            <DataLoading loading={!state.error} label="Loading task plans" />
+          )}
           {!state.loading && !state.list.plans.length && (
             <Empty>
               <EmptyHeader>

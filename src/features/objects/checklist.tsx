@@ -6,9 +6,9 @@ import {
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import { Checkbox } from "@workspace/ui/components/checkbox"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import {
   Tabs,
   TabsList,
@@ -307,13 +307,10 @@ function InlineChecklist({
           />
           <SaveState store={store} id={id} />
         </>
+      ) : state.error ? (
+        <p role="alert">{state.error}</p>
       ) : (
-        <>
-          <Skeleton className="h-5 w-40" />
-          <p className="text-sm text-muted-foreground">
-            {state.error || "Loading saved checklist…"}
-          </p>
-        </>
+        <DataLoading loading label="Loading saved checklist" />
       )}
       <footer className="inline-checklist-footer">
         <Button variant="link" size="sm" onClick={open}>
@@ -371,8 +368,11 @@ export function ChecklistView({
   if (!object)
     return (
       <>
-        <Skeleton className="h-7 w-44" />
-        <p>{state.error || "Loading checklist…"}</p>
+        {state.error ? (
+          <p role="alert">{state.error}</p>
+        ) : (
+          <DataLoading loading label="Loading checklist" layout="detail" />
+        )}
         <Button variant="outline" onClick={() => void store.load(id)}>
           Retry
         </Button>

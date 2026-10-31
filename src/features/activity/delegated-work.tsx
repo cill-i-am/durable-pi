@@ -5,8 +5,8 @@ import {
 } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldLabel, FieldGroup } from "@workspace/ui/components/field"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Textarea } from "@workspace/ui/components/textarea"
 import { Schema } from "effect"
 import { GitBranch, Square } from "lucide-react"
@@ -63,7 +63,7 @@ export function DelegatedWork({
   })
   const page = query.data ?? { groups: [], nextOffset: null }
   const error = query.error
-  if (!page.groups.length && !error && offset === 0) return null
+  if (query.data && !page.groups.length && !error && offset === 0) return null
   return (
     <section
       className="flex min-w-0 flex-col gap-4"
@@ -94,6 +94,14 @@ export function DelegatedWork({
             </Button>
           </AlertDescription>
         </Alert>
+      )}
+      {!query.data && !error && (
+        <DataLoading
+          loading
+          label={
+            background ? "Loading background work" : "Loading delegated work"
+          }
+        />
       )}
       {page.groups.map((group) => (
         <DelegationGroup key={group.id} group={group} agentId={agentId} />
@@ -482,7 +490,7 @@ function ChildTranscript({
           </AlertDescription>
         </Alert>
       ) : !page ? (
-        <Skeleton className="h-24 w-full" />
+        <DataLoading loading label="Loading task history" />
       ) : (
         <Trace>
           {page.entries.map((entry) => (

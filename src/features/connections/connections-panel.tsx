@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import {
   Empty,
   EmptyHeader,
@@ -109,11 +110,7 @@ export function ConnectionsPanel({
         </Button>
       </div>
       <div className="settings-panel-body">
-        {notice && (
-          <Alert>
-            <AlertDescription>{notice}</AlertDescription>
-          </Alert>
-        )}
+        <ConnectionStatus notice={notice} ready={state.ready} />
         {assignment && onManageLibrary && (
           <Button
             variant="outline"
@@ -509,4 +506,20 @@ function ConnectionForm({
       Add connection
     </Button>
   )
+}
+
+function ConnectionStatus({
+  notice,
+  ready,
+}: {
+  notice: string | false
+  ready: boolean
+}) {
+  if (notice)
+    return (
+      <Alert>
+        <AlertDescription>{notice}</AlertDescription>
+      </Alert>
+    )
+  return ready ? null : <DataLoading loading label="Loading connections" />
 }

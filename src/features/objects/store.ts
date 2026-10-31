@@ -30,6 +30,7 @@ type EditMachine = ReturnType<typeof objectEditMachine>
 type ReadMachine = ReturnType<typeof objectReadMachine>
 type EditEvent = EventFromLogic<EditMachine>
 type State = {
+  loaded: boolean
   list: readonly ObjectSummary[]
   details: Record<string, ObjectDetail>
   pending: Record<string, ObjectMutation>
@@ -104,6 +105,7 @@ function acknowledged(
  * The external-store snapshot is only a projection, never mutation authority. */
 export class ObjectStore {
   private state: State = {
+    loaded: false,
     list: [],
     details: {},
     pending: {},
@@ -364,11 +366,12 @@ export class ObjectStore {
         return old && old.revision >= object.revision ? old : object
       })
       if (
+        !this.state.loaded ||
         (this.state.error && !this.storageError) ||
         merged.length !== this.state.list.length ||
         merged.some((object, index) => object !== this.state.list[index])
       )
-        this.set({ list: merged, error: this.storageError })
+        this.set({ list: merged, loaded: true, error: this.storageError })
     })
   load = (id: string, _fresh = false) =>
     this.read(`detail:${id}`, `objects/${id}`, (raw) => {

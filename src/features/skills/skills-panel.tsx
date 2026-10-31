@@ -1,5 +1,6 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
@@ -157,8 +158,8 @@ function SkillLibraryPanel({
       </div>
       <div className="settings-panel-body">
         <SkillProblem state={state} view={view} />
-        {state.loading && (
-          <p className="text-sm text-muted-foreground">Loading skills…</p>
+        {state.loading && !state.ready && (
+          <DataLoading loading={!state.error} label="Loading skills" />
         )}
         {hostedImport ? (
           <HostedSkillImport
@@ -188,6 +189,9 @@ function SkillLibraryPanel({
                 Back to library
               </Button>
             </div>
+            {historyBusy && (
+              <DataLoading loading label="Loading skill history" />
+            )}
             {history.versions.map((version) => (
               <details key={version.revision} className="rounded-md border p-3">
                 <summary className="cursor-pointer text-sm">
@@ -328,8 +332,8 @@ function AssignedSkillsPanel({
             </AlertDescription>
           </Alert>
         )}
-        {state.loading && (
-          <p className="text-sm text-muted-foreground">Loading skills…</p>
+        {state.loading && !state.ready && (
+          <DataLoading loading={!state.error} label="Loading skills" />
         )}
         <section aria-label="Selected skills" className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground">
