@@ -86,6 +86,28 @@ export const workbenchPresenceMachine = setupEffect({
     held: {},
     closing: {
       on: {
+        ROUTE: ({ context, event }) =>
+          event.panel
+            ? {
+                target: "open",
+                context: {
+                  panel: event.panel,
+                  retainedPanel: event.panel,
+                  search: event.search,
+                  held: event.held,
+                  revision: context.revision + 1,
+                },
+              }
+            : {
+                // A settings overlay cannot revoke an accepted hide request.
+                // Release its overlay placement while the same native exit
+                // keeps its acknowledgement identity and mounted resources.
+                context: {
+                  ...context,
+                  panel: event.held ? null : context.panel,
+                  held: event.held,
+                },
+              },
         CLOSED: ({ context, event }) =>
           event.revision === context.revision
             ? { target: "closed", context: { ...context, panel: null } }

@@ -78,3 +78,11 @@ The final full-browser run exposed a mobile startup gap: the native chooser exis
 The standard browser suite discovers `tests/browser/file-controls-readiness.spec.ts`. Its test-only esbuild seam holds actual Effect owner publication, proving initial readiness, late pending-owner cancellation, and rebinding from an already published/uploaded alpha owner to a held beta owner. All six desktop/mobile readiness cases pass. The original PDF pending-extraction/durable-preparing reload test passes unchanged on both widths (two cases); all twelve file lifecycle unit tests pass.
 
 Both negative controls fail at the intended disabled-control assertion: forcing readiness true exposes the startup gap; deriving readiness from any published live owner allows the former alpha owner to enable beta's controls. Production source is not mutated by these test-build controls. Final scoped lint, formatting, typecheck and diff checks pass.
+
+## Hidden-frame test checkpoint follow-up
+
+An isolated CI investigation reproduced a test race: hiding the mounted iframe caused its real ResizeObserver to post height 400 after the test's synthetic height 457. The DOM committed both values, so polling for a persistent 457px missed already-completed bridge/actor delivery. Captured ordering showed zero actions and one render; restoring the host retained its draft and accepted exactly one normal action.
+
+Only the browser test changed. A MutationObserver installed before dispatch now latches the synthetic height, including a mutation's previous value, so a subsequent native resize cannot erase the checkpoint. Immediate hidden-action injection, all four visibility boundaries, zero hidden actions/extra renders, retained draft and restored visible action assertions remain. No production source or lifecycle changed.
+
+The corrected case passed 24 normal repetitions and 12 protocol-slowed repetitions across desktop/mobile. The existing test-build visibility negative control still fails on both widths with one hidden action instead of zero. Scoped lint, formatting, typecheck and diff checks pass.

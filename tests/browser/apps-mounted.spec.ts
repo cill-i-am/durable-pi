@@ -319,30 +319,48 @@ test("hidden or inert mounted frames reject actions and retain their draft", asy
     "aria-hidden",
   ]) {
     await page.evaluate(
-      ({ boundary, channel }) => {
-        const frame = document.querySelector("iframe")!
-        const host = frame.closest("section")!
-        if (boundary === "display") host.style.display = "none"
-        else
-          host.setAttribute(boundary, boundary === "aria-hidden" ? "true" : "")
-        for (const data of [
-          { channel, type: "action", name: "save", values: {} },
-          { channel, type: "height", height: 450 + boundary.length },
-        ])
-          window.dispatchEvent(
-            new MessageEvent("message", {
-              origin: "null",
-              source: frame.contentWindow,
-              data,
-            })
-          )
-      },
+      ({ boundary, channel }) =>
+        new Promise<void>((resolve) => {
+          const frame = document.querySelector("iframe")!
+          const host = frame.closest("section")!
+          const expected = `${450 + boundary.length}px`
+          // Latch delivery: the real ResizeObserver can immediately replace this height.
+          const checkpoint = new MutationObserver((records) => {
+            if (
+              frame.style.height === expected ||
+              records.some((record) =>
+                record.oldValue?.includes(`height: ${expected}`)
+              )
+            ) {
+              checkpoint.disconnect()
+              resolve()
+            }
+          })
+          checkpoint.observe(frame, {
+            attributes: true,
+            attributeFilter: ["style"],
+            attributeOldValue: true,
+          })
+          if (boundary === "display") host.style.display = "none"
+          else
+            host.setAttribute(
+              boundary,
+              boundary === "aria-hidden" ? "true" : ""
+            )
+          // The passive height follows the action through the actual bridge and actor.
+          for (const data of [
+            { channel, type: "action", name: "save", values: {} },
+            { channel, type: "height", height: 450 + boundary.length },
+          ])
+            window.dispatchEvent(
+              new MessageEvent("message", {
+                origin: "null",
+                source: frame.contentWindow,
+                data,
+              })
+            )
+        }),
       { boundary, channel }
-    )
-    // The passive height event is queued after the action and proves bridge/actor delivery.
-    await expect(page.locator("iframe")).toHaveCSS(
-      "height",
-      `${450 + boundary.length}px`
     )
     expect(
       await page.evaluate(() => {

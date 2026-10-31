@@ -553,17 +553,60 @@ test.describe("motion contracts", () => {
     await expect(descriptions).toHaveAttribute("aria-checked", "true")
     await descriptions.click()
     await expect(descriptions).toHaveAttribute("aria-checked", "false")
+    const original = await descriptions.elementHandle()
+    const exitSurface = page.locator(
+      ".ui-floating-popup:has([data-slot=dropdown-menu-checkbox-item]), .responsive-popup-shell:has([data-slot=dropdown-menu-checkbox-item])"
+    )
+    // Hold a real native exit so runner/protocol delay cannot turn this into a
+    // completed-close/remount test. Reopening cancels the held exit animation.
+    const exitBarrier = await page.addStyleTag({
+      content: `
+        @keyframes hold-menu-native-exit { from { opacity: 1 } to { opacity: 0 } }
+        .ui-floating-popup[data-ending-style],
+        .responsive-popup-shell[data-ending-style] {
+          animation: hold-menu-native-exit 30s linear;
+        }
+      `,
+    })
     await page.keyboard.press("Escape")
+    await expect(exitSurface).toHaveAttribute("data-ending-style", "")
+    await expect
+      .poll(() =>
+        exitSurface.evaluate((node) =>
+          node
+            .getAnimations()
+            .some(
+              (animation) =>
+                animation instanceof CSSAnimation &&
+                animation.animationName === "hold-menu-native-exit" &&
+                animation.playState === "running"
+            )
+        )
+      )
+      .toBe(true)
     await nativeClick(trigger)
     await expect(descriptions).toBeVisible()
     await expect(descriptions).toHaveAttribute("aria-checked", "false")
+    expect(
+      await descriptions.evaluate(
+        (node, previous) => node === previous,
+        original
+      )
+    ).toBe(true)
+    await expect(exitSurface).not.toHaveAttribute("data-ending-style", "")
+    await exitBarrier.evaluate((node: Element) => {
+      node.remove()
+    })
     await page.getByRole("menuitem", { name: "Theme", exact: true }).click()
     const light = page.getByRole("menuitemradio", {
       name: "Light",
       exact: true,
     })
     await expect(light).toBeVisible()
+    if (info.project.name.startsWith("phone"))
+      await expect(page.getByRole("menu").filter({ has: light })).toBeFocused()
     await light.focus()
+    await expect(light).toBeFocused()
     await page.keyboard.press("Tab")
     await expect(light).not.toBeVisible()
     await usableFocus(page)

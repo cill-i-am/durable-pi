@@ -47,3 +47,16 @@ Passed locally:
 The full repository typecheck was attempted while other redesign owners were editing. Remaining diagnostics were outside this slice (AgentCollection/AgentSidebar integration in the root and agents exports); full composed checks belong to the root closeout. Earlier workspace-navigation tests exposed two obsolete standalone-list assertions after the shared-sidebar redesign; the root owns that contract update. No CI, merge, deployment, real provider execution or production verification is claimed here.
 
 The standalone browser fixture can be reviewed with `node tests/browser/workbench-tabs-lifecycle.mjs --serve` at `http://127.0.0.1:4319`. It does not authenticate, contact providers, send messages or change application data.
+
+## Delayed-close race follow-up
+
+The desktop close/settings race was reproduced from the `bb18b33` source state. A hide request entered `closing` but kept its rendered panel until native `CLOSED`. If settings appeared before that acknowledgement, the global route handler changed the machine to `held`, advanced its revision, and revived the hidden workbench. The original close acknowledgement could no longer finish that exit.
+
+The closing state now admits reopening only through an explicit non-null panel route. A settings-only route keeps the same closing state and exit revision, releases the public panel so settings mounts outside it, and retains the tool identity/search. Opening settings directly from an open workbench still enters `held`. No hook, root integration, dependency or snapshot-format change is needed.
+
+Failure-sensitive proof:
+
+- The new actual Effect actor test failed against the original handler (`held` instead of `closing`) before the fix. After correction, 13 tab/presence tests pass, including direct open-to-held behavior, an explicit reopen after settings appears during closure, stale acknowledgement rejection, and existing closed-session restoration.
+- The desktop browser test now holds the native exit with a CSS animation, opens settings while that animation is still pending, then explicitly finishes the animation. It uses no fixed wait. The unchanged compiled browser build, whose presence machine was inspected and confirmed to lack the closing-specific route handler, fails with one unexpectedly open workbench. [Captured failure](evidence/conversation-first-workbench/close-race-before.png).
+- A fresh isolated build in `dist/presence-race`, without replacing the shared browser build, passes the same regression on desktop and mobile (2/2). The test remains in `tests/browser/workspace-design.spec.ts` and runs in the normal browser gate.
+- The isolated build, full repository typecheck, focused lint and formatting checks pass. Hosted CI and delivery remain the root closeout's responsibility.

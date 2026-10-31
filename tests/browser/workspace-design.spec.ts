@@ -32,6 +32,14 @@ test("settings after hiding a retained workbench keep it closed and return to th
 }) => {
   await signIn(page)
   await page.goto("/agents/navi")
+  if (!isMobile) {
+    await page.addStyleTag({
+      content: `
+        @keyframes hold-workbench-close { from { opacity: 1; } to { opacity: 0; } }
+        .workbench-sheet[data-ending-style] { animation: hold-workbench-close 30s linear; }
+      `,
+    })
+  }
   const draft = page.getByRole("textbox", { name: "Message Navi", exact: true })
   await draft.fill("Keep this private conversation draft")
   await page
@@ -48,9 +56,29 @@ test("settings after hiding a retained workbench keep it closed and return to th
   await page
     .getByRole("button", { name: "Hide workbench", exact: true })
     .click()
+  if (!isMobile)
+    await expect(
+      page.locator(".workbench-sheet[data-ending-style]")
+    ).toHaveCount(1)
   await expect(draft).toBeVisible()
   await openSettings(page, isMobile)
   await expect(page.locator('.workbench-host[data-open="true"]')).toHaveCount(0)
+  if (!isMobile) {
+    // Settings opens while native CLOSED is still withheld, not after it.
+    await expect(
+      page.locator(".workbench-sheet[data-ending-style]")
+    ).toHaveCount(1)
+    await page.evaluate(() =>
+      document.getAnimations().forEach((animation) => {
+        if (
+          animation instanceof CSSAnimation &&
+          animation.animationName === "hold-workbench-close"
+        )
+          animation.finish()
+      })
+    )
+    await expect(page.locator(".workbench-sheet")).toBeHidden()
+  }
   await closeSettings(page)
   await expect(draft).toHaveValue("Keep this private conversation draft")
   await expect(draft).toBeVisible()

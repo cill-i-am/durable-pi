@@ -75,3 +75,13 @@ Comparison captures:
 - `/private/tmp/durable-pi-foundation-app-mobile-deferred.png` — deferred menu-to-drawer result.
 
 These checks establish the shared foundation and retained native behavior. Full route verification and final repository gates remain the root task's responsibility.
+
+## Menu exit-race follow-up
+
+The [cancelled hosted UI job](https://github.com/cill-i-am/durable-pi/actions/runs/41190647660/job/124506625213) retained its failure artifact despite cancellation. Its trace identifies the assertion after menu reopen: the unchecked checkbox was replaced by a new native checkbox with its default checked value. The Escape and reopen browser calls spanned about 131ms across a 100ms exit. This tested a completed close and remount rather than reopening during exit; no library state-retention defect was demonstrated.
+
+The menu motion test now holds an actual CSS exit animation, observes the native ending state and running animation, then reopens. It asserts both the unchecked value and the same DOM instance. It removes the barrier after the native ending state clears. The mobile submenu also waits for native initial focus before placing focus on Light and sending Tab. No runtime component or stylesheet changed.
+
+Validation: the unchanged current-head test passed 20 desktop-night repetitions. An isolated negative control replaying a 150ms delay before reopen with 8x CPU slowdown reproduced the hosted assertion failure. The corrected test passed five repetitions under the same controlled condition. The menu and adjacent select/dialog/sheet exit-race cases passed all 16 desktop/phone and light/dark checks. Scoped lint, formatting and application typecheck passed; the package configuration was also typechecked.
+
+Evidence is retained in `/private/tmp/foundation-menu-motion-repro.log`, `/private/tmp/foundation-menu-negative-delay.log`, `/private/tmp/foundation-menu-fixed-delay.log`, and `/private/tmp/foundation-menu-barrier-scoped.log`. The downloaded hosted trace is under `/private/tmp/cancelled-ui-report/`. The delay injection and CPU throttle exist only in temporary negative/control tests, not in the repository test.
