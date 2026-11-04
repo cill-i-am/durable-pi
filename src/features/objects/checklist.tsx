@@ -16,12 +16,14 @@ import {
   TabsContent,
 } from "@workspace/ui/components/tabs"
 import { Textarea } from "@workspace/ui/components/textarea"
+import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
 import { cn } from "cn"
 import { Schema } from "effect"
 import {
   ArrowUpRight,
   Archive,
   Check,
+  ChevronDown,
   Pencil,
   Plus,
   RotateCcw,
@@ -30,12 +32,10 @@ import { useEffect, useId, useState } from "react"
 
 import { Markdown } from "@/components/markdown"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Select,
   SelectTrigger,
@@ -44,6 +44,13 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select"
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetNavigation,
+} from "@/components/ui/sheet"
 import {
   type Checklist,
   ChecklistTask,
@@ -913,52 +920,90 @@ function ChecklistOrigin({
   id: string
   active: boolean
 }) {
+  const mobile = useIsMobile()
   const dialog = useObjectOrigin(agentId, id),
     origin = dialog.origin,
     originError = dialog.error
+  if (!object.origin.turnId)
+    return (
+      <p className="text-xs text-muted-foreground">Created in the workbench.</p>
+    )
+  const content = origin ? (
+    <div className="checklist-origin-content">
+      <time className="checklist-origin-time" dateTime={origin.createdAt}>
+        {new Date(origin.createdAt).toLocaleString()}
+      </time>
+      <div className="checklist-origin-excerpt">
+        <p className="text-sm text-muted-foreground">Original request</p>
+        <p className="whitespace-pre-wrap">{origin.text}</p>
+      </div>
+      <div className="checklist-origin-excerpt">
+        <p className="text-sm text-muted-foreground">Saved reply</p>
+        <Markdown text={origin.answer} />
+      </div>
+    </div>
+  ) : (
+    <DataLoading loading label="Loading source conversation" layout="detail" />
+  )
   return (
-    <>
-      {object.origin.turnId ? (
-        <Button
-          variant="link"
-          className="h-auto justify-start p-0"
-          onClick={dialog.show}
-        >
-          From the conversation
-          <ArrowUpRight data-icon="inline-end" />
-        </Button>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Created in the workbench.
-        </p>
-      )}
+    <div className="checklist-origin">
       {originError && (
-        <p role="alert" className="text-sm text-destructive">
-          {originError}
-        </p>
+        <Alert role="alert">
+          <AlertDescription>
+            {originError}
+            <Button variant="outline" size="sm" onClick={dialog.show}>
+              Try again
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
-      <Dialog
-        open={active && dialog.open}
-        onOpenChange={(open) => {
-          if (active && !open) dialog.close()
-        }}
-      >
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Originating conversation</DialogTitle>
-            <DialogDescription>
-              {origin ? new Date(origin.createdAt).toLocaleString() : ""}
-            </DialogDescription>
-          </DialogHeader>
-          {origin && (
-            <div className="flex min-w-0 flex-col gap-5">
-              <p className="whitespace-pre-wrap">{origin.text}</p>
-              <Markdown text={origin.answer} />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+      {mobile ? (
+        <>
+          <Button
+            variant="link"
+            className="h-auto justify-start p-0"
+            onClick={dialog.show}
+          >
+            From the conversation <ArrowUpRight data-icon="inline-end" />
+          </Button>
+          <Sheet
+            open={active && dialog.open}
+            onOpenChange={(open) => {
+              if (active && !open) dialog.close()
+            }}
+          >
+            <SheetContent
+              className="checklist-origin-sheet"
+              showCloseButton={false}
+            >
+              <SheetNavigation
+                title="Source conversation"
+                backLabel="Checklist"
+                onBack={dialog.close}
+              />
+              <SheetDescription className="sr-only">
+                Original request and saved reply for this checklist.
+              </SheetDescription>
+              <SheetBody>{content}</SheetBody>
+            </SheetContent>
+          </Sheet>
+        </>
+      ) : (
+        <Collapsible
+          open={dialog.open}
+          onOpenChange={(open) => (open ? dialog.show() : dialog.close())}
+        >
+          <CollapsibleTrigger
+            render={
+              <Button variant="ghost" className="checklist-origin-trigger" />
+            }
+          >
+            <ChevronDown data-icon="inline-start" /> From the conversation
+          </CollapsibleTrigger>
+          <CollapsibleContent>{content}</CollapsibleContent>
+        </Collapsible>
+      )}
+    </div>
   )
 }
 

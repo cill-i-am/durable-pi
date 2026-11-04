@@ -1,17 +1,16 @@
 import { Button } from "@workspace/ui/components/button"
-import { Maximize2 } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { ArrowUpRight } from "lucide-react"
+import { useContext, type ReactNode } from "react"
+
+import { resultReference } from "@/navigation/result-reference"
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+  ResultElementContext,
+  ResultSourceContext,
+  ResultWorkspaceContext,
+} from "./result-workspace-context"
 
-// View state belongs to the card above this shell, so expanding never clears its filters or shortlist.
+/** A retained result tab owns the only full editing surface. */
 export function AnswerWorkspace({
   title,
   description,
@@ -25,55 +24,59 @@ export function AnswerWorkspace({
   toolbar?: ReactNode
   children: ReactNode
 }) {
-  const [open, setOpen] = useState(false)
+  const workspace = useContext(ResultWorkspaceContext)
+  const identity = useContext(ResultElementContext)
+  const source = useContext(ResultSourceContext)
+  const reference = identity ? resultReference(identity) : null
+  const promoted = !!reference && !!workspace?.opened.includes(reference)
+  const ownsSurface =
+    source?.surface === "workbench" && source.reference === reference
+  const compact = promoted && !ownsSurface
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <div
-          className={
-            open ? "hidden" : "flex min-w-0 flex-wrap items-center gap-2"
-          }
-        >
-          {!open && toolbar}
-          <DialogTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className={toolbar ? "max-md:ms-auto" : "ms-auto"}
-              />
-            }
+    <div className="answer-workspace flex min-w-0 flex-col gap-4">
+      {compact ? (
+        <div className="answer-workspace-source">
+          <p className="font-medium">{title}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => workspace?.open(reference!)}
           >
-            <Maximize2 data-icon="inline-start" /> Open workspace
-          </DialogTrigger>
+            View in workbench <ArrowUpRight data-icon="inline-end" />
+          </Button>
         </div>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[min(90rem,calc(100vw-3rem))]">
-          <DialogHeader className="pr-8">
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
+      ) : (
+        <>
           {toolbar && (
             <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
           )}
-          {open && (
-            <div
-              className={
-                sidebar
-                  ? "grid min-w-0 gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]"
-                  : "min-w-0"
-              }
+          <div
+            className={
+              ownsSurface && sidebar
+                ? "grid min-w-0 gap-6 @3xl:grid-cols-[16rem_minmax(0,1fr)]"
+                : "min-w-0"
+            }
+          >
+            {ownsSurface && sidebar && (
+              <aside className="flex min-w-0 flex-col gap-5 rounded-lg bg-muted/40 p-5">
+                {sidebar}
+              </aside>
+            )}
+            <div className="@container min-w-0">{children}</div>
+          </div>
+          {workspace && reference && source?.surface !== "workbench" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="self-end"
+              aria-description={description}
+              onClick={() => workspace.open(reference)}
             >
-              {sidebar && (
-                <aside className="flex min-w-0 flex-col gap-5 rounded-lg bg-muted/40 p-5">
-                  {sidebar}
-                </aside>
-              )}
-              <div className="@container min-w-0">{children}</div>
-            </div>
+              Open in workbench <ArrowUpRight data-icon="inline-end" />
+            </Button>
           )}
-        </DialogContent>
-      </Dialog>
-      {!open && children}
+        </>
+      )}
     </div>
   )
 }

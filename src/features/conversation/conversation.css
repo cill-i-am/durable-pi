@@ -97,41 +97,65 @@
   }
 }
 
-.conversation-people-sheet {
-  max-width: 400px;
+.conversation-people-popover {
+  gap: 8px;
+  padding: 12px;
 }
 
-.conversation-people-sheet .overlay-close {
-  top: 16px;
-  inset-inline-end: 12px;
+.conversation-people-popover .contextual-popover-title {
+  padding: 4px;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .conversation-people-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .conversation-people-list li {
   display: flex;
-  min-height: 60px;
+  min-height: 44px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 4px;
 }
 
 .conversation-person-name {
   min-width: 0;
+  flex: 1;
   overflow-wrap: anywhere;
-  font-size: var(--text-md);
+  font-size: var(--text-base);
   font-weight: 500;
-  line-height: var(--text-md--line-height);
+  line-height: var(--text-base--line-height);
 }
 
 .conversation-people-list [data-slot="badge"] {
   flex-shrink: 0;
   font-size: var(--text-xs);
+}
+
+.contextual-popover-drawer .conversation-people-list {
+  gap: 0;
+}
+
+.contextual-popover-drawer .conversation-people-list li {
+  min-height: 68px;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.contextual-popover-drawer .conversation-people-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.contextual-popover-drawer .conversation-person-name {
+  font-size: var(--text-md);
+  line-height: var(--text-md--line-height);
 }
 
 .conversation-scroller {

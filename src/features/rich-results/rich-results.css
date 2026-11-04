@@ -115,3 +115,34 @@
     width: 100%;
   }
 }
+
+.answer-workspace-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 16px;
+}
+.answer-workspace-source > p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.answer-workspace-source > button {
+  flex-shrink: 0;
+}
+.result-workbench {
+  padding: 24px;
+}
+.answer-examples {
+  gap: 20px;
+  padding: 24px;
+}
+@media (max-width: 767px) {
+  .result-workbench,
+  .answer-examples {
+    padding: 16px;
+  }
+  .answer-workspace-source {
+    flex-wrap: wrap;
+  }
+}

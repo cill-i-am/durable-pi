@@ -18,7 +18,7 @@ import { RichResult } from "./rich-result"
 export function AnswerGallery({
   onPrompt,
 }: {
-  onPrompt: (prompt: string) => void
+  onPrompt?: (prompt: string) => void
 }) {
   const [weatherRange, setWeatherRange] = useState(["weekend"])
   return (
@@ -45,8 +45,12 @@ export function AnswerGallery({
           >
             <div className="answer-sample-header">
               <p className="text-base font-medium">{active.question}</p>
-              <Button variant="outline" onClick={() => onPrompt(active.prompt)}>
-                Use this prompt
+              <Button
+                variant="outline"
+                disabled={!onPrompt}
+                onClick={() => onPrompt?.(active.prompt)}
+              >
+                Add to draft
                 <ArrowUpRight data-icon="inline-end" />
               </Button>
             </div>

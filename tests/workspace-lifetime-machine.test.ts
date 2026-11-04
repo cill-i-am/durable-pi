@@ -190,3 +190,50 @@ it.effect(
       expect(closed.context.retainedPanel).toBe("files")
     }).pipe(Effect.scoped)
 )
+
+it.effect(
+  "native composer focus intent is invalidated by settings, reopen, and stale close acknowledgement",
+  () =>
+    Effect.gen(function* () {
+      const owner = yield* makeWorkbenchPresence({
+        panel: "examples",
+        search: {},
+      })
+      yield* send(owner, { type: "RETURN_TO_COMPOSER" })
+      yield* send(owner, {
+        type: "ROUTE",
+        panel: null,
+        search: {},
+        held: false,
+      })
+      const first = yield* waitFor(owner, (state) => state.matches("closing"))
+      expect(first.context.returnToComposer).toBe(true)
+      yield* send(owner, { type: "ROUTE", panel: null, search: {}, held: true })
+      yield* waitFor(owner, (state) => state.context.returnToComposer === false)
+      expect(owner.getSnapshot().context.returnToComposer).toBe(false)
+      yield* send(owner, {
+        type: "ROUTE",
+        panel: "files",
+        search: {},
+        held: false,
+      })
+      yield* send(owner, { type: "CLOSED", revision: first.context.revision })
+      yield* waitFor(owner, (state) => state.matches("open"))
+      expect(owner.getSnapshot().matches("open")).toBe(true)
+      yield* waitFor(owner, (state) => state.context.returnToComposer === false)
+      expect(owner.getSnapshot().context.returnToComposer).toBe(false)
+      yield* send(owner, { type: "RETURN_TO_COMPOSER" })
+      yield* send(owner, {
+        type: "ROUTE",
+        panel: null,
+        search: {},
+        held: false,
+      })
+      const closing = yield* waitFor(owner, (state) => state.matches("closing"))
+      yield* send(owner, { type: "CLOSED", revision: first.context.revision })
+      expect(owner.getSnapshot().matches("closing")).toBe(true)
+      yield* send(owner, { type: "CLOSED", revision: closing.context.revision })
+      yield* waitFor(owner, (state) => state.matches("closed"))
+      expect(owner.getSnapshot().context.returnToComposer).toBe(true)
+    }).pipe(Effect.scoped)
+)

@@ -72,6 +72,7 @@ export function TurnActivity({
   items,
   toolTitles,
   agentId,
+  turnId,
   status = "done",
   waitingForApproval = false,
   onAppPendingChange,
@@ -82,6 +83,7 @@ export function TurnActivity({
   toolTitles?: Record<string, string>
   items: readonly TimelineItem[]
   agentId?: string
+  turnId?: string
   status?: ChatState["turns"][number]["status"]
   waitingForApproval?: boolean
   onAppPendingChange?: (key: string, pending: boolean) => void
@@ -142,7 +144,13 @@ export function TurnActivity({
                 />
               }
             >
-              <RichResult output={result.output} onPrompt={onAnswerPrompt} />
+              <RichResult
+                output={result.output}
+                onPrompt={onAnswerPrompt}
+                identity={
+                  turnId ? { turn: turnId, tool: result.id } : undefined
+                }
+              />
             </Suspense>
           )
         return (
@@ -177,6 +185,7 @@ function WorkGroup({
   waitingForApproval: boolean
   toolTitles?: Record<string, string>
   agentId?: string
+  turnId?: string
 }) {
   const [expanded, setExpanded] = useState<boolean | null>(null)
   const view = workPresentation(items, status, current, waitingForApproval)
@@ -367,6 +376,7 @@ function ToolActivity({
   item: ToolItem
   title?: string
   agentId?: string
+  turnId?: string
   runStatus: ChatState["turns"][number]["status"]
   waitingForApproval: boolean
 }) {
@@ -468,6 +478,7 @@ export function SteeringMessage({
   label: string
   attachments?: readonly FileInfo[]
   agentId?: string
+  turnId?: string
   provenance?: MessageProvenance
   createdAt?: string
 }) {

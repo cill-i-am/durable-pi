@@ -5,7 +5,7 @@ import {
   workspaceView,
   parseAgentReference,
   parsePanel,
-  parseResourceId,
+  parseWorkspaceItem,
 } from "@/navigation/workspace"
 
 export const Route = createFileRoute(
@@ -15,7 +15,7 @@ export const Route = createFileRoute(
     parse: ({ agentId, panel, itemId }) => ({
       agentId: parseAgentReference(agentId),
       panel: parsePanel(panel),
-      itemId: parseResourceId(itemId),
+      itemId: parseWorkspaceItem(panel, itemId),
     }),
   },
   validateSearch: validateWorkspaceSearch,

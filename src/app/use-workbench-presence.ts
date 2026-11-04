@@ -68,5 +68,8 @@ export function useWorkbenchPresence(view: WorkbenchView) {
     search: rendered.search,
     closed: () =>
       owner.current?.send({ type: "CLOSED", revision: rendered.revision }),
+    returnToComposer: snapshot?.context.returnToComposer ?? false,
+    focusComposerOnClose: () =>
+      owner.current?.send({ type: "RETURN_TO_COMPOSER" }),
   }
 }

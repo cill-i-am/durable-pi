@@ -2,14 +2,6 @@ import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@workspace/ui/components/dialog"
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -19,6 +11,11 @@ import { useState, type ReactNode } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  ContextualPopover,
+  ContextualPopoverContent,
+  ContextualPopoverTrigger,
+} from "@/components/ui/contextual-popover"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 export function ChatHeader({
@@ -43,10 +40,10 @@ export function ChatHeader({
         )}
       </div>
       <div className="chat-header-actions">
-        <Dialog>
+        <ContextualPopover>
           <TooltipProvider>
             <Tooltip>
-              <DialogTrigger
+              <ContextualPopoverTrigger
                 render={
                   <TooltipTrigger
                     render={
@@ -79,19 +76,16 @@ export function ChatHeader({
                     aria-hidden="true"
                   />
                 </span>
-              </DialogTrigger>
+              </ContextualPopoverTrigger>
               <TooltipContent side="bottom">
                 {hoveredName ?? `${name}, ${agent.name}`}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent className="conversation-people-sheet">
-            <DialogHeader>
-              <DialogTitle>People in this chat</DialogTitle>
-              <DialogDescription className="sr-only">
-                This private conversation is between you and {agent.name}.
-              </DialogDescription>
-            </DialogHeader>
+          <ContextualPopoverContent
+            title="People in this chat"
+            className="conversation-people-popover"
+          >
             <ul className="conversation-people-list">
               <li>
                 <PersonAvatar name={name} image={userImage} />
@@ -109,8 +103,8 @@ export function ChatHeader({
                 <Badge variant="secondary">Assistant</Badge>
               </li>
             </ul>
-          </DialogContent>
-        </Dialog>
+          </ContextualPopoverContent>
+        </ContextualPopover>
         {workbenchAction}
       </div>
     </header>

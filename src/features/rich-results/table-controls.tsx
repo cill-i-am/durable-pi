@@ -1,18 +1,20 @@
 import type { ReactTable } from "@tanstack/react-table"
 import { Button } from "@workspace/ui/components/button"
-import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
-import { Input } from "@workspace/ui/components/input"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@workspace/ui/components/field"
 import { Columns3, ListFilter, Plus, X } from "lucide-react"
-import { useId, useState } from "react"
+import { useContext, useId, useRef, useState } from "react"
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+  ContextualPopover,
+  ContextualPopoverContent,
+  ContextualPopoverTrigger,
+} from "@/components/ui/contextual-popover"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,6 +23,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group"
 import {
   Select,
   SelectTrigger,
@@ -31,7 +39,11 @@ import {
 } from "@/components/ui/select"
 import type { AnswerProps } from "@/rich-results/catalog"
 
+import { useResultViewState } from "./result-view-state"
+import { ResultSurfaceActiveContext } from "./result-workspace-context"
 import type { answerTableFeatures } from "./table-features"
+
+import "./table-controls.css"
 
 type Row = AnswerProps<"DataTable">["rows"][number]
 type Column = AnswerProps<"DataTable">["columns"][number]
@@ -39,6 +51,18 @@ export type ValueFilter = {
   operator: "contains" | "is" | "not" | "gt" | "gte" | "lt" | "lte" | "in"
   values: string[]
 }
+
+export function filterValueError(
+  value: string,
+  numeric: boolean,
+  badInput = false
+) {
+  if (badInput) return "Enter a number."
+  if (!value.trim()) return "Enter a value."
+  if (numeric && !Number.isFinite(Number(value))) return "Enter a number."
+  return null
+}
+
 export function matchesFilter(value: unknown, filter: ValueFilter) {
   const text = value == null ? "" : String(value)
   const expected = filter.values[0] ?? ""
@@ -59,6 +83,7 @@ export function matchesFilter(value: unknown, filter: ValueFilter) {
       if (
         value == null ||
         typeof value !== "number" ||
+        expected.trim() === "" ||
         !Number.isFinite(Number(expected))
       )
         return false
@@ -83,15 +108,31 @@ export function TableControls({
   columns: Column[]
   rows: Row[]
 }) {
+  const active = useContext(ResultSurfaceActiveContext)
   const [open, setOpen] = useState(false)
-  const [key, setKey] = useState(columns[0]!.key)
-  const [operator, setOperator] = useState<ValueFilter["operator"]>("contains")
-  const [inputValue, setValue] = useState("")
+  const [key, setKey] = useResultViewState(
+    "filter-column",
+    () => columns[0]!.key
+  )
+  const [operator, setOperator] = useResultViewState<ValueFilter["operator"]>(
+    "filter-operator",
+    "contains"
+  )
+  const [inputValue, setValue] = useResultViewState("filter-value", "")
+  const [error, setError] = useResultViewState<string | null>(
+    "filter-error",
+    null
+  )
+  const input = useRef<HTMLInputElement>(null)
   const id = useId()
   const activeColumn = columns.find((column) => column.key === key)!
   const numeric =
     ["number", "currency", "percent"].includes(activeColumn.format ?? "") ||
     rows.some((row) => typeof row[key] === "number")
+  const currency =
+    activeColumn.format === "currency" ? activeColumn.currency : null
+  const hint =
+    activeColumn.format === "percent" ? "Use a fraction: 0.15 is 15%." : null
   const operators = numeric
     ? [
         { value: "is", label: "Equals" },
@@ -186,28 +227,36 @@ export function TableControls({
             </DropdownMenu>
           )
         })}
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button variant="outline" size="sm" />}>
+        <ContextualPopover open={active && open} onOpenChange={setOpen}>
+          <ContextualPopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="table-filter-trigger"
+              />
+            }
+          >
             <Plus data-icon="inline-start" />
             Add filter
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add a table filter</DialogTitle>
-              <DialogDescription>
-                Filters combine across columns. Numeric values use the original
-                units; percentages use fractions.
-              </DialogDescription>
-            </DialogHeader>
+          </ContextualPopoverTrigger>
+          <ContextualPopoverContent title="Add filter">
             <form
-              className="flex flex-col gap-4"
+              className="table-filter-form"
+              noValidate
               onSubmit={(event) => {
                 event.preventDefault()
-                if (
-                  !inputValue.trim() ||
-                  (numeric && !Number.isFinite(Number(inputValue)))
+                if (!active) return
+                const nextError = filterValueError(
+                  inputValue,
+                  numeric,
+                  input.current?.validity.badInput
                 )
+                setError(nextError)
+                if (nextError) {
+                  input.current?.focus()
                   return
+                }
                 table.getColumn(key)!.setFilterValue({
                   operator: operators.some((item) => item.value === operator)
                     ? operator
@@ -232,13 +281,14 @@ export function TableControls({
                       if (value) {
                         setKey(value)
                         setOperator("is")
+                        setError(null)
                       }
                     }}
                   >
                     <SelectTrigger id={`${id}-column`}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent mobileTitle="Column">
                       <SelectGroup>
                         {columns.map((column) => (
                           <SelectItem key={column.key} value={column.key}>
@@ -265,7 +315,7 @@ export function TableControls({
                     <SelectTrigger id={`${id}-operator`}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent mobileTitle="Condition">
                       <SelectGroup>
                         {operators.map((item) => (
                           <SelectItem key={item.value} value={item.value}>
@@ -276,25 +326,67 @@ export function TableControls({
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field>
+                <Field data-invalid={!!error}>
                   <FieldLabel htmlFor={`${id}-value`}>Value</FieldLabel>
-                  <Input
-                    id={`${id}-value`}
-                    type={numeric ? "number" : "text"}
-                    step="any"
-                    value={inputValue}
-                    onChange={(event) => setValue(event.target.value)}
-                    required
-                    maxLength={1000}
-                  />
+                  <InputGroup className="table-filter-value">
+                    <InputGroupInput
+                      ref={input}
+                      id={`${id}-value`}
+                      type={numeric ? "number" : "text"}
+                      step="any"
+                      value={inputValue}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setValue(value)
+                        if (error)
+                          setError(
+                            filterValueError(
+                              value,
+                              numeric,
+                              event.target.validity.badInput
+                            )
+                          )
+                      }}
+                      aria-invalid={!!error}
+                      aria-describedby={
+                        [
+                          currency && `${id}-currency`,
+                          hint && `${id}-hint`,
+                          error && `${id}-error`,
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined
+                      }
+                      required
+                      maxLength={1000}
+                    />
+                    {currency && (
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText
+                          id={`${id}-currency`}
+                          className="table-filter-currency"
+                        >
+                          {currency}
+                        </InputGroupText>
+                      </InputGroupAddon>
+                    )}
+                  </InputGroup>
+                  {hint && (
+                    <FieldDescription id={`${id}-hint`}>
+                      {hint}
+                    </FieldDescription>
+                  )}
+                  {error && <FieldError id={`${id}-error`}>{error}</FieldError>}
                 </Field>
               </FieldGroup>
-              <Button type="submit" disabled={!inputValue.trim()}>
-                Apply filter
-              </Button>
+              <div className="contextual-popover-actions">
+                <Button type="submit" size="sm">
+                  Apply filter
+                </Button>
+              </div>
             </form>
-          </DialogContent>
-        </Dialog>
+          </ContextualPopoverContent>
+        </ContextualPopover>
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
             <Columns3 data-icon="inline-start" />

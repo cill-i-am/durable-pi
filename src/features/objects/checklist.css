@@ -14,6 +14,55 @@
   min-width: 0;
   gap: 1rem;
 }
+
+.checklist-origin,
+.checklist-origin-content,
+.checklist-origin-excerpt {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.checklist-origin {
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.checklist-origin-trigger[data-slot="button"] {
+  justify-content: start;
+  padding-inline: 0;
+}
+
+.checklist-origin-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.checklist-origin-content {
+  gap: 1rem;
+  padding-top: 0.75rem;
+  overflow-wrap: anywhere;
+  font-size: var(--text-base);
+  line-height: 1.5714;
+}
+
+.checklist-origin-excerpt {
+  gap: 0.375rem;
+}
+
+.checklist-origin-time {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  line-height: 1.5385;
+}
+
+.checklist-origin-sheet .responsive-overlay-body {
+  padding: 0;
+}
+
+.checklist-origin-sheet [data-slot="sheet-body"] {
+  padding: 1.25rem;
+}
 .checklist-list-row[data-slot="button"] {
   justify-content: start;
   min-height: 3.5rem;

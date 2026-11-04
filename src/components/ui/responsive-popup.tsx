@@ -1,4 +1,5 @@
 import { useRender } from "@base-ui/react/use-render"
+import { cn } from "@workspace/ui/lib/utils"
 import * as React from "react"
 
 import { ResponsiveOverlay } from "@/components/ui/responsive-overlay"
@@ -52,9 +53,13 @@ function Content({
   title,
   children,
   finalFocus,
+  className,
+  titleClassName = "sr-only",
 }: {
   title: string
   children: React.ReactNode
+  className?: string
+  titleClassName?: string
   finalFocus?: React.ComponentProps<
     typeof ResponsiveOverlay.Popup
   >["finalFocus"]
@@ -65,7 +70,7 @@ function Content({
     <ResponsiveOverlay.Portal>
       <ResponsiveOverlay.Backdrop />
       <ResponsiveOverlay.Popup
-        className="responsive-popup-shell"
+        className={cn("responsive-popup-shell", className)}
         ref={popup}
         initialFocus={() =>
           popup.current?.querySelector<HTMLElement>(
@@ -95,7 +100,7 @@ function Content({
           context.onTabOut()
         }}
       >
-        <ResponsiveOverlay.Title className="sr-only">
+        <ResponsiveOverlay.Title className={titleClassName}>
           {title}
         </ResponsiveOverlay.Title>
         <div className="responsive-popup">{children}</div>

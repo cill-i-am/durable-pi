@@ -13,20 +13,16 @@ import { SettingsSection } from "@/components/settings-section"
 import { useAccess } from "./use-access"
 
 export function AccessPanel({
-  embedded = false,
   onPendingChange,
   agentId,
   agentName,
   open,
-  onOpenChange: setOpen,
   onSaved,
 }: {
-  embedded?: boolean
   onPendingChange?: (pending: boolean) => void
   agentId: string
   agentName: string
   open: boolean
-  onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) {
   const { policies, busy, error, loading, update, refresh } = useAccess(
@@ -41,9 +37,7 @@ export function AccessPanel({
   }, [pending, onPendingChange])
   return (
     <SettingsSection
-      embedded={embedded}
       open={open}
-      onOpenChange={setOpen}
       title="Tool access"
       description={
         <>

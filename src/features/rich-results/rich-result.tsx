@@ -1,4 +1,9 @@
-import { defineRegistry, JSONUIProvider, Renderer } from "@json-render/react"
+import {
+  defineRegistry,
+  JSONUIProvider,
+  Renderer,
+  type ComponentRenderProps,
+} from "@json-render/react"
 import {
   Alert,
   AlertDescription,
@@ -8,6 +13,10 @@ import { Button } from "@workspace/ui/components/button"
 import { Component, useMemo, type ReactNode } from "react"
 import { useContext } from "react"
 
+import {
+  parseResultReference,
+  type ResultIdentity,
+} from "@/navigation/result-reference"
 import { answerCatalog, parseAnswerResult } from "@/rich-results/catalog"
 
 import { BriefLayout } from "./brief"
@@ -23,6 +32,11 @@ import {
 import { DataTableView } from "./data-table"
 import { ProductsCard } from "./products"
 import { AnswerDraftContext, QuestionCard } from "./question"
+import {
+  ResultElementScope,
+  ResultSourceContext,
+  ResultSurfaceActiveContext,
+} from "./result-workspace-context"
 import { WeatherCard } from "./weather"
 
 import "./rich-results.css"
@@ -51,6 +65,22 @@ const { registry } = defineRegistry(answerCatalog, {
     Timeline: ({ props }) => <TimelineCard {...props} />,
   },
 })
+
+// Local presentation keys preserve the public, validated answer schema.
+const presentationRegistry = Object.fromEntries(
+  Object.entries(registry).map(([type, Render]) => [
+    type,
+    (props: ComponentRenderProps) => (
+      <ResultElementScope
+        element={String(
+          Reflect.get(props.element, "presentationKey") ?? "answer"
+        )}
+      >
+        <Render {...props} />
+      </ResultElementScope>
+    ),
+  ])
+)
 
 function UnavailableResult() {
   const onPrompt = useContext(AnswerDraftContext)
@@ -97,22 +127,55 @@ class ResultBoundary extends Component<
 export function RichResult({
   output,
   onPrompt,
+  identity,
+  surface = "inline",
+  reference,
+  active,
 }: {
   output: string
   onPrompt?: (text: string) => void
+  identity?: Pick<ResultIdentity, "turn" | "tool">
+  surface?: "inline" | "workbench"
+  reference?: string
+  active?: boolean
 }) {
+  const parentActive = useContext(ResultSurfaceActiveContext)
   const spec = useMemo(() => parseAnswerResult(output), [output])
+  const presentation = useMemo(
+    () =>
+      spec
+        ? {
+            ...spec,
+            root: reference
+              ? parseResultReference(reference).element
+              : spec.root,
+            elements: Object.fromEntries(
+              Object.entries(spec.elements).map(([key, value]) => [
+                key,
+                { ...value, presentationKey: key },
+              ])
+            ),
+          }
+        : null,
+    [spec, reference]
+  )
   return (
-    <AnswerDraftContext.Provider value={onPrompt}>
-      <ResultBoundary key={output}>
-        {spec ? (
-          <JSONUIProvider registry={registry}>
-            <Renderer spec={spec} registry={registry} />
-          </JSONUIProvider>
-        ) : (
-          <UnavailableResult />
-        )}
-      </ResultBoundary>
-    </AnswerDraftContext.Provider>
+    <ResultSurfaceActiveContext.Provider value={active ?? parentActive}>
+      <ResultSourceContext.Provider
+        value={identity ? { source: identity, surface, reference } : null}
+      >
+        <AnswerDraftContext.Provider value={onPrompt}>
+          <ResultBoundary key={output}>
+            {presentation ? (
+              <JSONUIProvider registry={presentationRegistry}>
+                <Renderer spec={presentation} registry={presentationRegistry} />
+              </JSONUIProvider>
+            ) : (
+              <UnavailableResult />
+            )}
+          </ResultBoundary>
+        </AnswerDraftContext.Provider>
+      </ResultSourceContext.Provider>
+    </ResultSurfaceActiveContext.Provider>
   )
 }

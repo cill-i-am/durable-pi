@@ -167,6 +167,7 @@ function ReplyBody({
       <BubbleContent className="message-text">
         {turn.activity?.length ? (
           <TurnActivity
+            turnId={turn.id}
             onAnswerPrompt={onAnswerPrompt}
             onAppPendingChange={onAppPendingChange}
             items={turn.activity}

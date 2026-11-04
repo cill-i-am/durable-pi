@@ -22,6 +22,7 @@ import type { AnswerProps } from "@/rich-results/catalog"
 
 import { ResultCard } from "./cards"
 import { questionMachine } from "./question.machine"
+import { useResultViewState } from "./result-view-state"
 
 type QuestionMachine = ReturnType<typeof questionMachine>
 
@@ -31,8 +32,11 @@ export const AnswerDraftContext = createContext<
 
 export function QuestionCard(props: AnswerProps<"Question">) {
   const onPrompt = useContext(AnswerDraftContext)
-  const [chosen, setChosen] = useState<string[]>([])
-  const [other, setOther] = useState("")
+  const [chosen, setChosen] = useResultViewState<string[]>(
+    "question-choices",
+    []
+  )
+  const [other, setOther] = useResultViewState("question-other", "")
   const revision = useRef(0)
   const append = useRef(onPrompt)
   const [actor, setActor] = useState<EffectActor<QuestionMachine> | null>(null)

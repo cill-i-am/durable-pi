@@ -5,12 +5,6 @@ import { Monitor, ShieldCheck } from "lucide-react"
 import { useEffect, useRef, type ReactNode } from "react"
 
 import { authClient } from "@/auth/client"
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
 
 import { useAuthBusy } from "./auth-owner"
 import { FactorSettings } from "./factor-settings"
@@ -77,7 +71,6 @@ function useSecurityView(
   useAuthBusy(pending || factorLocked || passkeyLocked, onPendingChange)
   const refresh = () => auth.send({ type: "REFRESH" })
   const revoke = () => auth.send({ type: "REVOKE" })
-  const close = () => auth.send({ type: "CLOSE" })
   const others = sessions.filter(
     (session) => session.id !== current?.session.id
   )
@@ -99,7 +92,6 @@ function useSecurityView(
     confirmationHeading,
     refresh,
     revoke,
-    close,
     others,
     twoFactorEnabled,
     locked,
@@ -109,11 +101,9 @@ function useSecurityView(
 export function AccountSecurity({
   onClose,
   onPendingChange,
-  embedded,
 }: {
   onClose: () => void
   onPendingChange?: (pending: boolean) => void
-  embedded?: boolean
 }) {
   const {
     auth,
@@ -131,13 +121,12 @@ export function AccountSecurity({
     confirmationHeading,
     refresh,
     revoke,
-    close,
     others,
     twoFactorEnabled,
     locked,
   } = useSecurityView(onClose, onPendingChange)
   return (
-    <AccountSecurityFrame embedded={embedded} locked={locked} onClose={close}>
+    <AccountSecurityFrame>
       {factorView ? (
         <FactorSettings
           onBusyChange={(busy) =>
@@ -304,11 +293,6 @@ export function AccountSecurity({
               >
                 Sign out other browsers
               </Button>
-              {!embedded && (
-                <Button variant="outline" disabled={locked} onClick={close}>
-                  Done
-                </Button>
-              )}
             </div>
           </footer>
         </>
@@ -317,50 +301,17 @@ export function AccountSecurity({
   )
 }
 
-function AccountSecurityFrame({
-  embedded = false,
-  locked,
-  onClose,
-  children,
-}: {
-  embedded?: boolean
-  locked: boolean
-  onClose: () => void
-  children: ReactNode
-}) {
-  const Heading = embedded ? "h2" : DialogTitle
-  const Description = embedded ? "p" : DialogDescription
-  const content = (
-    <>
+function AccountSecurityFrame({ children }: { children: ReactNode }) {
+  return (
+    <section className="account-security">
       <header className="space-y-2 pr-8">
-        <Heading className="text-2xl leading-8 font-semibold">
-          Account security
-        </Heading>
-        <Description className="text-sm leading-6 text-muted-foreground">
+        <h2 className="text-2xl leading-8 font-semibold">Account security</h2>
+        <p className="text-sm leading-6 text-muted-foreground">
           Protect your account and control where you’re signed in.
-        </Description>
+        </p>
       </header>
       {children}
-    </>
-  )
-  if (embedded) {
-    return <section className="account-security">{content}</section>
-  }
-  return (
-    <Dialog
-      open
-      dismissible={!locked}
-      onOpenChange={(open) => {
-        if (!open && !locked) onClose()
-      }}
-    >
-      <DialogContent
-        showCloseButton={!locked}
-        className="account-security flex max-h-[90dvh] flex-col gap-6 overflow-y-auto p-6 max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:translate-0 max-sm:rounded-none sm:max-w-[720px] sm:p-8"
-      >
-        {content}
-      </DialogContent>
-    </Dialog>
+    </section>
   )
 }
 

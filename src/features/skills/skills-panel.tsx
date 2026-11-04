@@ -23,13 +23,11 @@ import { useSkillView } from "./use-skill-view"
 import { useSkills, type SkillsState } from "./use-skills"
 
 type SkillsPanelProps = {
-  embedded?: boolean
   onPendingChange?: (pending: boolean) => void
   agentId?: string
   agentName?: string
   onManageLibrary?: () => void
   open: boolean
-  onOpenChange: (open: boolean) => void
 }
 
 export function SkillsPanel({ agentId, ...props }: SkillsPanelProps) {
@@ -40,12 +38,7 @@ export function SkillsPanel({ agentId, ...props }: SkillsPanelProps) {
   )
 }
 
-function SkillLibraryPanel({
-  embedded = false,
-  onPendingChange,
-  open,
-  onOpenChange: setOpen,
-}: SkillsPanelProps) {
+function SkillLibraryPanel({ onPendingChange, open }: SkillsPanelProps) {
   const state = useSkills()
   const { refresh } = state
   useEffect(() => {
@@ -86,12 +79,7 @@ function SkillLibraryPanel({
   }, [state.busy, editing, importing, hostedImport, onPendingChange])
   return (
     <SettingsSection
-      embedded={embedded}
       open={open}
-      onOpenChange={(value) => {
-        setOpen(value)
-        if (!value) leaveView()
-      }}
       title="Skills"
       description="Reusable instructions for your assistants."
     >
@@ -270,13 +258,11 @@ function SkillLibraryPanel({
   )
 }
 function AssignedSkillsPanel({
-  embedded = false,
   onPendingChange,
   agentId,
   agentName = "this assistant",
   onManageLibrary,
   open,
-  onOpenChange,
 }: SkillsPanelProps & { agentId: string }) {
   const state = useSkills(agentId)
   const { refresh } = state
@@ -288,9 +274,7 @@ function AssignedSkillsPanel({
   }, [state.busy, onPendingChange])
   return (
     <SettingsSection
-      embedded={embedded}
       open={open}
-      onOpenChange={onOpenChange}
       title="Skills"
       description={<>Choose the revisions {agentName} uses.</>}
     >

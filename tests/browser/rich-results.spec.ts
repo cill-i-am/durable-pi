@@ -20,17 +20,32 @@ async function openConversation(page: Page) {
   await expect(
     page.getByRole("textbox", { name: "Message Navi", exact: true })
   ).toBeEnabled()
-  await page
-    .getByRole("button", { name: "Explore answers", exact: true })
-    .click()
-  return page.getByRole("dialog", {
-    name: "Answers you can explore",
-    exact: true,
-  })
+  return openExamples(page)
 }
 
-test("a shopping shortlist survives workspace expansion and questions append to an unsent draft", async ({
+async function openExamples(page: Page) {
+  await page
+    .getByRole("button", { name: "Open workbench", exact: true })
+    .click()
+  await page.getByRole("button", { name: "Open a tool", exact: true }).click()
+  await page.getByRole("menuitem", { name: /^Examples/ }).click()
+  const gallery = page.getByRole("region", {
+    name: "Answer examples",
+    exact: true,
+  })
+  await expect(gallery).toBeVisible()
+  return gallery
+}
+
+async function hideWorkbench(page: Page) {
+  await page
+    .getByRole("button", { name: "Hide workbench", exact: true })
+    .click()
+}
+
+test("a shopping shortlist survives workbench expansion and hiding, and questions append to an unsent draft", async ({
   page,
+  isMobile,
 }) => {
   const errors: string[] = []
   page.on("pageerror", (error) => errors.push(error.message))
@@ -43,9 +58,7 @@ test("a shopping shortlist survives workspace expansion and questions append to 
       submitted = true
   })
   const gallery = await openConversation(page)
-  await expect(
-    gallery.getByText("Illustrative data. Add a sample prompt to your draft.")
-  ).toBeVisible()
+  await expect(gallery.getByText("Sample data", { exact: true })).toBeVisible()
   await gallery
     .getByRole("button", { name: "Shortlist Everyday wireless", exact: true })
     .click()
@@ -55,12 +68,11 @@ test("a shopping shortlist survives workspace expansion and questions append to 
   await gallery
     .getByRole("button", { name: "Compare (2)", exact: true })
     .click()
-  await gallery
-    .getByRole("button", { name: "Open workspace", exact: true })
-    .click()
-  const workspace = page
-    .getByRole("dialog")
-    .filter({ has: page.getByRole("table") })
+  if (!isMobile)
+    await page
+      .getByRole("button", { name: "Expand workbench", exact: true })
+      .click()
+  const workspace = gallery
   await expect(
     workspace.getByRole("columnheader", {
       name: "Everyday wireless",
@@ -73,29 +85,23 @@ test("a shopping shortlist survives workspace expansion and questions append to 
       exact: true,
     })
   ).toBeVisible()
-  await workspace
-    .getByRole("button", { name: "Close dialog", exact: true })
-    .click()
+  if (!isMobile)
+    await page
+      .getByRole("button", { name: "Collapse workbench", exact: true })
+      .click()
+  await hideWorkbench(page)
   await expect(
-    gallery.getByRole("button", { name: "Open workspace", exact: true })
-  ).toBeFocused()
-  await expect(
-    gallery.getByRole("button", { name: "Compare (2)", exact: true })
-  ).toHaveAttribute("aria-pressed", "true")
-  await gallery
-    .getByRole("button", { name: "Close dialog", exact: true })
-    .click()
-  await expect(
-    page.getByRole("button", { name: "Explore answers", exact: true })
+    page.getByRole("button", { name: "Open workbench", exact: true })
   ).toBeFocused()
   const composer = page.getByRole("textbox", {
     name: "Message Navi",
     exact: true,
   })
   await composer.fill("Keep my original requirements.")
-  await page
-    .getByRole("button", { name: "Explore answers", exact: true })
-    .click()
+  await openExamples(page)
+  await expect(
+    gallery.getByRole("button", { name: "Compare (2)", exact: true })
+  ).toHaveAttribute("aria-pressed", "true")
   await gallery.getByRole("tab", { name: "Questions", exact: true }).click()
   await expect(
     gallery.getByRole("button", { name: "Add answer to draft", exact: true })
@@ -115,13 +121,10 @@ test("a shopping shortlist survives workspace expansion and questions append to 
     .getByRole("button", { name: "Add answer to draft", exact: true })
     .scrollIntoViewIfNeeded()
   await expect(
-    gallery.getByRole("heading", {
-      name: "Answers you can explore",
-      exact: true,
-    })
+    page.getByRole("button", { name: "Hide workbench", exact: true })
   ).toBeInViewport()
   await expect(
-    gallery.getByRole("button", { name: "Close dialog", exact: true })
+    page.getByRole("button", { name: "Close Examples tab", exact: true })
   ).toBeInViewport()
   await gallery
     .getByRole("button", { name: "Add answer to draft", exact: true })
@@ -137,6 +140,7 @@ test("a shopping shortlist survives workspace expansion and questions append to 
 
 test("table search and sorting survive expansion and govern the exported CSV", async ({
   page,
+  isMobile,
 }) => {
   const gallery = await openConversation(page)
   await gallery.getByRole("tab", { name: "Data tables", exact: true }).click()
@@ -145,12 +149,12 @@ test("table search and sorting survive expansion and govern the exported CSV", a
   await gallery
     .getByRole("button", { name: "Sort by Amount (EUR)", exact: true })
     .click()
-  await gallery
-    .getByRole("button", { name: "Open workspace", exact: true })
-    .click()
-  const workspace = page
-    .getByRole("dialog")
-    .filter({ has: page.getByRole("table") })
+  if (!isMobile)
+    await page
+      .getByRole("button", { name: "Expand workbench", exact: true })
+      .click()
+  await hideWorkbench(page)
+  const workspace = await openExamples(page)
   await expect(
     workspace.getByRole("textbox", { name: /^Filter / })
   ).toHaveValue("Food")
@@ -298,9 +302,7 @@ test("map leases survive selection, theme replacement and route teardown without
     .click()
   await gallery.getByRole("tab", { name: "Weather", exact: true }).click()
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
-  await gallery
-    .getByRole("button", { name: "Close dialog", exact: true })
-    .click()
+  await hideWorkbench(page)
   expect(errors).toEqual([])
 })
 
@@ -341,9 +343,7 @@ test("closing a map during a held style request releases it and leaves the next 
       exact: true,
     })
   ).toBeEnabled()
-  await gallery
-    .getByRole("button", { name: "Close dialog", exact: true })
-    .click()
+  await hideWorkbench(page)
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
   expect(errors).toEqual([])
 })
@@ -385,10 +385,8 @@ test("loaded syntax highlighting preserves code text and unsupported-language fa
         .join(""),
     })
   )
-  const gallery = await openConversation(page)
-  await gallery
-    .getByRole("button", { name: "Close dialog", exact: true })
-    .click()
+  await openConversation(page)
+  await hideWorkbench(page)
   const code = page.locator(
     ".assistant-message code[data-slot=code-block-code]"
   )
@@ -439,8 +437,6 @@ test("failed map loading keeps accessible addresses and a selected-place fallbac
   await expect(
     gallery.getByRole("link", { name: "Get directions", exact: true })
   ).toBeVisible()
-  await gallery
-    .getByRole("button", { name: "Close dialog", exact: true })
-    .click()
+  await hideWorkbench(page)
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
 })

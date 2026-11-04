@@ -3,7 +3,7 @@ import { Effect, Fiber } from "effect"
 import { useEffect, useRef, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
-import type { Workbench } from "@/navigation/workspace"
+import type { WorkbenchTab } from "@/navigation/workbench-tab"
 
 import {
   workbenchTabsMachine,
@@ -13,8 +13,8 @@ import {
 export function makeWorkbenchTabs(
   input: WorkbenchTabsInput,
   work: {
-    available: (from: Workbench) => boolean
-    navigate: (panel: Workbench | null) => void
+    available: (from: WorkbenchTab) => boolean
+    navigate: (panel: WorkbenchTab | null) => void
   }
 ) {
   return Effect.gen(function* () {
@@ -45,7 +45,7 @@ export function makeWorkbenchTabs(
 
 export function useWorkbenchTabs(
   input: WorkbenchTabsInput,
-  onChange: (panel: Workbench | null) => void
+  onChange: (panel: WorkbenchTab | null) => void
 ) {
   const initial = useRef(input)
   const latest = useRef({ input, onChange })
@@ -111,9 +111,9 @@ export function useWorkbenchTabs(
     ready: snapshot !== null,
     tabsOpen: snapshot?.matches({ open: "tabs" }) ?? false,
     toolsOpen: snapshot?.matches({ open: "tools" }) ?? false,
-    select: (next: Workbench) =>
+    select: (next: WorkbenchTab) =>
       owner.current?.actor.send({ type: "SELECT", panel: next }),
-    close: (next: Workbench) =>
+    close: (next: WorkbenchTab) =>
       owner.current?.actor.send({ type: "CLOSE_TAB", panel: next }),
     hide: () => owner.current?.actor.send({ type: "HIDE" }),
     expand: (expanded: boolean) =>

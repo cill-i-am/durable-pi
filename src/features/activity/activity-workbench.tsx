@@ -162,6 +162,7 @@ export function ActivityWorkbench({
           </Button>
           {!selected && (
             <BotTasks
+              active={active}
               onOpenBot={onOpenBot}
               key={`${agentId}:communication`}
               agentId={agentId}

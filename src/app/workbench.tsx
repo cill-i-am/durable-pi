@@ -19,6 +19,7 @@ import {
   Maximize,
   Minimize,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react"
 import {
   useEffect,
@@ -44,7 +45,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import type { Workbench } from "@/navigation/workspace"
+import { isResultTab } from "@/navigation/result-reference"
+import type { WorkbenchTab } from "@/navigation/workbench-tab"
 
 import { useWorkbenchTabs } from "./use-workbench-tabs"
 
@@ -60,6 +62,7 @@ const tools = [
   { id: "memory", label: "Memory", icon: BookOpen },
   { id: "code", label: "Code", icon: Code2 },
   { id: "routines", label: "Routines", icon: Clock3 },
+  { id: "examples", label: "Examples", icon: Sparkles },
 ] as const
 
 function FrameAction({
@@ -111,12 +114,16 @@ export function WorkbenchPanel({
   overlays,
   renderTool,
   onExpandedChange,
+  resultLabel,
+  onTabsChange,
 }: {
   open: boolean
-  value: Workbench
-  onChange: (value: Workbench | null) => void
+  value: WorkbenchTab
+  onChange: (value: WorkbenchTab | null) => void
   onClosed: () => void
-  returnFocus: RefObject<HTMLElement | null>
+  returnFocus:
+    | RefObject<HTMLElement | null>
+    | (() => HTMLElement | false | null)
   agentName: string
   agentReference: string
   locked: boolean
@@ -125,8 +132,10 @@ export function WorkbenchPanel({
   recoveryAction?: ReactNode
   children?: ReactNode
   overlays?: ReactNode
-  renderTool?: (panel: Workbench, active: boolean) => ReactNode
+  renderTool?: (panel: WorkbenchTab, active: boolean) => ReactNode
   onExpandedChange?: (expanded: boolean) => void
+  resultLabel?: (reference: string) => string
+  onTabsChange?: (tabs: readonly WorkbenchTab[]) => void
 }) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const tabs = useWorkbenchTabs(
@@ -134,7 +143,15 @@ export function WorkbenchPanel({
     onChange
   )
   const disabled = locked || overlayOpen || !tabs.ready
-  const selected = tools.find((tool) => tool.id === value)!
+  const describe = (panel: WorkbenchTab) =>
+    isResultTab(panel)
+      ? {
+          id: panel,
+          label: resultLabel?.(panel.slice(7)) ?? "Saved result",
+          icon: PanelsTopLeft,
+        }
+      : tools.find((tool) => tool.id === panel)!
+  const selected = describe(value)
   const tablist = useRef<HTMLDivElement>(null)
   const sheetContainer = useRef<HTMLDivElement>(null)
   const mobileTabsTrigger = useRef<HTMLButtonElement>(null)
@@ -145,7 +162,12 @@ export function WorkbenchPanel({
     expansionCallback.current?.(tabs.expanded)
   }, [tabs.expanded])
   useEffect(() => () => expansionCallback.current?.(false), [])
-  const closeTab = (panel: Workbench, mobile = false) => {
+  const tabsCallback = useRef(onTabsChange)
+  tabsCallback.current = onTabsChange
+  useEffect(() => {
+    tabsCallback.current?.(tabs.tabs)
+  }, [tabs.tabs])
+  const closeTab = (panel: WorkbenchTab, mobile = false) => {
     if (disabled) return
     const index = tabs.tabs.indexOf(panel)
     const remaining = tabs.tabs.filter((item) => item !== panel)
@@ -164,7 +186,7 @@ export function WorkbenchPanel({
   }
   const keyboard = (
     event: KeyboardEvent<HTMLButtonElement>,
-    panel: Workbench
+    panel: WorkbenchTab
   ) => {
     const index = tabs.tabs.indexOf(panel)
     const next =
@@ -327,7 +349,7 @@ export function WorkbenchPanel({
                       className="workbench-tabs"
                     >
                       {tabs.tabs.map((panel) => {
-                        const tool = tools.find((item) => item.id === panel)!
+                        const tool = describe(panel)
                         return (
                           <div
                             key={panel}
@@ -360,7 +382,7 @@ export function WorkbenchPanel({
                           <button
                             type="button"
                             className="workbench-close-tab"
-                            aria-label={`Close ${tools.find((tool) => tool.id === panel)!.label} tab`}
+                            aria-label={`Close ${describe(panel).label} tab`}
                             disabled={disabled}
                             onClick={() => closeTab(panel)}
                           >
@@ -426,7 +448,7 @@ export function WorkbenchPanel({
                   id={`${id}-panel-${panel}`}
                   role="tabpanel"
                   aria-labelledby={`${id}-tab-${panel}`}
-                  aria-label={`${tools.find((tool) => tool.id === panel)!.label} workbench`}
+                  aria-label={`${describe(panel).label} workbench`}
                   className="workbench-panel workbench-tool-panel"
                   hidden={panel !== value}
                   inert={
@@ -483,7 +505,7 @@ export function WorkbenchPanel({
               </SheetHeader>
               <div className="workbench-open-tabs-list">
                 {tabs.tabs.map((panel) => {
-                  const tool = tools.find((item) => item.id === panel)!
+                  const tool = describe(panel)
                   return (
                     <div
                       key={panel}

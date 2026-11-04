@@ -3,7 +3,7 @@ import { createEffectActor, send, type EffectActor } from "@xstate/effect"
 import { Cause, Effect, Exit, Fiber } from "effect"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url"
 import { useTheme } from "next-themes"
-import { useEffect, useRef, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 
 import "maplibre-gl/dist/maplibre-gl.css"
 import type { SnapshotFrom } from "xstate"
@@ -12,6 +12,7 @@ import type { AnswerProps } from "@/rich-results/catalog"
 
 import { openPlacesMap } from "./places-map-resource"
 import { placesMapMachine, type MapView } from "./places-map.machine"
+import { ResultSurfaceActiveContext } from "./result-workspace-context"
 
 type Props = {
   places: AnswerProps<"Places">["places"]
@@ -21,7 +22,11 @@ type Props = {
 }
 type MapMachine = ReturnType<typeof placesMapMachine>
 
-export function PlacesMap({ places, selected, onSelect, coordinates }: Props) {
+export function PlacesMap(props: Props) {
+  const active = useContext(ResultSurfaceActiveContext)
+  return active ? <ActivePlacesMap {...props} /> : null
+}
+function ActivePlacesMap({ places, selected, onSelect, coordinates }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const select = useRef(onSelect)
   const { resolvedTheme } = useTheme()
