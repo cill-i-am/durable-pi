@@ -118,6 +118,15 @@ test("record detail returns to the retained filtered page and restores the selec
   await expect(
     record.getByRole("button", { name: "Open assistant", exact: true })
   ).toBeVisible()
+  if (mobile) {
+    const action = record
+      .locator('[data-slot="sheet-footer"]')
+      .getByRole("button", { name: "Open assistant", exact: true })
+    await expect(action).toBeInViewport()
+    await page.setViewportSize({ width: 320, height: 430 })
+    await expect(action).toBeInViewport()
+    await page.setViewportSize({ width: 390, height: 844 })
+  }
   await expect(
     record.getByRole("button", { name: /Stop|Approve|Request cancellation/ })
   ).toHaveCount(0)

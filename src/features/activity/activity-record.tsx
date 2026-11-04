@@ -25,6 +25,7 @@ import {
   SheetBody,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetNavigation,
 } from "@/components/ui/sheet"
 import {
@@ -131,7 +132,9 @@ export function ActivityRecord({
               <Separator />
             </>
           )}
-          <p className="text-xs text-muted-foreground">{record.status}</p>
+          {record.status !== "done" && (
+            <p className="text-xs text-muted-foreground">{record.status}</p>
+          )}
           <div className="activity-record-request">
             <p className="text-sm text-muted-foreground">
               {record.source === "background"
@@ -263,12 +266,12 @@ export function ActivityRecord({
             {entry.agent.name}.
           </SheetDescription>
           <SheetBody className="activity-record">
-            <div className="activity-record-navigation">
-              {recordedAt}
-              {openAssistant}
-            </div>
+            {recordedAt}
             {content}
           </SheetBody>
+          <SheetFooter className="activity-record-footer">
+            {openAssistant}
+          </SheetFooter>
         </SheetContent>
       </Sheet>
     )

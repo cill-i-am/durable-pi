@@ -185,7 +185,6 @@ function WorkGroup({
   waitingForApproval: boolean
   toolTitles?: Record<string, string>
   agentId?: string
-  turnId?: string
 }) {
   const [expanded, setExpanded] = useState<boolean | null>(null)
   const view = workPresentation(items, status, current, waitingForApproval)
@@ -376,7 +375,6 @@ function ToolActivity({
   item: ToolItem
   title?: string
   agentId?: string
-  turnId?: string
   runStatus: ChatState["turns"][number]["status"]
   waitingForApproval: boolean
 }) {
@@ -478,7 +476,6 @@ export function SteeringMessage({
   label: string
   attachments?: readonly FileInfo[]
   agentId?: string
-  turnId?: string
   provenance?: MessageProvenance
   createdAt?: string
 }) {

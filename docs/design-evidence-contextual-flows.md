@@ -32,7 +32,7 @@ Assistant saves retain the original editor machine, immutable request and uncert
 
 Recorded result reads use the existing authorized Activity query owner. Existing workbench machines own tabs, expansion, closing acknowledgement and native focus-return intent. A user/assistant-scoped view cache retains independent filter, sort, pagination, shortlist and question values. It contains no commands or lifecycle snapshots. Map cleanup remains with the existing map owner.
 
-Saved activity and source conversations are historical reads. Hiding a retained surface interrupts its observer without issuing a remote cancellation. Inspecting a checklist source leaves its unsaved task form mounted. Examples can append to the current draft but cannot submit it.
+Saved activity and source conversations are historical reads. Hiding a retained surface interrupts its observer without issuing a remote cancellation. The saved Activity phone drawer keeps Open assistant in its footer while its historical content scrolls, including at 320×430. Completed records omit the redundant raw done label. Inspecting a checklist source leaves its unsaved task form mounted. Examples can append to the current draft but cannot submit it.
 
 ## Review and verification
 
@@ -47,3 +47,5 @@ Local verification after integrating main `b0d0818`:
 - `pnpm verify:static`, `pnpm test` (**4,006 tests / 347 files**) and `pnpm build` passed.
 - The focused Playwright run for assistant pages, recorded results, contextual filters, Activity detail and checklist lifecycle passed **25 journeys**, with one intentional desktop-only observer case skipped on mobile.
 - Earlier surrounding browser runs passed authentication recovery, global-route ownership, desktop settings and retained-workbench behavior. Final CI runs every repository browser and native-runtime gate on the committed head; partial local runs are not represented as a complete browser gate.
+
+The final visual correction passed 13 focused Activity tests and five browser journeys (one intentional mobile skip), including the 320×430 footer check. PR review also identified three unused child `turnId` type fields; those were removed while retaining the actual RichResult identity at TurnActivity.
