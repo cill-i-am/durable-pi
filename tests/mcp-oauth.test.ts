@@ -253,6 +253,41 @@ describe("native MCP OAuth concurrency regression", () => {
 })
 
 describe("connection generation owns pending OAuth state", () => {
+  it("binds once while lookup is pending and rejects writes if revocation wins before resolution", async () => {
+    const { store, storage, values } = await fixture()
+    const original = Effect.runSync(store.get(connectionId))
+    let release!: () => void
+    const pending = new Promise<void>((done) => {
+      release = done
+    })
+    let lookups = 0
+    const provider = new ConnectionOAuthProvider(
+      storage,
+      {
+        get: (id) =>
+          ++lookups === 1
+            ? Effect.promise(() => pending.then(() => original))
+            : store.get(id),
+      },
+      "https://app.example.com/callback"
+    )
+    provider.serverId = connectionId
+    provider.serverId = connectionId
+    expect(() => {
+      provider.serverId = "different"
+    }).toThrow("identity")
+    const before = [...values]
+    const saving = provider.saveClientInformation({
+      client_id: "revoked",
+      issuer,
+    })
+    expect(lookups).toBe(1)
+    expect([...values]).toEqual(before)
+    Effect.runSync(store.change(connectionId, 1, false))
+    release()
+    await expect(saving).rejects.toThrow("changed")
+    expect([...values]).toEqual(before)
+  })
   it("does not recapture a new generation when the SDK repeats the same server assignment", async () => {
     const { provider, store } = await fixture()
     Effect.runSync(store.change(connectionId, 1, false))

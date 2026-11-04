@@ -1,12 +1,12 @@
+// The parent webCanvasMachine owns admission. The opaque frame only projects
+// permissions onto native controls and forwards trusted actions.
 const bridge = String.raw`(() => {
   const channel = "__PI_CHANNEL__";
-  let enabled = false;
   const controls = [...document.querySelectorAll('input,textarea,select,button')];
   const originallyDisabled = new Set(controls.filter(control => control.disabled));
   const send = value => parent.postMessage({channel,...value}, '*');
   function permission(value) {
-    enabled = value;
-    for (const control of controls) control.disabled = !enabled || originallyDisabled.has(control);
+    for (const control of controls) control.disabled = !value || originallyDisabled.has(control);
   }
   permission(false);
   addEventListener('message', event => {
@@ -14,7 +14,6 @@ const bridge = String.raw`(() => {
   });
   const actionName = element => element ? Element.prototype.getAttribute.call(element, "data-action") : null;
   function action(name, form) {
-    if (!enabled) return;
     if (typeof name !== "string" || !/^[a-z][a-z0-9_-]{0,39}$/.test(name) || ["constructor","prototype","__proto__"].includes(name)) { send({type:"error"}); return; }
     const values = Object.create(null);
     if (form) for (const [key,value] of new FormData(form)) {

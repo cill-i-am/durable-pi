@@ -1,10 +1,17 @@
-import { Schema } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Effect, Schema } from "effect"
 
+import { nativeResponse } from "../shared/interop"
+import {
+  initialReportAdmission,
+  admitReport,
+  browserReportMachine,
+} from "./browser-report.machine"
 import { ClientErrorReport, clientFailure, errorPage } from "./client-errors"
 
 // Browser-only state: SSR never records request data in this module.
 const reports = new WeakMap<object, Promise<string | undefined>>()
-let recent: number[] = []
+let admission = initialReportAdmission()
 export function reportClientError(
   error: unknown,
   info?: { componentStack?: string | null },
@@ -12,13 +19,11 @@ export function reportClientError(
 ): Promise<string | undefined> {
   if (typeof window === "undefined") return Promise.resolve(undefined)
   try {
-    if (error !== null && typeof error === "object") {
-      const prior = reports.get(error)
-      if (prior) return prior
-    }
-    recent = recent.filter((at) => at > Date.now() - 60_000)
-    if (recent.length >= 5) return Promise.resolve(undefined)
-    recent.push(Date.now())
+    const key = error !== null && typeof error === "object" ? error : undefined
+    const prior = key ? reports.get(key) : undefined
+    admission = admitReport(admission, Date.now(), prior !== undefined)
+    if (admission.context.decision === "reuse") return prior!
+    if (admission.context.decision === "drop") return Promise.resolve(undefined)
     const build: unknown = import.meta.env.VITE_BUILD_ID
     const report = Schema.decodeUnknownSync(ClientErrorReport)({
       id: crypto.randomUUID(),
@@ -32,16 +37,36 @@ export function reportClientError(
         info?.componentStack ?? ""
       ),
     })
-    const task = fetch("/api/diagnostics/client-error", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(report),
-      keepalive: true,
-      signal: AbortSignal.timeout(5000),
-    })
-      .then((response) => (response.status === 204 ? report.id : undefined))
-      .catch(() => undefined)
-    if (error !== null && typeof error === "object") reports.set(error, task)
+    const task = Effect.runPromise(
+      Effect.gen(function* () {
+        const actor = yield* createEffectActor(
+          browserReportMachine(
+            nativeResponse(
+              (signal) =>
+                fetch("/api/diagnostics/client-error", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify(report),
+                  keepalive: true,
+                  signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+                }),
+              (cause) => cause
+            ).pipe(
+              Effect.map((response) =>
+                response.status === 204 ? report.id : undefined
+              ),
+              Effect.scoped
+            )
+          )
+        )
+        const settled = yield* waitFor(
+          actor,
+          (state) => state.status === "done"
+        )
+        return settled.output
+      }).pipe(Effect.scoped)
+    ).catch(() => undefined)
+    if (key) reports.set(key, task)
     return task
   } catch {
     // Logging must never break the recovery screen or create a rejection loop.

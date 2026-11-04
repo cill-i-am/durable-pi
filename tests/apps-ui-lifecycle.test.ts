@@ -281,6 +281,51 @@ it.effect("form completion cannot erase newer edits including edit ABA", () =>
   }).pipe(Effect.scoped)
 )
 
+it.effect(
+  "the parent alone admits frame actions and keeps duplicate messages blocked until work settles",
+  () =>
+    Effect.gen(function* () {
+      const entered = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      let calls = 0
+      const actor = yield* makeFrameOwner(
+        { revision: 1, disabled: false },
+        {
+          render: Effect.succeed(frame()),
+          bridge: Effect.never,
+          action: () =>
+            Effect.gen(function* () {
+              calls++
+              yield* Deferred.succeed(entered, undefined)
+              yield* Deferred.await(release)
+              return false
+            }),
+        }
+      )
+      yield* waitFor(actor, (state) => state.matches({ owned: "ready" }))
+      yield* send(actor, { type: "ACTION", channel: "first", action })
+      yield* Deferred.await(entered)
+      yield* send(actor, { type: "ACTION", channel: "first", action })
+      yield* send(actor, { type: "READY", channel: "first" })
+      yield* send(actor, { type: "SYNC", revision: 1, disabled: true })
+      yield* waitFor(actor, (state) => state.context.disabled)
+      expect(calls).toBe(1)
+      yield* Deferred.succeed(release, undefined)
+      yield* waitFor(actor, (state) => state.matches({ owned: "ready" }))
+      yield* send(actor, { type: "ACTION", channel: "first", action })
+      // Observe a subsequent event so the rejected action has been processed.
+      yield* send(actor, { type: "HEIGHT", channel: "first", height: 300 })
+      yield* waitFor(actor, (state) => state.context.height === 300)
+      expect(calls).toBe(1)
+      yield* send(actor, { type: "SYNC", revision: 1, disabled: false })
+      yield* send(actor, { type: "ACTION", channel: "first", action })
+      yield* waitFor(
+        actor,
+        (state) => state.matches({ owned: "ready" }) && calls === 2
+      )
+    }).pipe(Effect.scoped)
+)
+
 it.effect("app list visibility suspends polls until visible again", () =>
   Effect.gen(function* () {
     let calls = 0

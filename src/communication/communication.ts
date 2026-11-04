@@ -41,6 +41,7 @@ import {
   communicationTaskAttemptMachine,
   communicationContinuationMachine,
 } from "./pump.machine"
+import { initialTaskReleases, advanceTaskReleases } from "./release.machine"
 
 export const DelegateInput = Schema.Struct({
   to: AgentId,
@@ -144,7 +145,7 @@ export const makeCommunication = (host: Host) =>
     ) =>
       effect.pipe(services, Effect.provideService(MailboxTransport, transport))
     const discover = () => host.contacts()
-    const completedReleases = new Map<string, TaskRelease>()
+    let releases = initialTaskReleases()
     const cleanupConfirmed = (task: Task) =>
       task.direction === "incoming" &&
       terminal(task) &&
@@ -152,10 +153,13 @@ export const makeCommunication = (host: Host) =>
     const serial = yield* Semaphore.make(1)
     const reconcile = Effect.fn("communication.reconcileJoinedReleases")(
       function* (taskId?: string) {
-        for (const receipt of [...completedReleases.values()]) {
+        for (const receipt of releases.context.receipts) {
           if (taskId && receipt.taskId !== taskId) continue
           yield* mailbox.releaseTask(receipt)
-          completedReleases.delete(receipt.owner)
+          releases = advanceTaskReleases(releases, {
+            type: "RELEASED",
+            receipt,
+          })
           if (cleanupConfirmed(yield* mailbox.task(receipt.taskId)))
             yield* execution.settled(receipt.taskId)
         }
@@ -348,9 +352,15 @@ export const makeCommunication = (host: Host) =>
                       ? { stop: "confirmed" as const }
                       : {}),
                   }
-                  completedReleases.set(owner, receipt)
+                  releases = advanceTaskReleases(releases, {
+                    type: "RETAIN",
+                    receipt,
+                  })
                   yield* mailbox.releaseTask(receipt)
-                  completedReleases.delete(owner)
+                  releases = advanceTaskReleases(releases, {
+                    type: "RELEASED",
+                    receipt,
+                  })
                   if (cleanupConfirmed(yield* mailbox.task(owned.id)))
                     yield* execution.settled(owned.id)
                 })
@@ -459,9 +469,15 @@ export const makeCommunication = (host: Host) =>
                   now: yield* Clock.currentTimeMillis,
                   failed: Exit.isFailure(exit),
                 }
-                completedReleases.set(owner, receipt)
+                releases = advanceTaskReleases(releases, {
+                  type: "RETAIN",
+                  receipt,
+                })
                 yield* mailbox.releaseTask(receipt)
-                completedReleases.delete(owner)
+                releases = advanceTaskReleases(releases, {
+                  type: "RELEASED",
+                  receipt,
+                })
               })
             ),
             Effect.tap(() => Effect.sync(() => onAttempt(undefined)))

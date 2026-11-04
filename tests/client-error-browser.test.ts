@@ -2,7 +2,15 @@ import { afterEach, expect, it, vi } from "vitest"
 
 import { ClientErrorReport } from "../src/observability/client-errors"
 
+function barrier() {
+  let resolve!: () => void
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   vi.resetModules()
 })
@@ -55,6 +63,52 @@ it("caps an error loop at five reports per minute", async () => {
   )
   expect(fetch).toHaveBeenCalledTimes(5)
 })
+it("reopens the rate window at its boundary without resending an already reported error", async () => {
+  const now = vi.spyOn(Date, "now").mockReturnValue(1000)
+  const { fetch, reportClientError } = await fixture()
+  const error = new Error("retained")
+  const first = reportClientError(error)
+  await first
+  await Promise.all(
+    Array.from({ length: 4 }, () => reportClientError(new Error("loop")))
+  )
+  now.mockReturnValue(60_999)
+  expect(await reportClientError(new Error("limited"))).toBeUndefined()
+  expect(fetch).toHaveBeenCalledTimes(5)
+  now.mockReturnValue(61_000)
+  expect(reportClientError(error)).toBe(first)
+  expect(await reportClientError(new Error("new window"))).toBeDefined()
+  expect(fetch).toHaveBeenCalledTimes(6)
+})
+it("joins response cleanup and caches a failed attempt without reporting the reporting failure", async () => {
+  const { fetch, reportClientError } = await fixture(503)
+  const cleanup = barrier()
+  const cancelled = barrier()
+  fetch.mockResolvedValue(
+    new Response(
+      new ReadableStream({
+        cancel: () => {
+          cancelled.resolve()
+          return cleanup.promise
+        },
+      }),
+      { status: 503 }
+    )
+  )
+  const error = new Error("synthetic")
+  let settled = false
+  const pending = reportClientError(error)
+  void pending.then(() => {
+    settled = true
+  })
+  await cancelled.promise
+  expect(settled).toBe(false)
+  expect(reportClientError(error)).toBe(pending)
+  cleanup.resolve()
+  expect(await pending).toBeUndefined()
+  expect(reportClientError(error)).toBe(pending)
+  expect(fetch).toHaveBeenCalledOnce()
+})
 it.each([200, 401, 503])(
   "does not claim a report was recorded after HTTP %i",
   async (status) => {
@@ -86,7 +140,7 @@ it("installs and removes global exception and rejection listeners", async () => 
       reason: new Error("synthetic rejection"),
     })
   )
-  expect(fetch).toHaveBeenCalledTimes(2)
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
   stop()
   target.dispatchEvent(
     Object.assign(new Event("error"), { error: new Error("later") })

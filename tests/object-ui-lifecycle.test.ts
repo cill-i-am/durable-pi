@@ -85,6 +85,26 @@ const disk = (initial = "[]") => {
     },
   }
 }
+
+it("closing during actor acquisition revokes reads and edits synchronously and joins one disposal", async () => {
+  const api = vi.fn(async () => {
+    throw new Error("Closed store started work")
+  })
+  const owner = store(api)
+  owner.connect(disk())
+  const reading = owner.refresh()
+  const editing = owner.submit(input)
+  const closing = owner.dispose()
+  expect(owner.dispose()).toBe(closing)
+  expect(await owner.submit(input)).toBe(false)
+  await Promise.all([reading, editing, closing])
+  expect(await editing).toBe(false)
+  await owner.refresh()
+  expect(api).not.toHaveBeenCalled()
+  const storage = { getItem: vi.fn(() => "[]"), setItem: vi.fn() }
+  owner.connect(storage)
+  expect(storage.getItem).not.toHaveBeenCalled()
+})
 const barrier = <T>() => {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((done) => {
