@@ -125,6 +125,16 @@ test("record detail returns to the retained filtered page and restores the selec
     await expect(action).toBeInViewport()
     await page.setViewportSize({ width: 320, height: 430 })
     await expect(action).toBeInViewport()
+    const content = record.getByRole("region", {
+      name: "Saved conversation content",
+      exact: true,
+    })
+    await content.focus()
+    await page.keyboard.press("End")
+    await expect
+      .poll(() => content.evaluate((node) => node.scrollTop))
+      .toBeGreaterThan(0)
+    await expect(action).toBeInViewport()
     await page.setViewportSize({ width: 390, height: 844 })
   }
   await expect(

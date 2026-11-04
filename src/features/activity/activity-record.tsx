@@ -265,7 +265,12 @@ export function ActivityRecord({
             Original conversation and committed tool results from{" "}
             {entry.agent.name}.
           </SheetDescription>
-          <SheetBody className="activity-record">
+          <SheetBody
+            className="activity-record"
+            role="region"
+            aria-label="Saved conversation content"
+            tabIndex={0}
+          >
             {recordedAt}
             {content}
           </SheetBody>

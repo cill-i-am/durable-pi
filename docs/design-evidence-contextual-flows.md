@@ -49,3 +49,5 @@ Local verification after integrating main `b0d0818`:
 - Earlier surrounding browser runs passed authentication recovery, global-route ownership, desktop settings and retained-workbench behavior. Final CI runs every repository browser and native-runtime gate on the committed head; partial local runs are not represented as a complete browser gate.
 
 The final visual correction passed 13 focused Activity tests and five browser journeys (one intentional mobile skip), including the 320×430 footer check. PR review also identified three unused child `turnId` type fields; those were removed while retaining the actual RichResult identity at TurnActivity.
+
+The short-phone Activity body is a named, focusable scroll region with a visible focus ring. The browser regression focuses it and presses End to reach overflowing content without moving the footer. The focused axe 4.12.1 scan reports zero violations; its one incomplete gradient-contrast check remains a manual visual check rather than an automated contrast claim.
