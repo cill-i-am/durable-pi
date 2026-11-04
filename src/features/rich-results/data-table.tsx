@@ -5,6 +5,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
   type ColumnVisibilityState,
+  type PaginationState,
 } from "@tanstack/react-table"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -20,7 +21,7 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from "lucide-react"
-import { useId, useMemo, useState } from "react"
+import { useId, useMemo } from "react"
 
 import {
   Select,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/select"
 import { webUrl, type AnswerProps } from "@/rich-results/catalog"
 
+import { useResultViewState } from "./result-view-state"
 import {
   TableControls,
   matchesFilter,
@@ -92,11 +94,19 @@ export function DataTableView({
   columns,
   rows,
 }: Pick<AnswerProps<"DataTable">, "title" | "columns" | "rows">) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [search, setSearch] = useState("")
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [sorting, setSorting] = useResultViewState<SortingState>(
+    "table-sort",
+    []
+  )
+  const [search, setSearch] = useResultViewState("table-search", "")
+  const [columnFilters, setColumnFilters] =
+    useResultViewState<ColumnFiltersState>("table-filters", [])
   const [columnVisibility, setColumnVisibility] =
-    useState<ColumnVisibilityState>({})
+    useResultViewState<ColumnVisibilityState>("table-columns", {})
+  const [pagination, setPagination] = useResultViewState<PaginationState>(
+    "table-pagination",
+    { pageIndex: 0, pageSize: 8 }
+  )
   const filterId = useId()
   const columnDefs = useMemo<ColumnDef<typeof answerTableFeatures, Row>[]>(
     () =>
@@ -134,7 +144,14 @@ export function DataTableView({
     features: answerTableFeatures,
     data: rows,
     columns: columnDefs,
-    state: { sorting, globalFilter: search, columnFilters, columnVisibility },
+    state: {
+      sorting,
+      globalFilter: search,
+      columnFilters,
+      columnVisibility,
+      pagination,
+    },
+    onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onSortingChange: setSorting,
@@ -146,7 +163,6 @@ export function DataTableView({
         .includes(value.toLocaleLowerCase())
     },
     getColumnCanGlobalFilter: () => true,
-    initialState: { pagination: { pageIndex: 0, pageSize: 8 } },
   })
   const filtered = table.getFilteredRowModel().rows.length
   function download() {

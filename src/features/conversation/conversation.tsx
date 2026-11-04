@@ -49,7 +49,6 @@ import {
 } from "@/features/files"
 import { MessageFileControls } from "@/features/files/message-file-controls"
 import { markReady } from "@/features/performance"
-import { AnswerExplorer } from "@/features/rich-results/explorer"
 import type { Profile } from "@/inference/policy"
 
 import "./conversation.css"
@@ -67,6 +66,7 @@ import { useConversationCommands } from "./use-conversation-commands"
 
 export function Conversation({
   composerDraft,
+  composerInput: ownedComposerInput,
   name,
   userImage,
   agent,
@@ -79,6 +79,7 @@ export function Conversation({
   onAppPendingChange,
 }: {
   composerDraft: ComposerDraftState
+  composerInput?: RefObject<HTMLTextAreaElement | null>
   name: string
   userImage?: string | null
   agent: AgentProfile
@@ -106,7 +107,8 @@ export function Conversation({
       text: typeof change === "function" ? change(current.text) : change,
     }))
   const setProfile = (profile: Profile) => composerDraft.update({ profile })
-  const composerInput = useRef<HTMLTextAreaElement>(null)
+  const localComposerInput = useRef<HTMLTextAreaElement>(null)
+  const composerInput = ownedComposerInput ?? localComposerInput
   const answerPrompt = archived
     ? undefined
     : (prompt: string) => {
@@ -143,9 +145,9 @@ export function Conversation({
     )
   useEffect(() => {
     if (state) markReady("history")
-    if (composerInput.current && !composerInput.current.disabled)
-      markReady("composer")
-  }, [state])
+    const input = composerInput.current
+    if (input && !input.disabled) markReady("composer")
+  }, [state, composerInput])
   function send(text: string, mode: SubmissionMode) {
     if (archived || !composerDraft.ready || composerDraft.unreadable)
       return Promise.resolve(false)
@@ -496,17 +498,6 @@ function Composer({
       }}
     >
       {attachments}
-      <div className="flex justify-start py-1">
-        <AnswerExplorer
-          disabled={pending}
-          onPrompt={(prompt) => {
-            setDraft((current) =>
-              current.trim() ? `${current}\n\n${prompt}` : prompt
-            )
-            requestAnimationFrame(() => inputRef.current?.focus())
-          }}
-        />
-      </div>
       <InputGroup className="chat-composer" data-working={working}>
         <InputGroupTextarea
           ref={inputRef}

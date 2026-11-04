@@ -217,3 +217,94 @@ test("cancel after uncertain edit uses its original operation and waits for a va
   expect(cancels).toEqual([{ operationId: mutations[0]?.operationId }])
   expect(mutations).toHaveLength(1)
 })
+
+test("source inspection recovers locally and returns with an unsaved checklist draft intact", async ({
+  page,
+}, info) => {
+  const original = detail(1, "Lisbon weekend")
+  const saved: ObjectDetail = {
+    ...original,
+    object: {
+      ...original.object,
+      origin: {
+        ...source,
+        actor: "agent",
+        surface: "chat",
+        turnId: "22222222-2222-4222-8222-222222222222",
+      },
+    },
+  }
+  const writes: unknown[] = []
+  let available = false
+  await page.route("**/api/agent/objects**", async (route) => {
+    const request = route.request(),
+      path = new URL(request.url()).pathname
+    if (request.method() !== "GET") {
+      writes.push(request.postDataJSON())
+      return route.abort()
+    }
+    if (path.endsWith("/origin"))
+      return route.fulfill(
+        available
+          ? {
+              json: {
+                id: saved.object.origin.turnId,
+                text: "Original packing request",
+                answer: "Saved packing reply",
+                createdAt: "2026-10-30T09:15:00.000Z",
+              },
+            }
+          : { status: 503, json: { error: "Source unavailable" } }
+      )
+    return route.fulfill({
+      json: path.endsWith("/objects")
+        ? { objects: [objectSummary(saved.object)] }
+        : saved,
+    })
+  })
+  await openObjects(page, id)
+  await page
+    .getByRole("button", { name: "Edit checklist", exact: true })
+    .click()
+  await page.getByLabel("Title", { exact: true }).fill("Unsaved trip draft")
+  const originalUrl = page.url()
+  await page
+    .getByRole("button", { name: "From the conversation", exact: true })
+    .click()
+  await expect(page.getByRole("alert")).toContainText(
+    "Could not open the originating conversation."
+  )
+  available = true
+  await page.getByRole("button", { name: "Try again", exact: true }).click()
+  await expect(
+    page.getByText("Original packing request", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByText("Saved packing reply", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.locator('time[datetime="2026-10-30T09:15:00.000Z"]')
+  ).toBeVisible()
+  await expect(page).toHaveURL(originalUrl)
+  if (info.project.name === "mobile") {
+    const drawer = page.getByRole("dialog", {
+      name: "Source conversation",
+      exact: true,
+    })
+    await drawer.getByRole("button", { name: "Checklist", exact: true }).click()
+  } else {
+    await expect(
+      page.getByRole("dialog", { name: "Source conversation", exact: true })
+    ).toHaveCount(0)
+    await page
+      .getByRole("button", { name: "From the conversation", exact: true })
+      .click()
+  }
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Unsaved trip draft"
+  )
+  await expect(
+    page.getByRole("button", { name: "Save changes", exact: true })
+  ).toBeEnabled()
+  expect(writes).toEqual([])
+})

@@ -1,0 +1,62 @@
+.table-filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-filter-form [data-slot="field-group"] {
+  gap: 16px;
+}
+
+.table-filter-form [data-slot="field"] {
+  gap: 6px;
+}
+
+.table-filter-value {
+  height: auto;
+  min-height: 44px;
+  border-radius: var(--radius);
+}
+
+.table-filter-value [data-slot="input-group-control"] {
+  box-shadow: none;
+}
+
+.table-filter-value:focus-within {
+  border-color: var(--ring);
+  box-shadow: var(--shadow-focus);
+}
+
+.table-filter-currency {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+}
+
+@media (forced-colors: active) {
+  .table-filter-value:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 768px) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .table-filter-value {
+    min-height: 36px;
+  }
+
+  .table-filter-trigger,
+  .table-filter-form .contextual-popover-actions > button {
+    min-height: 36px;
+  }
+
+  .table-filter-form
+    :is(
+      [data-slot="field-label"],
+      [data-slot="select-trigger"],
+      [data-slot="input-group-control"]
+    ) {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+}

@@ -2,17 +2,9 @@ import { setupEffect } from "@xstate/effect"
 import { Effect, Schema } from "effect"
 import { standardSchemaValidator } from "xstate/validation"
 
-const panel = Schema.Literals([
-  "browser",
-  "terminal",
-  "files",
-  "apps",
-  "activity",
-  "objects",
-  "memory",
-  "code",
-  "routines",
-])
+import { WorkbenchTab } from "@/navigation/workbench-tab"
+
+const panel = WorkbenchTab
 const facts = Schema.Struct({
   panel,
   open: Schema.Boolean,

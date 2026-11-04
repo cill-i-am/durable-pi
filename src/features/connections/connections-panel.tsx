@@ -37,7 +37,6 @@ const statusLabel = {
 export function ConnectionsPanel({
   callbackResult,
   onCallbackConsumed,
-  embedded = false,
   onPendingChange,
   agentId,
   agentName,
@@ -48,7 +47,6 @@ export function ConnectionsPanel({
 }: {
   callbackResult?: "connected" | "failed"
   onCallbackConsumed?: () => void
-  embedded?: boolean
   onPendingChange?: (pending: boolean) => void
   agentId?: string
   agentName?: string
@@ -83,9 +81,7 @@ export function ConnectionsPanel({
   }, [state.busy, editing, state.uncertain, onPendingChange])
   return (
     <SettingsSection
-      embedded={embedded}
       open={open}
-      onOpenChange={setOpen}
       title="Connections"
       description={
         assignment ? (

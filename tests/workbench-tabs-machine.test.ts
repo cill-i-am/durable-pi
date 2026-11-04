@@ -9,7 +9,7 @@ import {
   workbenchTabsMachine,
   type WorkbenchTabsInput,
 } from "../src/app/workbench-tabs.machine"
-import type { Workbench } from "../src/navigation/workspace"
+import type { WorkbenchTab as Workbench } from "../src/navigation/workbench-tab"
 
 const initial: WorkbenchTabsInput = {
   panel: "files",

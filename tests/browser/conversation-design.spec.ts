@@ -42,7 +42,19 @@ test("private participants have keyboard names and return focus to the chat", as
   await expect(sheet.getByText("Navi", { exact: true })).toBeVisible()
   await expect(sheet.getByText("Assistant", { exact: true })).toBeVisible()
   await expect(sheet.getByRole("button", { name: /invite/i })).toHaveCount(0)
-  await page.getByRole("button", { name: "Close dialog", exact: true }).click()
+  await expect(sheet.getByRole("listitem")).toHaveCount(2)
+  if (isMobile) {
+    await expect(sheet).toHaveAttribute("data-overlay-mobile", "true")
+    await sheet.getByRole("button", { name: "Close", exact: true }).click()
+  } else {
+    await expect(sheet).not.toHaveAttribute("aria-modal", "true")
+    const anchor = await people.boundingBox()
+    const popup = await sheet.boundingBox()
+    expect(popup?.width).toBe(320)
+    expect(popup!.y).toBeGreaterThanOrEqual(anchor!.y + anchor!.height)
+    expect(popup!.y - anchor!.y - anchor!.height).toBeLessThanOrEqual(12)
+    await page.keyboard.press("Escape")
+  }
   await expect(sheet).not.toBeVisible()
   await expect(people).toBeFocused()
   if (isMobile) {

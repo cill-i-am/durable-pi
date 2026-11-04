@@ -14,6 +14,8 @@ const panel = Schema.Literals([
   "memory",
   "code",
   "routines",
+  "results",
+  "examples",
 ])
 const search = Schema.declare(
   (value): value is WorkspaceSearch =>
@@ -40,10 +42,12 @@ export const workbenchPresenceMachine = setupEffect({
       ...route.fields,
       retainedPanel: Schema.NullOr(panel),
       revision: Schema.Number,
+      returnToComposer: Schema.Boolean,
     }),
     events: {
       ROUTE: route,
       CLOSED: Schema.Struct({ revision: Schema.Number }),
+      RETURN_TO_COMPOSER: Schema.Struct({}),
     },
   },
 }).createMachine({
@@ -53,8 +57,13 @@ export const workbenchPresenceMachine = setupEffect({
     ...input,
     retainedPanel: input.panel,
     revision: 0,
+    returnToComposer: false,
   }),
   on: {
+    RETURN_TO_COMPOSER: ({ context }) =>
+      context.panel && !context.held
+        ? { context: { ...context, returnToComposer: true } }
+        : {},
     ROUTE: ({ context, event }) =>
       event.panel
         ? {
@@ -65,6 +74,7 @@ export const workbenchPresenceMachine = setupEffect({
               search: event.search,
               held: event.held,
               revision: context.revision + 1,
+              returnToComposer: false,
             },
           }
         : context.panel
@@ -74,6 +84,7 @@ export const workbenchPresenceMachine = setupEffect({
                 ...context,
                 held: event.held,
                 revision: context.revision + 1,
+                returnToComposer: event.held ? false : context.returnToComposer,
               },
             }
           : {},
@@ -96,6 +107,7 @@ export const workbenchPresenceMachine = setupEffect({
                   search: event.search,
                   held: event.held,
                   revision: context.revision + 1,
+                  returnToComposer: false,
                 },
               }
             : {
@@ -106,6 +118,9 @@ export const workbenchPresenceMachine = setupEffect({
                   ...context,
                   panel: event.held ? null : context.panel,
                   held: event.held,
+                  returnToComposer: event.held
+                    ? false
+                    : context.returnToComposer,
                 },
               },
         CLOSED: ({ context, event }) =>

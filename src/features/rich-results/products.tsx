@@ -22,7 +22,7 @@ import {
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
 import { Bookmark, ExternalLink } from "lucide-react"
-import { useContext, useMemo, useState, type ReactNode } from "react"
+import { useContext, useMemo, type ReactNode } from "react"
 
 import {
   Select,
@@ -36,6 +36,7 @@ import type { AnswerProps } from "@/rich-results/catalog"
 
 import { ComparisonTable, ResultCard } from "./cards"
 import { AnswerDraftContext } from "./question"
+import { useResultViewState } from "./result-view-state"
 import { AnswerWorkspace } from "./workspace"
 
 export function money(value: number | null, currency: string) {
@@ -47,13 +48,19 @@ export function money(value: number | null, currency: string) {
 }
 export function ProductsCard(props: AnswerProps<"Products">) {
   const onPrompt = useContext(AnswerDraftContext)
-  const [selected, setSelected] = useState<string[]>([])
-  const [query, setQuery] = useState("")
-  const [budget, setBudget] = useState("")
-  const [sort, setSort] = useState(["recommended"])
-  const [view, setView] = useState(["browse"])
-  const [shortlistOnly, setShortlistOnly] = useState(false)
-  const [merchant, setMerchant] = useState("")
+  const [selected, setSelected] = useResultViewState<string[]>(
+    "products-selected",
+    []
+  )
+  const [query, setQuery] = useResultViewState("products-query", "")
+  const [budget, setBudget] = useResultViewState("products-budget", "")
+  const [sort, setSort] = useResultViewState("products-sort", ["recommended"])
+  const [view, setView] = useResultViewState("products-view", ["browse"])
+  const [shortlistOnly, setShortlistOnly] = useResultViewState(
+    "products-shortlistOnly",
+    false
+  )
+  const [merchant, setMerchant] = useResultViewState("products-merchant", "")
   const visible = useMemo(
     () =>
       props.products
@@ -216,7 +223,7 @@ export function ProductsCard(props: AnswerProps<"Products">) {
                       )
                     }
                   >
-                    Ask Pi about this shortlist
+                    Add shortlist to draft
                   </Button>
                 )}
               </div>

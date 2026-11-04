@@ -9,6 +9,8 @@ import { ActivityFilter, ActivityCursor } from "@/activity/contracts"
 import { AgentId } from "@/agents/contracts"
 import { AgentSlug } from "@/agents/slugs"
 
+import { isResultReference, parseResultReference } from "./result-reference"
+
 export const AgentReference = Schema.Union([AgentId, AgentSlug])
 export type AgentReference = typeof AgentReference.Type
 export const parseAgentReference = Schema.decodeUnknownSync(AgentReference)
@@ -23,6 +25,8 @@ export const Workbench = Schema.Literals([
   "activity",
   "files",
   "memory",
+  "results",
+  "examples",
 ])
 export type Workbench = typeof Workbench.Type
 export const SettingsCategory = Schema.Literals([
@@ -53,6 +57,10 @@ export const SettingsSection = Schema.Literals([
 export const ResourceId = Schema.String.check(
   Schema.isPattern(/^[a-zA-Z0-9_:-]{1,200}$/)
 )
+const ResultReference = Schema.declare((value): value is string =>
+  isResultReference(value)
+)
+const WorkspaceItem = Schema.Union([ResourceId, ResultReference])
 const Tab = Schema.Literals([
   "files",
   "trash",
@@ -83,7 +91,7 @@ const Search = Schema.Struct({
   q: Schema.optional(Schema.String.check(Schema.isMaxLength(200))),
   activityAgent: Schema.optional(AgentId),
   panel: Schema.optional(Workbench),
-  item: Schema.optional(ResourceId),
+  item: Schema.optional(WorkspaceItem),
 })
 export type WorkspaceQuery = typeof Search.Type
 export type WorkspaceSearch = WorkspaceQuery & {
@@ -111,6 +119,13 @@ export function parseSection(value: unknown) {
   }
 }
 export const parseResourceId = Schema.decodeUnknownSync(ResourceId)
+export function parseWorkspaceItem(panel: unknown, value: string) {
+  if (panel === "results") {
+    parseResultReference(value)
+    return value
+  }
+  return parseResourceId(value)
+}
 export type GlobalSettingsSection =
   | "settings"
   | "account"
@@ -193,7 +208,7 @@ export function workspaceBackdrop(value: string) {
     const params: WorkspaceParams = {
       agentId,
       ...(parts[2] ? { panel: parsePanel(parts[2]) } : {}),
-      ...(parts[3] ? { itemId: parseResourceId(parts[3]) } : {}),
+      ...(parts[3] ? { itemId: parseWorkspaceItem(parts[2], parts[3]) } : {}),
     }
     const query = validateWorkspaceSearch(defaultParseSearch(url.search))
     const view = workspaceView(params, query)
@@ -298,6 +313,8 @@ const tabs: Record<Workbench, readonly NonNullable<WorkspaceQuery["tab"]>[]> = {
   objects: [],
   terminal: ["commands", "interactive", "transfers"],
   routines: ["webhook"],
+  results: [],
+  examples: [],
   activity: ["timeline", "tasks"],
   files: ["files", "trash"],
   memory: ["notes", "history", "tree", "files"],
@@ -305,7 +322,7 @@ const tabs: Record<Workbench, readonly NonNullable<WorkspaceQuery["tab"]>[]> = {
 const WorkspaceParams = Schema.Struct({
   agentId: Schema.optional(AgentReference),
   panel: Schema.optional(Workbench),
-  itemId: Schema.optional(ResourceId),
+  itemId: Schema.optional(WorkspaceItem),
   section: Schema.optional(
     Schema.Union([SettingsSection, Schema.Literal("agent-settings")])
   ),
@@ -343,6 +360,11 @@ function validateWorkspaceFilters(view: WorkspaceSearch) {
 }
 
 function validatePanelSelection(view: WorkspaceSearch) {
+  if (view.item && view.panel !== "results") parseResourceId(view.item)
+  if (view.panel === "examples" && view.item)
+    throw new Error("Examples do not select a saved resource.")
+  if (view.panel === "results" && (!view.item || !isResultReference(view.item)))
+    throw new Error("A saved result requires its recorded identity.")
   if (view.tab && (!view.panel || !tabs[view.panel].includes(view.tab)))
     throw new Error("This tab does not belong to the selected workspace panel.")
   if (
@@ -399,7 +421,7 @@ function agentWorkspaceDestination(
   if (panel && item)
     return {
       to: "/agents/$agentId/$panel/$itemId" as const,
-      params: { agentId, panel, itemId: parseResourceId(item) },
+      params: { agentId, panel, itemId: parseWorkspaceItem(panel, item) },
       search: query,
     }
   if (panel)
@@ -472,7 +494,9 @@ function agentWorkspaceParams(
         ? {
             agentId,
             panel: parsePanel(parts[2]),
-            itemId: parts[3] ? parseResourceId(parts[3]) : undefined,
+            itemId: parts[3]
+              ? parseWorkspaceItem(parts[2], parts[3])
+              : undefined,
           }
         : { agentId }
 }

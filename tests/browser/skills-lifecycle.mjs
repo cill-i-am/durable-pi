@@ -10,7 +10,7 @@ const { build } = createRequire(require.resolve("alchemy"))("esbuild")
 const { chromium } = require("@playwright/test")
 const bundle = await build({
   stdin: {
-    contents: `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{SkillsPanel}from'./src/features/skills/skills-panel';function App(){const[agent,setAgent]=useState(),[open,setOpen]=useState(true);window.skillHost={agent,assign:()=>setAgent('old'),change:()=>setAgent('new'),close:()=>setOpen(false),open:()=>setOpen(true)};return <><div data-agent={agent}/><SkillsPanel embedded agentId={agent} agentName={agent} open={open} onOpenChange={setOpen}/></>}createRoot(document.getElementById('root')).render(<App/>);`,
+    contents: `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{SkillsPanel}from'./src/features/skills/skills-panel';function App(){const[agent,setAgent]=useState(),[open,setOpen]=useState(true);window.skillHost={agent,assign:()=>setAgent('old'),change:()=>setAgent('new'),close:()=>setOpen(false),open:()=>setOpen(true)};return <><div data-agent={agent}/><SkillsPanel agentId={agent} agentName={agent} open={open}/></>}createRoot(document.getElementById('root')).render(<App/>);`,
     loader: "tsx",
     resolveDir: root,
   },

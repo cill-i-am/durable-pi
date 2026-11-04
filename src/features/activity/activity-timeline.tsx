@@ -11,15 +11,16 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
+import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
 import { Schema } from "effect"
 import { ArrowRight, ChevronDown, Clock3, RefreshCw } from "lucide-react"
+import { useLayoutEffect, useRef } from "react"
 
 import {
   ActivityFilter as importedFilter,
   ActivityPage,
   type ActivityCursor,
   type ActivityAgent,
-  type ActivityEntry,
 } from "@/activity/contracts"
 import {
   Select,
@@ -32,7 +33,7 @@ import {
 import type { WorkspaceQuery } from "@/navigation/workspace"
 import { parseAgentId } from "@/navigation/workspace"
 
-import { ActivityRecord } from "./activity-record"
+import { ActivityRecord, type ActivityRecordEntry } from "./activity-record"
 import { activityJsonRequest } from "./query-owner"
 import { useActivityQuery } from "./use-activity-query"
 
@@ -40,7 +41,8 @@ function useActivityTimeline(
   agentId: string,
   scope: string,
   filter: string,
-  cursor: ActivityCursor | null
+  cursor: ActivityCursor | null,
+  active: boolean
 ) {
   const params = new URLSearchParams({
     scope: scope === "all" ? "all" : "bot",
@@ -50,6 +52,7 @@ function useActivityTimeline(
   const path = `activity?${params}`
   return useActivityQuery({
     key: JSON.stringify(["activity", agentId, scope, path]),
+    enabled: active,
     interval: cursor ? 15000 : 5000,
     read: async (signal) =>
       Schema.decodeUnknownSync(ActivityPage)(
@@ -79,16 +82,33 @@ export function ActivityTimeline({
   onFiltersChange: (
     value: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
   ) => void
-  record: Pick<ActivityEntry, "agent" | "reference"> | null
-  onRecordChange: (
-    record: Pick<ActivityEntry, "agent" | "reference"> | null
-  ) => void
+  record: ActivityRecordEntry | null
+  onRecordChange: (record: ActivityRecordEntry | null) => void
   agent: ActivityAgent
   agents: readonly ActivityAgent[]
   onDetails: (agent: ActivityAgent) => void
   onOpenBot: (id: ActivityAgent["id"]) => void
   onMemory: (id: ActivityAgent["id"]) => void
 }) {
+  const mobile = useIsMobile()
+  const list = useRef<HTMLDivElement>(null)
+  const previousRecord = useRef(record)
+  useLayoutEffect(() => {
+    const previous = previousRecord.current
+    previousRecord.current = record
+    if (!record && previous && !mobile)
+      Array.from(
+        list.current?.querySelectorAll<HTMLButtonElement>(
+          "button[data-record-reference]"
+        ) ?? []
+      )
+        .find(
+          (button) =>
+            button.dataset.recordReference === previous.reference &&
+            button.dataset.recordAgent === previous.agent.id
+        )
+        ?.focus({ preventScroll: true })
+  }, [record, mobile])
   const scope = filters.scope ?? agent.id
   const filter = filters.filter ?? "all"
   const cursor = filters.cursor ?? null
@@ -98,177 +118,198 @@ export function ActivityTimeline({
     data: page,
     error,
     refresh,
-  } = useActivityTimeline(agent.id, scope, filter, cursor)
+  } = useActivityTimeline(agent.id, scope, filter, cursor, active)
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-md font-semibold">Activity</h2>
-        <Select<string>
-          value={scope}
-          onValueChange={(value) => {
-            if (value) {
-              onFiltersChange({
-                ...filters,
-                scope: value === "all" ? "all" : parseAgentId(value),
-                cursor: undefined,
-              })
-            }
-          }}
-        >
-          <SelectTrigger
-            className="w-auto max-w-1/2 min-w-0"
-            aria-label="Activity agent"
+    <div className="activity-timeline" data-record-open={!!record}>
+      <div ref={list} className="activity-timeline-list">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-md font-semibold">Activity</h2>
+          <Select<string>
+            value={scope}
+            onValueChange={(value) => {
+              if (value) {
+                onFiltersChange({
+                  ...filters,
+                  scope: value === "all" ? "all" : parseAgentId(value),
+                  cursor: undefined,
+                })
+              }
+            }}
           >
-            <SelectValue>
-              {scope === "all"
-                ? "All agents"
-                : (agents.find((value) => value.id === scope)?.name ??
-                  "This agent")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">All agents</SelectItem>
-              {agents.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="activity-filters">
-        <ToggleGroup
-          value={[filter]}
-          onValueChange={(values) => {
-            if (values[0]) {
-              onFiltersChange({
-                ...filters,
-                filter: Schema.decodeUnknownSync(importedFilter)(values[0]),
-                cursor: undefined,
-              })
-            }
-          }}
-          aria-label="Filter activity"
-          className="justify-start"
-        >
-          <ToggleGroupItem value="all">All</ToggleGroupItem>
-          <ToggleGroupItem value="attention">Needs you</ToggleGroupItem>
-          <ToggleGroupItem value="running">Running</ToggleGroupItem>
-        </ToggleGroup>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            onDetails(agents.find((value) => value.id === scope) ?? agent)
-          }
-        >
-          Task details <ArrowRight />
-        </Button>
-      </div>
-      <TimelineAvailability
-        page={page}
-        error={error}
-        onRetry={() => void refresh()}
-        onMemory={onMemory}
-      />
-      <section className="flex flex-col divide-y" aria-label="Recent activity">
-        {page?.entries.map((entry) => (
-          <button
-            key={entry.key}
-            type="button"
-            className="activity-event"
-            onClick={() =>
-              entry.target === "background"
-                ? onDetails(entry.agent)
-                : setRecord(entry)
-            }
+            <SelectTrigger
+              className="w-auto max-w-1/2 min-w-0"
+              aria-label="Activity agent"
+            >
+              <SelectValue>
+                {scope === "all"
+                  ? "All agents"
+                  : (agents.find((value) => value.id === scope)?.name ??
+                    "This agent")}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">All agents</SelectItem>
+                {agents.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="activity-filters">
+          <ToggleGroup
+            value={[filter]}
+            onValueChange={(values) => {
+              if (values[0]) {
+                onFiltersChange({
+                  ...filters,
+                  filter: Schema.decodeUnknownSync(importedFilter)(values[0]),
+                  cursor: undefined,
+                })
+              }
+            }}
+            aria-label="Filter activity"
+            className="justify-start"
           >
-            <span className="flex min-w-0 items-start gap-3">
-              <time
-                dateTime={entry.at}
-                className="w-11 shrink-0 pt-0.5 text-xs text-muted-foreground"
-              >
-                {new Date(entry.at).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                })}
-              </time>
-              <AgentAvatar
-                name={entry.agent.id}
-                label={entry.agent.name}
-                size={24}
-                aria-hidden="true"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-xs text-muted-foreground">
-                  {entry.agent.name} · {new Date(entry.at).toLocaleDateString()}
-                </span>
-                <span className="line-clamp-3 text-sm font-medium">
-                  {entry.title || "Attached files"}
-                </span>
-              </span>
-              <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
-            </span>
-            <span className="activity-event-meta">
-              <span>
-                {entry.kind === "steer"
-                  ? "Steering"
-                  : entry.kind === "tool"
-                    ? "Tool operation"
-                    : entry.kind === "background"
-                      ? "Background drafting"
-                      : "Conversation"}
-              </span>
-              <Badge variant={entry.attention ? "outline" : "secondary"}>
-                {entry.attention ? "Needs you" : entry.status}
-              </Badge>
-            </span>
-          </button>
-        ))}
-      </section>
-      {page &&
-        !page.entries.length &&
-        !page.issues.length &&
-        !page.unavailable.length &&
-        !error && (
-          <p className="py-6 text-sm text-muted-foreground">
-            {filter === "attention"
-              ? "Nothing needs your attention here."
-              : filter === "running"
-                ? "No work is running here."
-                : "No activity in this view yet."}
-          </p>
-        )}
-      <div className="flex flex-wrap justify-between gap-3">
-        {cursor && (
-          <Button variant="ghost" size="sm" onClick={() => setCursor(null)}>
-            Latest activity
-          </Button>
-        )}
-        {page?.next && (
+            <ToggleGroupItem value="all">All</ToggleGroupItem>
+            <ToggleGroupItem value="attention">Needs you</ToggleGroupItem>
+            <ToggleGroupItem value="running">Running</ToggleGroupItem>
+          </ToggleGroup>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => setCursor(page.next)}
+            onClick={() =>
+              onDetails(agents.find((value) => value.id === scope) ?? agent)
+            }
           >
-            Earlier activity <ChevronDown />
+            Task details <ArrowRight />
           </Button>
-        )}
+        </div>
+        <TimelineAvailability
+          page={page}
+          error={error}
+          onRetry={() => void refresh()}
+          onMemory={onMemory}
+        />
+        <section
+          className="flex flex-col divide-y"
+          aria-label="Recent activity"
+        >
+          {page?.entries.map((entry) => (
+            <button
+              key={entry.key}
+              type="button"
+              className="activity-event"
+              data-record-reference={entry.reference}
+              data-record-agent={entry.agent.id}
+              onClick={() =>
+                entry.target === "background"
+                  ? onDetails(entry.agent)
+                  : setRecord(entry)
+              }
+            >
+              <span className="flex min-w-0 items-start gap-3">
+                <time
+                  dateTime={entry.at}
+                  className="w-11 shrink-0 pt-0.5 text-xs text-muted-foreground"
+                >
+                  {new Date(entry.at).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </time>
+                <AgentAvatar
+                  name={entry.agent.id}
+                  label={entry.agent.name}
+                  size={24}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs text-muted-foreground">
+                    {entry.agent.name} ·{" "}
+                    {new Date(entry.at).toLocaleDateString()}
+                  </span>
+                  <span className="line-clamp-3 text-sm font-medium">
+                    {entry.title || "Attached files"}
+                  </span>
+                </span>
+                <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
+              </span>
+              <span className="activity-event-meta">
+                <span>
+                  {entry.kind === "steer"
+                    ? "Steering"
+                    : entry.kind === "tool"
+                      ? "Tool operation"
+                      : entry.kind === "background"
+                        ? "Background drafting"
+                        : "Conversation"}
+                </span>
+                <Badge variant={entry.attention ? "outline" : "secondary"}>
+                  {entry.attention ? "Needs you" : entry.status}
+                </Badge>
+              </span>
+            </button>
+          ))}
+        </section>
+        {page &&
+          !page.entries.length &&
+          !page.issues.length &&
+          !page.unavailable.length &&
+          !error && (
+            <p className="py-6 text-sm text-muted-foreground">
+              {filter === "attention"
+                ? "Nothing needs your attention here."
+                : filter === "running"
+                  ? "No work is running here."
+                  : "No activity in this view yet."}
+            </p>
+          )}
+        <div className="flex flex-wrap justify-between gap-3">
+          {cursor && (
+            <Button variant="ghost" size="sm" onClick={() => setCursor(null)}>
+              Latest activity
+            </Button>
+          )}
+          {page?.next && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCursor(page.next)}
+            >
+              Earlier activity <ChevronDown />
+            </Button>
+          )}
+        </div>
       </div>
       {record && (
         <ActivityRecord
           active={active}
           key={`${record.agent.id}:${record.reference}`}
-          entry={record}
+          entry={recordedEntry(record, page)}
           onClose={() => setRecord(null)}
           onOpenBot={() => onOpenBot(record.agent.id)}
         />
       )}
-    </>
+    </div>
   )
+}
+
+function recordedEntry(record: ActivityRecordEntry, page: ActivityPage | null) {
+  return {
+    ...record,
+    at:
+      record.at ??
+      page?.entries.find(
+        (entry) =>
+          entry.agent.id === record.agent.id &&
+          entry.reference === record.reference
+      )?.at,
+  }
 }
 
 function TimelineAvailability({

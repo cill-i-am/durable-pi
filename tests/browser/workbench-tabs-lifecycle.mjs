@@ -38,7 +38,7 @@ if (process.argv.includes("--serve")) {
   const openTool = async (name) => {
     await by("Open a tool").click()
     await page.getByRole("menuitem").first().waitFor()
-    assert.equal(await page.getByRole("menuitem").count(), 9)
+    assert.equal(await page.getByRole("menuitem").count(), 10)
     await page.getByRole("menuitem", { name: new RegExp(`^${name}`) }).click()
   }
   try {

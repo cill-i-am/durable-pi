@@ -13,6 +13,7 @@ async function signIn(page: Page, path = "/agents/new") {
 
 test("a held agent save retains newer edits and uses update after acknowledged creation", async ({
   page,
+  isMobile,
 }) => {
   let release!: () => void
   const held = new Promise<void>((resolve) => {
@@ -54,21 +55,31 @@ test("a held agent save retains newer edits and uses update after acknowledged c
     .getByRole("region", { name: "Assistants", exact: true })
     .getByRole("button", { name: "New assistant", exact: true })
     .click()
+  await expect(page.locator(".assistant-editor-sheet")).toHaveAttribute(
+    "role",
+    isMobile ? "dialog" : "region"
+  )
   await page.getByLabel("Name", { exact: true }).fill("First name")
   await page.getByLabel("Purpose", { exact: true }).fill("First purpose")
   await page
     .getByRole("button", { name: "Create assistant", exact: true })
     .click()
   await expect.poll(() => writes.length).toBe(1)
+  if (isMobile)
+    await page.getByRole("button", { name: "Close sheet", exact: true }).click()
+  else await page.keyboard.press("Escape")
+  await expect(page.locator(".assistant-editor-sheet")).toBeVisible()
   await page.getByLabel("Name", { exact: true }).fill("Newer name")
   await page.getByLabel("Purpose", { exact: true }).fill("Newer purpose")
   await page.evaluate(() => window.history.back())
   await expect(page).toHaveURL(/\/agents\/new/)
   await expect(
-    page.getByText("Finish or cancel the open edit before leaving this view.", {
-      exact: true,
-    })
-  ).toBeAttached()
+    page
+      .getByText("Finish or cancel the open edit before leaving this view.", {
+        exact: true,
+      })
+      .filter({ visible: true })
+  ).toBeVisible()
   release()
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
     "Newer name"
@@ -89,6 +100,7 @@ test("a held agent save retains newer edits and uses update after acknowledged c
 
 test("an acknowledged agent save retries only its failed catalog refresh", async ({
   page,
+  isMobile,
 }) => {
   let writes = 0,
     readsAfterSave = 0
@@ -121,6 +133,10 @@ test("an acknowledged agent save retries only its failed catalog refresh", async
     return route.fulfill({ json: created })
   })
   await signIn(page)
+  await expect(page.locator(".assistant-editor-sheet")).toHaveAttribute(
+    "role",
+    isMobile ? "dialog" : "region"
+  )
   await page.getByLabel("Name", { exact: true }).fill("Acknowledged agent")
   await page
     .getByRole("button", { name: "Create assistant", exact: true })

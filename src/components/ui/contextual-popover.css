@@ -1,0 +1,74 @@
+.contextual-popover-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: var(--available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-menu);
+  outline: none;
+}
+
+.contextual-popover-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--text-base--line-height);
+}
+
+.contextual-popover-content:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.contextual-popover-drawer {
+  background: var(--popover);
+}
+
+.contextual-popover-drawer > .responsive-overlay-body {
+  gap: 8px;
+  padding: 0 20px max(16px, env(safe-area-inset-bottom));
+}
+
+.contextual-popover-mobile-title {
+  min-height: 56px;
+  padding: 10px 44px 8px 0;
+}
+
+.contextual-popover-drawer .contextual-popover-content {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.contextual-popover-actions {
+  display: flex;
+}
+
+.contextual-popover-actions > button {
+  width: 100%;
+}
+
+.contextual-popover-drawer .contextual-popover-actions {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+@media (forced-colors: active) {
+  .contextual-popover-content:focus-visible {
+    outline-color: Highlight;
+  }
+}

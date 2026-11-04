@@ -72,6 +72,7 @@ export function TurnActivity({
   items,
   toolTitles,
   agentId,
+  turnId,
   status = "done",
   waitingForApproval = false,
   onAppPendingChange,
@@ -82,6 +83,7 @@ export function TurnActivity({
   toolTitles?: Record<string, string>
   items: readonly TimelineItem[]
   agentId?: string
+  turnId?: string
   status?: ChatState["turns"][number]["status"]
   waitingForApproval?: boolean
   onAppPendingChange?: (key: string, pending: boolean) => void
@@ -142,7 +144,13 @@ export function TurnActivity({
                 />
               }
             >
-              <RichResult output={result.output} onPrompt={onAnswerPrompt} />
+              <RichResult
+                output={result.output}
+                onPrompt={onAnswerPrompt}
+                identity={
+                  turnId ? { turn: turnId, tool: result.id } : undefined
+                }
+              />
             </Suspense>
           )
         return (

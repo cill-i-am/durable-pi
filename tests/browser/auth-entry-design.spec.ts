@@ -180,6 +180,7 @@ test("two-factor recovery clears mode drafts and returns to the authenticator af
 
 test("unsupported passkeys leave password sign-in available", async ({
   page,
+  isMobile,
 }) => {
   await page.addInitScript(() => {
     Object.defineProperty(window, "PublicKeyCredential", { value: undefined })
@@ -208,8 +209,17 @@ test("unsupported passkeys leave password sign-in available", async ({
   await expect(
     page.getByRole("heading", { name: "Edit assistant", exact: true })
   ).toBeVisible()
+  await expect(page.locator(".assistant-editor-sheet")).toHaveAttribute(
+    "role",
+    isMobile ? "dialog" : "region"
+  )
   await expect(page.locator(".assistant-collection")).toBeAttached()
   await expect(page.locator(".chat-workspace")).toHaveCount(0)
-  await page.getByRole("button", { name: "Cancel", exact: true }).click()
+  await page
+    .getByRole("button", {
+      name: isMobile ? "Close sheet" : "Cancel",
+      exact: true,
+    })
+    .click()
   await expect(page).toHaveURL(/\/agents$/)
 })

@@ -20,11 +20,12 @@ import {
 } from "@workspace/ui/components/table"
 import { cn } from "cn"
 import { MapPin, Navigation, ExternalLink } from "lucide-react"
-import { useId, useState, type ReactNode } from "react"
+import { useId, type ReactNode } from "react"
 
 import type { AnswerProps } from "@/rich-results/catalog"
 
 import { PlacesMap } from "./places-map"
+import { useResultViewState } from "./result-view-state"
 
 type Provenance = {
   source: { label: string; url: string | null }
@@ -113,7 +114,7 @@ export function CalculationCard(props: AnswerProps<"Calculation">) {
   )
 }
 export function PlacesCard(props: AnswerProps<"Places">) {
-  const [selected, setSelected] = useState(0)
+  const [selected, setSelected] = useResultViewState("place-selection", 0)
   const place = props.places[selected] ?? props.places[0]!
   return (
     <ResultCard
@@ -177,7 +178,7 @@ export function PlacesCard(props: AnswerProps<"Places">) {
   )
 }
 export function RouteCard(props: AnswerProps<"Route">) {
-  const [selected, setSelected] = useState(0)
+  const [selected, setSelected] = useResultViewState("place-selection", 0)
   const directions = new URL("https://www.google.com/maps/dir/")
   directions.search = new URLSearchParams({
     api: "1",

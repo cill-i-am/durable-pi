@@ -681,7 +681,6 @@ function PersonalSettings({
   if (category === "security")
     return (
       <AccountSecurity
-        embedded
         onClose={() => onCategoryChange(null)}
         onPendingChange={onPendingChange}
       />
@@ -698,7 +697,6 @@ function PersonalSettings({
   if (category === "connection-library")
     return (
       <ConnectionsPanel
-        embedded
         open
         onOpenChange={() => {}}
         onSaved={() => {}}
@@ -708,14 +706,7 @@ function PersonalSettings({
       />
     )
   if (category === "skill-library")
-    return (
-      <SkillsPanel
-        embedded
-        open
-        onOpenChange={() => {}}
-        onPendingChange={onPendingChange}
-      />
-    )
+    return <SkillsPanel open onPendingChange={onPendingChange} />
   if (category === "channels")
     return family.role === "owner" ? (
       <ChannelSettings agents={agents} onPendingChange={onPendingChange} />
@@ -847,7 +838,6 @@ function AgentSettings({
   if (category === "connections")
     return (
       <ConnectionsPanel
-        embedded
         open
         agentId={agent.id}
         agentName={agent.name}
@@ -861,11 +851,9 @@ function AgentSettings({
   if (category === "skills")
     return (
       <SkillsPanel
-        embedded
         open
         agentId={agent.id}
         agentName={agent.name}
-        onOpenChange={() => {}}
         onPendingChange={onPendingChange}
         onManageLibrary={onManageSkills}
       />
@@ -892,11 +880,9 @@ function AgentSettings({
           </Button>
         </div>
         <AccessPanel
-          embedded
           open
           agentId={agent.id}
           agentName={agent.name}
-          onOpenChange={() => {}}
           onSaved={reload}
           onPendingChange={onPendingChange}
         />
