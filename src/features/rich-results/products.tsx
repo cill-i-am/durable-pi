@@ -122,246 +122,250 @@ export function ProductsCard(props: AnswerProps<"Products">) {
       </ResultCard>
     )
   return (
-    <ResultCard
+    <AnswerWorkspace
       title={props.title}
-      description="Shortlist up to four products to compare."
-      provenance={props}
+      summary={`${props.products.length} products`}
+      description="Explore sourced offers, then compare the details that matter to you."
+      renderSurface={(content) => (
+        <ResultCard
+          title={props.title}
+          description="Shortlist up to four products to compare."
+          provenance={props}
+        >
+          {content}
+        </ResultCard>
+      )}
+      toolbar={
+        <>
+          <ToggleGroup
+            value={view}
+            onValueChange={(value) => value.length && setView(value)}
+            aria-label="Product view"
+          >
+            <ToggleGroupItem value="browse">Browse</ToggleGroupItem>
+            <ToggleGroupItem value="compare">
+              Compare ({selected.length})
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <Button
+            className="ms-auto"
+            size="sm"
+            variant={shortlistOnly ? "secondary" : "ghost"}
+            aria-pressed={shortlistOnly}
+            onClick={() => {
+              setShortlistOnly((current) => !current)
+              setView(["browse"])
+            }}
+          >
+            <Bookmark data-icon="inline-start" />
+            Shortlist ({selected.length})
+          </Button>
+        </>
+      }
+      sidebar={
+        <>
+          {props.context?.question &&
+            props.context.question !== props.title && (
+              <p className="text-sm font-medium">{props.context.question}</p>
+            )}
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">What to compare</p>
+            <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
+              {(
+                props.context?.priorities ?? [
+                  "Price",
+                  "Availability",
+                  ...new Set(
+                    props.products.flatMap((product) =>
+                      product.specs.map((spec) => spec.label)
+                    )
+                  ),
+                ]
+              ).map((label) => (
+                <li key={label}>{label}</li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {props.source.label} · {props.asOf}
+          </p>
+        </>
+      }
     >
-      <AnswerWorkspace
-        title={props.title}
-        description="Explore sourced offers, then compare the details that matter to you."
-        toolbar={
-          <>
-            <ToggleGroup
-              value={view}
-              onValueChange={(value) => value.length && setView(value)}
-              aria-label="Product view"
-            >
-              <ToggleGroupItem value="browse">Browse</ToggleGroupItem>
-              <ToggleGroupItem value="compare">
-                Compare ({selected.length})
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <Button
-              className="ms-auto"
-              size="sm"
-              variant={shortlistOnly ? "secondary" : "ghost"}
-              aria-pressed={shortlistOnly}
-              onClick={() => {
-                setShortlistOnly((current) => !current)
-                setView(["browse"])
-              }}
-            >
-              <Bookmark data-icon="inline-start" />
-              Shortlist ({selected.length})
-            </Button>
-          </>
-        }
-        sidebar={
-          <>
-            {props.context?.question &&
-              props.context.question !== props.title && (
-                <p className="text-sm font-medium">{props.context.question}</p>
-              )}
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">What to compare</p>
-              <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
-                {(
-                  props.context?.priorities ?? [
-                    "Price",
-                    "Availability",
-                    ...new Set(
-                      props.products.flatMap((product) =>
-                        product.specs.map((spec) => spec.label)
-                      )
-                    ),
-                  ]
-                ).map((label) => (
-                  <li key={label}>{label}</li>
-                ))}
-              </ul>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {props.source.label} · {props.asOf}
-            </p>
-          </>
-        }
-      >
-        <div className="@container flex flex-col gap-4">
-          {view[0] === "compare" ? (
-            choices.length >= 2 ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap gap-2">
-                  {choices.map((product) => (
-                    <Button
-                      key={product.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setSelected((current) =>
-                          current.filter((id) => id !== product.id)
-                        )
-                      }
-                      aria-label={`Remove ${product.name} from comparison`}
-                    >
-                      {product.name} ×
-                    </Button>
-                  ))}
-                </div>
-                <ComparisonTable
-                  title={props.title}
-                  options={choices.map((product) => product.name)}
-                  criteria={criteria}
-                />
-                {onPrompt && (
+      <div className="@container flex flex-col gap-4">
+        {view[0] === "compare" ? (
+          choices.length >= 2 ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
+                {choices.map((product) => (
                   <Button
-                    className="self-start"
+                    key={product.id}
                     variant="outline"
+                    size="sm"
                     onClick={() =>
-                      onPrompt(
-                        `Help me decide between these shortlisted products: ${choices.map((product) => `${product.name} (${product.url})`).join(", ")}.${props.context?.priorities.length ? ` My priorities: ${props.context.priorities.join(", ")}.` : ""} Verify the current offers and explain the trade-offs.`
+                      setSelected((current) =>
+                        current.filter((id) => id !== product.id)
                       )
                     }
+                    aria-label={`Remove ${product.name} from comparison`}
                   >
-                    Add shortlist to draft
+                    {product.name} ×
                   </Button>
-                )}
+                ))}
               </div>
-            ) : (
+              <ComparisonTable
+                title={props.title}
+                options={choices.map((product) => product.name)}
+                criteria={criteria}
+              />
+              {onPrompt && (
+                <Button
+                  className="self-start"
+                  variant="outline"
+                  onClick={() =>
+                    onPrompt(
+                      `Help me decide between these shortlisted products: ${choices.map((product) => `${product.name} (${product.url})`).join(", ")}.${props.context?.priorities.length ? ` My priorities: ${props.context.priorities.join(", ")}.` : ""} Verify the current offers and explain the trade-offs.`
+                    )
+                  }
+                >
+                  Add shortlist to draft
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>Choose at least two products</EmptyTitle>
+                <EmptyDescription>
+                  Shortlist products in Browse to compare prices and
+                  specifications.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )
+        ) : (
+          <>
+            <FieldGroup className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_9rem_minmax(9rem,0.65fr)]">
+              <Field>
+                <FieldLabel>Search products</FieldLabel>
+                <Input
+                  aria-label="Search products"
+                  value={query}
+                  placeholder="Name, merchant or feature…"
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>
+                  Max price ({props.products[0]!.currency})
+                </FieldLabel>
+                <Input
+                  aria-label="Maximum product price"
+                  type="number"
+                  min="0"
+                  value={budget}
+                  placeholder="Any budget"
+                  onChange={(event) => setBudget(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Retailer</FieldLabel>
+                <Select
+                  value={merchant}
+                  onValueChange={(value) => setMerchant(value ?? "")}
+                >
+                  <SelectTrigger aria-label="Filter retailer">
+                    <SelectValue>{merchant || "All retailers"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="">All retailers</SelectItem>
+                      {[
+                        ...new Set(
+                          props.products.map((product) => product.merchant)
+                        ),
+                      ].map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </FieldGroup>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span
+                className="text-xs text-muted-foreground"
+                aria-live="polite"
+              >
+                {visible.length} of {props.products.length} products
+              </span>
+              <ToggleGroup
+                value={sort}
+                onValueChange={(value) => value.length && setSort(value)}
+                aria-label="Sort products"
+              >
+                <ToggleGroupItem value="recommended">
+                  Original order
+                </ToggleGroupItem>
+                <ToggleGroupItem value="price">
+                  Price: low to high
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <div className="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
+              {visible.map((product) => (
+                <ProductOffer
+                  key={product.id}
+                  product={product}
+                  shortlist={
+                    <Button
+                      variant={
+                        selected.includes(product.id) ? "secondary" : "ghost"
+                      }
+                      size="sm"
+                      aria-pressed={selected.includes(product.id)}
+                      aria-label={`${selected.includes(product.id) ? "Remove" : "Shortlist"} ${product.name}`}
+                      disabled={
+                        !selected.includes(product.id) && selected.length >= 4
+                      }
+                      onClick={() =>
+                        setSelected((current) =>
+                          current.includes(product.id)
+                            ? current.filter((id) => id !== product.id)
+                            : [...current, product.id]
+                        )
+                      }
+                    >
+                      <Bookmark data-icon="inline-start" />
+                      {selected.includes(product.id) ? "Saved" : "Shortlist"}
+                    </Button>
+                  }
+                />
+              ))}
+            </div>
+            {!visible.length && (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>Choose at least two products</EmptyTitle>
+                  <EmptyTitle>No products match</EmptyTitle>
                   <EmptyDescription>
-                    Shortlist products in Browse to compare prices and
-                    specifications.
+                    Try a higher budget, a different search, or turn off
+                    Shortlist.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
-            )
-          ) : (
-            <>
-              <FieldGroup className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_9rem_minmax(9rem,0.65fr)]">
-                <Field>
-                  <FieldLabel>Search products</FieldLabel>
-                  <Input
-                    aria-label="Search products"
-                    value={query}
-                    placeholder="Name, merchant or feature…"
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>
-                    Max price ({props.products[0]!.currency})
-                  </FieldLabel>
-                  <Input
-                    aria-label="Maximum product price"
-                    type="number"
-                    min="0"
-                    value={budget}
-                    placeholder="Any budget"
-                    onChange={(event) => setBudget(event.target.value)}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>Retailer</FieldLabel>
-                  <Select
-                    value={merchant}
-                    onValueChange={(value) => setMerchant(value ?? "")}
-                  >
-                    <SelectTrigger aria-label="Filter retailer">
-                      <SelectValue>{merchant || "All retailers"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="">All retailers</SelectItem>
-                        {[
-                          ...new Set(
-                            props.products.map((product) => product.merchant)
-                          ),
-                        ].map((name) => (
-                          <SelectItem key={name} value={name}>
-                            {name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </FieldGroup>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span
-                  className="text-xs text-muted-foreground"
-                  aria-live="polite"
-                >
-                  {visible.length} of {props.products.length} products
-                </span>
-                <ToggleGroup
-                  value={sort}
-                  onValueChange={(value) => value.length && setSort(value)}
-                  aria-label="Sort products"
-                >
-                  <ToggleGroupItem value="recommended">
-                    Original order
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="price">
-                    Price: low to high
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-              <div className="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
-                {visible.map((product) => (
-                  <ProductOffer
-                    key={product.id}
-                    product={product}
-                    shortlist={
-                      <Button
-                        variant={
-                          selected.includes(product.id) ? "secondary" : "ghost"
-                        }
-                        size="sm"
-                        aria-pressed={selected.includes(product.id)}
-                        aria-label={`${selected.includes(product.id) ? "Remove" : "Shortlist"} ${product.name}`}
-                        disabled={
-                          !selected.includes(product.id) && selected.length >= 4
-                        }
-                        onClick={() =>
-                          setSelected((current) =>
-                            current.includes(product.id)
-                              ? current.filter((id) => id !== product.id)
-                              : [...current, product.id]
-                          )
-                        }
-                      >
-                        <Bookmark data-icon="inline-start" />
-                        {selected.includes(product.id) ? "Saved" : "Shortlist"}
-                      </Button>
-                    }
-                  />
-                ))}
-              </div>
-              {!visible.length && (
-                <Empty>
-                  <EmptyHeader>
-                    <EmptyTitle>No products match</EmptyTitle>
-                    <EmptyDescription>
-                      Try a higher budget, a different search, or turn off
-                      Shortlist.
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-            </>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {selected.length >= 4 &&
-              "Four products selected. Remove one to add another. "}
-            Shortlists stay in this view. Confirm price, delivery and
-            availability with the retailer.
-          </p>
-        </div>
-      </AnswerWorkspace>
-    </ResultCard>
+            )}
+          </>
+        )}
+        <p className="text-xs text-muted-foreground">
+          {selected.length >= 4 &&
+            "Four products selected. Remove one to add another. "}
+          Shortlists stay in this view. Confirm price, delivery and availability
+          with the retailer.
+        </p>
+      </div>
+    </AnswerWorkspace>
   )
 }
 

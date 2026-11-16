@@ -25,7 +25,6 @@ import {
   CalculationCard,
   ComparisonCard,
   PlacesCard,
-  ResultCard,
   TimelineCard,
   RouteCard,
 } from "./cards"
@@ -55,11 +54,7 @@ const { registry } = defineRegistry(answerCatalog, {
     Calculation: ({ props }) => <CalculationCard {...props} />,
     Places: ({ props }) => <PlacesCard {...props} />,
     Products: ({ props }) => <ProductsCard {...props} />,
-    DataTable: ({ props }) => (
-      <ResultCard title={props.title} provenance={props}>
-        <DataTableView {...props} />
-      </ResultCard>
-    ),
+    DataTable: ({ props }) => <DataTableView {...props} />,
     Comparison: ({ props }) => <ComparisonCard {...props} />,
     BarChart: ({ props }) => <BarChartCard {...props} />,
     Timeline: ({ props }) => <TimelineCard {...props} />,

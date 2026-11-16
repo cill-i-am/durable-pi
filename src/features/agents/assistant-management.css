@@ -78,17 +78,13 @@
 .assistant-collection-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
   list-style: none;
 }
 .assistant-collection-row {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
+  padding-block: 20px;
 }
 .assistant-collection-row + .assistant-collection-row {
   border-top: 1px solid var(--border);
@@ -140,7 +136,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  padding: 32px;
+  padding-block: 32px;
 }
 .assistant-collection-empty h2 {
   font-size: var(--text-md);
@@ -170,6 +166,13 @@
 .assistant-editor-form {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+.assistant-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 .assistant-editor-content {
   display: flex;
@@ -313,7 +316,7 @@
   }
   .assistant-collection-row {
     gap: 12px;
-    padding: 16px;
+    padding-block: 16px;
   }
   .assistant-editor-sheet[data-slot="sheet-content"] {
     max-width: none;
@@ -340,40 +343,27 @@
     overflow: hidden;
     padding: 0;
   }
-  .assistant-editor-form,
-  .assistant-editor-form > [data-slot="card-frame"] {
+  .assistant-editor-form {
     min-height: 0;
     flex: 1;
     max-width: none;
-  }
-  .assistant-editor-form [data-slot="card-frame"],
-  .assistant-editor-form [data-slot="card"] {
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  .assistant-editor-form [data-slot="card-frame"] {
     gap: 0;
-    padding: 0;
   }
-  .assistant-editor-form [data-slot="card"] {
+  .assistant-editor-fields {
     min-height: 0;
     flex: 1;
     overflow-y: auto;
     overscroll-behavior: contain;
-  }
-  .assistant-editor-form [data-slot="card-content"] {
     padding: calc(var(--spacing) * 3) calc(var(--spacing) * 5)
       calc(var(--spacing) * 6);
   }
-  .assistant-editor-form [data-slot="card-frame-footer"] {
+  .assistant-editor-actions {
     flex-shrink: 0;
     border-top: 1px solid var(--border);
     padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5)
       max(calc(var(--spacing) * 4), env(safe-area-inset-bottom));
   }
-  .assistant-editor-form [data-slot="card-frame-footer"] > button {
+  .assistant-editor-actions > button {
     width: 100%;
   }
   .assistant-editor-cancel {

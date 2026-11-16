@@ -44,17 +44,15 @@
   padding: 32px 24px 64px;
 }
 
-.auth-entry-panel[data-slot="card"] {
+.auth-entry-panel {
+  display: flex;
   width: min(100%, 400px);
+  flex-direction: column;
   gap: 24px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
   overflow-wrap: anywhere;
 }
 
-.auth-entry-heading[data-slot="card-header"] {
+.auth-entry-heading {
   display: flex;
   min-height: 0;
   flex-direction: column;
@@ -71,12 +69,13 @@
   overflow-wrap: anywhere;
 }
 
-.auth-entry-heading [data-slot="card-description"] {
+.auth-entry-heading p {
+  color: var(--muted-foreground);
   font-size: var(--text-base);
   line-height: 22px;
 }
 
-.auth-entry-form[data-slot="card-content"] {
+.auth-entry-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -116,14 +115,12 @@
   gap: 12px;
 }
 
-.auth-entry-footer[data-slot="card-footer"] {
-  min-height: 0;
+.auth-entry-footer {
+  display: flex;
+  align-items: center;
   flex-direction: column;
   justify-content: center;
   gap: 8px;
-  padding: 0;
-  border: 0;
-  background: transparent;
   text-align: center;
 }
 

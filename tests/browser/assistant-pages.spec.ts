@@ -84,10 +84,10 @@ for (const [path, title] of [
           editor.getByRole("button", { name: "Cancel", exact: true })
         ).toHaveCount(0)
         await expect(
-          editor.locator('[data-slot="card-frame-footer"] button:visible')
+          editor.locator(".assistant-editor-actions button:visible")
         ).toHaveCount(1)
         await expect(
-          editor.locator('[data-slot="card-frame-footer"] button:visible')
+          editor.locator(".assistant-editor-actions button:visible")
         ).toBeInViewport()
       } else {
         expect(

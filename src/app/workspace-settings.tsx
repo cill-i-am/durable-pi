@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { AgentAvatar } from "@workspace/ui/components/agent-avatar"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
-import { Card, CardFrame, CardFrameFooter } from "@workspace/ui/components/card"
 import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Switch } from "@workspace/ui/components/switch"
 import { Schema } from "effect"
@@ -724,36 +723,32 @@ function Preferences() {
       <header className="settings-section-heading">
         <h2>Preferences</h2>
       </header>
-      <div className="settings-section-body settings-preferences-body">
-        <CardFrame className="settings-preferences-frame">
-          <Card className="settings-preferences-card">
-            <AppearanceSettings />
-            <MessageDeliverySettings />
-            <div className="settings-preference">
-              <div>
-                <h3>Interaction sounds</h3>
-                <p>Play a click when copying or showing passwords.</p>
-              </div>
-              <div className="settings-preference-actions">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void playInteractionSound({ preview: true })}
-                >
-                  <Play data-icon="inline-start" />
-                  Test sound
-                </Button>
-                <Switch
-                  aria-label="Interaction sounds"
-                  checked={sound.enabled}
-                  onCheckedChange={sound.setEnabled}
-                />
-              </div>
-            </div>
-          </Card>
-          <CardFrameFooter>On this device.</CardFrameFooter>
-        </CardFrame>
+      <div className="settings-preferences">
+        <AppearanceSettings />
+        <MessageDeliverySettings />
+        <div className="settings-preference">
+          <div>
+            <h3>Interaction sounds</h3>
+            <p>Play a click when copying or showing passwords.</p>
+          </div>
+          <div className="settings-preference-actions">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void playInteractionSound({ preview: true })}
+            >
+              <Play data-icon="inline-start" />
+              Test sound
+            </Button>
+            <Switch
+              aria-label="Interaction sounds"
+              checked={sound.enabled}
+              onCheckedChange={sound.setEnabled}
+            />
+          </div>
+        </div>
+        <p className="settings-panel-footer">On this device.</p>
       </div>
     </section>
   )
@@ -789,19 +784,15 @@ function AgentSettings({
           <h2>General</h2>
         </header>
         <div className="settings-section-body">
-          <CardFrame>
-            <Card className="settings-agent-summary">
-              <div className="settings-preference">
-                <div>
-                  <h3>{agent.name}</h3>
-                  <p>{agent.instructions || "Your personal assistant"}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={onEdit}>
-                  Edit assistant
-                </Button>
-              </div>
-            </Card>
-          </CardFrame>
+          <div className="settings-preference settings-agent-summary">
+            <div>
+              <h3>{agent.name}</h3>
+              <p>{agent.instructions || "Your personal assistant"}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              Edit assistant
+            </Button>
+          </div>
           {family.role === "owner" && (
             <EmailSettings
               agentId={agent.id}
