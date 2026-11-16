@@ -61,6 +61,21 @@ test("desktop settings are non-modal pages inside the shell and retain the chat 
     path: "test-results/settings-pages-desktop.png",
     animations: "disabled",
   })
+  const preferences = settingsFront(page)
+  const appearance = preferences.getByRole("heading", { name: "Appearance" })
+  const theme = preferences.getByRole("group", { name: "Appearance" })
+  for (const width of [768, 800]) {
+    await page.setViewportSize({ width, height: 900 })
+    const labelBounds = (await appearance.boundingBox())!
+    const themeBounds = (await theme.boundingBox())!
+    expect(labelBounds.width).toBeGreaterThan(80)
+    expect(themeBounds.y).toBeGreaterThan(labelBounds.y + labelBounds.height)
+    expect(themeBounds.x + themeBounds.width).toBeLessThan(width)
+    await expect(
+      preferences.getByRole("combobox", { name: "During a reply" })
+    ).toBeVisible()
+  }
+  await page.setViewportSize({ width: 1280, height: 900 })
   await closeSettings(page)
   await expect(composer).toBeVisible()
   await expect(composer).toHaveValue("Keep this conversation draft")

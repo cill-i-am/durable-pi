@@ -294,6 +294,7 @@
 
 .settings-preferences {
   border-block-start: 1px solid var(--border);
+  container: settings-preferences / inline-size;
 }
 
 .settings-preference {
@@ -327,26 +328,78 @@
 .settings-preference-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
   flex-shrink: 0;
 }
 
-.settings-delivery-preference > [data-slot="field"] {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 1fr);
-  gap: 4px 20px;
-  align-items: center;
+.settings-preferences .settings-preference {
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.settings-delivery-preference [data-slot="field-description"] {
-  grid-column: 1;
+.appearance-preference > div:first-child,
+.settings-preference:has(.settings-preference-actions) > div:first-child,
+.settings-preference-actions {
+  flex-basis: 100%;
 }
 
-.settings-delivery-preference [data-slot="select-trigger"] {
-  grid-column: 2;
-  grid-row: 1 / 3;
+.appearance-preference > [data-slot="toggle-group"] {
   width: 100%;
+  justify-content: stretch;
+}
+
+.appearance-preference [data-slot="toggle-group-item"] {
+  flex: 1;
+}
+
+.settings-delivery-preference > [data-slot="field"] {
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  @container settings-preferences (min-width: 400px) {
+    .settings-preferences .settings-preference {
+      flex-wrap: nowrap;
+      gap: 16px;
+    }
+
+    .appearance-preference > div:first-child,
+    .settings-preference:has(.settings-preference-actions) > div:first-child,
+    .settings-preference-actions {
+      flex-basis: auto;
+    }
+
+    .appearance-preference > [data-slot="toggle-group"] {
+      width: auto;
+      justify-content: start;
+    }
+
+    .appearance-preference [data-slot="toggle-group-item"] {
+      flex: auto;
+    }
+
+    .settings-preference-actions {
+      justify-content: flex-end;
+    }
+
+    .settings-delivery-preference > [data-slot="field"] {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 1fr);
+      gap: 4px 20px;
+      align-items: center;
+    }
+
+    .settings-delivery-preference [data-slot="field-description"] {
+      grid-column: 1;
+    }
+
+    .settings-delivery-preference [data-slot="select-trigger"] {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      width: 100%;
+    }
+  }
 }
 
 .appearance-preview {
@@ -959,35 +1012,6 @@
     flex-wrap: wrap;
     padding: 16px 12px;
     gap: 12px;
-  }
-
-  .settings-preference.appearance-preference > div:first-child {
-    flex-basis: 100%;
-  }
-
-  .settings-preference.appearance-preference > [data-slot="toggle-group"] {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .settings-preference.appearance-preference [data-slot="toggle-group-item"] {
-    flex: 1;
-  }
-
-  .settings-preference:has(.settings-preference-actions) > div:first-child,
-  .settings-preference-actions {
-    flex-basis: 100%;
-  }
-
-  .settings-preference-actions {
-    justify-content: space-between;
-  }
-
-  .settings-delivery-preference > [data-slot="field"] {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
   }
 
   .account-security header > div {

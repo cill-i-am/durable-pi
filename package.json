@@ -63,10 +63,10 @@
     "typecheck:typescript": "tsc --noEmit"
   },
   "dependencies": {
-    "@alchemy.run/cloudflare": "2.0.0-beta.84",
-    "@alchemy.run/drizzle": "2.0.0-beta.84",
-    "@alchemy.run/frontend-frameworks": "2.0.0-beta.84",
-    "@alchemy.run/github": "2.0.0-beta.84",
+    "@alchemy.run/cloudflare": "2.0.0-beta.85",
+    "@alchemy.run/drizzle": "2.0.0-beta.85",
+    "@alchemy.run/frontend-frameworks": "2.0.0-beta.85",
+    "@alchemy.run/github": "2.0.0-beta.85",
     "@base-ui/react": "^1.9.0",
     "@better-auth/passkey": "1.7.14",
     "@chat-adapter/whatsapp": "4.43.0",
@@ -100,7 +100,7 @@
     "@xterm/addon-fit": "0.11.0",
     "@xterm/xterm": "6.0.0",
     "agents": "0.32.0",
-    "alchemy": "2.0.0-beta.84",
+    "alchemy": "2.0.0-beta.85",
     "better-auth": "1.7.14",
     "chat": "4.43.0",
     "class-variance-authority": "^0.7.1",

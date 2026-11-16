@@ -200,7 +200,7 @@ patchedDependencies:
 overrides:
   workerd: 1.20261031.1
 packageExtensions:
-  "@alchemy.run/cloudflare-runtime@2.0.0-beta.84":
+  "@alchemy.run/cloudflare-runtime@2.0.0-beta.85":
     dependencies:
       rolldown: 1.2.13
 
