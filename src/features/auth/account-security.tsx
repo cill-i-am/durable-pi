@@ -326,7 +326,7 @@ function TwoFactorCard({
 }) {
   return (
     <section
-      className="flex flex-wrap items-center gap-4 rounded-lg border p-5 max-sm:grid max-sm:grid-cols-[20px_1fr]"
+      className="flex flex-wrap items-center gap-4 max-sm:grid max-sm:grid-cols-[20px_1fr]"
       aria-labelledby="two-factor-heading"
     >
       <ShieldCheck className="size-5 text-primary" />

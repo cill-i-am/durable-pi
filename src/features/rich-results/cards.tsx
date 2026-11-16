@@ -4,9 +4,8 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFrame,
+  CardFooter,
   CardHeader,
-  CardFrameFooter,
   CardTitle,
 } from "@workspace/ui/components/card"
 import {
@@ -18,7 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
-import { cn } from "cn"
 import { MapPin, Navigation, ExternalLink } from "lucide-react"
 import { useId, type ReactNode } from "react"
 
@@ -46,51 +44,45 @@ export function ResultCard({
   panel?: ReactNode
   children: ReactNode
 }) {
-  const card = (
-    <Card
-      className={cn(
-        "w-full min-w-0 whitespace-normal",
-        !provenance && !panel && "rich-result"
-      )}
-    >
+  return (
+    <Card className="rich-result w-full min-w-0 whitespace-normal shadow-none">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
         {action && <CardAction>{action}</CardAction>}
       </CardHeader>
       <CardContent>{children}</CardContent>
-    </Card>
-  )
-  if (!provenance && !panel) return card
-  return (
-    <CardFrame className="rich-result w-full min-w-0 whitespace-normal">
-      {card}
-      <CardFrameFooter className="answer-result-footer justify-between">
-        {panel}
-        {provenance && (
-          <>
-            {provenance.source.url ? (
-              <a
-                className="inline-flex min-w-0 items-center gap-1 text-xs break-words text-muted-foreground underline-offset-4 hover:underline"
-                href={provenance.source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {provenance.source.label}
-                <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
-              </a>
-            ) : (
+      {(provenance || panel) && (
+        <CardFooter className="answer-result-footer justify-between bg-transparent">
+          {panel}
+          {provenance && (
+            <>
+              {provenance.source.url ? (
+                <a
+                  className="inline-flex min-w-0 items-center gap-1 text-xs break-words text-muted-foreground underline-offset-4 hover:underline"
+                  href={provenance.source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {provenance.source.label}
+                  <ExternalLink
+                    className="size-3 shrink-0"
+                    aria-hidden="true"
+                  />
+                </a>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {provenance.source.label}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">
-                {provenance.source.label}
+                As of {provenance.asOf}
               </span>
-            )}
-            <span className="text-xs text-muted-foreground">
-              As of {provenance.asOf}
-            </span>
-          </>
-        )}
-      </CardFrameFooter>
-    </CardFrame>
+            </>
+          )}
+        </CardFooter>
+      )}
+    </Card>
   )
 }
 export function CalculationCard(props: AnswerProps<"Calculation">) {

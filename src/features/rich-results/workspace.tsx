@@ -14,14 +14,18 @@ import {
 export function AnswerWorkspace({
   title,
   description,
+  summary,
   sidebar,
   toolbar,
+  renderSurface,
   children,
 }: {
   title: string
   description: string
+  summary?: string
   sidebar?: ReactNode
   toolbar?: ReactNode
+  renderSurface: (content: ReactNode) => ReactNode
   children: ReactNode
 }) {
   const workspace = useContext(ResultWorkspaceContext)
@@ -32,50 +36,53 @@ export function AnswerWorkspace({
   const ownsSurface =
     source?.surface === "workbench" && source.reference === reference
   const compact = promoted && !ownsSurface
-  return (
-    <div className="answer-workspace flex min-w-0 flex-col gap-4">
-      {compact ? (
-        <div className="answer-workspace-source">
+  if (compact)
+    return (
+      <div className="rich-result answer-workspace-source">
+        <div>
           <p className="font-medium">{title}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => workspace?.open(reference!)}
-          >
-            View in workbench <ArrowUpRight data-icon="inline-end" />
-          </Button>
+          {summary && (
+            <p className="text-sm text-muted-foreground">{summary}</p>
+          )}
         </div>
-      ) : (
-        <>
-          {toolbar && (
-            <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
-          )}
-          <div
-            className={
-              ownsSurface && sidebar
-                ? "grid min-w-0 gap-6 @3xl:grid-cols-[16rem_minmax(0,1fr)]"
-                : "min-w-0"
-            }
-          >
-            {ownsSurface && sidebar && (
-              <aside className="flex min-w-0 flex-col gap-5 rounded-lg bg-muted/40 p-5">
-                {sidebar}
-              </aside>
-            )}
-            <div className="@container min-w-0">{children}</div>
-          </div>
-          {workspace && reference && source?.surface !== "workbench" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-end"
-              aria-description={description}
-              onClick={() => workspace.open(reference)}
-            >
-              Open in workbench <ArrowUpRight data-icon="inline-end" />
-            </Button>
-          )}
-        </>
+        <Button
+          variant="link"
+          size="sm"
+          onClick={() => workspace?.open(reference!)}
+        >
+          View in workbench <ArrowUpRight data-icon="inline-end" />
+        </Button>
+      </div>
+    )
+  return renderSurface(
+    <div className="answer-workspace flex min-w-0 flex-col gap-4">
+      {toolbar && (
+        <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
+      )}
+      <div
+        className={
+          ownsSurface && sidebar
+            ? "grid min-w-0 gap-6 @3xl:grid-cols-[16rem_minmax(0,1fr)]"
+            : "min-w-0"
+        }
+      >
+        {ownsSurface && sidebar && (
+          <aside className="flex min-w-0 flex-col gap-5 rounded-lg bg-muted/40 p-5">
+            {sidebar}
+          </aside>
+        )}
+        <div className="@container min-w-0">{children}</div>
+      </div>
+      {workspace && reference && source?.surface !== "workbench" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-end"
+          aria-description={description}
+          onClick={() => workspace.open(reference)}
+        >
+          Open in workbench <ArrowUpRight data-icon="inline-end" />
+        </Button>
       )}
     </div>
   )

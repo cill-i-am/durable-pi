@@ -731,6 +731,9 @@ test("mobile Family invitation stays a nested sheet and dismisses back to the wo
   })
   await expect(invitation).toBeVisible()
   await expect(invitation).toHaveAttribute("data-overlay-mobile", "true")
+  await expect
+    .poll(async () => (await settingsFront(page).boundingBox())?.height ?? 0)
+    .toBeGreaterThan(600)
   await invitation
     .getByLabel("Email address", { exact: true })
     .fill("unsent@example.invalid")

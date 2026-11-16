@@ -4,12 +4,7 @@ import "./execution.css"
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
-import {
-  CardFrame,
-  Card,
-  CardContent,
-  CardFrameFooter,
-} from "@workspace/ui/components/card"
+import { Card, CardContent, CardFooter } from "@workspace/ui/components/card"
 import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
 import { Textarea } from "@workspace/ui/components/textarea"
@@ -82,44 +77,46 @@ export function ExecutionWorkbench({
           />
         )}
         {run && (
-          <CardFrame aria-label="Run output" className="execution-result">
-            <Card>
-              <CardContent className="flex flex-col gap-3 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-medium">Result</h3>
-                  <Badge variant="secondary">
-                    {run.status === "succeeded" ? "Completed" : run.status}
-                  </Badge>
-                </div>
-                {run.status === "running" && (
-                  <p className="text-sm text-muted-foreground">
-                    Running… You can close this panel; the result will be saved.
-                  </p>
-                )}
-                {run.status === "interrupted" && (
-                  <p className="text-sm">
-                    This run was interrupted. It has not been repeated. Review
-                    its code before starting a new run.
-                  </p>
-                )}
-                {run.status === "cancelled" && (
-                  <p className="text-sm text-muted-foreground">
-                    Run cancelled. Late output will not replace this result.
-                  </p>
-                )}
-                {run.output?.error && (
-                  <Alert>
-                    <AlertDescription>{run.output.error}</AlertDescription>
-                  </Alert>
-                )}
-                {run.output?.result && (
-                  <pre className="max-h-72 overflow-auto rounded-md border bg-muted/30 p-3 text-xs break-words whitespace-pre-wrap">
-                    {run.output.result}
-                  </pre>
-                )}
-              </CardContent>
-            </Card>
-            <CardFrameFooter className="flex-col items-stretch gap-3">
+          <Card
+            role="region"
+            aria-label="Run output"
+            className="execution-result shadow-none"
+          >
+            <CardContent className="flex flex-col gap-3 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">Result</h3>
+                <Badge variant="secondary">
+                  {run.status === "succeeded" ? "Completed" : run.status}
+                </Badge>
+              </div>
+              {run.status === "running" && (
+                <p className="text-sm text-muted-foreground">
+                  Running… You can close this panel; the result will be saved.
+                </p>
+              )}
+              {run.status === "interrupted" && (
+                <p className="text-sm">
+                  This run was interrupted. It has not been repeated. Review its
+                  code before starting a new run.
+                </p>
+              )}
+              {run.status === "cancelled" && (
+                <p className="text-sm text-muted-foreground">
+                  Run cancelled. Late output will not replace this result.
+                </p>
+              )}
+              {run.output?.error && (
+                <Alert>
+                  <AlertDescription>{run.output.error}</AlertDescription>
+                </Alert>
+              )}
+              {run.output?.result && (
+                <pre className="max-h-72 overflow-auto text-xs break-words whitespace-pre-wrap">
+                  {run.output.result}
+                </pre>
+              )}
+            </CardContent>
+            <CardFooter className="flex-col items-stretch gap-3 bg-transparent">
               {run.output?.logs && (
                 <details>
                   <summary className="cursor-pointer text-xs font-medium">
@@ -140,8 +137,8 @@ export function ExecutionWorkbench({
                   {run.input.data}
                 </pre>
               </details>
-            </CardFrameFooter>
-          </CardFrame>
+            </CardFooter>
+          </Card>
         )}
         <section
           className="flex flex-col gap-2 border-t pt-4"

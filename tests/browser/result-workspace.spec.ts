@@ -160,6 +160,11 @@ test("recorded result filters and unfinished filter input survive promotion, hid
     .getByRole("button", { name: "Hide workbench", exact: true })
     .click()
   await expect(page).toHaveURL(/\/agents\/navi$/)
+  await expect(inline).toHaveClass(/answer-workspace-source/)
+  await expect(inline.getByText(title, { exact: true })).toHaveCount(1)
+  await expect(
+    inline.getByRole("textbox", { name: `Filter ${title}`, exact: true })
+  ).toHaveCount(0)
   await inline
     .getByRole("button", { name: "View in workbench", exact: true })
     .click()

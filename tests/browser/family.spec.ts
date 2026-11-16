@@ -53,13 +53,21 @@ async function assertFits(page: Page) {
 
 test("admin can invite and remove with safe focus and retained private data copy", async ({
   page,
-}) => {
+  isMobile,
+}, info) => {
   const data = structuredClone(family)
+  let attempts = 0
   await page.route("**/api/family", (route) => route.fulfill({ json: data }))
   await page.route("**/api/auth/organization/invite-member", async (route) => {
     const body = route.request().postDataJSON()
     expect(body.organizationId).toBe("family")
     expect(body.role).toBe("member")
+    expect(body.email).toBe("taylor@example.invalid")
+    if (++attempts === 1)
+      return route.fulfill({
+        status: 400,
+        json: { message: "Could not create this invitation." },
+      })
     data.invitations = [
       {
         id: "invitation-fixture",
@@ -83,17 +91,57 @@ test("admin can invite and remove with safe focus and retained private data copy
   ).toBeVisible()
   await expect(page.getByText("Your work stays yours")).toBeVisible()
   await assertFits(page)
-  await page.getByRole("button", { name: "Invite someone" }).click()
-  await page.getByLabel("Email address").fill("taylor@example.invalid")
-  await page
-    .getByRole("button", { name: "Send invitation", exact: true })
-    .click()
+  const invitations = page.getByRole("region", { name: "Invitations" })
+  const trigger = invitations.getByRole("button", { name: "Invite someone" })
+  const drawer = page.getByRole("dialog", { name: "Invite someone" })
+  const form = isMobile ? drawer : invitations
+  if (isMobile) {
+    await expect(invitations.getByLabel("Email address")).toHaveCount(0)
+    await trigger.click()
+    await expect(drawer).toHaveAttribute("data-overlay-mobile", "true")
+    await expect(drawer).toHaveAttribute("data-mobile-layout", "content")
+  } else {
+    await expect(trigger).toHaveCount(0)
+    await expect(page.getByRole("dialog")).toHaveCount(0)
+    const list = await invitations
+      .getByText("No pending invitations.")
+      .boundingBox()
+    const field = await form.getByLabel("Email address").boundingBox()
+    expect(list).not.toBeNull()
+    expect(field).not.toBeNull()
+    expect(field!.x).toBeGreaterThanOrEqual(list!.x + list!.width)
+  }
+  const email = form.getByLabel("Email address")
+  const send = form.getByRole("button", {
+    name: "Send invitation",
+    exact: true,
+  })
+  await expect(send).toBeDisabled()
+  await email.fill("taylor@example.invalid")
+  await send.click()
+  await expect(form.getByRole("alert")).toContainText(
+    "Could not create this invitation."
+  )
+  await expect(email).toHaveValue("taylor@example.invalid")
+  await expect(send).toBeEnabled()
+  await page.screenshot({ path: info.outputPath("family-invite.png") })
+  await email.press("Enter")
+  if (isMobile) {
+    await expect(
+      page.getByRole("heading", { name: "Invitation sent" })
+    ).toBeVisible()
+    await page.getByRole("button", { name: "Done", exact: true }).click()
+    await expect(drawer).not.toBeVisible()
+    await expect(trigger).toBeFocused()
+  } else {
+    await expect(invitations.getByRole("status")).toContainText(
+      "Invitation sent to taylor@example.invalid."
+    )
+    await expect(email).toHaveValue("")
+  }
+  expect(attempts).toBe(2)
   await expect(
-    page.getByRole("heading", { name: "Invitation sent" })
-  ).toBeVisible()
-  await page.getByRole("button", { name: "Done", exact: true }).click()
-  await expect(
-    page.getByText("taylor@example.invalid", { exact: true })
+    invitations.getByText("taylor@example.invalid", { exact: true })
   ).toBeVisible()
   await page.getByRole("button", { name: "Manage Claire", exact: true }).click()
   await page.getByRole("menuitem", { name: "Remove from family" }).click()
@@ -124,6 +172,7 @@ test("member family screen is read only, and a shared model outage preserves an 
   await expect(
     page.getByRole("button", { name: "Invite someone" })
   ).toHaveCount(0)
+  await expect(page.getByLabel("Email address")).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Manage Claire" })).toHaveCount(
     0
   )

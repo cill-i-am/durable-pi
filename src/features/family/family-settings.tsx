@@ -4,10 +4,12 @@ import { Button } from "@workspace/ui/components/button"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
+import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
 import { Effect, Fiber } from "effect"
 import {
   ArrowUpRight,
@@ -15,9 +17,8 @@ import {
   LockKeyhole,
   MoreHorizontal,
   Plus,
-  Users,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import type { SnapshotFrom } from "xstate"
 
 import { authClient } from "@/auth/client"
@@ -41,8 +42,9 @@ import {
   SheetContent,
   SheetDescription,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet"
-import type { FamilyMember } from "@/family/contracts"
+import type { FamilyInvitation, FamilyMember } from "@/family/contracts"
 
 import { useFamily } from "./context"
 import { makeFamilyChange } from "./family-change-owner"
@@ -57,7 +59,6 @@ export function FamilySettings({
 }) {
   const { family, refresh, current } = useFamily()
   const authority = `${family.id}:${family.members.find((member) => member.role === "owner")?.id}`
-  const [inviteOpen, setInviteOpen] = useState(false)
   const [removing, setRemoving] = useState<typeof FamilyMember.Type | null>(
     null
   )
@@ -128,49 +129,38 @@ export function FamilySettings({
       Effect.runFork(Fiber.interrupt(fiber))
     }
   }, [authority, current, refresh])
-  const { pending, error, notice, sent, removed } = changeView(
+  const { pending, error, notice, command, removed } = changeView(
     snapshot,
     removing
   )
+  const invite = command?.kind === "invite" ? command : null
+  const owner = family.role === "owner"
   useEffect(() => {
     onPendingChange(pending)
     return () => onPendingChange(false)
   }, [pending, onPendingChange])
+
   function change(command: FamilyChange) {
     resource.current?.actor.send({ type: "CHANGE", command })
   }
   function reset() {
     resource.current?.actor.send({ type: "RESET" })
   }
-  const owner = family.role === "owner"
+
   return (
     <section className="settings-section family-settings" aria-label="Family">
-      <header className="settings-section-heading family-heading">
-        <div>
-          <h2>Family</h2>
-          <p>One family. A private space for each person.</p>
-        </div>
-        {owner && (
-          <Button
-            onClick={() => {
-              reset()
-              setInviteOpen(true)
-            }}
-            disabled={pending}
-          >
-            <Plus />
-            Invite someone
-          </Button>
-        )}
+      <header className="settings-section-heading">
+        <h2>Family</h2>
+        <p>One family. A private space for each person.</p>
       </header>
       <div className="settings-section-body">
-        {error && (
+        {!invite && error && (
           <Alert role="alert">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         <div role="status" className="family-notice">
-          {notice && (
+          {!invite && notice && (
             <>
               <Check />
               {notice}
@@ -185,7 +175,7 @@ export function FamilySettings({
               {family.members.length === 1 ? "person" : "people"}
             </span>
           </div>
-          <ul className="family-roster">
+          <ul>
             {family.members.map((person) => (
               <li className="family-person" key={person.id}>
                 <span className="family-avatar" aria-hidden="true">
@@ -235,75 +225,15 @@ export function FamilySettings({
           </ul>
         </section>
         {owner && (
-          <section aria-labelledby="family-invitations">
-            <div className="family-section-label">
-              <h3 id="family-invitations">Invitations</h3>
-              <span>{family.invitations.length} pending</span>
-            </div>
-            {family.invitations.length ? (
-              <ul className="family-roster">
-                {family.invitations.map((invite) => (
-                  <li
-                    className="family-person family-invitation"
-                    key={invite.id}
-                  >
-                    <span className="family-avatar" aria-hidden="true">
-                      <Users />
-                    </span>
-                    <div className="family-person-name">
-                      <strong>{invite.email}</strong>
-                      <span>{invitationStatus(invite)}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      disabled={pending}
-                      onClick={() =>
-                        change({
-                          kind: "resend",
-                          id: invite.id,
-                          email: invite.email,
-                        })
-                      }
-                    >
-                      Resend
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Manage invitation for ${invite.email}`}
-                            disabled={pending}
-                          />
-                        }
-                      >
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        mobileTitle="Invitation actions"
-                      >
-                        <DropdownMenuGroup>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              change({ kind: "cancel", id: invite.id })
-                            }
-                          >
-                            Cancel invitation
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="family-empty">
-                No pending invitations. Invite someone when you’re ready.
-              </p>
-            )}
-          </section>
+          <FamilyInvitations
+            invitations={family.invitations}
+            pending={pending}
+            invite={invite}
+            error={error}
+            notice={notice}
+            change={change}
+            reset={reset}
+          />
         )}
         <section className="family-model-row" aria-labelledby="family-model">
           <div>
@@ -333,17 +263,6 @@ export function FamilySettings({
           </p>
         )}
       </div>
-      {inviteOpen && (
-        <InviteSheet
-          open={inviteOpen}
-          onOpenChange={setInviteOpen}
-          familyName={family.name}
-          pending={pending}
-          onInvite={(email) => change({ kind: "invite", email })}
-          sent={sent}
-          error={error}
-        />
-      )}
       <AlertDialog
         open={!!removing && !removed}
         dismissible={!pending}
@@ -405,10 +324,191 @@ function changeView(
   const error = snapshot?.context.error ?? ""
   const notice = snapshot?.context.notice ?? ""
   const command = snapshot?.context.command
-  const sent = !!notice && command?.kind === "invite"
   const removed =
     !!notice && command?.kind === "remove" && command.id === removing?.id
-  return { pending, error, notice, sent, removed }
+  return { pending, error, notice, command, removed }
+}
+
+function FamilyInvitations({
+  invitations,
+  pending,
+  invite,
+  error,
+  notice,
+  change,
+  reset,
+}: {
+  invitations: readonly (typeof FamilyInvitation.Type)[]
+  pending: boolean
+  invite: Extract<FamilyChange, { kind: "invite" }> | null
+  error: string
+  notice: string
+  change: (command: FamilyChange) => void
+  reset: () => void
+}) {
+  const mobile = useIsMobile()
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState("")
+  const inviteNotice = invite && !pending ? notice : ""
+  const inviteError = invite && !pending ? error : ""
+  useEffect(() => {
+    if (inviteNotice) setInviteEmail("")
+  }, [inviteNotice])
+  useEffect(() => {
+    if (!mobile) setInviteOpen(false)
+  }, [mobile])
+
+  const failedDelivery =
+    invite &&
+    invitations.some(
+      (item) =>
+        item.delivery === "failed" &&
+        item.email.toLowerCase() === invite.email.toLowerCase()
+    )
+  const inviteForm = {
+    email: inviteEmail,
+    pending,
+    sending: pending && !!invite,
+    error:
+      inviteError && failedDelivery
+        ? `${inviteError} Use Resend in Invitations to try again.`
+        : inviteError,
+    onEmailChange(email: string) {
+      if (inviteError || inviteNotice) reset()
+      setInviteEmail(email)
+    },
+    onSubmit(email: string) {
+      change({ kind: "invite", email })
+    },
+  }
+  function changeInviteOpen(open: boolean) {
+    if (pending) return
+    reset()
+    setInviteOpen(open)
+    if (!open) setInviteEmail("")
+  }
+
+  return (
+    <section
+      className="family-invitations-layout"
+      aria-labelledby="family-invitations"
+    >
+      <div className="family-invitations-list">
+        <div className="family-section-label">
+          <h3 id="family-invitations">Invitations</h3>
+          <span>{invitations.length} pending</span>
+        </div>
+        {invitations.length ? (
+          <ul>
+            {invitations.map((invite) => (
+              <li className="family-person" key={invite.id}>
+                <div className="family-person-name">
+                  <strong>{invite.email}</strong>
+                  <span>{invitationStatus(invite)}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() =>
+                    change({
+                      kind: "resend",
+                      id: invite.id,
+                      email: invite.email,
+                    })
+                  }
+                >
+                  Resend
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Manage invitation for ${invite.email}`}
+                        disabled={pending}
+                      />
+                    }
+                  >
+                    <MoreHorizontal />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    mobileTitle="Invitation actions"
+                  >
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          change({ kind: "cancel", id: invite.id })
+                        }
+                      >
+                        Cancel invitation
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="family-empty">No pending invitations.</p>
+        )}
+      </div>
+      {mobile ? (
+        <Sheet
+          open={inviteOpen}
+          onOpenChange={changeInviteOpen}
+          dismissible={!pending}
+        >
+          <SheetTrigger
+            render={<Button variant="outline" disabled={pending} />}
+          >
+            <Plus data-icon="inline-start" aria-hidden="true" />
+            Invite someone
+          </SheetTrigger>
+          <SheetContent
+            className="family-invite-sheet"
+            showCloseButton={!pending}
+          >
+            <header>
+              <SheetTitle>
+                {inviteNotice ? "Invitation sent" : "Invite someone"}
+              </SheetTitle>
+              <SheetDescription className="sr-only">
+                Invite a family member by email.
+              </SheetDescription>
+            </header>
+            {inviteNotice ? (
+              <>
+                <p role="status">{inviteNotice}</p>
+                <div className="family-invite-footer">
+                  <Button onClick={() => changeInviteOpen(false)}>Done</Button>
+                </div>
+              </>
+            ) : (
+              <InviteForm
+                {...inviteForm}
+                onCancel={() => changeInviteOpen(false)}
+              />
+            )}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <div className="family-invite-inline">
+          <h3>Invite someone</h3>
+          <InviteForm {...inviteForm} />
+          <div role="status" className="family-notice">
+            {inviteNotice && (
+              <>
+                <Check aria-hidden="true" />
+                {inviteNotice}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  )
 }
 
 function invitationStatus(invite: { delivery: string; status: string }) {
@@ -419,120 +519,68 @@ function invitationStatus(invite: { delivery: string; status: string }) {
     : "Waiting to join"
 }
 
-function InviteSheet({
-  open,
-  onOpenChange,
-  familyName,
+function InviteForm({
+  email,
   pending,
-  onInvite,
-  sent,
+  sending,
   error,
+  onEmailChange,
+  onSubmit,
+  onCancel,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  familyName: string
+  email: string
   pending: boolean
-  onInvite: (email: string) => void
-  sent: boolean
+  sending: boolean
   error: string
+  onEmailChange: (email: string) => void
+  onSubmit: (email: string) => void
+  onCancel?: () => void
 }) {
-  const [email, setEmail] = useState("")
+  const id = useId()
+  const address = email.trim()
   return (
-    <Sheet
-      open={open}
-      dismissible={!pending}
-      onOpenChange={(value) => {
-        if (!pending) {
-          onOpenChange(value)
-          if (!value) {
-            setEmail("")
-          }
-        }
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (address && !pending) onSubmit(address)
       }}
     >
-      <SheetContent className="family-invite-sheet" mobileLayout="panel">
-        <header>
-          <SheetTitle>{sent ? "Invitation sent" : "Invite someone"}</SheetTitle>
-          <SheetDescription>
-            {sent
-              ? `${email} can now join ${familyName}.`
-              : `Give someone their own private space in ${familyName}.`}
-          </SheetDescription>
-        </header>
-        {sent ? (
-          <>
-            <div className="family-sent">
-              <Check />
-              <h2>They’re on the list.</h2>
-              <p>
-                We’ve sent an email with a link to join. You can resend or
-                cancel it from Family settings.
-              </p>
-            </div>
-            <Button onClick={() => onOpenChange(false)}>Done</Button>
-          </>
-        ) : (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault()
-              onInvite(email.trim())
-            }}
-          >
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="family-invite-email">
-                  Email address
-                </FieldLabel>
-                <Input
-                  id="family-invite-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  required
-                  maxLength={254}
-                  disabled={pending}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-                <FieldDescription>
-                  The invitation expires in 7 days.
-                </FieldDescription>
-              </Field>
-              <div className="family-privacy">
-                <LockKeyhole />
-                <div>
-                  <h3>A private workspace</h3>
-                  <p>
-                    They’ll have their own chats, agents, memory, files and
-                    connected accounts, with access to the family’s ChatGPT
-                    connection.
-                  </p>
-                </div>
-              </div>
-              {error && (
-                <Alert role="alert">
-                  <AlertDescription>
-                    {error} If delivery failed, the invitation remains in Family
-                    settings. Use Resend to try again.
-                  </AlertDescription>
-                </Alert>
-              )}
-              <div className="family-invite-footer">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={pending || !email.trim()}>
-                  {pending ? "Sending…" : "Send invitation"}
-                </Button>
-              </div>
-            </FieldGroup>
-          </form>
-        )}
-      </SheetContent>
-    </Sheet>
+      <FieldGroup className="gap-3">
+        <Field>
+          <FieldLabel htmlFor={id}>Email address</FieldLabel>
+          <Input
+            id={id}
+            type="email"
+            autoComplete="email"
+            placeholder="name@example.com"
+            value={email}
+            required
+            maxLength={254}
+            readOnly={pending}
+            aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
+            onChange={(event) => onEmailChange(event.target.value)}
+          />
+          <FieldDescription id={`${id}-hint`}>
+            The invitation expires in 7 days.
+          </FieldDescription>
+          <FieldError id={`${id}-error`}>{error}</FieldError>
+        </Field>
+        <div className="family-invite-footer">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" disabled={pending || !address}>
+            {sending ? "Sending…" : "Send invitation"}
+          </Button>
+        </div>
+      </FieldGroup>
+    </form>
   )
 }

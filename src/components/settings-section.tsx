@@ -1,4 +1,3 @@
-import { Card, CardFrame } from "@workspace/ui/components/card"
 import type { ReactNode } from "react"
 
 export function SettingsSection({
@@ -18,9 +17,7 @@ export function SettingsSection({
         <h2>{title}</h2>
         <p>{description}</p>
       </header>
-      <CardFrame className="settings-panel">
-        <Card className="settings-panel-content">{children}</Card>
-      </CardFrame>
+      {children}
     </section>
   )
 }

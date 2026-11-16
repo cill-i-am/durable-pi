@@ -163,11 +163,8 @@
   flex-direction: column;
   min-width: 0;
   gap: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--border);
 }
 .checklist-task-editor > :last-child {
   flex-wrap: wrap;

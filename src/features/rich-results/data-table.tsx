@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select"
 import { webUrl, type AnswerProps } from "@/rich-results/catalog"
 
+import { ResultCard } from "./cards"
 import { useResultViewState } from "./result-view-state"
 import {
   TableControls,
@@ -93,7 +94,9 @@ export function DataTableView({
   title,
   columns,
   rows,
-}: Pick<AnswerProps<"DataTable">, "title" | "columns" | "rows">) {
+  source,
+  asOf,
+}: AnswerProps<"DataTable">) {
   const [sorting, setSorting] = useResultViewState<SortingState>(
     "table-sort",
     []
@@ -188,7 +191,13 @@ export function DataTableView({
   return (
     <AnswerWorkspace
       title={title}
+      summary={`${rows.length} ${rows.length === 1 ? "row" : "rows"}`}
       description="Filter, sort and explore your data. CSV exports include visible columns and all filtered rows in their current sort order."
+      renderSurface={(content) => (
+        <ResultCard title={title} provenance={{ source, asOf }}>
+          {content}
+        </ResultCard>
+      )}
     >
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-2">

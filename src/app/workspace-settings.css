@@ -216,23 +216,13 @@
   font-weight: 500;
 }
 
-.settings-panel,
-.settings-preferences-frame {
-  min-height: 0;
-}
-
-.settings-panel-content {
-  min-height: 0;
-  overflow: clip;
-}
-
 .settings-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding-block: 12px;
   border-block-end: 1px solid var(--border);
 }
 
@@ -241,13 +231,12 @@
   flex-direction: column;
   min-width: 0;
   gap: 24px;
-  padding: 16px;
+  padding-block: 16px;
 }
 
 .settings-panel-footer {
-  padding: 16px;
+  padding-block: 16px;
   border-block-start: 1px solid var(--border);
-  background: var(--surface-underlay);
   color: var(--muted-foreground);
   font-size: 13px;
   line-height: 20px;
@@ -258,10 +247,8 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--card);
+  padding-block: 12px;
+  border-block-start: 1px solid var(--border);
 }
 
 .settings-skill-row {
@@ -285,9 +272,8 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  padding-block: 12px;
+  border-block-start: 1px solid var(--border);
 }
 
 .settings-selected-skill > span {
@@ -306,21 +292,19 @@
   line-height: 22px;
 }
 
-.settings-preferences-card {
-  gap: 0;
-  overflow: clip;
+.settings-preferences {
+  border-block-start: 1px solid var(--border);
 }
 
 .settings-preference {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px;
-  border-block-end: 1px solid var(--border);
+  padding-block: 16px;
 }
 
-.settings-preference:last-child {
-  border-block-end: 0;
+.settings-preference + .settings-preference {
+  border-block-start: 1px solid var(--border);
 }
 
 .settings-preference > div:first-child {
@@ -369,7 +353,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding-block: 12px;
   color: var(--muted-foreground);
   font-size: 13px;
   line-height: 20px;
@@ -378,24 +362,29 @@
 .profile-photo {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .profile-photo-identity {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 24px;
-  border-block-end: 1px solid var(--border);
   overflow-wrap: anywhere;
 }
 
-.profile-photo-fields {
-  padding: 24px;
+.profile-photo-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--border);
 }
 
-.settings-agent-summary .settings-preference {
+.settings-agent-summary {
   align-items: flex-start;
+  padding-block-start: 0;
 }
 
 .settings-agent-summary p {
@@ -411,11 +400,11 @@
   min-width: 0;
   align-items: stretch;
   gap: 20px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
+}
+
+.settings-channel {
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--border);
 }
 
 .settings-provider p,
@@ -433,15 +422,6 @@
   gap: 8px;
   padding-block-start: 16px;
   border-block-start: 1px solid var(--border);
-}
-
-.settings-model-form > [data-slot="field-group"] {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.settings-model-form > [data-slot="field-group"] > :first-child {
-  grid-column: 1 / -1;
 }
 
 .settings-save-status {
@@ -520,14 +500,11 @@
   padding-inline-end: 0;
 }
 
-.account-security > section,
+.account-security > section[aria-labelledby],
 .account-security .passkey-settings {
   margin: 0;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--border);
 }
 
 .account-security h2:not(:first-child),
@@ -551,16 +528,13 @@
   border: 0;
 }
 
-.family-heading,
 .family-section-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-}
-
-.family-section-label {
-  margin-block-end: 12px;
+  padding-block-end: 10px;
+  border-block-end: 1px solid var(--border);
 }
 
 .family-section-label > span {
@@ -568,20 +542,12 @@
   font-size: 13px;
 }
 
-.family-roster {
-  padding-inline: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
-}
-
 .family-person {
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
-  padding-block: 16px;
+  padding-block: 12px;
 }
 
 .family-person + .family-person {
@@ -600,11 +566,6 @@
   color: var(--muted-foreground);
   font-size: 13px;
   font-weight: 500;
-}
-
-.family-avatar svg {
-  width: 16px;
-  height: 16px;
 }
 
 .family-person-name {
@@ -641,10 +602,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--border);
 }
 
 .family-model-row p {
@@ -699,25 +658,48 @@
   height: 16px;
 }
 
-.family-invite-sheet[data-slot="sheet-content"] {
-  width: 480px;
-  max-width: 100%;
+.family-settings .settings-section-body {
+  container: family-settings / inline-size;
 }
 
-.family-invite-sheet > .responsive-overlay-body {
-  gap: 24px;
-  padding: 24px;
+.family-invitations-layout {
+  display: grid;
+  align-items: start;
+  justify-items: start;
+  gap: 16px;
+}
+
+.family-invitations-list,
+.family-invite-inline {
+  width: 100%;
+  min-width: 0;
+}
+
+.family-invite-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@container family-settings (min-width: 600px) {
+  .family-invitations-layout {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 32px;
+  }
+}
+
+.family-invite-sheet[data-slot="sheet-content"][data-overlay-mobile="true"]
+  > .responsive-overlay-body {
+  gap: 16px;
+  padding: 8px 20px max(24px, env(safe-area-inset-bottom));
 }
 
 .family-invite-sheet header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-inline-end: 32px;
+  padding-inline-end: 44px;
 }
 
-.family-invite-sheet [data-slot="field-group"] {
-  gap: 24px;
+.family-invite-sheet .overlay-close {
+  inset-block-start: 24px;
 }
 
 .family-invite-footer {
@@ -725,31 +707,6 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.family-sent {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-block: 24px;
-}
-
-.family-sent > svg {
-  width: 32px;
-  height: 32px;
-  color: var(--primary);
-}
-
-.family-sent h2 {
-  font-size: 20px;
-  line-height: 26px;
-  font-weight: 600;
-}
-
-.family-sent p {
-  color: var(--muted-foreground);
-  font-size: 14px;
-  line-height: 22px;
 }
 
 @media (min-width: 768px) {
@@ -908,6 +865,12 @@
 }
 
 @media (max-width: 767px) {
+  .settings-route-drawer[data-nested-drawer-open]:has(
+      .family-invitations-layout > [aria-expanded="true"]
+    ) {
+    height: 100%;
+  }
+
   .workspace-settings > .responsive-overlay-body {
     display: flex;
     flex: 1;
@@ -1027,23 +990,6 @@
     gap: 8px;
   }
 
-  .profile-photo-identity,
-  .profile-photo-fields {
-    padding: 20px 16px;
-  }
-
-  .settings-channel,
-  .settings-provider,
-  .settings-model-form,
-  .account-security > section,
-  .account-security .passkey-settings {
-    padding: 16px;
-  }
-
-  .settings-model-form > [data-slot="field-group"] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .account-security header > div {
     flex-wrap: wrap;
     gap: 12px;
@@ -1057,14 +1003,6 @@
     flex-basis: calc(100% - 40px);
   }
 
-  .family-heading {
-    flex-wrap: wrap;
-  }
-
-  .family-roster {
-    padding-inline: 12px;
-  }
-
   .family-person {
     gap: 8px;
   }
@@ -1072,30 +1010,6 @@
   .family-avatar {
     width: 32px;
     height: 32px;
-  }
-
-  .family-invitation {
-    flex-wrap: wrap;
-  }
-
-  .family-invitation .family-person-name {
-    flex-basis: calc(100% - 44px);
-  }
-
-  .family-invitation > [data-slot="button"]:nth-last-child(2) {
-    margin-inline-start: 40px;
-  }
-
-  .family-invite-sheet[data-slot="sheet-content"] {
-    width: 100%;
-  }
-
-  .family-invite-sheet > .responsive-overlay-body {
-    padding: 16px 20px max(20px, env(safe-area-inset-bottom));
-  }
-
-  .family-invite-footer > [data-slot="button"] {
-    flex: 1;
   }
 
   .settings-access-row > [data-slot="toggle-group"] {

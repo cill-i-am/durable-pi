@@ -1,11 +1,3 @@
-import {
-  Card,
-  CardHeader,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@workspace/ui/components/card"
-
 import { AgentMark } from "@/components/agent-mark"
 import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
 import { ThemeMenu } from "@/features/appearance/appearance-settings"
@@ -47,20 +39,14 @@ export function AuthFrame({
           </div>
         </header>
         <div className="auth-entry-content">
-          <Card
-            className="auth-entry-panel"
-            role="region"
-            aria-labelledby="auth-title"
-          >
-            <CardHeader className="auth-entry-heading">
+          <section className="auth-entry-panel" aria-labelledby="auth-title">
+            <header className="auth-entry-heading">
               <h1 id="auth-title">{title}</h1>
-              <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="auth-entry-form">{children}</CardContent>
-            {footer && (
-              <CardFooter className="auth-entry-footer">{footer}</CardFooter>
-            )}
-          </Card>
+              <p>{description}</p>
+            </header>
+            <div className="auth-entry-form">{children}</div>
+            {footer && <footer className="auth-entry-footer">{footer}</footer>}
+          </section>
         </div>
       </div>
     </main>
