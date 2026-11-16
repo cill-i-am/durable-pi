@@ -66,6 +66,12 @@ jobs:
           if-no-files-found: error
       - name: Run ${{ matrix.suite }} checks
         run: pnpm verify:${{ matrix.suite }}
+      - name: Check Alchemy provider loading with fixture values
+        if: matrix.suite == 'static'
+        run: pnpm exec alchemy provider check-env --provider Cloudflare --profile durable-pi --no-input
+        env:
+          CLOUDFLARE_ACCOUNT_ID: "00000000000000000000000000000000"
+          CLOUDFLARE_API_TOKEN: fixture-only
       - name: Retain browser failure traces
         if: failure() && matrix.suite == 'browser'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -143,7 +149,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Deploy production with Alchemy
         run: |
-          pnpm exec alchemy provider check-env --provider Cloudflare --no-input
+          pnpm exec alchemy provider check-env --provider Cloudflare --profile durable-pi --no-input
           pnpm run deploy --yes --no-input
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
