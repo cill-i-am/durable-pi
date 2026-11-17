@@ -599,6 +599,9 @@ test("global libraries manage connections and skill revisions without assistant 
     .click()
   await expect(shell.getByLabel("MCP endpoint", { exact: true })).toBeEditable()
   await shell.getByRole("button", { name: "Cancel", exact: true }).click()
+  await expect(
+    shell.getByRole("button", { name: "Add connection", exact: true })
+  ).toBeFocused()
   await page.goto("/settings/skills")
   await expectGlobalShell(page)
   await expect(
