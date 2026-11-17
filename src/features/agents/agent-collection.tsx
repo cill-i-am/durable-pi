@@ -4,6 +4,7 @@ import { Button } from "@workspace/ui/components/button"
 import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Input } from "@workspace/ui/components/input"
 import { Archive, Pencil, Plus, Search, Undo2 } from "lucide-react"
+import { useRef } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { homeAgentId } from "@/agents/contracts"
@@ -30,6 +31,7 @@ export function AgentCollection({
   onEdit?: (agent: AgentProfile) => void
   onArchive: (agent: AgentProfile) => void
 }) {
+  const filter = useRef<HTMLInputElement>(null)
   const shown = agents.filter(
     (agent) =>
       (agent.status === "archived") === archived &&
@@ -69,6 +71,7 @@ export function AgentCollection({
         <div className="assistant-collection-filter">
           <Search aria-hidden="true" />
           <Input
+            ref={filter}
             aria-label="Filter assistants"
             placeholder="Filter assistants…"
             maxLength={200}
@@ -156,7 +159,13 @@ export function AgentCollection({
                     : "Create an assistant for the work you have in mind."}
               </p>
               {query && (
-                <Button variant="outline" onClick={() => onQuery("")}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    filter.current?.focus()
+                    onQuery("")
+                  }}
+                >
                   Clear filter
                 </Button>
               )}
