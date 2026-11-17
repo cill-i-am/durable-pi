@@ -21,6 +21,7 @@ const route = Schema.Struct({
   href: Schema.String,
   frames,
   locked: Schema.Boolean,
+  instant: Schema.Boolean,
 })
 const action = Schema.declare(
   (value): value is () => void => typeof value === "function"
@@ -100,7 +101,9 @@ export function settingsDrawersMachine(work: {
             context: {
               ...context,
               route: event,
-              rendered: reconcile(context.rendered, event.frames),
+              rendered: event.instant
+                ? event.frames
+                : reconcile(context.rendered, event.frames),
               revision: context.revision + 1,
             },
           }),

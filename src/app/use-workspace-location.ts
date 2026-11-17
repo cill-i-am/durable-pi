@@ -37,15 +37,16 @@ const noAgents: readonly AgentProfile[] = []
 /** Location advances before matches commit; identity and view must share one snapshot. */
 export function useWorkspaceRoute() {
   const match = useMatches({ select: (matches) => matches.at(-1)! })
+  // TanStack's index match includes a trailing slash even at the canonical URL.
+  const pathname = match.pathname.replace(/\/+$/, "") || "/"
   const params = useMemo(
     () => parseWorkspaceParams(match.params),
     [match.params]
   )
   const query: WorkspaceQuery & GlobalSettingsQuery = useMemo(
-    () => workspaceRouteSearch(match.pathname, match.search),
-    [match.pathname, match.search]
+    () => workspaceRouteSearch(pathname, match.search),
+    [pathname, match.search]
   )
-  const pathname = match.pathname
   const navigation = useMemo(
     () => readWorkspaceNavigation(match.context),
     [match.context]

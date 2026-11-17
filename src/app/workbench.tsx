@@ -24,6 +24,7 @@ import {
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -153,6 +154,8 @@ export function WorkbenchPanel({
       : tools.find((tool) => tool.id === panel)!
   const selected = describe(value)
   const tablist = useRef<HTMLDivElement>(null)
+  const tabScroller = useRef<HTMLDivElement>(null)
+  const activeTab = useRef<HTMLDivElement>(null)
   const sheetContainer = useRef<HTMLDivElement>(null)
   const mobileTabsTrigger = useRef<HTMLButtonElement>(null)
   const expansionCallback = useRef(onExpandedChange)
@@ -167,6 +170,25 @@ export function WorkbenchPanel({
   useEffect(() => {
     tabsCallback.current?.(tabs.tabs)
   }, [tabs.tabs])
+  useLayoutEffect(() => {
+    const strip = tabScroller.current
+    const tab = activeTab.current
+    if (!open || !strip || !tab) return
+    const revealActiveTab = () => {
+      if (!strip.clientWidth) return
+      const stripBounds = strip.getBoundingClientRect()
+      const bounds = tab.getBoundingClientRect()
+      const offset =
+        bounds.left < stripBounds.left
+          ? bounds.left - stripBounds.left
+          : Math.max(0, bounds.right - stripBounds.right)
+      if (offset) strip.scrollBy({ left: offset, behavior: "instant" })
+    }
+    revealActiveTab()
+    const resize = new ResizeObserver(revealActiveTab)
+    resize.observe(strip)
+    return () => resize.disconnect()
+  }, [open, value, tabs.tabs])
   const closeTab = (panel: WorkbenchTab, mobile = false) => {
     if (disabled) return
     const index = tabs.tabs.indexOf(panel)
@@ -340,7 +362,7 @@ export function WorkbenchPanel({
                 </div>
               )}
               <header className="workbench-header">
-                <div className="workbench-tabs-scroller">
+                <div ref={tabScroller} className="workbench-tabs-scroller">
                   <div className="workbench-tabs-layout">
                     <div
                       ref={tablist}
@@ -353,6 +375,7 @@ export function WorkbenchPanel({
                         return (
                           <div
                             key={panel}
+                            ref={panel === value ? activeTab : undefined}
                             role="presentation"
                             className="workbench-tab-frame"
                             data-active={panel === value}

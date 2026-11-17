@@ -245,9 +245,10 @@ async function expectNavigation(page: Page, paths: readonly string[]) {
     includeHidden: true,
   }
   const front = settingsFront(page).getByRole("navigation", options)
-  const navigation = (await front.count())
-    ? front
-    : settingsRoot(page).getByRole("navigation", options)
+  const navigation = front.or(
+    settingsRoot(page).getByRole("navigation", options)
+  )
+  await expect(navigation).toHaveCount(1)
   await expect
     .poll(() =>
       navigation
@@ -259,6 +260,12 @@ async function expectNavigation(page: Page, paths: readonly string[]) {
         )
     )
     .toEqual([...paths].sort())
+}
+
+function settingsIdentity(page: Page) {
+  return settingsFront(page)
+    .locator(".settings-agent")
+    .or(settingsRoot(page).locator(".settings-agent"))
 }
 
 async function expectGlobalShell(page: Page) {
@@ -504,9 +511,7 @@ test("assistant settings have only assistant controls and five scoped destinatio
       page,
       sections.map((value) => `/agents/navi/settings/${value}`)
     )
-    await expect(settingsRoot(page).locator(".settings-agent")).toContainText(
-      "Navi"
-    )
+    await expect(settingsIdentity(page)).toContainText("Navi")
     await expect(
       settingsFront(page).getByRole("region", {
         name: "Your profile photo",
@@ -661,9 +666,7 @@ test("assistant connection and skill assignments save only to the selected assis
   await signIn(page)
   const shell = settingsFront(page)
   await page.goto("/agents/research/settings/connections")
-  await expect(settingsRoot(page).locator(".settings-agent")).toContainText(
-    "Research"
-  )
+  await expect(settingsIdentity(page)).toContainText("Research")
   await expect(
     shell.getByRole("heading", { name: "Calendar service", exact: true })
   ).toBeVisible()

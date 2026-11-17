@@ -1,12 +1,8 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
 import { closeSettings, settingsFront } from "./settings-helpers"
 
-test("desktop settings are non-modal pages inside the shell and retain the chat draft", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "Mobile retains the stacked drawer flow")
+async function signIn(page: Page) {
   await page.goto("/agents/navi")
   await page
     .getByLabel("Email", { exact: true })
@@ -15,6 +11,17 @@ test("desktop settings are non-modal pages inside the shell and retain the chat 
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await expect(
+    page.getByRole("textbox", { name: "Message Navi" })
+  ).toBeVisible()
+}
+
+test("desktop settings are non-modal pages inside the shell and retain the chat draft", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Mobile retains the stacked drawer flow")
+  await signIn(page)
   const composer = page.getByRole("textbox", {
     name: "Message Navi",
     exact: true,
@@ -50,13 +57,26 @@ test("desktop settings are non-modal pages inside the shell and retain the chat 
   })
   await sidebar.focus()
   await expect(sidebar).toBeFocused()
-  await front.getByRole("link", { name: "Preferences", exact: true }).click()
+  const navigation = front.getByRole("navigation", {
+    name: "Settings sections",
+  })
+  const originalNavigation = (await navigation.elementHandle())!
+  const preferencesLink = navigation.getByRole("link", { name: "Preferences" })
+  await preferencesLink.press("Enter")
   await expect(
     settingsFront(page).getByRole("heading", {
       name: "Preferences",
       exact: true,
     })
   ).toBeVisible()
+  expect(await originalNavigation.evaluate((node) => node.isConnected)).toBe(
+    true
+  )
+  await expect(preferencesLink).toBeFocused()
+  await expect(front.locator(".settings-route-drawer:visible")).toHaveCSS(
+    "transition-duration",
+    "0s"
+  )
   await page.screenshot({
     path: "test-results/settings-pages-desktop.png",
     animations: "disabled",
@@ -85,4 +105,50 @@ test("desktop settings are non-modal pages inside the shell and retain the chat 
       async () => (await page.locator(".chat-workspace").boundingBox())?.height
     )
     .toBe(chatHeight)
+})
+
+test("settings rows stack when the sidebars narrow the desktop pane", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Desktop settings pane")
+  await page.route(
+    (url) =>
+      [
+        "/api/auth/list-sessions",
+        "/api/auth/passkey/list-user-passkeys",
+      ].includes(url.pathname),
+    (route) => route.fulfill({ json: [] })
+  )
+  await signIn(page)
+  for (const width of [768, 800]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const [path, copy, action] of [
+      [
+        "/settings/security",
+        "#two-factor-heading",
+        'section[aria-labelledby="two-factor-heading"] > button',
+      ],
+      [
+        "/agents/navi/settings/general",
+        ".settings-agent-summary h3",
+        ".settings-agent-summary button",
+      ],
+      [
+        "/agents/navi/settings/access",
+        ".settings-network-copy > span",
+        ".settings-network-actions",
+      ],
+    ] as const) {
+      await page.goto(path)
+      const pane = settingsFront(page)
+      const label = pane.locator(copy)
+      await expect(label).toBeVisible()
+      const labelBounds = (await label.boundingBox())!
+      const actionBounds = (await pane.locator(action).boundingBox())!
+      expect(labelBounds.width).toBeGreaterThan(190)
+      expect(actionBounds.y).toBeGreaterThan(labelBounds.y + labelBounds.height)
+      expect(actionBounds.x + actionBounds.width).toBeLessThan(width)
+    }
+  }
 })

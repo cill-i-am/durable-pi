@@ -223,6 +223,43 @@ if (process.argv.includes("--serve")) {
       .waitFor({ state: "hidden" })
     await page.getByLabel("Draft apps").waitFor()
     assert.equal(await page.evaluate(() => window.fixture.mounts.code), 1)
+    await page.setViewportSize({ width: 768, height: 900 })
+    for (const tool of [
+      "Files",
+      "Activity",
+      "Routines",
+      "Examples",
+      "Browser",
+      "Checklists",
+    ])
+      await openTool(tool)
+    const expectActiveTabInStrip = async (name) => {
+      const tab = page.getByRole("tab", { name, exact: true, selected: true })
+      await expect(tab).toBeVisible()
+      await expect
+        .poll(() =>
+          tab.evaluate((button) => {
+            const frame = button
+              .closest(".workbench-tab-frame")
+              .getBoundingClientRect()
+            const strip = button.closest(".workbench-tabs-scroller")
+            const viewport = strip.getBoundingClientRect()
+            return (
+              strip.scrollWidth > strip.clientWidth &&
+              frame.left >= viewport.left - 1 &&
+              frame.right <= viewport.right + 1
+            )
+          })
+        )
+        .toBe(true)
+    }
+    await expectActiveTabInStrip("Checklists")
+    await page.setViewportSize({ width: 800, height: 900 })
+    await expectActiveTabInStrip("Checklists")
+    await openTool("Memory")
+    await expectActiveTabInStrip("Memory")
+    await openTool("Checklists")
+    await expectActiveTabInStrip("Checklists")
     await page.evaluate(() => window.fixture.unmount())
     await page.waitForFunction(() => window.fixture.unmounts.code === 1)
     assert.deepEqual(errors, [])

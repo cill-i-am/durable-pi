@@ -14,6 +14,29 @@ async function signIn(page: Page) {
 
 const returnTo = "/agents/navi/files?tab=trash"
 
+test("All assistants opens the active directory from chat and from the archive", async ({
+  page,
+  isMobile,
+}) => {
+  await signIn(page)
+  await page.goto("/agents/navi")
+  if (isMobile)
+    await page.getByRole("button", { name: "Toggle Sidebar" }).click()
+  await page
+    .getByRole("button", { name: "All assistants", exact: true })
+    .click()
+  await expect(page).toHaveURL(/\/agents$/)
+  const active = page.getByRole("region", { name: "Assistants", exact: true })
+  await expect(
+    active.getByRole("link", { name: "Navi", exact: true })
+  ).toBeVisible()
+  await active.getByRole("link", { name: "Archived assistants" }).click()
+  await page.getByRole("link", { name: "Active assistants" }).click()
+  await expect(active).toBeVisible()
+  await page.goto("/agents/")
+  await expect(active).toBeVisible()
+})
+
 for (const [path, title] of [
   ["new", "New assistant"],
   ["navi/edit", "Edit assistant"],

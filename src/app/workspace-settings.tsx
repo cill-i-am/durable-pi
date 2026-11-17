@@ -19,12 +19,13 @@ import {
   MessageCircle,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { authClient } from "@/auth/client"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useOverlayMobile } from "@/components/ui/responsive-overlay"
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { UserAvatar } from "@/components/user-avatar"
 import { AccessPanel } from "@/features/access"
 import { AppearanceSettings } from "@/features/appearance/appearance-settings"
@@ -42,6 +43,7 @@ import { SkillsPanel } from "@/features/skills"
 import { ChannelSettings } from "@/features/whatsapp/channel-settings"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { ThinkingLevel } from "@/inference/selection"
 import type { SettingsFrame } from "@/navigation/settings-stack"
 import { isGlobalSettingsSection } from "@/navigation/workspace"
@@ -90,6 +92,7 @@ type StackContext = {
   pending: (id: string, value: boolean) => void
   exit: (action?: () => void) => void
 }
+type DrawerContext = StackContext & { layerHost: HTMLElement }
 function frameTitle(frame: SettingsFrame) {
   if (frame.category === "settings") return "Settings"
   if (frame.category === "agent-settings") return "Assistant settings"
@@ -102,22 +105,28 @@ function frameTitle(frame: SettingsFrame) {
 
 export function WorkspaceSettings(props: SettingsProps) {
   const { onPendingChange, onShownChange } = props
+  const mobile = useIsMobile()
   const location = useWorkspaceLocation(
     props.agent ? [props.agent] : [],
     props.agent
   )
   const [pending, setPending] = useState<Record<string, boolean>>({})
   const locked = Object.values(pending).some(Boolean)
-  const drawers = useSettingsDrawers(
-    !props.category ? [] : location.settingsFrames,
-    { href: location.href, locked }
-  )
+  const routedFrames = props.category ? location.settingsFrames : []
+  const drawers = useSettingsDrawers(routedFrames, {
+    href: location.href,
+    locked,
+    instant: !mobile,
+  })
+  const page = !mobile && !drawers.exiting
+  const frames = page ? routedFrames : drawers.frames
+  const depth = page ? frames.length : drawers.depth
   const reportPending = useCallback((id: string, value: boolean) => {
     setPending((current) =>
       current[id] === value ? current : { ...current, [id]: value }
     )
   }, [])
-  const shown = drawers.frames.length > 0
+  const shown = frames.length > 0
   useEffect(() => {
     onShownChange?.(shown)
     return () => onShownChange?.(false)
@@ -126,21 +135,86 @@ export function WorkspaceSettings(props: SettingsProps) {
     onPendingChange(locked)
     return () => onPendingChange(false)
   }, [locked, onPendingChange])
-  const exit = (action?: () => void) =>
-    drawers.exit(action ?? location.closeSettings)
-  const root = drawers.frames[0]
-  if (!root) return null
-  const context = { props, location, locked, pending: reportPending, exit }
-  return (
-    <SettingsRoot
-      key={root.id}
+  const exit = (action = location.closeSettings) => {
+    if (locked) return
+    if (mobile) drawers.exit(action)
+    else {
+      document.getElementById("main-content")?.focus({ preventScroll: true })
+      action()
+    }
+  }
+  const root = frames[0]
+  const active = frames[Math.max(0, depth - 1)]
+  const host = shown && document.getElementById("settings-page-host")
+  if (!root || !active || !host) return null
+  return createPortal(
+    <SettingsLayout
       root={root}
-      frames={drawers.frames}
-      depth={drawers.depth}
-      context={context}
+      active={active}
+      frames={frames}
+      depth={depth}
+      mobile={mobile}
+      context={{ props, location, locked, pending: reportPending, exit }}
       onClosed={drawers.closed}
-      onLayerClosed={drawers.closed}
-    />
+    />,
+    host
+  )
+}
+
+function SettingsLayout({
+  root,
+  active,
+  frames,
+  depth,
+  mobile,
+  context,
+  onClosed,
+}: {
+  root: SettingsFrame
+  active: SettingsFrame
+  frames: readonly SettingsFrame[]
+  depth: number
+  mobile: boolean
+  context: StackContext
+  onClosed: (id: string) => void
+}) {
+  const [layerHost, setLayerHost] = useState<HTMLDivElement | null>(null)
+  const global = isGlobalSettingsSection(active.category)
+  return (
+    <section
+      className="settings-layout"
+      role={mobile ? undefined : "region"}
+      aria-label={
+        mobile ? undefined : global ? "Settings" : "Assistant settings"
+      }
+      data-overlay-mobile={mobile}
+      data-settings-route={mobile ? undefined : active.id}
+      data-settings-frontmost={mobile ? undefined : true}
+      data-settings-index={!mobile && active === root ? true : undefined}
+    >
+      {!mobile && (
+        <>
+          <SettingsPageHeader frame={active} context={context} />
+          <SettingsNavigation
+            root={root}
+            selected={active}
+            global={global}
+            context={context}
+          />
+        </>
+      )}
+      <div ref={setLayerHost} className="settings-layer-host" />
+      {layerHost && (
+        <SettingsRoot
+          key={root.id}
+          root={root}
+          frames={frames}
+          depth={depth}
+          context={{ ...context, layerHost }}
+          onClosed={onClosed}
+        />
+      )}
+    </section>
   )
 }
 
@@ -150,18 +224,17 @@ function SettingsRoot({
   depth,
   context,
   onClosed,
-  onLayerClosed,
 }: {
   root: SettingsFrame
   frames: readonly SettingsFrame[]
   depth: number
-  context: StackContext
+  context: DrawerContext
   onClosed: (id: string) => void
-  onLayerClosed: (id: string) => void
 }) {
   const [entered, setEntered] = useState(false)
   useEffect(() => setEntered(true), [])
-  const open = entered && depth > 0
+  const mobile = useIsMobile()
+  const open = (!mobile || entered) && depth > 0
   return (
     <Dialog
       desktop="page"
@@ -180,7 +253,7 @@ function SettingsRoot({
         frames={frames}
         depth={depth}
         context={context}
-        onLayerClosed={onLayerClosed}
+        onLayerClosed={onClosed}
       />
     </Dialog>
   )
@@ -196,10 +269,9 @@ function SettingsPresentation({
   root: SettingsFrame
   frames: readonly SettingsFrame[]
   depth: number
-  context: StackContext
+  context: DrawerContext
   onLayerClosed: (id: string) => void
 }) {
-  const { state: sidebarState } = useSidebar()
   const mobile = useOverlayMobile()
   const active = frames[Math.max(0, depth - 1)] ?? root
   const global = isGlobalSettingsSection(root.category)
@@ -207,36 +279,41 @@ function SettingsPresentation({
   return (
     <DialogContent
       showCloseButton={false}
-      container={document.getElementById("settings-page-host")}
+      container={context.layerHost}
       mobileLayout="panel"
       className="workspace-settings translate-none"
       overlayClassName="settings-backdrop"
-      data-sidebar={sidebarState}
-      data-settings-index
-      data-settings-route={root.id}
-      data-settings-frontmost={depth === 1}
+      data-settings-index={mobile ? true : undefined}
+      data-settings-route={mobile ? root.id : undefined}
+      data-settings-frontmost={mobile ? depth === 1 : undefined}
+      data-settings-layer-active={false}
       data-settings-scope={global ? "personal" : "agent"}
-      finalFocus={() => document.getElementById("main-content")}
+      finalFocus={() => mobile && document.getElementById("main-content")}
     >
-      {!mobile && <SettingsPageHeader frame={root} context={context} />}
-      <SettingsNavigation
-        root={root}
-        selected={active}
-        global={global}
-        context={context}
-        rows={rows.current}
-      />
+      <DialogTitle render={<span />} className="sr-only">
+        {frameTitle(root)}
+      </DialogTitle>
       {mobile && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="settings-root-close"
-          aria-label="Close settings"
-          disabled={context.locked}
-          onClick={() => context.exit()}
-        >
-          <X />
-        </Button>
+        <>
+          <SettingsNavigation
+            root={root}
+            selected={active}
+            global={global}
+            context={context}
+            rows={rows.current}
+            mobile
+          />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="settings-root-close"
+            aria-label="Close settings"
+            disabled={context.locked}
+            onClick={() => context.exit()}
+          >
+            <X />
+          </Button>
+        </>
       )}
       {frames[1] && (
         <SettingsLayer
@@ -259,18 +336,17 @@ function SettingsNavigation({
   global,
   context,
   rows,
-  dialogTitle = true,
+  mobile = false,
 }: {
   root: SettingsFrame
   selected: SettingsFrame
   global: boolean
   context: StackContext
   rows?: Map<string, HTMLElement>
-  dialogTitle?: boolean
+  mobile?: boolean
 }) {
   const { family } = useFamily()
   const { data: session } = authClient.useSession()
-  const mobile = useOverlayMobile()
   const agent = context.props.agent
   const sections = global
     ? personalSections.filter(
@@ -328,15 +404,9 @@ function SettingsNavigation({
         )}
       </div>
       <div className="settings-nav-content">
-        {dialogTitle ? (
-          <DialogTitle className="settings-title">
-            {global ? "Settings" : "Assistant settings"}
-          </DialogTitle>
-        ) : (
-          <h2 className="settings-title">
-            {global ? "Settings" : "Assistant settings"}
-          </h2>
-        )}
+        <h2 className="settings-title">
+          {global ? "Settings" : "Assistant settings"}
+        </h2>
         <nav aria-label="Settings sections">
           {groups.map((group) => (
             <div className="settings-nav-group" key={group[0]!.id}>
@@ -402,20 +472,19 @@ function SettingsLayer({
   frames: readonly SettingsFrame[]
   index: number
   depth: number
-  context: StackContext
+  context: DrawerContext
   onClosed: (id: string) => void
   returnFocus?: () => HTMLElement | null
 }) {
   const frame = frames[index]!
   const parent = frames[index - 1]!
   const mobile = useOverlayMobile()
-  const { state: sidebarState } = useSidebar()
   const global = isGlobalSettingsSection(frame.category)
   const dismiss = () =>
     mobile ? context.location.popSettings() : context.exit()
   const [entered, setEntered] = useState(false)
   useEffect(() => setEntered(true), [])
-  const open = entered && index < depth
+  const open = (!mobile || entered) && index < depth
   const title = frameTitle(frame)
   const body = useRef<HTMLDivElement>(null)
   const trigger = useRef(
@@ -437,22 +506,18 @@ function SettingsLayer({
       }}
     >
       <DialogContent
-        container={document.getElementById("settings-page-host")}
+        container={context.layerHost}
         showCloseButton={false}
         mobileLayout="panel"
         className="workspace-settings settings-route-drawer translate-none"
         overlayClassName="settings-backdrop"
-        data-sidebar={sidebarState}
-        data-settings-route={frame.id}
-        data-settings-frontmost={index === depth - 1}
+        data-settings-route={mobile ? frame.id : undefined}
+        data-settings-frontmost={mobile ? index === depth - 1 : undefined}
+        data-settings-layer-active={index === depth - 1}
         data-settings-scope={global ? "personal" : "agent"}
-        data-family={
-          !mobile &&
-          (frame.category === "family" || frame.category === "model-access")
-        }
         finalFocus={() =>
           !mobile
-            ? document.getElementById("main-content")
+            ? false
             : trigger.current?.isConnected &&
                 trigger.current
                   .closest("[data-settings-route]")
@@ -462,25 +527,16 @@ function SettingsLayer({
         }
         ref={body}
       >
-        {!mobile && <SettingsPageHeader frame={frame} context={context} />}
         <DialogTitle render={<span />} className="sr-only">
-          {mobile ? title : global ? "Settings" : "Assistant settings"}
+          {title}
         </DialogTitle>
-        {!mobile && (
-          <SettingsNavigation
-            root={frames[0]!}
-            selected={frame}
-            global={global}
-            context={context}
-            dialogTitle={false}
-          />
-        )}
         <SettingsDetail
           key="detail"
           frame={frame}
           parent={parent}
           context={context}
           mobile={mobile}
+          showPending={context.locked && index === depth - 1}
           onDismiss={dismiss}
         />
         {frames[index + 1] && (
@@ -551,12 +607,14 @@ function SettingsDetail({
   parent,
   context,
   mobile,
+  showPending,
   onDismiss,
 }: {
   frame: SettingsFrame
   parent?: SettingsFrame
   context: StackContext
   mobile: boolean
+  showPending: boolean
   onDismiss: () => void
 }) {
   return (
@@ -590,7 +648,7 @@ function SettingsDetail({
       <div className="settings-detail-content">
         <SettingsBody frame={frame} context={context} onDismiss={onDismiss} />
       </div>
-      {context.locked && (
+      {showPending && (
         <p role="status" className="settings-draft-notice">
           Finish or cancel your changes before leaving this section.
         </p>
@@ -853,22 +911,26 @@ function AgentSettings({
     return (
       <>
         <div className="settings-network-link">
-          <Globe />
-          <span>Browser and terminal internet access</span>
-          <Button
-            size="sm"
-            variant="link"
-            onClick={() => onWorkbench("browser")}
-          >
-            Browser
-          </Button>
-          <Button
-            size="sm"
-            variant="link"
-            onClick={() => onWorkbench("terminal")}
-          >
-            Terminal
-          </Button>
+          <div className="settings-network-copy">
+            <Globe />
+            <span>Browser and terminal internet access</span>
+          </div>
+          <div className="settings-network-actions">
+            <Button
+              size="sm"
+              variant="link"
+              onClick={() => onWorkbench("browser")}
+            >
+              Browser
+            </Button>
+            <Button
+              size="sm"
+              variant="link"
+              onClick={() => onWorkbench("terminal")}
+            >
+              Terminal
+            </Button>
+          </div>
         </div>
         <AccessPanel
           open
