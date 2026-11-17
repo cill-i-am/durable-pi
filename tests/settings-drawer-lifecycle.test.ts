@@ -26,7 +26,12 @@ const security: SettingsFrame = {
   href: "/settings/security",
   category: "security",
 }
-const route = { href: account.href, frames: [root, account], locked: false }
+const route = {
+  href: account.href,
+  frames: [root, account],
+  locked: false,
+  instant: false,
+}
 
 it.effect(
   "route replacement retains outgoing bodies until closure and rejects a stale acknowledgement after reopening",
@@ -38,6 +43,7 @@ it.effect(
         href: security.href,
         frames: [root, security],
         locked: false,
+        instant: false,
       })
       const outgoing = yield* waitFor(
         owner.actor,
@@ -63,6 +69,7 @@ it.effect(
         href: security.href,
         frames: [root, security],
         locked: false,
+        instant: false,
       })
       const replaced = yield* waitFor(
         owner.actor,
@@ -203,6 +210,7 @@ it.effect(
         href: security.href,
         frames: [root, security],
         locked: false,
+        instant: false,
       })
       yield* waitFor(
         owner,

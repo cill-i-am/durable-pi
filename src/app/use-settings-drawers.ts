@@ -44,7 +44,7 @@ export function makeSettingsDrawers(
 /** Retain outgoing native bodies and dispatch an exit only after root closure. */
 export function useSettingsDrawers(
   frames: readonly SettingsFrame[],
-  options: { href: string; locked: boolean }
+  options: { href: string; locked: boolean; instant: boolean }
 ) {
   const latest = useRef<SettingsDrawerRoute>({ ...options, frames })
   latest.current = { ...options, frames }
@@ -87,7 +87,7 @@ export function useSettingsDrawers(
   const signature = JSON.stringify(frames)
   useEffect(() => {
     owner.current?.actor.send({ type: "ROUTE", ...latest.current })
-  }, [signature, options.href, options.locked])
+  }, [signature, options.href, options.locked, options.instant])
   const rendered = snapshot?.context.rendered ?? initial.current.frames
   const desired =
     snapshot && !snapshot.matches("active")
@@ -96,6 +96,7 @@ export function useSettingsDrawers(
   return {
     frames: rendered,
     depth: settingsPrefix(rendered, desired),
+    exiting: snapshot?.matches("closing") ?? false,
     exit: (action: () => void) =>
       owner.current?.actor.send({ type: "EXIT", action }),
     closed: (id: string) =>
