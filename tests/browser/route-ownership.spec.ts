@@ -599,6 +599,9 @@ test("global libraries manage connections and skill revisions without assistant 
     .click()
   await expect(shell.getByLabel("MCP endpoint", { exact: true })).toBeEditable()
   await shell.getByRole("button", { name: "Cancel", exact: true }).click()
+  await expect(
+    shell.getByRole("button", { name: "Add connection", exact: true })
+  ).toBeFocused()
   await page.goto("/settings/skills")
   await expectGlobalShell(page)
   await expect(
@@ -607,6 +610,11 @@ test("global libraries manage connections and skill revisions without assistant 
   await expect(
     shell.getByRole("button", { name: "New", exact: true })
   ).toBeEnabled()
+  const newSkill = shell.getByRole("button", { name: "New", exact: true })
+  await newSkill.click()
+  await expect(shell.getByLabel("Name", { exact: true })).toBeFocused()
+  await shell.getByRole("button", { name: "Cancel", exact: true }).click()
+  await expect(newSkill).toBeFocused()
   await expect(
     shell.getByRole("button", { name: "Import", exact: true })
   ).toBeEnabled()
@@ -625,6 +633,9 @@ test("global libraries manage connections and skill revisions without assistant 
     shell.getByRole("button", { name: "Save skill", exact: true })
   ).toBeEnabled()
   await shell.getByRole("button", { name: "Cancel", exact: true }).click()
+  await expect(
+    shell.getByRole("button", { name: "Edit", exact: true })
+  ).toBeFocused()
   expect(fixture.writes).toEqual([])
 })
 
