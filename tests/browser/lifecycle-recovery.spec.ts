@@ -248,7 +248,7 @@ test("cancelled and exhausted app updates retain saved content without claiming 
       await expect(row).toContainText(event.deliveryMessage!)
       await expect(row).toContainText(event.text)
       await expect(row).not.toContainText("Sent to conversation")
-      await expect(row).not.toContainText("Waiting for bot")
+      await expect(row).not.toContainText("Waiting for assistant")
     }
     await expect(app.getByRole("status")).toHaveCount(0)
     await expect(

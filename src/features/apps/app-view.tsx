@@ -191,7 +191,7 @@ function AppViewContent({
                         ? "Cancelled"
                         : event.delivery === "exhausted"
                           ? "Delivery stopped"
-                          : "Waiting for bot"}
+                          : "Waiting for assistant"}
                   </span>
                   {event.deliveryMessage && <p>{event.deliveryMessage}</p>}
                   <p className="max-h-28 overflow-auto break-words whitespace-pre-wrap">
@@ -344,7 +344,8 @@ function AppPublication({
       {pending > 0 && (
         <p className="text-xs text-muted-foreground" role="status">
           {pending} {pending === 1 ? "update is" : "updates are"} waiting for
-          the bot. They will be queued when its model connection is available.
+          the assistant. They will be queued when its model connection is
+          available.
         </p>
       )}
     </>

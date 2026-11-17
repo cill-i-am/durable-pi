@@ -231,7 +231,7 @@ function SelectedTools({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`Remove ${tool.remoteName} from this bot`}
+              aria-label={`Remove ${tool.remoteName} from this assistant`}
               disabled={disabled}
               onClick={() =>
                 void state.select(
@@ -340,7 +340,7 @@ function ConnectionCatalog({
                 <p className="text-xs text-muted-foreground">
                   {isExecutorConnection(connection.url)
                     ? "Disconnect stops new calls for all agents. Executor defaults refresh after reconnection; actions already sent may finish."
-                    : "Disconnect stops new calls for all bots. Reconnecting requires selecting tools again; actions already sent may finish."}
+                    : "Disconnect stops new calls for all assistants. Reconnecting requires selecting tools again; actions already sent may finish."}
                 </p>
               )}
             </>
