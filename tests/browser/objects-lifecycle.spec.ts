@@ -58,6 +58,25 @@ async function openObjects(page: Page, selected?: string) {
   await page.goto(`/agents/navi/objects${selected ? `/${selected}` : ""}`)
 }
 
+test("cancelling a new checklist returns keyboard focus to New checklist", async ({
+  page,
+}) => {
+  await page.route("**/api/agent/objects**", (route) =>
+    route.fulfill({ json: { objects: [] } })
+  )
+  await openObjects(page)
+  const create = page.getByRole("button", {
+    name: "New checklist",
+    exact: true,
+  })
+  await create.press("Enter")
+  await expect(
+    page.getByRole("textbox", { name: "Title", exact: true })
+  ).toBeFocused()
+  await page.getByRole("button", { name: "Cancel", exact: true }).press("Enter")
+  await expect(create).toBeFocused()
+})
+
 test("uncertain creation survives reload and retries the identical mutation", async ({
   page,
 }) => {

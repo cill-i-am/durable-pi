@@ -11,7 +11,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { ArrowLeft, ChevronRight, ListTodo, Plus } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 
@@ -62,6 +62,28 @@ function Workbench({
     creating = creation.id
   const inputId = useId(),
     locked = editing || !!creating || Object.keys(state.pending).length > 0
+  const newButton = useRef<HTMLButtonElement>(null)
+  const restoreFocus = useRef(false)
+  useEffect(() => {
+    if (creating || !restoreFocus.current) return
+    restoreFocus.current = false
+    if (!active) return
+    const target = newButton.current
+    target?.focus()
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        if (
+          target?.isConnected &&
+          !target.disabled &&
+          (document.activeElement === document.body ||
+            document.activeElement ===
+              target.closest('[data-slot="sheet-content"]'))
+        )
+          target.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [creating, active])
   useEffect(() => {
     onEditing(editing || !!creating)
     return () => onEditing(false)
@@ -73,6 +95,7 @@ function Workbench({
           <h2 className="workbench-section-title">Checklists</h2>
           {!creating && (
             <Button
+              ref={newButton}
               variant="outline"
               size="sm"
               disabled={archived || locked}
@@ -165,7 +188,10 @@ function Workbench({
                 disabled={!!state.pending[creating]}
                 onClick={() => {
                   void store.dismiss(creating).then((ok) => {
-                    if (ok) creation.cancel()
+                    if (ok) {
+                      restoreFocus.current = true
+                      creation.cancel()
+                    }
                   })
                   setTitle("")
                 }}
