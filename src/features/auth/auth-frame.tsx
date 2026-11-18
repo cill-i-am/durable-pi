@@ -1,3 +1,5 @@
+import { useLayoutEffect, useRef } from "react"
+
 import { AgentMark } from "@/components/agent-mark"
 import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
 import { ThemeMenu } from "@/features/appearance/appearance-settings"
@@ -21,6 +23,10 @@ export function AuthFrame({
   family?: boolean
   footer?: React.ReactNode
 }) {
+  const heading = useRef<HTMLHeadingElement>(null)
+  useLayoutEffect(() => {
+    heading.current?.focus()
+  }, [title])
   return (
     <main
       id="main-content"
@@ -41,7 +47,14 @@ export function AuthFrame({
         <div className="auth-entry-content">
           <section className="auth-entry-panel" aria-labelledby="auth-title">
             <header className="auth-entry-heading">
-              <h1 id="auth-title">{title}</h1>
+              <h1
+                id="auth-title"
+                ref={heading}
+                tabIndex={-1}
+                className="outline-none"
+              >
+                {title}
+              </h1>
               <p>{description}</p>
             </header>
             <div className="auth-entry-form">{children}</div>

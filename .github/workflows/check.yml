@@ -147,6 +147,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Build browser diagnostics
+        run: pnpm build
       - name: Deploy production with Alchemy
         run: |
           pnpm exec alchemy provider check-env --provider Cloudflare --profile durable-pi --no-input

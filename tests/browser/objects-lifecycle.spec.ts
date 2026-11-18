@@ -73,6 +73,9 @@ test("cancelling a new checklist returns keyboard focus to New checklist", async
   await expect(
     page.getByRole("textbox", { name: "Title", exact: true })
   ).toBeFocused()
+  await expect(
+    page.getByRole("button", { name: "All checklists", exact: true })
+  ).toHaveCount(0)
   await page.getByRole("button", { name: "Cancel", exact: true }).press("Enter")
   await expect(create).toBeFocused()
 })

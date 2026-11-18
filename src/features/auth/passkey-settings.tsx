@@ -215,7 +215,7 @@ export function PasskeySettings(props: Props) {
       {loading && <DataLoading loading={!error} label="Loading passkeys" />}
       {!loading && !error && keys.length === 0 && (
         <p className="text-sm leading-6 text-muted-foreground">
-          No passkeys yet. Add a passkey to sign in with your device.
+          No passkeys yet.
         </p>
       )}
       {!available && (

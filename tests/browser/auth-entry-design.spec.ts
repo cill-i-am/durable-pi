@@ -2,6 +2,80 @@ import { expect, test } from "@playwright/test"
 
 const password = "Disposable auth fixture password 2026!"
 
+test("auth mode changes focus their heading before the new form", async ({
+  page,
+}) => {
+  await page.goto("/agents")
+  await page
+    .getByRole("button", {
+      name: "First time? Set up your account",
+      exact: true,
+    })
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "Create your account", exact: true })
+  ).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(page.getByLabel("Your name", { exact: true })).toBeFocused()
+  await page
+    .getByRole("button", { name: "Back to sign in", exact: true })
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "Welcome back", exact: true })
+  ).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(page.getByLabel("Email", { exact: true })).toBeFocused()
+  await page.goto("/two-factor?returnTo=%2Fagents")
+  await page
+    .getByRole("button", { name: "Use a recovery code", exact: true })
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "Use a recovery code", exact: true })
+  ).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(page.getByLabel("Recovery code", { exact: true })).toBeFocused()
+  await page
+    .getByRole("button", { name: "Use your authenticator", exact: true })
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "Check your authenticator", exact: true })
+  ).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(
+    page.getByLabel("Authentication code", { exact: true })
+  ).toBeFocused()
+})
+
+test("password visibility keeps its value and a full mobile touch target", async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto("/agents")
+  const field = page.getByLabel("Password", { exact: true })
+  await field.fill(password)
+  for (const width of isMobile ? [390, 320] : [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    const show = page.getByRole("button", {
+      name: "Show password",
+      exact: true,
+    })
+    const target = (await show.boundingBox())!
+    expect(target.width).toBeGreaterThanOrEqual(isMobile ? 44 : 24)
+    expect(target.height).toBeGreaterThanOrEqual(isMobile ? 44 : 24)
+    await show.click()
+    await expect(field).toHaveAttribute("type", "text")
+    await expect(field).toHaveValue(password)
+    const hide = page.getByRole("button", {
+      name: "Hide password",
+      exact: true,
+    })
+    await expect(hide).toHaveAttribute("aria-pressed", "true")
+    await hide.press("Space")
+    await expect(field).toHaveAttribute("type", "password")
+    await expect(field).toHaveValue(password)
+  }
+})
+
 test("owner setup keeps its request locked and returns to sign-in without retaining the setup key", async ({
   page,
 }) => {

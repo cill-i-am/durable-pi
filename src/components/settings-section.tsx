@@ -15,7 +15,7 @@ export function SettingsSection({
     <section hidden={!open} className="settings-section" aria-label={title}>
       <header className="settings-section-heading">
         <h2>{title}</h2>
-        <p>{description}</p>
+        {description != null && <p>{description}</p>}
       </header>
       {children}
     </section>

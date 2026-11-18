@@ -125,7 +125,7 @@ function Workbench({
             </AlertDescription>
           </Alert>
         )}
-        {(selected || creating) && (
+        {selected && (
           <Button
             variant="ghost"
             size="sm"

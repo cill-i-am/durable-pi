@@ -1,3 +1,4 @@
+import { Button } from "@workspace/ui/components/button"
 import { Eye, EyeOff } from "lucide-react"
 import { useState, type ComponentProps } from "react"
 
@@ -5,7 +6,6 @@ import {
   InputGroup,
   InputGroupInput,
   InputGroupAddon,
-  InputGroupButton,
 } from "@/components/ui/input-group"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
 
@@ -18,8 +18,9 @@ export function PasswordInput(
     <InputGroup>
       <InputGroupInput {...props} type={visible ? "text" : "password"} />
       <InputGroupAddon align="inline-end">
-        <InputGroupButton
+        <Button
           type="button"
+          variant="ghost"
           size="icon-sm"
           disabled={props.disabled}
           aria-label={visible ? "Hide password" : "Show password"}
@@ -31,7 +32,7 @@ export function PasswordInput(
           }}
         >
           {visible ? <EyeOff /> : <Eye />}
-        </InputGroupButton>
+        </Button>
       </InputGroupAddon>
     </InputGroup>
   )

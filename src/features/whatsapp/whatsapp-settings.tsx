@@ -30,7 +30,7 @@ import type { WhatsAppView } from "@/whatsapp/contracts"
 
 const labels = {
   queued: "Queued",
-  waiting: "Agent is working",
+  waiting: "Assistant is working",
   sending: "Sending reply",
   sent: "Accepted by WhatsApp",
   failed: "Send rejected",
@@ -259,12 +259,12 @@ function WhatsAppRouting({
           ? "Loading WhatsApp…"
           : view.configured
             ? "Send text from your connected WhatsApp account. Approvals stay in Pi and Executor."
-            : "WhatsApp Business setup is pending. Once connected, choose which agent receives your messages."}
+            : "WhatsApp Business setup is pending. Once connected, choose which assistant receives your messages."}
       </p>
       {view?.enabled && (
         <p className="text-sm">
           New WhatsApp messages go to {view.agentName}. Earlier requests keep
-          their original agent.
+          their original assistant.
         </p>
       )}
       <WhatsAppAgentSelect
@@ -286,7 +286,7 @@ function WhatsAppRouting({
         <p className="text-xs text-muted-foreground">
           Disabling stops new messages and replies that have not started
           sending. Use /agents and /agent &lt;id&gt; in WhatsApp to change
-          agents.
+          assistants.
         </p>
       )}
       {view?.enabled && view.contactUrl && (
@@ -325,7 +325,7 @@ function WhatsAppAgentSelect({
     <>
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor={selectionId}>WhatsApp agent</FieldLabel>
+          <FieldLabel htmlFor={selectionId}>WhatsApp assistant</FieldLabel>
           <Select
             items={agents.map((agent) => ({
               value: agent.id,
@@ -338,9 +338,9 @@ function WhatsAppAgentSelect({
             }}
           >
             <SelectTrigger id={selectionId} className="w-full">
-              <SelectValue placeholder="Choose an agent" />
+              <SelectValue placeholder="Choose an assistant" />
             </SelectTrigger>
-            <SelectContent mobileTitle="WhatsApp agent">
+            <SelectContent mobileTitle="WhatsApp assistant">
               <SelectGroup>
                 {agents.map((agent) => (
                   <SelectItem key={agent.id} value={agent.id}>
@@ -396,7 +396,7 @@ function WhatsAppRoutingActions({
         onClick={() => configure(true)}
       >
         <MessageCircle data-icon="inline-start" />
-        {view?.enabled ? "Save WhatsApp agent" : "Enable WhatsApp"}
+        {view?.enabled ? "Save WhatsApp assistant" : "Enable WhatsApp"}
       </Button>
       {routingDirty && (
         <Button

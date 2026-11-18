@@ -845,7 +845,7 @@ function AgentSettings({
           <div className="settings-preference settings-agent-summary">
             <div>
               <h3>{agent.name}</h3>
-              <p>{agent.instructions || "Your personal assistant"}</p>
+              {agent.instructions.trim() && <p>{agent.instructions}</p>}
             </div>
             <Button variant="outline" size="sm" onClick={onEdit}>
               Edit assistant
