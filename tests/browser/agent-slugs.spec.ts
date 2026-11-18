@@ -54,7 +54,7 @@ test("ID links become canonical slug URLs and preserve the selected view", async
   ).toBeVisible()
   await page.goto("/agents/navi/settings/general")
   await expect(
-    page.getByText("Email this agent", { exact: true })
+    page.getByText("Email this assistant", { exact: true })
   ).toBeVisible()
   await page.goto("/agents")
   const link = page

@@ -2,6 +2,56 @@ import { expect, test } from "@playwright/test"
 
 const id = "44444444-4444-4444-8444-444444444444"
 
+test("manual execution starts with empty drafts and terminal tabs fit one row", async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto("/agents")
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill("browser-smoke@example.invalid")
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill("Disposable browser fixture password 2026!")
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await expect(page.getByRole("region", { name: "Assistants" })).toBeVisible()
+  await page.goto("/agents/navi/code")
+  await expect(page.getByLabel("JavaScript", { exact: true })).toBeEmpty()
+  await expect(page.getByLabel("Input JSON", { exact: true })).toHaveValue(
+    "null"
+  )
+  await expect(
+    page.getByRole("button", { name: "Run code", exact: true })
+  ).toBeDisabled()
+  await expect(
+    page
+      .locator(".execution-workbench > header")
+      .getByText("JavaScript", { exact: true })
+  ).toHaveCount(0)
+  await page.goto("/agents/navi/terminal")
+  await expect(page.getByLabel("Shell command", { exact: true })).toBeEmpty()
+  await expect(
+    page.getByRole("button", { name: "Run command", exact: true })
+  ).toBeDisabled()
+  for (const width of isMobile ? [390, 320] : [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    const bounds = []
+    for (const name of ["Commands", "Interactive", "Transfers"]) {
+      const tab = page.getByRole("tab", { name, exact: true })
+      await expect(tab).toBeVisible()
+      const box = (await tab.boundingBox())!
+      bounds.push(box)
+      expect(box.width).toBeGreaterThanOrEqual(44)
+      if (isMobile) expect(box.height).toBeGreaterThanOrEqual(44)
+    }
+    expect(
+      Math.max(...bounds.map((box) => box.y)) -
+        Math.min(...bounds.map((box) => box.y))
+    ).toBeLessThan(1)
+    expect(bounds.at(-1)!.x + bounds.at(-1)!.width).toBeLessThanOrEqual(width)
+  }
+})
+
 test("long app forms scroll to their action while workbench controls stay visible", async ({
   page,
 }) => {

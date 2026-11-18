@@ -15,6 +15,15 @@ async function openCode(page: Page) {
   await page.goto("/agents/navi/code")
   await expect(
     page.getByRole("button", { name: "Run code", exact: true })
+  ).toBeDisabled()
+  await page
+    .getByLabel("JavaScript", { exact: true })
+    .fill(
+      "console.log('Items:', input.length)\nreturn input.reduce((sum, n) => sum + n, 0)"
+    )
+  await page.getByLabel("Input JSON", { exact: true }).fill("[1, 2, 3]")
+  await expect(
+    page.getByRole("button", { name: "Run code", exact: true })
   ).toBeEnabled()
 }
 function saved(input: RunInput, status: CodeRun["status"]): CodeRun {

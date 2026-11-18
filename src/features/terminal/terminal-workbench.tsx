@@ -77,9 +77,7 @@ function TerminalWorkbenchView({
     onPendingChange(pending || !!networkSettings)
     return () => onPendingChange(false)
   }, [pending, networkSettings, onPendingChange])
-  const [command, setCommand] = useState(
-    'printf "Hello from Linux\\n"\nls -la /workspace'
-  )
+  const [command, setCommand] = useState("")
   const content = (
     <section className="terminal-workbench @container/tool flex min-h-0 min-w-0 flex-1 flex-col">
       <TerminalHeader
@@ -151,7 +149,7 @@ function TerminalWorkbenchView({
                 onTabChange(value)
             }}
           >
-            <TabsList>
+            <TabsList className="terminal-tabs">
               <TabsTrigger disabled={pending} value="commands">
                 Commands
               </TabsTrigger>
@@ -159,7 +157,7 @@ function TerminalWorkbenchView({
                 Interactive
               </TabsTrigger>
               <TabsTrigger disabled={pending} value="transfers">
-                File transfer
+                Transfers
               </TabsTrigger>
             </TabsList>
             <TabsContent value="transfers">
@@ -423,7 +421,7 @@ function CommandEditor({
               terminal.busy ||
               (!terminal.attempt &&
                 (terminal.runtimeBusy || !!terminal.cleanupError)) ||
-              !command.trim()
+              !(terminal.attempt?.command ?? command).trim()
             }
           >
             <Play data-icon="inline-start" />

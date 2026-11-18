@@ -319,7 +319,7 @@ export function WorkbenchPanel({
           <SheetHeader className="sr-only">
             <SheetTitle>{agentName} workbench</SheetTitle>
             <SheetDescription>
-              Private tools, files, activity and saved work for this agent.
+              Private tools, files, activity and saved work for this assistant.
             </SheetDescription>
           </SheetHeader>
           <div className="workbench-frame">

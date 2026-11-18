@@ -29,6 +29,18 @@
   display: none;
 }
 
+.terminal-tabs[data-slot="tabs-list"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+
+.terminal-tabs [data-slot="tabs-trigger"] {
+  min-width: 0;
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-sm);
+}
+
 .terminal-run-form {
   padding-block-start: calc(var(--spacing) * 3);
 }

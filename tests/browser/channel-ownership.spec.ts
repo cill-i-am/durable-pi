@@ -155,7 +155,7 @@ async function channelFixture(
 
 async function chooseAgent(page: Page, name: string) {
   await page
-    .getByRole("combobox", { name: "WhatsApp agent", exact: true })
+    .getByRole("combobox", { name: "WhatsApp assistant", exact: true })
     .click()
   await page.getByRole("option", { name, exact: true }).click()
 }
@@ -169,7 +169,7 @@ test("WhatsApp uses its persisted target, reroutes explicitly, and retains earli
     `/settings/channels?${new URLSearchParams({ returnTo: "/agents/navi" })}`
   )
   const picker = page.getByRole("combobox", {
-    name: "WhatsApp agent",
+    name: "WhatsApp assistant",
     exact: true,
   })
   await expect(picker).toContainText("Research")
@@ -185,7 +185,7 @@ test("WhatsApp uses its persisted target, reroutes explicitly, and retains earli
   await chooseAgent(page, "Navi")
   await expect(picker).toContainText("Navi")
   await expect(
-    page.getByRole("button", { name: "Save WhatsApp agent", exact: true })
+    page.getByRole("button", { name: "Save WhatsApp assistant", exact: true })
   ).toBeEnabled()
   await expect(
     ledger.getByRole("button", {
@@ -195,7 +195,7 @@ test("WhatsApp uses its persisted target, reroutes explicitly, and retains earli
   ).toBeDisabled()
   expect(fixture.configure).toEqual([])
   await page
-    .getByRole("button", { name: "Save WhatsApp agent", exact: true })
+    .getByRole("button", { name: "Save WhatsApp assistant", exact: true })
     .click()
   await expect(
     page.getByText("New WhatsApp messages go to Navi.", { exact: false })
@@ -248,26 +248,26 @@ for (const availability of ["missing", "archived"] as const) {
       `/settings/channels?${new URLSearchParams({ returnTo: "/agents/navi" })}`
     )
     const picker = page.getByRole("combobox", {
-      name: "WhatsApp agent",
+      name: "WhatsApp assistant",
       exact: true,
     })
-    await expect(picker).toContainText("Choose an agent")
+    await expect(picker).toContainText("Choose an assistant")
     await expect(
       page.getByText("Research is unavailable.", { exact: false })
     ).toBeVisible()
     await expect(
-      page.getByRole("button", { name: "Save WhatsApp agent", exact: true })
+      page.getByRole("button", { name: "Save WhatsApp assistant", exact: true })
     ).toBeDisabled()
     await expect(
       page.getByRole("region", { name: "Recent WhatsApp replies", exact: true })
     ).toContainText("Agent: Research")
     await chooseAgent(page, "Navi")
     await expect(
-      page.getByRole("button", { name: "Save WhatsApp agent", exact: true })
+      page.getByRole("button", { name: "Save WhatsApp assistant", exact: true })
     ).toBeEnabled()
     expect(fixture.configure).toEqual([])
     await page.getByRole("button", { name: "Cancel", exact: true }).click()
-    await expect(picker).toContainText("Choose an agent")
+    await expect(picker).toContainText("Choose an assistant")
     expect(fixture.configure).toEqual([])
   })
 }
@@ -283,13 +283,13 @@ test("an unconfirmed WhatsApp reroute retries its original operation and chosen 
   )
   await chooseAgent(page, "Navi")
   await page
-    .getByRole("button", { name: "Save WhatsApp agent", exact: true })
+    .getByRole("button", { name: "Save WhatsApp assistant", exact: true })
     .click()
   await expect(
     page.getByText("Synthetic configure acknowledgement lost.", { exact: true })
   ).toBeVisible()
   const picker = page.getByRole("combobox", {
-    name: "WhatsApp agent",
+    name: "WhatsApp assistant",
     exact: true,
   })
   await expect(picker).toBeDisabled()
