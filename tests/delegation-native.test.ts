@@ -5,7 +5,6 @@ import { join } from "node:path"
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
   createModels,
-  Type,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
@@ -18,6 +17,7 @@ import {
   type Extension,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 import { expect, it } from "vitest"
 
@@ -116,7 +116,7 @@ it.each([
     const read = defineTool({
       name: "date",
       description: "Read synthetic reference",
-      parameters: Type.Object({}),
+      parameters: ToolSchema.obj({}),
       replay: "safe",
       execute: async (_, api) => {
         reads.set(

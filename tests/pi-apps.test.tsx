@@ -9,11 +9,7 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  watchEvents,
-} from "@earendil-works/pi-durable"
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { Effect } from "effect"
 import { renderToStaticMarkup } from "react-dom/server"
@@ -27,6 +23,7 @@ import { appTools } from "../src/apps/adapters/pi"
 import { AppStore } from "../src/apps/adapters/sqlite"
 import { makeApps } from "../src/apps/service"
 import { piTimeline } from "../src/conversations/adapters/pi-timeline"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { TurnActivity } from "../src/features/conversation/turn-activity"
 import { database } from "./database"
 
@@ -143,8 +140,8 @@ it("saves a native Pi app, resumes publication approval after restart and render
     await conversation.waitForIdle(ctx)
     expect(Effect.runSync(apps.get(appId))?.publishedVersion).toBe(1)
     expect(Effect.runSync(apps.detail(appId)).versions).toHaveLength(1)
-    const events = await watchEvents(harness, conversation.id, ctx)
-    const activity = piTimeline(events.snapshot.entries)
+    const events = await conversation.watch(ctx)
+    const activity = piTimeline(snapshotFromView(events.value).entries)
     expect(
       renderToStaticMarkup(
         <TurnActivity items={activity} agentId="synthetic-bot" />

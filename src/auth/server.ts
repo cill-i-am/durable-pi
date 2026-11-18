@@ -5,7 +5,7 @@ import { twoFactor } from "better-auth/plugins"
 import { drizzle } from "drizzle-orm/d1"
 import { Effect, Schema } from "effect"
 
-import type { WebsiteEnv } from "../../alchemy.run"
+import type { WebsiteEnv } from "../../stacks/resources/website"
 import { familyOrganization, guardFamilyAuth } from "../family/adapters/auth"
 import {
   familyDirectory,
@@ -14,11 +14,7 @@ import {
 import { verificationEmail } from "../family/adapters/mail"
 import { nativeOperation } from "../shared/interop"
 import { OwnerSessionUnavailable, ownerSession } from "./owner-session"
-import {
-  accountPasskeys,
-  guardPasskeyAuth,
-  passkeyAuthenticationOptions,
-} from "./passkeys"
+import { accountPasskeys, guardPasskeyAuth } from "./passkeys"
 import { passwordResetEmail, PASSWORD_RESET_SECONDS } from "./password-email"
 import * as schema from "./schema"
 
@@ -123,8 +119,6 @@ export function authOptions(
           })
       }),
       after: createAuthMiddleware(async (ctx) => {
-        const options = passkeyAuthenticationOptions(ctx, ctx.context.returned)
-        if (options) return options
         if (ctx.path === "/send-verification-email") {
           const body = Schema.decodeUnknownOption(
             Schema.Struct({ email: Schema.String })

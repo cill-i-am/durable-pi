@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai"
 import { defineTool, type ToolExecutionApi } from "@earendil-works/pi-durable"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Schema, Effect } from "effect"
 
 import type { DelegationFailure } from "../../delegation/contracts"
@@ -28,7 +28,7 @@ export function communicationTools(
       description:
         "List other active bots owned by this account that can receive a bounded text-only internal task or question.",
       replay: "safe",
-      parameters: Type.Object({}),
+      parameters: ToolSchema.obj({}),
       execute: async (_, _api, context) => ({
         output: [
           {
@@ -45,11 +45,14 @@ export function communicationTools(
       description:
         "Send another bot one bounded question or drafting task with explicit text context. Saves a durable dependency and returns acceptance immediately; findings arrive later in this chat. No object, file or outside-action grants. At most three tasks per originating request, ten-minute deadline. Requires existing tool permission.",
       replay: "safe",
-      parameters: Type.Object({
-        to: Type.String(),
-        kind: Type.Union([Type.Literal("task"), Type.Literal("question")]),
-        objective: Type.String({ minLength: 1, maxLength: 1000 }),
-        context: Type.String({ maxLength: 12000 }),
+      parameters: ToolSchema.obj({
+        to: ToolSchema.str(),
+        kind: ToolSchema.union([
+          ToolSchema.lit("task"),
+          ToolSchema.lit("question"),
+        ]),
+        objective: ToolSchema.str({ minLength: 1, maxLength: 1000 }),
+        context: ToolSchema.str({ maxLength: 12000 }),
       }),
       execute: async (input, api, context) => ({
         output: [
@@ -81,7 +84,7 @@ export function communicationTools(
       description:
         "Read this bot's durable task outcome by task ID. Do not poll repeatedly while waiting; results resume the original task automatically.",
       replay: "safe",
-      parameters: Type.Object({ id: Type.String({ maxLength: 180 }) }),
+      parameters: ToolSchema.obj({ id: ToolSchema.str({ maxLength: 180 }) }),
       execute: async (input, _api, context) => ({
         output: [
           {

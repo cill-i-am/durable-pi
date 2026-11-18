@@ -21,8 +21,6 @@ export function passkeyError(error: unknown) {
       return "Sign out and sign in again before adding a passkey."
     case "UNAUTHORIZED":
       return "Your session has ended. Sign in again to continue."
-    case "PASSKEY_DEVICE_VERIFICATION_REQUIRED":
-      return "Unlock your device with your fingerprint, face or PIN, then try again."
     case "AUTH_CANCELLED":
     case "REGISTRATION_CANCELLED":
     case "ERROR_CEREMONY_ABORTED":

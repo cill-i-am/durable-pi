@@ -1,4 +1,7 @@
-import type { AgentEvent, AgentEventStream } from "@earendil-works/pi-durable"
+import type {
+  ConversationWatch,
+  ConversationView,
+} from "@earendil-works/pi-durable"
 import type { StreamChunk } from "@tanstack/ai/client"
 import { Cause, Clock, Effect, Exit, Schema } from "effect"
 
@@ -13,6 +16,7 @@ import { conversationEventPump } from "../events"
 import { probeHandoff, type HandoffPublication } from "../handoff"
 import type { ConversationLatency, FirstTextTrace } from "../latency"
 import { conversationOutput } from "./output"
+import { snapshotFromView } from "./pi-view"
 import { chatMessages, messageEvents } from "./tanstack"
 
 export class ConversationStreamError extends Schema.TaggedError<ConversationStreamError>()(
@@ -37,7 +41,7 @@ type Source<TError> = {
   milestones?: boolean
   snapshot: () => Effect.Effect<ChatState, TError>
   activeSession: () => Effect.Effect<string | undefined, TError>
-  watch: (id: string) => Promise<AgentEventStream>
+  watch: (id: string) => Promise<ConversationWatch>
   subscribe: (listener: () => void) => () => void
 }
 
@@ -211,11 +215,18 @@ export function conversationEvents<TError>(
                 ).pipe(
                   Effect.flatMap((watch) =>
                     Effect.sync(() => {
-                      if (source.latency && hasNativeText(watch.snapshot))
+                      if (source.latency && hasNativeText(watch.value))
                         Effect.runSync(source.latency.native(id))
-                      watch.start(async (events) => {
-                        if (source.latency && events.some(hasNativeText))
-                          Effect.runSync(source.latency.native(id))
+                      let after = latestEntry(watch.value)
+                      watch.start(async (call) => {
+                        if (call.kind === "value") {
+                          if (
+                            source.latency &&
+                            hasNativeText(call.value, after)
+                          )
+                            Effect.runSync(source.latency.native(id))
+                          after = latestEntry(call.value)
+                        }
                         notify()
                       })
                     })
@@ -360,17 +371,28 @@ function firstTextDiagnostic(
   }
 }
 
-function hasNativeText(event: AgentEvent): boolean {
-  const text = (content: readonly { type: string; text?: string }[]) =>
-    content.some((block) => block.type === "text" && Boolean(block.text))
-  if (event.type === "message_start")
-    return event.message.role === "assistant" && text(event.message.content)
-  if (event.type === "snapshot")
-    return text(event.generation?.message?.content ?? [])
-  if (event.type !== "message_update") return false
-  return event.changes.some((change) => {
-    if (change.type === "text_delta") return change.delta.length > 0
-    if (change.type === "message") return text(change.message.content)
-    return "block" in change && text([change.block])
-  })
+const latestEntry = (view: ConversationView) =>
+  view.entries.reduce((latest, entry) => Math.max(latest, entry.id), -1)
+
+function hasNativeText(view: ConversationView, after?: number): boolean {
+  return (
+    (snapshotFromView(view).generation?.message?.content.some(
+      (block) => block.type === "text" && Boolean(block.text)
+    ) ??
+      false) ||
+    // A folded watch may deliver the committed answer without its live partial.
+    // Only new entries count; a reused session's history is not current latency.
+    (after !== undefined &&
+      view.entries.some(
+        (entry) =>
+          entry.id > after &&
+          entry.model?.some(
+            (message) =>
+              message.role === "assistant" &&
+              message.content.some(
+                (block) => block.type === "text" && Boolean(block.text)
+              )
+          )
+      ))
+  )
 }

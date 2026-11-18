@@ -1,10 +1,6 @@
-import {
-  createModels,
-  Type,
-  type Message,
-  type Tool,
-} from "@earendil-works/pi-ai"
+import { createModels, type Message, type Tool } from "@earendil-works/pi-ai"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 
 import { CoordinationStore } from "../src/coordination/adapters/sqlite"
@@ -78,7 +74,7 @@ tools.push({
   name: "publish_report",
   description:
     "Publish the report externally. Requires explicit approval from human-owner in this conversation.",
-  parameters: Type.Object({}),
+  parameters: ToolSchema.obj({}),
 })
 const input = (author: Actor, text: string): Message => ({
   role: "user",

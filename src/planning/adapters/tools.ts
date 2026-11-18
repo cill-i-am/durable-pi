@@ -1,4 +1,3 @@
-import { Type } from "@earendil-works/pi-ai"
 import {
   defineTool,
   GenerationTask,
@@ -6,6 +5,7 @@ import {
   type HookApi,
   type ToolExecutionApi,
 } from "@earendil-works/pi-durable"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 
 import { PlanFailure } from "../contracts"
@@ -22,43 +22,43 @@ Use a new task for a distinct user objective. Use continue with the existing tas
 Keep stable step IDs, concrete actions, relevant constraints and observable completion criteria. Record the next action and any blocker. Update at meaningful changes, not after every trivial action. Reuse completed external-action receipts; updating a plan must never repeat the action. Waiting for approval, external results or missing information is a blocker, not a reason to poll or retry in a loop. Respect Stop. Once the outcome is achieved and appropriately verified, mark complete and finish without repeated checking.
 Evidence references are bot-local receipt IDs/revisions, execution IDs (revision 0), current working-object/app revisions, or immutable workspace file IDs (revision 0). Evidence validation confirms the saved source and recorded outcome; it does not independently prove your semantic claim. Never invent evidence. Keep unsupported completion clearly agent-reported. Changed requirements or stale evidence can reopen completed steps. A bounded view of the current plan is supplied fresh per request; use read_plan for omitted details before revising or acting on them. Do not copy its full body into chat or memory.`
 
-const id = Type.String({ pattern: "^[a-f0-9-]{36}$" })
-const revision = Type.Integer({ minimum: 0 })
-const string = (maxLength: number) => Type.String({ maxLength })
-const label = (maxLength: number) => Type.String({ minLength: 1, maxLength })
-const evidence = Type.Object({
-  kind: Type.Union([
-    Type.Literal("receipt"),
-    Type.Literal("execution"),
-    Type.Literal("object"),
-    Type.Literal("app"),
-    Type.Literal("file"),
+const id = ToolSchema.str({ pattern: "^[a-f0-9-]{36}$" })
+const revision = ToolSchema.int({ minimum: 0 })
+const string = (maxLength: number) => ToolSchema.str({ maxLength })
+const label = (maxLength: number) => ToolSchema.str({ minLength: 1, maxLength })
+const evidence = ToolSchema.obj({
+  kind: ToolSchema.union([
+    ToolSchema.lit("receipt"),
+    ToolSchema.lit("execution"),
+    ToolSchema.lit("object"),
+    ToolSchema.lit("app"),
+    ToolSchema.lit("file"),
   ]),
   id: label(100),
   revision,
 })
-const draft = Type.Object({
+const draft = ToolSchema.obj({
   objective: label(1000),
-  constraints: Type.Array(label(500), { maxItems: 10 }),
-  criteria: Type.Array(label(500), { minItems: 1, maxItems: 10 }),
-  steps: Type.Array(
-    Type.Object({
-      id: Type.String({ pattern: "^[a-z][a-z0-9_-]{0,39}$" }),
+  constraints: ToolSchema.arr(label(500), { maxItems: 10 }),
+  criteria: ToolSchema.arr(label(500), { minItems: 1, maxItems: 10 }),
+  steps: ToolSchema.arr(
+    ToolSchema.obj({
+      id: ToolSchema.str({ pattern: "^[a-z][a-z0-9_-]{0,39}$" }),
       title: label(240),
-      status: Type.Union([
-        Type.Literal("pending"),
-        Type.Literal("active"),
-        Type.Literal("blocked"),
-        Type.Literal("completed"),
+      status: ToolSchema.union([
+        ToolSchema.lit("pending"),
+        ToolSchema.lit("active"),
+        ToolSchema.lit("blocked"),
+        ToolSchema.lit("completed"),
       ]),
-      evidence: Type.Array(evidence, { maxItems: 5 }),
+      evidence: ToolSchema.arr(evidence, { maxItems: 5 }),
       note: string(1000),
     }),
     { minItems: 1, maxItems: 20 }
   ),
   nextAction: string(1000),
   blocker: string(1000),
-  complete: Type.Boolean(),
+  complete: ToolSchema.bool(),
 })
 const toolPageFits = (value: ReturnType<typeof result>) =>
   new TextEncoder().encode(value.output[0]!.text).byteLength <= 40000
@@ -79,9 +79,12 @@ export function planTools(
       description:
         "Create or revise the current logical task plan. No plan approval is needed. Choose new for a distinct objective (omit id, expectedRevision 0); continue for related follow-up work (supply id and current revision). Use inputRevision from current planning context. Keep stable step IDs. Conflicts require rereading current state. Changed requirements reopen completed steps for reassessment. Returns a small durable receipt; a bounded current view is injected into the next request. Use read_plan for omitted fields before revising. Grants no permissions and runs no actions.",
       replay: "safe",
-      parameters: Type.Object({
-        id: Type.Optional(id),
-        relation: Type.Union([Type.Literal("new"), Type.Literal("continue")]),
+      parameters: ToolSchema.obj({
+        id: ToolSchema.opt(id),
+        relation: ToolSchema.union([
+          ToolSchema.lit("new"),
+          ToolSchema.lit("continue"),
+        ]),
         expectedRevision: revision,
         inputRevision: revision,
         reason: label(500),
@@ -116,10 +119,10 @@ export function planTools(
       description:
         "Read a bot-local plan and validated evidence as paginated items (objective, constraint, criterion, step, nextAction, blocker). Follow nextOffset until null for the complete plan; all pages carry its revision. With no id, list this bot's tasks. History is a separate revision summary; use beforeRevision for older history. Cancelled plans are reference only and cannot restart work.",
       replay: "safe",
-      parameters: Type.Object({
-        id: Type.Optional(id),
-        beforeRevision: Type.Optional(revision),
-        offset: Type.Optional(Type.Integer({ minimum: 0, maximum: 200 })),
+      parameters: ToolSchema.obj({
+        id: ToolSchema.opt(id),
+        beforeRevision: ToolSchema.opt(revision),
+        offset: ToolSchema.opt(ToolSchema.int({ minimum: 0, maximum: 200 })),
       }),
       execute: async (args, _api, context) => {
         if (!args.id) {

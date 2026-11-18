@@ -1,10 +1,10 @@
 import { Schema } from "effect"
 import { expect, it, vi } from "vitest"
 
-import type { AgentEnv } from "../alchemy.run"
 import service from "../src/agent/worker"
 import { agentObjectName, AgentId } from "../src/agents/domain"
 import { isMailboxRequest } from "../src/communication/adapters/rpc"
+import type { AgentEnv } from "../stacks/resources/agent"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},

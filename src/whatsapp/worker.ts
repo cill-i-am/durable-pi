@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect"
 
-import type { WhatsAppEnv } from "../../alchemy.run"
+import type { WhatsAppEnv } from "../../stacks/resources/channels"
 import { ownerAccounts } from "../auth/adapters/accounts"
 import { requestBytes } from "../shared/http"
 import { WhatsAppWebhook } from "./contracts"

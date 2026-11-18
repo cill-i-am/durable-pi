@@ -1,9 +1,6 @@
 import { fauxAssistantMessage } from "@earendil-works/pi-ai"
-import type {
-  EntryRecord,
-  SnapshotEvent,
-  SubmissionRecord,
-} from "@earendil-works/pi-durable"
+import type { ConversationView } from "@earendil-works/pi-durable"
+import type { EntryRecord, SubmissionRecord } from "@earendil-works/pi-durable"
 import type { PiHarness } from "agents/harness/pi"
 import { Cause, Effect, Exit, Logger } from "effect"
 import { expect, it, vi } from "vitest"
@@ -14,10 +11,12 @@ import {
   piConversationLayer,
   conversationNativeOperation,
 } from "../src/conversations/adapters/pi-execution"
+import type { PiSnapshot } from "../src/conversations/adapters/pi-view"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import type { TurnOrigin } from "../src/conversations/contracts"
 import { ConversationExecution } from "../src/conversations/execution"
 import { database } from "./database"
+import { conversationView } from "./pi-view"
 
 function deferred() {
   let resolve!: () => void
@@ -125,15 +124,11 @@ const entry = (id: number): EntryRecord => ({
   conversationId: 0 as EntryRecord["conversationId"],
   kind: "pi.user",
 })
-const snapshot = (ids: number[]): SnapshotEvent => ({
-  type: "snapshot",
-  nestedTools: [],
+const snapshot = (ids: number[]): PiSnapshot => ({
   entries: ids.map(entry),
   tools: [],
-  inbox: [],
+
   compactions: [],
-  agent: {},
-  usage: { models: {}, tools: {} },
 })
 const done = {
   id: 1,
@@ -191,19 +186,22 @@ function fixture() {
   const root = Effect.runSync(store.get("root"))!
   const reads = vi.fn(async () => done)
   const stop = vi.fn(async () => {})
-  const events = vi.fn(async () => ({ snapshot: snapshot([1, 2]), stop }))
+  const watch = vi.fn(async () => ({
+    value: conversationView([entry(1), entry(2)]),
+    stop,
+  }))
   const entries = vi.fn(async () => ({ items: [] as EntryRecord[] }))
   const harness = {
     storage: async () => ({ submissionByRequest: reads }),
     conversation: async () => ({ id: 0, entries }),
-    session: () => ({ events }),
+    session: () => ({ watch }),
   } as unknown as PiHarness
   return {
     root,
     store,
     reads,
     stop,
-    events,
+    watch,
     entries,
     execution: piConversationObserver(() => harness),
   }
@@ -233,7 +231,7 @@ it("normalizes historical archive identities, steering, consumed inputs and live
       entries: [user, response, steer],
       generation: {
         message: fauxAssistantMessage("partial"),
-      } as SnapshotEvent["generation"],
+      } as PiSnapshot["generation"],
     },
     records: new Map([
       [root.id, done],
@@ -299,10 +297,10 @@ it("joins a late snapshot acquisition and stop after interruption without readin
     acquired = deferred(),
     stopping = deferred(),
     released = deferred()
-  f.events.mockImplementation(async () => {
+  f.watch.mockImplementation(async () => {
     started.resolve()
     await acquired.promise
-    return { snapshot: snapshot([1, 2]), stop: f.stop }
+    return { value: conversationView([entry(1), entry(2)]), stop: f.stop }
   })
   f.stop.mockImplementation(async () => {
     stopping.resolve()
@@ -334,11 +332,8 @@ it("joins an in-flight transcript page and skips subsequent pages after cancella
   const f = fixture(),
     started = deferred(),
     released = deferred()
-  f.events.mockResolvedValue({
-    snapshot: {
-      ...snapshot([]),
-      entries: [{ ...entry(3), head: entry(1).id }],
-    },
+  f.watch.mockResolvedValue({
+    value: conversationView([{ ...entry(3), head: entry(1).id }]),
     stop: f.stop,
   })
   // The native read ignores cancellation, so the adapter retains ownership.
@@ -352,7 +347,7 @@ it("joins an in-flight transcript page and skips subsequent pages after cancella
         return { items: [entry(1)], next: { offset: 1 } }
       }),
     }),
-    session: () => ({ events: f.events }),
+    session: () => ({ watch: f.watch }),
   }
   const conversation = await harness.conversation()
   const stableHarness = {
@@ -416,7 +411,7 @@ it.each(["capture", "receipt"])(
   async (operation) => {
     const f = fixture(),
       cause = new Error("native unavailable")
-    if (operation === "capture") f.events.mockRejectedValue(cause)
+    if (operation === "capture") f.watch.mockRejectedValue(cause)
     if (operation === "receipt") f.reads.mockRejectedValue(cause)
     const result = await Effect.runPromise(
       f.execution.observe(f.root, [f.root]).pipe(Effect.result)
@@ -481,8 +476,8 @@ it("retains both snapshot acquisition and native observer cleanup defects", asyn
   const f = fixture(),
     snapshotFailure = new Error("snapshot invariant"),
     cleanup = new Error("observer stop invariant")
-  f.events.mockImplementation(async () => ({
-    get snapshot(): SnapshotEvent {
+  f.watch.mockImplementation(async () => ({
+    get value(): ConversationView {
       throw snapshotFailure
     },
     stop: f.stop,

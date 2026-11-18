@@ -9,13 +9,14 @@ Durable Pi includes [tsrs](https://github.com/oxc-project/tsrs), the compiler in
 | `pnpm typecheck` | tsrs; required by CI |
 | `pnpm typecheck:rust` | Alias for the same tsrs check |
 | `pnpm typecheck:typescript` | TypeScript 7 comparison and fallback |
+| `pnpm lint` | Official `effect-tsgo oxlint` launcher selects matching patched Oxlint and tsgolint binaries |
 | `pnpm lint:effect` | Rust Effect diagnostics; errors fail, warnings and suggestions stay advisory |
 | `pnpm test:tooling` | Positive and negative TypeScript/Effect fixtures |
 | `pnpm bench:typecheck` | Repeated time, memory, and compatibility measurements |
 
 Static verification runs tsrs, then Rust Effect diagnostics and tooling tests, followed by the existing Oxlint and Oxfmt checks. The CI matrix, native recovery, browser, container, and deployment gates remain unchanged. Existing Oxlint Effect correctness rules remain enforced.
 
-The standalone Effect command uses `--lspconfig '{}'` to activate upstream defaults without altering the existing editor/Oxlint options in `tsconfig.json`. The existing `@effect/tsgo` integration and TypeScript 6 compiler-API compatibility package remain installed. This change does not replace editor services or patch Oxlint again.
+The standalone Effect command uses `--lspconfig '{}'` to activate upstream defaults without altering the existing editor/Oxlint options in `tsconfig.json`. The existing `@effect/tsgo` integration and TypeScript 6 compiler-API compatibility package remain installed. The `prepare` step retains editor/config type augmentation. Lint uses the official `effect-tsgo oxlint` launcher so it does not depend on an installed stock binary retaining an earlier patch; both CLI conformance suites invoke that same launcher.
 
 ## Recursive Zod compatibility
 

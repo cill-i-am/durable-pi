@@ -2,7 +2,7 @@
 
 A private, durable agent workspace built with **Pi Durable**, Cloudflare Durable Objects, **TanStack Start and AI**, **shadcn/ui on Base UI**, Better Auth, and **Alchemy Effect**.
 
-Production: [bot.cill-i-am.com](https://bot.cill-i-am.com). Alchemy attaches this hostname to the existing website Worker and manages its DNS and TLS certificate. The production zone is pinned in `alchemy.run.ts`; development keeps its local URL. `Worker.URL` supplies the canonical origin to authentication. The previous `workers.dev` address redirects page requests to this address; mutations require the canonical origin. Sign in again on the new hostname using the existing account.
+Production: [bot.cill-i-am.com](https://bot.cill-i-am.com). Alchemy attaches this hostname to the existing website Worker and manages its DNS and TLS certificate. The production zone is pinned in `stacks/resources/worker-settings.ts`; development keeps its local URL. `Worker.URL` supplies the canonical origin to authentication. The previous `workers.dev` address redirects page requests to this address; mutations require the canonical origin. Sign in again on the new hostname using the existing account.
 
 Pi owns model turns, tool execution, committed transcripts, and recovery. The application adds invitation-only account access, a durable submission queue, a lossless message archive, a binary summary tree, and sourced Markdown memory notes. ChatGPT subscription access uses Pi's current OpenAI sign-in flow.
 
@@ -66,13 +66,13 @@ CI runs the verification suites in parallel and requires the aggregate `check` r
 
 Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, Workers R2 Storage read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access. A fresh machine also needs Secrets Store read/write to retrieve remote-state credentials; an existing trusted state-credential cache avoids that additional local permission.
 
-Workers use the `2026-09-25` compatibility date. Alchemy and its providers use beta.84; native fixtures explicitly pin workerd `1.20261031.1`. Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
+Worker compatibility dates remain explicit in their resource modules. Alchemy and its providers use beta.87; native fixtures pin workerd `1.20261117.1`. Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
 
 ### Package upgrade compatibility
 
-Pi 1.4 upgrades its SQLite task table to schema version 2. Once a database opens on this release, Pi 1.3 and earlier cannot reopen it; reverting only the application bundle is not a rollback plan. Existing completed tool receipts and application workflow records remain readable without redispatch. New records identify Pi 1.4 and XState alpha.71 / Effect integration alpha.10; the existing workflow versions and durable identities remain unchanged.
+Pi 1.5.2 retains SQLite schema version 2 and upgrades its live document and native task versions. Once the new versions are written, a code-only rollback to Pi 1.4 is unsupported; Pi 1.3 also cannot open schema version 2. Existing completed tool receipts and application workflow records remain readable without redispatch. New records identify Pi 1.5.2 and XState alpha.73 / Effect integration alpha.12; application workflow versions and durable identities remain unchanged. Interrupted model requests now consume the configured retry budget. See the [upgrade evidence and rollout notes](docs/dependency-modernization.md).
 
-The Alchemy provider integrations now live in `@alchemy.run/cloudflare`, `@alchemy.run/github`, and `@alchemy.run/drizzle`. The native Sandbox migration and four-container capacity coordinator are retained. Both native and legacy rehearsal images match their respective SDK versions.
+The [Alchemy composition root](alchemy.run.ts) assembles resources from [modules grouped by responsibility](stacks/README.md). The Alchemy provider integrations live in `@alchemy.run/cloudflare`, `@alchemy.run/github`, and `@alchemy.run/drizzle`. The native Sandbox migration and four-container capacity coordinator are retained. Both native and legacy rehearsal images match their respective SDK versions.
 
 Local dependency patches retain MCP credential rotation serialization and Pi/Drizzle storage coordination. A Zod packaging patch preserves schema initialization when a bundle combines static MCP imports with deferred Zod imports; the package-bundle test exercises that startup path.
 
@@ -315,7 +315,7 @@ The selected community [Effect lifecycle rules](https://github.com/cevr/oxlint-p
 
 React component syntax and handler naming remain flexible. Memo wrappers and native-tag substitutions are not required for valid live regions and composite widgets. The incomplete React Compiler diagnostics are explicitly disabled where they reject supported try/finally, dynamic imports, schemas or mutable request lifetimes; the Hooks dependency checker remains enabled. Intentional request-generation invalidation and the reconnect transport key have local, explained exceptions.
 
-Oxlint enforces classic cyclomatic complexity **20** for source, scripts and tests, with no legacy waivers. [cccc](https://github.com/moznion/cccc) reports cognitive and cyclomatic complexity separately: install its official **v1.8.3** release, then run `pnpm complexity:report` for JSON or `cccc --top-cognitive 25 --table src` for a table. CI verifies the reporter through its pinned setup action, adds the top cognitive hotspots to the check summary, and retains the complete JSON report for 14 days. cccc is informational; Oxlint provides the complexity gate.
+Oxlint enforces classic cyclomatic complexity **20** for source, scripts and tests, with no legacy waivers. [cccc](https://github.com/moznion/cccc) reports cognitive and cyclomatic complexity separately: install its official **v1.9.1** release, then run `pnpm complexity:report` for JSON or `cccc --top-cognitive 25 --table src` for a table. CI verifies the reporter through its pinned setup action, adds the top cognitive hotspots to the check summary, and retains the complete JSON report for 14 days. cccc is informational; Oxlint provides the complexity gate.
 
 ### Task controls across agents and surfaces
 

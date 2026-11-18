@@ -9,11 +9,7 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  watchEvents,
-} from "@earendil-works/pi-durable"
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { Effect } from "effect"
 import { expect, it } from "vitest"
@@ -24,6 +20,7 @@ import { AccessStore } from "../src/access/adapters/sqlite"
 import { builtInTools } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
 import { piTimeline } from "../src/conversations/adapters/pi-timeline"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { objectsRequest } from "../src/objects/adapters/http"
 import { piWorkingObjects } from "../src/objects/adapters/pi"
 import {
@@ -191,10 +188,10 @@ it.each(["shrink", "grow"])(
       await conversation.waitForIdle(ctx)
       expect(projections.at(-1)).toContain('"changed":true')
       expect((await execute(objects.context())).offeredThrough).toBe(1)
-      const events = await watchEvents(harness, conversation.id, ctx)
-      expect(JSON.stringify(events.snapshot.entries)).not.toContain(
-        "Working objects:"
-      )
+      const events = await conversation.watch(ctx)
+      expect(
+        JSON.stringify(snapshotFromView(events.value).entries)
+      ).not.toContain("Working objects:")
       await events.stop()
     } finally {
       await harness.close(ctx)
@@ -528,12 +525,12 @@ it("runs typed native tools, uses the same UI operations, sees live user edits n
     expect(
       requests.at(-1)!.match(/Working objects: current server-generated/g) ?? []
     ).toHaveLength(1)
-    const events = await watchEvents(harness, second.id, ctx)
-    const timeline = piTimeline(events.snapshot.entries)
+    const events = await second.watch(ctx)
+    const timeline = piTimeline(snapshotFromView(events.value).entries)
     expect(JSON.stringify(timeline)).toContain("Reviewed on mobile")
-    expect(JSON.stringify(events.snapshot.entries)).not.toContain(
-      "Working objects: current server-generated"
-    )
+    expect(
+      JSON.stringify(snapshotFromView(events.value).entries)
+    ).not.toContain("Working objects: current server-generated")
     expect((await execute(objects.context())).offeredThrough).toBe(2)
     await events.stop()
   } finally {
@@ -760,8 +757,8 @@ it.each([
         expect((await execute(objects.read(list[0].id))).events).toHaveLength(1)
       expect((await conversation.submit(command, ctx)).id).toBe(first.id)
       expect((await execute(objects.list())).length).toBe(expectedCount)
-      const events = await watchEvents(harness, conversation.id, ctx)
-      const transcript = JSON.stringify(events.snapshot.entries)
+      const events = await conversation.watch(ctx)
+      const transcript = JSON.stringify(snapshotFromView(events.value).entries)
       if (scenario.startsWith("revoked"))
         expect(transcript).toContain("Tool access changed")
       else if (scenario.startsWith("expired"))

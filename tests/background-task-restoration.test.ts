@@ -1,4 +1,3 @@
-import type { Context } from "@earendil-works/chord"
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
 import { createModels } from "@earendil-works/pi-ai"
 import {
@@ -10,6 +9,7 @@ import {
   type StorageWrite,
 } from "@earendil-works/pi-durable"
 import { MemoryStorage } from "@earendil-works/pi-durable/storage/memory"
+import { commitWrites } from "@earendil-works/pi-durable/testing"
 import { Effect, Exit } from "effect"
 import { expect, it } from "vitest"
 
@@ -100,15 +100,23 @@ const restored = (state: BackgroundState) =>
 class RecordedMemoryStorage extends MemoryStorage {
   readonly commits: (readonly StorageWrite[])[] = []
 
-  override async commit(writes: readonly StorageWrite[], callContext: Context) {
-    const seq = await super.commit(writes, callContext)
-    this.commits.push(structuredClone(writes))
-    return seq
+  override async commit(
+    ...[batches, receive, callContext]: Parameters<MemoryStorage["commit"]>
+  ) {
+    return super.commit(
+      batches,
+      (index, seq) => {
+        this.commits.push(structuredClone(batches[index]!))
+        receive(index, seq)
+      },
+      callContext
+    )
   }
 }
 const reopenStorage = async (previous: RecordedMemoryStorage) => {
   const storage = new RecordedMemoryStorage()
-  for (const writes of previous.commits) await storage.commit(writes, context)
+  for (const writes of previous.commits)
+    await commitWrites(storage, writes, context)
   return storage
 }
 const open = (storage: MemoryStorage) =>
@@ -184,8 +192,8 @@ it("cold reopens a v1 document, commits its migration, and preserves native iden
     expect(migrated).toMatchObject({
       schemaVersion: 2,
       workflowVersion: 1,
-      libraryVersion: "6.0.0-alpha.71/1.0.0-alpha.10",
-      piVersion: "1.4.0",
+      libraryVersion: "6.0.0-alpha.73/1.0.0-alpha.12",
+      piVersion: "1.5.2",
       handoff: old.handoff,
       revision: old.revision,
       controls: old.controls,

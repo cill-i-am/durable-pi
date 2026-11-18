@@ -4,8 +4,8 @@ import {
 } from "@earendil-works/chord/context"
 import type {
   Conversation,
+  ConversationView,
   Storage,
-  SnapshotEvent,
   SubmissionRecord,
   ToolRegistration,
 } from "@earendil-works/pi-durable"
@@ -29,6 +29,7 @@ import {
   replySettled,
 } from "./pi-reply"
 import { displayAnswer, piTimeline } from "./pi-timeline"
+import { snapshotFromView, type PiSnapshot } from "./pi-view"
 
 export interface PiObservationHost {
   storage: () => Promise<Pick<Storage, "submissionByRequest">>
@@ -36,8 +37,8 @@ export interface PiObservationHost {
     session: string
   ) => Promise<Pick<Conversation, "id" | "entries">>
   session: (session: string) => {
-    events: () => Promise<{
-      snapshot: SnapshotEvent
+    watch: () => Promise<{
+      value: ConversationView
       stop: () => Promise<unknown>
     }>
   }
@@ -47,7 +48,7 @@ export function normalizePiObservation(
   root: Turn,
   members: readonly Turn[],
   reply: {
-    snapshot: SnapshotEvent
+    snapshot: PiSnapshot
     records: ReadonlyMap<string, SubmissionRecord>
   }
 ): ConversationObservation {
@@ -186,11 +187,11 @@ export const piConversationObserver = (
     const snapshot = yield* conversationNativeOperation(
       "capture snapshot",
       async () => {
-        const stream = await host.session(sessionId).events()
-        let captured: SnapshotEvent | undefined,
+        const stream = await host.session(sessionId).watch()
+        let captured: PiSnapshot | undefined,
           failure: Cause.Cause<never> | undefined
         try {
-          captured = stream.snapshot
+          captured = snapshotFromView(stream.value)
         } catch (cause) {
           failure = Cause.die(cause)
         }

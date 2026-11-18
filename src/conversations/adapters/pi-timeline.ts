@@ -1,12 +1,13 @@
-import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
+import type { EntryRecord } from "@earendil-works/pi-durable"
 
 import type { MessageProvenance } from "../../messages/identity"
 import type { FileInfo } from "../../workspace/files"
 import type { TimelineItem } from "../contracts"
+import type { PiSnapshot } from "./pi-view"
 
 export function piTimeline(
   entries: readonly EntryRecord[],
-  live?: SnapshotEvent,
+  live?: PiSnapshot,
   steers: ReadonlyMap<
     number,
     {
@@ -151,7 +152,7 @@ export function displayAnswer(entries: readonly EntryRecord[]) {
 type Tool = Extract<TimelineItem, { type: "tool" }>
 type MutableTool = { -readonly [K in keyof Tool]: Tool[K] }
 
-function mergeLiveTools(tools: Map<string, MutableTool>, live?: SnapshotEvent) {
+function mergeLiveTools(tools: Map<string, MutableTool>, live?: PiSnapshot) {
   for (const slot of live?.tools ?? []) {
     const tool = tools.get(slot.callId)
     if (tool && slot.status === "done" && !slot.entry) {

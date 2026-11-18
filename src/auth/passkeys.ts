@@ -1,7 +1,6 @@
 import { passkey } from "@better-auth/passkey"
 import type { GenericEndpointContext } from "better-auth"
-import { APIError, getSessionFromCtx, isAPIError } from "better-auth/api"
-import { Schema } from "effect"
+import { APIError, getSessionFromCtx } from "better-auth/api"
 
 import type { FamilyDirectory } from "../family/adapters/directory"
 
@@ -16,14 +15,6 @@ const management = new Set([
   "/passkey/delete-passkey",
 ])
 
-function requireDeviceVerification(verified: boolean | undefined) {
-  if (!verified)
-    throw new APIError("FORBIDDEN", {
-      code: "PASSKEY_DEVICE_VERIFICATION_REQUIRED",
-      message: "Unlock your device to use this passkey, then try again.",
-    })
-}
-
 export function accountPasskeys(appUrl: string) {
   const origin = new URL(appUrl)
   return passkey({
@@ -36,14 +27,6 @@ export function accountPasskeys(appUrl: string) {
     },
     registration: {
       requireSession: true,
-      afterVerification: ({ verification }) => {
-        requireDeviceVerification(verification.registrationInfo?.userVerified)
-      },
-    },
-    authentication: {
-      afterVerification: ({ verification }) => {
-        requireDeviceVerification(verification.authenticationInfo.userVerified)
-      },
     },
   })
 }
@@ -71,21 +54,4 @@ export async function guardPasskeyAuth(
     throw new APIError("FORBIDDEN", {
       message: "Your account does not have family access.",
     })
-}
-
-/** The plugin requests preferred verification for sign-in by default. Require
- * it in the browser too; the verified callbacks above enforce it on the server. */
-export function passkeyAuthenticationOptions(
-  ctx: GenericEndpointContext,
-  returned: unknown
-) {
-  if (
-    ctx.path !== "/passkey/generate-authenticate-options" ||
-    isAPIError(returned)
-  )
-    return
-  const options = Schema.decodeUnknownSync(
-    Schema.Record(Schema.String, Schema.Unknown)
-  )(returned)
-  return ctx.json({ ...options, userVerification: "required" })
 }

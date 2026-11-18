@@ -11,6 +11,7 @@ import {
   defineDocFamily,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { commitWrites } from "@earendil-works/pi-durable/testing"
 import { Cause, Effect, Exit } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
@@ -297,7 +298,8 @@ for (const kind of ["plans.task", "plans.turn", "plans.operation"] as const) {
             : input.operationId
       const stored = await f.stored(kind, key)
       expect(stored).toBeDefined()
-      await f.storage.commit(
+      await commitWrites(
+        f.storage,
         [
           {
             type: "document.change",

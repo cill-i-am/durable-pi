@@ -4,11 +4,11 @@ import { DatabaseSync } from "node:sqlite"
 import { Effect } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 
-import type { WebsiteEnv } from "../alchemy.run"
 import { authorizedMember, createAuth } from "../src/auth/server"
 import { familyAgentAction } from "../src/family/adapters/agent-actions"
 import { familyDirectory } from "../src/family/adapters/directory"
 import { familyRequest } from "../src/family/adapters/http"
+import type { WebsiteEnv } from "../stacks/resources/website"
 import { d1 } from "./d1"
 
 const origin = "http://localhost:1337"

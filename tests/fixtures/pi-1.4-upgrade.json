@@ -1,0 +1,357 @@
+{
+  "source": "@earendil-works/pi-durable@1.4.0, pi-ai@1.4.0, chord@1.4.0; synthetic Node SQLite fixture",
+  "conversation": 1,
+  "completed": 8,
+  "waiting": 17,
+  "mutations": 1,
+  "indexes": [
+    "CREATE INDEX conversations_by_owner_conversation ON conversations (owner_conversation_id, id)",
+    "CREATE INDEX conversations_by_owner_task ON conversations (owner_task_id, id)",
+    "CREATE INDEX document_revisions_by_kind ON document_revisions (document_id, kind, seq DESC)",
+    "CREATE INDEX documents_by_address\n\t\t\tON documents (kind, scope_kind, owner_id, family, key_value, created_at DESC, retired_at)",
+    "CREATE INDEX documents_by_scope ON documents (scope_kind, owner_id, id)",
+    "CREATE INDEX documents_by_scope_kind ON documents (scope_kind, owner_id, kind, id)",
+    "CREATE INDEX entries_by_conversation ON entries (conversation_id, id DESC)",
+    "CREATE INDEX entry_heads_by_conversation ON entries (conversation_id, id DESC) WHERE head IS NOT NULL",
+    "CREATE INDEX submissions_by_conversation ON submissions (conversation_id, id)",
+    "CREATE INDEX submissions_by_request ON submissions (conversation_id, request_id)",
+    "CREATE INDEX submissions_by_status ON submissions (status, id)",
+    "CREATE INDEX tasks_by_abort_requested ON tasks (abort_requested, id)",
+    "CREATE INDEX tasks_by_background ON tasks (background, id)",
+    "CREATE INDEX tasks_by_conversation ON tasks (conversation_id, id)",
+    "CREATE INDEX tasks_by_kind ON tasks (kind, id)",
+    "CREATE INDEX tasks_by_status ON tasks (status, id)"
+  ],
+  "tables": [
+    {
+      "name": "durable_schema",
+      "sql": "CREATE TABLE durable_schema (\n\t\t\tsingleton INTEGER PRIMARY KEY CHECK (singleton = 1),\n\t\t\tversion INTEGER NOT NULL CHECK (version >= 0)\n\t\t) STRICT",
+      "rows": [
+        {
+          "singleton": 1,
+          "version": 2
+        }
+      ]
+    },
+    {
+      "name": "durable_metadata",
+      "sql": "CREATE TABLE durable_metadata (\n\t\t\tsingleton INTEGER PRIMARY KEY CHECK (singleton = 1),\n\t\t\tnext_id TEXT NOT NULL,\n\t\t\tnext_seq INTEGER NOT NULL\n\t\t) STRICT",
+      "rows": [
+        {
+          "singleton": 1,
+          "next_id": "19",
+          "next_seq": 21
+        }
+      ]
+    },
+    {
+      "name": "record_ids",
+      "sql": "CREATE TABLE record_ids (\n\t\t\tid INTEGER PRIMARY KEY,\n\t\t\trecord_type TEXT NOT NULL CHECK (record_type IN ('conversation', 'entry', 'task', 'submission', 'document'))\n\t\t) STRICT",
+      "rows": [
+        {
+          "id": 1,
+          "record_type": "conversation"
+        },
+        {
+          "id": 2,
+          "record_type": "document"
+        },
+        {
+          "id": 3,
+          "record_type": "document"
+        },
+        {
+          "id": 4,
+          "record_type": "document"
+        },
+        {
+          "id": 5,
+          "record_type": "document"
+        },
+        {
+          "id": 6,
+          "record_type": "document"
+        },
+        {
+          "id": 7,
+          "record_type": "entry"
+        },
+        {
+          "id": 8,
+          "record_type": "submission"
+        },
+        {
+          "id": 9,
+          "record_type": "task"
+        },
+        {
+          "id": 10,
+          "record_type": "entry"
+        },
+        {
+          "id": 11,
+          "record_type": "entry"
+        },
+        {
+          "id": 12,
+          "record_type": "task"
+        },
+        {
+          "id": 13,
+          "record_type": "entry"
+        },
+        {
+          "id": 14,
+          "record_type": "task"
+        },
+        {
+          "id": 15,
+          "record_type": "entry"
+        },
+        {
+          "id": 16,
+          "record_type": "entry"
+        },
+        {
+          "id": 17,
+          "record_type": "submission"
+        },
+        {
+          "id": 18,
+          "record_type": "task"
+        }
+      ]
+    },
+    {
+      "name": "conversations",
+      "sql": "CREATE TABLE conversations (\n\t\t\tid INTEGER PRIMARY KEY,\n\t\t\towner_conversation_id INTEGER,\n\t\t\towner_task_id INTEGER,\n\t\t\trecord TEXT NOT NULL CHECK (json_valid(record))\n\t\t) STRICT",
+      "rows": [
+        {
+          "id": 1,
+          "owner_conversation_id": null,
+          "owner_task_id": null,
+          "record": "{\"id\":1}"
+        }
+      ]
+    },
+    {
+      "name": "entries",
+      "sql": "CREATE TABLE entries (\n\t\t\tid INTEGER PRIMARY KEY,\n\t\t\tconversation_id INTEGER NOT NULL,\n\t\t\thead INTEGER,\n\t\t\tcommit_seq INTEGER NOT NULL,\n\t\t\trecord TEXT NOT NULL CHECK (json_valid(record))\n\t\t) STRICT",
+      "rows": [
+        {
+          "id": 7,
+          "conversation_id": 1,
+          "head": null,
+          "commit_seq": 2,
+          "record": "{\"model\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Record once\"}],\"timestamp\":1794961105973}],\"kind\":\"pi.user\",\"id\":7,\"conversationId\":1}"
+        },
+        {
+          "id": 10,
+          "conversation_id": 1,
+          "head": null,
+          "commit_seq": 4,
+          "record": "{\"model\":[{\"role\":\"system\",\"content\":\"\",\"toolsAdded\":[{\"name\":\"record\",\"description\":\"Fixture mutation\",\"parameters\":{\"type\":\"object\",\"properties\":{}}}],\"timestamp\":1794961105979}],\"kind\":\"pi.system\",\"id\":10,\"conversationId\":1,\"byTaskId\":9}"
+        },
+        {
+          "id": 11,
+          "conversation_id": 1,
+          "head": null,
+          "commit_seq": 6,
+          "record": "{\"model\":[{\"role\":\"assistant\",\"content\":[{\"type\":\"toolCall\",\"id\":\"tool:1794961105982:mbtekyujd7\",\"name\":\"record\",\"arguments\":{}}],\"api\":\"faux:1794961105954:7xxkrdipkyk\",\"provider\":\"faux\",\"model\":\"faux-1\",\"usage\":{\"input\":32,\"output\":3,\"cacheRead\":0,\"cacheWrite\":32,\"totalTokens\":67,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0}},\"stopReason\":\"toolUse\",\"timestamp\":1794961105982,\"durationMs\":3}],\"kind\":\"pi.assistant\",\"id\":11,\"conversationId\":1,\"byTaskId\":9}"
+        },
+        {
+          "id": 13,
+          "conversation_id": 1,
+          "head": null,
+          "commit_seq": 9,
+          "record": "{\"model\":[{\"role\":\"toolResult\",\"toolCallId\":\"tool:1794961105982:mbtekyujd7\",\"toolName\":\"record\",\"content\":[{\"type\":\"text\",\"text\":\"receipt-1\"}],\"isError\":false,\"durationMs\":0,\"timestamp\":1794961105996}],\"data\":{\"diagnostics\":[]},\"kind\":\"pi.tool-result\",\"id\":13,\"conversationId\":1,\"byTaskId\":12}"
+        },
+        {
+          "id": 15,
+          "conversation_id": 1,
+          "head": null,
+          "commit_seq": 15,
+          "record": "{\"model\":[{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Saved once.\"}],\"api\":\"faux:1794961105954:7xxkrdipkyk\",\"provider\":\"faux\",\"model\":\"faux-1\",\"usage\":{\"input\":13,\"output\":3,\"cacheRead\":32,\"cacheWrite\":13,\"totalTokens\":61,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0}},\"stopReason\":\"stop\",\"timestamp\":1794961106004,\"durationMs\":2}],\"kind\":\"pi.assistant\",\"id\":15,\"conversationId\":1,\"byTaskId\":14}"
+        },
+        {
+          "id": 16,
+          "conversation_id": 1,
+          "head": null,
+          "commit_seq": 16,
+          "record": "{\"model\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Continue after upgrade\"}],\"timestamp\":1794961106007}],\"kind\":\"pi.user\",\"id\":16,\"conversationId\":1}"
+        }
+      ]
+    },
+    {
+      "name": "submissions",
+      "sql": "CREATE TABLE submissions (\n\t\t\tid INTEGER PRIMARY KEY,\n\t\t\tconversation_id INTEGER NOT NULL,\n\t\t\trequest_id TEXT,\n\t\t\tstatus TEXT NOT NULL CHECK (status IN ('queued', 'placed', 'done', 'unanswered')),\n\t\t\trecord TEXT NOT NULL CHECK (json_valid(record))\n\t\t) STRICT",
+      "rows": [
+        {
+          "id": 8,
+          "conversation_id": 1,
+          "request_id": "\"legacy-completed\"",
+          "status": "done",
+          "record": "{\"conversationId\":1,\"requestId\":\"legacy-completed\",\"type\":\"input\",\"status\":\"done\",\"entry\":7,\"id\":8,\"answer\":15}"
+        },
+        {
+          "id": 17,
+          "conversation_id": 1,
+          "request_id": "\"legacy-waiting\"",
+          "status": "placed",
+          "record": "{\"conversationId\":1,\"requestId\":\"legacy-waiting\",\"type\":\"input\",\"status\":\"placed\",\"entry\":16,\"id\":17}"
+        }
+      ]
+    },
+    {
+      "name": "documents",
+      "sql": "CREATE TABLE documents (\n\t\t\tid INTEGER PRIMARY KEY,\n\t\t\tkind TEXT NOT NULL,\n\t\t\tfamily INTEGER NOT NULL CHECK (family IN (0, 1)),\n\t\t\tkey_value TEXT NOT NULL,\n\t\t\tscope_kind TEXT NOT NULL CHECK (scope_kind IN ('session', 'conversation', 'task')),\n\t\t\towner_id INTEGER NOT NULL,\n\t\t\tcreated_at INTEGER NOT NULL,\n\t\t\tretired_at INTEGER,\n\t\t\trecord TEXT NOT NULL CHECK (json_valid(record))\n\t\t) STRICT",
+      "rows": [
+        {
+          "id": 2,
+          "kind": "\"pi.live\"",
+          "family": 0,
+          "key_value": "\"\"",
+          "scope_kind": "conversation",
+          "owner_id": 1,
+          "created_at": 1,
+          "retired_at": null,
+          "record": "{\"id\":2,\"kind\":\"pi.live\",\"scope\":{\"kind\":\"conversation\",\"conversationId\":1},\"history\":\"latest\",\"fork\":\"initial\",\"createdAt\":1}"
+        },
+        {
+          "id": 3,
+          "kind": "\"pi.inbox\"",
+          "family": 0,
+          "key_value": "\"\"",
+          "scope_kind": "conversation",
+          "owner_id": 1,
+          "created_at": 1,
+          "retired_at": null,
+          "record": "{\"id\":3,\"kind\":\"pi.inbox\",\"scope\":{\"kind\":\"conversation\",\"conversationId\":1},\"history\":\"latest\",\"fork\":\"initial\",\"createdAt\":1}"
+        },
+        {
+          "id": 4,
+          "kind": "\"pi.usage\"",
+          "family": 0,
+          "key_value": "\"\"",
+          "scope_kind": "conversation",
+          "owner_id": 1,
+          "created_at": 1,
+          "retired_at": null,
+          "record": "{\"id\":4,\"kind\":\"pi.usage\",\"scope\":{\"kind\":\"conversation\",\"conversationId\":1},\"history\":\"latest\",\"fork\":\"initial\",\"createdAt\":1}"
+        },
+        {
+          "id": 5,
+          "kind": "\"pi.provider\"",
+          "family": 0,
+          "key_value": "\"\"",
+          "scope_kind": "conversation",
+          "owner_id": 1,
+          "created_at": 1,
+          "retired_at": null,
+          "record": "{\"id\":5,\"kind\":\"pi.provider\",\"scope\":{\"kind\":\"conversation\",\"conversationId\":1},\"history\":\"latest\",\"fork\":\"initial\",\"createdAt\":1}"
+        },
+        {
+          "id": 6,
+          "kind": "\"pi.agent\"",
+          "family": 0,
+          "key_value": "\"\"",
+          "scope_kind": "conversation",
+          "owner_id": 1,
+          "created_at": 1,
+          "retired_at": null,
+          "record": "{\"id\":6,\"kind\":\"pi.agent\",\"scope\":{\"kind\":\"conversation\",\"conversationId\":1},\"history\":\"rewindable\",\"fork\":\"asOf\",\"createdAt\":1}"
+        }
+      ]
+    },
+    {
+      "name": "document_revisions",
+      "sql": "CREATE TABLE document_revisions (\n\t\t\tdocument_id INTEGER NOT NULL,\n\t\t\tseq INTEGER NOT NULL,\n\t\t\tkind TEXT NOT NULL CHECK (kind IN ('base', 'delta')),\n\t\t\tversion INTEGER NOT NULL,\n\t\t\tcontent TEXT NOT NULL CHECK (json_valid(content)),\n\t\t\tPRIMARY KEY (document_id, seq)\n\t\t) STRICT",
+      "rows": [
+        {
+          "document_id": 3,
+          "seq": 1,
+          "kind": "base",
+          "version": 1,
+          "content": "{\"items\":[]}"
+        },
+        {
+          "document_id": 5,
+          "seq": 1,
+          "kind": "base",
+          "version": 1,
+          "content": "{\"sessionId\":\"01a1ec04-e42c-7219-90c6-1158e080db31\"}"
+        },
+        {
+          "document_id": 6,
+          "seq": 1,
+          "kind": "base",
+          "version": 1,
+          "content": "{\"model\":{\"provider\":\"faux\",\"modelId\":\"faux-1\"}}"
+        },
+        {
+          "document_id": 4,
+          "seq": 15,
+          "kind": "base",
+          "version": 1,
+          "content": "{\"models\":{\"faux/faux-1\":{\"input\":45,\"output\":6,\"cacheRead\":32,\"cacheWrite\":45,\"totalTokens\":128,\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0,\"total\":0}}},\"tools\":{}}"
+        },
+        {
+          "document_id": 2,
+          "seq": 16,
+          "kind": "base",
+          "version": 1,
+          "content": "{\"run\":{\"taskId\":18,\"inputs\":[17]}}"
+        },
+        {
+          "document_id": 2,
+          "seq": 19,
+          "kind": "delta",
+          "version": 1,
+          "content": "[[\"s\",[\"generation\"],{\"attempt\":1}]]"
+        }
+      ]
+    },
+    {
+      "name": "tasks",
+      "sql": "CREATE TABLE \"tasks\" (\n\t\t\tid INTEGER PRIMARY KEY,\n\t\t\tconversation_id INTEGER NOT NULL,\n\t\t\tkind TEXT NOT NULL,\n\t\t\tstatus TEXT NOT NULL CHECK (status IN ('pending', 'running', 'waiting', 'sleeping', 'completing', 'terminal')),\n\t\t\tabort_requested INTEGER NOT NULL CHECK (abort_requested IN (0, 1)),\n\t\t\tbackground INTEGER NOT NULL CHECK (background IN (0, 1)),\n\t\t\trecord TEXT NOT NULL CHECK (json_valid(record))\n\t\t) STRICT",
+      "rows": [
+        {
+          "id": 9,
+          "conversation_id": 1,
+          "kind": "\"pi.generation\"",
+          "status": "terminal",
+          "abort_requested": 0,
+          "background": 0,
+          "record": "{\"id\":9,\"conversationId\":1,\"kind\":\"pi.generation\",\"version\":1,\"input\":{},\"background\":false,\"abortRequested\":false,\"state\":{\"status\":\"terminal\",\"outcome\":{\"status\":\"completed\",\"result\":{\"entryId\":11}}},\"startedAt\":1794961105976,\"endedAt\":1794961106000}"
+        },
+        {
+          "id": 12,
+          "conversation_id": 1,
+          "kind": "\"pi.tool\"",
+          "status": "terminal",
+          "abort_requested": 0,
+          "background": 0,
+          "record": "{\"id\":12,\"conversationId\":1,\"kind\":\"pi.tool\",\"version\":2,\"input\":{\"kind\":\"model\",\"assistant\":11,\"callId\":\"tool:1794961105982:mbtekyujd7\"},\"owner\":9,\"background\":false,\"abortRequested\":false,\"state\":{\"status\":\"terminal\",\"outcome\":{\"status\":\"completed\",\"result\":{\"kind\":\"model\",\"entryId\":13}}},\"startedAt\":1794961105988,\"endedAt\":1794961105996}"
+        },
+        {
+          "id": 14,
+          "conversation_id": 1,
+          "kind": "\"pi.generation\"",
+          "status": "terminal",
+          "abort_requested": 0,
+          "background": 0,
+          "record": "{\"id\":14,\"conversationId\":1,\"kind\":\"pi.generation\",\"version\":1,\"input\":{},\"background\":false,\"abortRequested\":false,\"state\":{\"status\":\"terminal\",\"outcome\":{\"status\":\"completed\",\"result\":{\"entryId\":15}}},\"startedAt\":1794961106001,\"endedAt\":1794961106006}"
+        },
+        {
+          "id": 18,
+          "conversation_id": 1,
+          "kind": "\"pi.generation\"",
+          "status": "pending",
+          "abort_requested": 0,
+          "background": 0,
+          "record": "{\"id\":18,\"conversationId\":1,\"kind\":\"pi.generation\",\"version\":1,\"input\":{},\"background\":false,\"abortRequested\":false,\"state\":{\"status\":\"pending\",\"checkpoint\":{\"phase\":\"request\",\"attempt\":1,\"model\":{\"provider\":\"faux\",\"modelId\":\"faux-1\"},\"thinkingLevel\":\"off\",\"streamOptions\":{},\"cutoff\":16}},\"startedAt\":1794961106009}"
+        }
+      ]
+    }
+  ]
+}

@@ -326,8 +326,8 @@ try {
     isUserVerified: false,
   })
   const unverified = await assertion(page, "unverified")
-  assert.equal(unverified.status, 403)
-  assert.equal(unverified.code, "PASSKEY_DEVICE_VERIFICATION_REQUIRED")
+  assert.equal(unverified.status, 400)
+  assert.equal(unverified.code, "AUTHENTICATION_FAILED")
   assert.equal(await session(page), null)
   await cdp.send("WebAuthn.setUserVerified", {
     authenticatorId,
@@ -367,8 +367,8 @@ try {
     })
     return { status: response.status, body: await response.json() }
   })
-  assert.equal(rejected.status, 403)
-  assert.equal(rejected.body.code, "PASSKEY_DEVICE_VERIFICATION_REQUIRED")
+  assert.equal(rejected.status, 400)
+  assert.equal(rejected.body.code, "FAILED_TO_VERIFY_REGISTRATION")
   assert.equal(
     fixture.sql.prepare("SELECT count(*) AS count FROM passkey").get().count,
     before

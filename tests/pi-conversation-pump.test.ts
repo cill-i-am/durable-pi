@@ -11,7 +11,6 @@ import {
 import {
   Harness,
   createRegistry,
-  watchEvents,
   type Conversation,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
@@ -55,10 +54,10 @@ it("reconciles an acknowledged native Pi input after a lost host acknowledgment 
       },
     },
     session: (id: string) => ({
-      events: async () => {
+      watch: async () => {
         if (!conversation || String(conversation.id) !== id)
           throw new Error("Unknown session")
-        return watchEvents(harness, conversation.id, context)
+        return conversation.watch(context)
       },
     }),
     submit: async (

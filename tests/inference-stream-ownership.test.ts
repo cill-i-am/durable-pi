@@ -179,7 +179,9 @@ it("a revoked request cannot acquire a native source while shutdown drains it", 
     runtime.runSync(streams.start(request))
     await runtime.runPromise(streams.shutdown())
     expect(dispatch).not.toHaveBeenCalled()
-    expect((await request.stream.result()).stopReason).toBe("aborted")
+    await expect(request.stream.result()).rejects.toSatisfy(
+      (cause: unknown) => Cause.isCause(cause) && Cause.hasInterruptsOnly(cause)
+    )
   } finally {
     await runtime.dispose()
   }
@@ -228,7 +230,9 @@ it("runtime scope disposal joins a just-admitted request", async () => {
   // that request and revoke its signal before returning.
   expect(dispatch).toHaveBeenCalledOnce()
   expect(request.signal.aborted).toBe(true)
-  expect((await request.stream.result()).stopReason).toBe("aborted")
+  await expect(request.stream.result()).rejects.toSatisfy(
+    (cause: unknown) => Cause.isCause(cause) && Cause.hasInterruptsOnly(cause)
+  )
 })
 
 it("invalid admission events and unrelated releases cannot advance the owner", async () => {

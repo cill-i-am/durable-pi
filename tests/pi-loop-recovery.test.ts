@@ -4,7 +4,6 @@ import { join } from "node:path"
 
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
@@ -17,10 +16,10 @@ import {
   hook,
   createRegistry,
   defineTool,
-  watchEvents,
   type Storage,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 import { expect, it } from "vitest"
 
@@ -29,6 +28,7 @@ import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessStorageError } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
 import { runRecoveryHook } from "../src/conversations/adapters/pi-recovery"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
@@ -234,7 +234,7 @@ it.each([
               defineTool({
                 name,
                 description: "Synthetic operation",
-                parameters: Type.Object({ value: Type.String() }),
+                parameters: ToolSchema.obj({ value: ToolSchema.str() }),
                 replay: "safe",
                 execute: async ({ value }) => {
                   if (name === "check_bot_task")
@@ -334,8 +334,8 @@ it.each([
       expect(Effect.runSync(store.get(turnId))?.view?.phase).toBe(
         expected.phase
       )
-      const events = await watchEvents(harness, conversation.id, ctx)
-      const entries = events.snapshot.entries
+      const events = await conversation.watch(ctx)
+      const entries = snapshotFromView(events.value).entries
       expect(JSON.stringify(entries)).not.toContain("Run recovery:")
       const results = entries.filter((e) => e.kind === "pi.tool-result")
       expect(new Set(results.map((e) => e.id)).size).toBe(results.length)

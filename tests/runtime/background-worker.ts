@@ -1,7 +1,6 @@
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai"
 import { Cause, Effect, Exit, Schema } from "effect"
 
-import type { AgentEnv } from "../../alchemy.run"
 import { connectionNative, connectionRpc } from "../../src/access/adapters/rpc"
 import {
   activityDirectory,
@@ -26,6 +25,7 @@ import {
 import { nativeOperation } from "../../src/shared/interop"
 import { skillNative, skillRpc } from "../../src/skills/adapters/rpc"
 import { webhookAuthorizationRpc } from "../../src/webhooks/adapters/authorization-rpc"
+import type { AgentEnv } from "../../stacks/resources/agent"
 import type { LegacyAgentProbe } from "./legacy-agent-worker"
 import type { PersonalAgentProbe } from "./personal-agent-worker"
 

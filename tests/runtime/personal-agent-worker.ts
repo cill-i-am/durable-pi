@@ -9,7 +9,6 @@ import { getAgentByName } from "agents"
 import { Cause, Effect, Exit, Redacted, Schema } from "effect"
 import { SqlClient } from "effect/sql"
 
-import type { AgentEnv } from "../../alchemy.run"
 import { ConnectionStorageError } from "../../src/access/connections"
 import { activityRequest } from "../../src/activity/adapters/http"
 import { activityDirectory } from "../../src/activity/adapters/rpc"
@@ -73,6 +72,7 @@ import {
   WhatsAppStorageError,
 } from "../../src/whatsapp/contracts"
 import { WorkspaceUnavailable } from "../../src/workspace/files"
+import type { AgentEnv } from "../../stacks/resources/agent"
 import { transcript } from "../audio-fixture"
 import type { BackgroundGroupProbe } from "./background-worker"
 import type { TerminalProbe } from "./terminal-worker"
@@ -941,11 +941,15 @@ export class PersonalAgentProbe extends PersonalAgent {
     })
     this.harness.session = (id) => {
       const handle = session(id)
-      const events = handle.events.bind(handle)
-      handle.events = async () => {
-        const stream = await events()
+      const watch = handle.watch.bind(handle)
+      handle.watch = async () => {
+        const stream = await watch()
         return {
-          ...stream,
+          get value() {
+            return stream.value
+          },
+          start: stream.start.bind(stream),
+          closed: stream.closed,
           stop: async () => {
             this.stopEntered = true
             await held
@@ -961,7 +965,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       {
         snapshot: () => this.snapshotProgram(),
         activeSession: () => Effect.succeed(root.session_id ?? undefined),
-        watch: (id) => this.harness.session(id).events(),
+        watch: (id) => this.harness.session(id).watch(),
         subscribe: () => () => {
           this.events.push("native.unsubscribe")
         },

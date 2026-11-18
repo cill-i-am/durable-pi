@@ -7,7 +7,6 @@ import {
   type Context as PiContext,
 } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
@@ -20,6 +19,7 @@ import {
   type SubmissionRecord,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import type { PiHarness } from "agents/harness/pi"
 import { Cause, Context, Effect, Exit } from "effect"
 import { expect, it, vi } from "vitest"
@@ -317,7 +317,7 @@ it("interrupts a native abort wait without confirming task cleanup or aborting l
       defineTool({
         name: "hold",
         description: "Hold a synthetic tool until cleanup is released",
-        parameters: Type.Object({}),
+        parameters: ToolSchema.obj({}),
         replay: "safe",
         execute: async (_args, _api, context) => {
           context.abortSignal!.addEventListener("abort", cancelled.resolve, {

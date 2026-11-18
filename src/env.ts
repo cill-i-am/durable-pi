@@ -1,6 +1,6 @@
 import * as cloudflare from "cloudflare:workers"
 
-import type { WebsiteEnv } from "../alchemy.run"
+import type { WebsiteEnv } from "../stacks/resources/website"
 
 export function getEnv(): WebsiteEnv {
   return cloudflare.env as WebsiteEnv

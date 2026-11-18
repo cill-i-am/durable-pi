@@ -9,7 +9,7 @@ import {
   Scope,
 } from "effect"
 
-import type { TerminalEnv } from "../../alchemy.run"
+import type { TerminalEnv } from "../../stacks/resources/terminal"
 import { reportTerminal } from "../observability/events"
 import { WorkerTelemetry } from "../observability/worker"
 import { makeDurableObjectSqlite } from "../storage/durable-object"

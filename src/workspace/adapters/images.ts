@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect"
 
-import type { AgentEnv } from "../../../alchemy.run"
+import type { AgentEnv } from "../../../stacks/resources/agent"
 import { preserveFatal } from "../../shared/effect"
 import { nativeOperation } from "../../shared/interop"
 import { nativeBytes } from "../../shared/stream"

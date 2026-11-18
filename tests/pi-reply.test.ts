@@ -1,18 +1,12 @@
-import type {
-  EntryRecord,
-  SnapshotEvent,
-  SubmissionRecord,
-} from "@earendil-works/pi-durable"
-import type { PiHarness } from "agents/harness/pi"
+import type { EntryRecord, SubmissionRecord } from "@earendil-works/pi-durable"
 import { Clock, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import {
-  readPiReply,
   replySettled,
-  placedInputs,
   originalTranscript,
 } from "../src/conversations/adapters/pi-reply"
+import type { PiSnapshot } from "../src/conversations/adapters/pi-view"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
 
@@ -21,15 +15,11 @@ const entry = (id: number): EntryRecord => ({
   conversationId: 0 as EntryRecord["conversationId"],
   kind: "pi.user",
 })
-const snapshot = (ids: number[]): SnapshotEvent => ({
-  type: "snapshot",
-  nestedTools: [],
+const snapshot = (ids: number[]): PiSnapshot => ({
   entries: ids.map(entry),
   tools: [],
-  inbox: [],
+
   compactions: [],
-  agent: {},
-  usage: { models: {}, tools: {} },
 })
 const done = {
   id: 1,
@@ -111,32 +101,6 @@ describe("Pi snapshot and receipt consistency", () => {
       })
     ).toBe(false)
   })
-  it("reads committed input mappings after capturing the transcript", async () => {
-    const { root } = fixture()
-    let captured = false
-    let stopped = false
-    const harness = {
-      storage: async () => ({
-        submissionByRequest: async () =>
-          captured ? done : { ...done, status: "queued", entry: undefined },
-      }),
-      conversation: async () => ({ id: 0 }),
-      session: () => ({
-        events: async () => {
-          captured = true
-          return {
-            snapshot: snapshot([1, 2]),
-            stop: async () => {
-              stopped = true
-            },
-          }
-        },
-      }),
-    } as unknown as PiHarness
-    const reply = await readPiReply(harness, root, [root])
-    expect(placedInputs([root], reply.records).get(1)?.id).toBe(root.id)
-    expect(stopped).toBe(true)
-  })
   it("waits when completion receipts are newer than the captured output", () => {
     const { root } = fixture()
     const records = new Map([[root.id, done]])
@@ -146,7 +110,14 @@ describe("Pi snapshot and receipt consistency", () => {
     expect(
       replySettled(root, [root], { records, snapshot: snapshot([1, 2]) })
     ).toBe(true)
-    const active = { ...snapshot([1, 2]), run: { inputs: [] } }
+    const active = {
+      ...snapshot([1, 2]),
+      run: {
+        taskId: 0 as NonNullable<PiSnapshot["run"]>["taskId"],
+        inputs: [],
+        turns: 0,
+      },
+    }
     const unanswered = {
       ...done,
       status: "unanswered",
