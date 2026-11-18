@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url"
 
-import { Config, Data, Effect, Redacted, Schema } from "effect"
+import { Config, Data, Effect, Redacted, Schedule, Schema } from "effect"
 
 class ObservabilitySetupFailed extends Data.TaggedError(
   "ObservabilitySetupFailed"
@@ -127,25 +127,38 @@ export const configureObservability = Effect.gen(function* () {
         )
       )
     )
-    const verified = yield* request(`/${name}/script-settings`).pipe(
-      Effect.flatMap(Schema.decodeUnknownEffect(Settings)),
-      Effect.catchTag("SchemaError", () =>
-        Effect.fail(
-          new ObservabilitySetupFailed({
-            operation: `Verify settings schema: ${name}`,
-          })
+    const operation = `Verify Issues enabled: ${name}`
+    // One PATCH, followed by bounded transport readbacks of that same update.
+    // Cloudflare can briefly return the old settings after accepting the PATCH.
+    yield* Effect.gen(function* () {
+      const verified = yield* request(`/${name}/script-settings`).pipe(
+        Effect.flatMap(Schema.decodeUnknownEffect(Settings)),
+        Effect.catchTag("SchemaError", () =>
+          Effect.fail(
+            new ObservabilitySetupFailed({
+              operation: `Verify settings schema: ${name}`,
+            })
+          )
         )
       )
-    )
-    yield* Schema.decodeUnknownEffect(
-      Schema.Struct({ enabled: Schema.Literal(true) })
-    )(verified.observability.issues).pipe(
-      Effect.catchTag("SchemaError", () =>
-        Effect.fail(
-          new ObservabilitySetupFailed({
-            operation: `Verify Issues enabled: ${name}`,
-          })
+      yield* Schema.decodeUnknownEffect(
+        Schema.Struct({ enabled: Schema.Literal(true) })
+      )(verified.observability.issues).pipe(
+        Effect.catchTag("SchemaError", () =>
+          Effect.fail(new ObservabilitySetupFailed({ operation }))
         )
+      )
+    }).pipe(
+      Effect.retry({
+        times: 9,
+        schedule: Schedule.spaced("2 seconds"),
+        while: (error) =>
+          error._tag === "ObservabilitySetupFailed" &&
+          error.operation === operation,
+      }),
+      Effect.timeout("30 seconds"),
+      Effect.catchTag("TimeoutError", () =>
+        Effect.fail(new ObservabilitySetupFailed({ operation }))
       )
     )
     yield* Effect.logInfo("Workers Issues enabled", { worker: name })
