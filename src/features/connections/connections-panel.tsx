@@ -92,9 +92,7 @@ export function ConnectionsPanel({
       description={
         assignment ? (
           <>Choose connected tools for {agentName ?? "this assistant"}.</>
-        ) : (
-          <>Manage your connected tools and services.</>
-        )
+        ) : null
       }
     >
       <div className="settings-toolbar">
@@ -345,8 +343,8 @@ function ConnectionCatalog({
               {connection.active && (
                 <p className="text-xs text-muted-foreground">
                   {isExecutorConnection(connection.url)
-                    ? "Disconnect stops new calls for all agents. Executor defaults refresh after reconnection; actions already sent may finish."
-                    : "Disconnect stops new calls for all assistants. Reconnecting requires selecting tools again; actions already sent may finish."}
+                    ? "Disconnect stops new calls for all assistants. Executor defaults refresh after reconnection. Actions already sent may finish."
+                    : "Disconnect stops new calls for all assistants. Reconnecting requires selecting tools again. Actions already sent may finish."}
                 </p>
               )}
             </>

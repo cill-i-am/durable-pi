@@ -29,7 +29,7 @@ import { replyProgressText, replyRetryLabel } from "@/replies/progress"
 
 const labels = {
   queued: "Queued",
-  waiting: "Agent is working",
+  waiting: "Assistant is working",
   sending: "Sending reply",
   sent: "Sent",
   failed: "Send failed",
@@ -85,7 +85,7 @@ export function EmailSettings({
     <div className="settings-channel">
       <FieldGroup>
         <Field>
-          <FieldLabel>Email this agent</FieldLabel>
+          <FieldLabel>Email this assistant</FieldLabel>
           <FieldDescription>
             {view?.configured
               ? "Email your assistant from your enrolled inbox. Send files, receive replies and review action approvals by email."
@@ -113,7 +113,7 @@ export function EmailSettings({
           {view?.enabled && (
             <FieldDescription>
               Disabling email cancels unsent replies. Re-enabling gives this
-              agent a new private address.
+              assistant a new private address.
             </FieldDescription>
           )}
         </Field>

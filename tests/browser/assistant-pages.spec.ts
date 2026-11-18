@@ -64,6 +64,17 @@ test("assistant descriptions display only supplied purpose text", async ({
   instructions = "Keep our family travel plans organised."
   await page.reload()
   await expect(descriptions).toHaveText([instructions])
+  instructions = ""
+  await page.goto("/agents/navi/settings/general")
+  await page.reload()
+  const summary = page.locator(".settings-agent-summary")
+  await expect(
+    summary.getByRole("heading", { name: "Navi", exact: true })
+  ).toBeVisible()
+  await expect(summary.locator("p")).toHaveCount(0)
+  instructions = "Keep our family travel plans organised."
+  await page.reload()
+  await expect(summary.locator("p")).toHaveText(instructions)
 })
 
 test("All assistants opens the active directory from chat and from the archive", async ({

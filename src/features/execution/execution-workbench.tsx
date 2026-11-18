@@ -32,17 +32,14 @@ export function ExecutionWorkbench({
     onPendingChange(pending)
     return () => onPendingChange(false)
   }, [pending, onPendingChange])
-  const [code, setCode] = useState(
-    "console.log('Items:', input.length)\nreturn input.reduce((sum, n) => sum + n, 0)"
-  )
-  const [data, setData] = useState("[1, 2, 3]")
+  const [code, setCode] = useState("")
+  const [data, setData] = useState("null")
   const run = execution.detail
   const content = (
     <section className="execution-workbench @container/tool flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-4 @max-md/tool:px-4">
         <h2 className="flex min-w-0 items-center gap-2 text-md font-semibold">
-          <Code2 className="size-4" /> Code{" "}
-          <Badge variant="secondary">JavaScript</Badge>
+          <Code2 className="size-4" /> Code
         </h2>
         <div className="flex gap-1">
           <Button
@@ -251,7 +248,9 @@ function ExecutionEditor({
           type="submit"
           size="sm"
           disabled={
-            execution.busy || (!execution.attempt && !!active) || !code.trim()
+            execution.busy ||
+            (!execution.attempt && !!active) ||
+            !(execution.attempt?.code ?? code).trim()
           }
         >
           <Play />

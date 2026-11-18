@@ -119,7 +119,7 @@ export function FilesWorkbench({
           </Alert>
         )}
         {!!state.uploads.length && <UploadStatus state={state} />}
-        {!state.loading && previewId && !preview && (
+        {!state.loading && !state.error && previewId && !preview && (
           <Alert>
             <AlertDescription>
               This file is unavailable in this collection.

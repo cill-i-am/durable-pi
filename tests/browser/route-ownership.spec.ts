@@ -327,7 +327,7 @@ async function expectGlobalShell(page: Page) {
     })
   ).toHaveCount(0)
   await expect(
-    shell.getByText("Email this agent", { exact: true })
+    shell.getByText("Email this assistant", { exact: true })
   ).toHaveCount(0)
   await expect(
     shell.getByRole("region", {
@@ -373,7 +373,7 @@ for (const { path, heading } of destinations) {
       ).toBeEnabled()
     } else if (path === "/settings/channels") {
       await expect(
-        shell.getByRole("combobox", { name: "WhatsApp agent", exact: true })
+        shell.getByRole("combobox", { name: "WhatsApp assistant", exact: true })
       ).toBeEnabled()
     }
   })
@@ -710,7 +710,7 @@ test("family members retain global account settings without channel administrati
     })
   ).toBeVisible()
   await expect(
-    page.getByRole("combobox", { name: "WhatsApp agent", exact: true })
+    page.getByRole("combobox", { name: "WhatsApp assistant", exact: true })
   ).toHaveCount(0)
 })
 

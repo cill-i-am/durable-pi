@@ -196,7 +196,7 @@ export function AccountSecurity({
                 </Button>
               </div>
               <p className="text-sm leading-6 text-muted-foreground">
-                Each entry is a browser session. Device names are inferred.
+                Device names are inferred.
               </p>
             </header>
             {loading && (

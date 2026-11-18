@@ -250,7 +250,7 @@ export function FamilySettings({
           <div>
             <h3>Your work stays yours</h3>
             <p>
-              Everyone’s chats, agents, memory, files and connected accounts
+              Everyone’s chats, assistants, memory, files and connected accounts
               stay private. Family admins manage access and invitations. They
               can’t open another person’s work.
             </p>
