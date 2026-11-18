@@ -204,7 +204,9 @@ test("generated table headers stay readable and scroll by keyboard in narrow vie
         exact: true,
       })
       await expect(heading).toHaveCSS("white-space", "nowrap")
-      expect((await heading.boundingBox())!.height).toBeLessThanOrEqual(44)
+      expect(
+        await heading.evaluate((node) => (node as HTMLElement).offsetHeight)
+      ).toBeLessThanOrEqual(44)
       expect(
         await table.evaluate((node) => node.scrollWidth > node.clientWidth)
       ).toBe(true)
