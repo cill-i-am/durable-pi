@@ -398,38 +398,43 @@ function RoutinesWorkbenchOwner({
             <p className="text-xs text-muted-foreground">
               Tool approvals still apply.
             </p>
-            {actions.loading ? (
+            {actions.hasData ? (
+              <>
+                {actions.data.routines.length === 0 && (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyTitle>No routines yet</EmptyTitle>
+                      <EmptyDescription>
+                        Create a routine to run instructions on a schedule or
+                        event.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                )}
+                <div className="flex flex-col gap-4">
+                  {actions.data.routines
+                    .filter((r) => r.status !== "archived")
+                    .map(row)}
+                </div>
+                {actions.data.routines.some((r) => r.status === "archived") && (
+                  <details>
+                    <summary className="cursor-pointer text-xs font-medium">
+                      Archived routines
+                    </summary>
+                    {actions.data.routines
+                      .filter((r) => r.status === "archived")
+                      .map(row)}
+                  </details>
+                )}
+                <RoutineHistory
+                  runs={actions.data.runs}
+                  disabled={locked}
+                  onStop={(id) => void actions.stop(id)}
+                />
+              </>
+            ) : (
               <DataLoading loading={!actions.error} label="Loading routines" />
-            ) : actions.data.routines.length === 0 ? (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyTitle>No routines yet</EmptyTitle>
-                  <EmptyDescription>
-                    Create a routine to run instructions on a schedule or event.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            ) : null}
-            <div className="flex flex-col gap-4">
-              {actions.data.routines
-                .filter((r) => r.status !== "archived")
-                .map(row)}
-            </div>
-            {actions.data.routines.some((r) => r.status === "archived") && (
-              <details>
-                <summary className="cursor-pointer text-xs font-medium">
-                  Archived routines
-                </summary>
-                {actions.data.routines
-                  .filter((r) => r.status === "archived")
-                  .map(row)}
-              </details>
             )}
-            <RoutineHistory
-              runs={actions.data.runs}
-              disabled={locked}
-              onStop={(id) => void actions.stop(id)}
-            />
           </>
         )}
       </div>
@@ -721,7 +726,8 @@ function RoutineEditor({
               />
               <FieldDescription>
                 Time in {Intl.DateTimeFormat().resolvedOptions().timeZone}.
-                Repeats use elapsed time, including across clock changes.
+                {type === "interval" &&
+                  " Repeats use elapsed time, including across clock changes."}
               </FieldDescription>
             </Field>
           )}
