@@ -173,7 +173,7 @@ settings:
 
 overrides:
   workerd: 1.20261117.1
-  '@alchemy.run/cloudflare-runtime@2.0.0-beta.87>unenv': 2.0.0-rc.24
+  '@alchemy.run/cloudflare-runtime@2.0.0-beta.87>unenv': 2.0.0-rc.25
 
 patchedDependencies:
   '@modelcontextprotocol/client@2.4.0': 1c92abfe7d9c92bc2e4a89df3bf48301c013a0e3babcdd1bbceb3b60b768009c
@@ -7023,6 +7023,9 @@ packages:
   unenv@2.0.0-rc.24:
     resolution: {integrity: sha512-i7qRCmY42zmCwnYlh9H2SvLEypEFGye5iRmEMKjcGi7zk9UquigRjFtTLz0TYqr0ZGLZhaMHl/foy1bZR+Cwlw==}
 
+  unenv@2.0.0-rc.25:
+    resolution: {integrity: sha512-oXXwuT7VhhvYRQdoy9H0f3Qqgo6kTo0Zbh/OzUxFkeSoZ6LtovJjV9Ocd3SnmKmRLndIS8yPFxo1cJbaexhRVA==}
+
   unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
@@ -7432,7 +7435,7 @@ snapshots:
   '@alchemy.run/cloudflare-runtime@2.0.0-beta.87(@distilled.cloud/cloudflare@1.0.0-rc.20(effect@4.1.4))(@effect/platform-bun@4.1.4(effect@4.1.4))(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1(@opentelemetry/api@1.10.0)))(@types/node@26.6.6)(@typescript/typescript6@6.0.2)(effect@4.1.4)(rolldown@1.2.16)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@alchemy.run/node-utils': 2.0.0-beta.87
-      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261117.1)
+      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.25)(workerd@1.20261117.1)
       '@distilled.cloud/cloudflare': 1.0.0-rc.20(effect@4.1.4)
       '@puppeteer/browsers': 3.2.7(yauzl@3.4.0)
       capnp-es: 0.0.16(@typescript/typescript6@6.0.2)
@@ -7440,7 +7443,7 @@ snapshots:
       magic-string: 0.30.21
       mime: 4.1.2
       sharp: 0.35.5(@types/node@26.6.6)
-      unenv: 2.0.0-rc.24
+      unenv: 2.0.0-rc.25
       workerd: 1.20261117.1
       yauzl: 3.4.0
     optionalDependencies:
@@ -8261,6 +8264,12 @@ snapshots:
   '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261117.1)':
     dependencies:
       unenv: 2.0.0-rc.24
+    optionalDependencies:
+      workerd: 1.20261117.1
+
+  '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.25)(workerd@1.20261117.1)':
+    dependencies:
+      unenv: 2.0.0-rc.25
     optionalDependencies:
       workerd: 1.20261117.1
 
@@ -13593,6 +13602,10 @@ snapshots:
   undici@8.12.4: {}
 
   unenv@2.0.0-rc.24:
+    dependencies:
+      pathe: 2.0.3
+
+  unenv@2.0.0-rc.25:
     dependencies:
       pathe: 2.0.3
 

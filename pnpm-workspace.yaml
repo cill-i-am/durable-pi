@@ -150,4 +150,4 @@ patchedDependencies:
 overrides:
   workerd: "catalog:"
   # Cloudflare's preset requires this exact prerelease peer.
-  "@alchemy.run/cloudflare-runtime@2.0.0-beta.87>unenv": 2.0.0-rc.24
+  "@alchemy.run/cloudflare-runtime@2.0.0-beta.87>unenv": 2.0.0-rc.25
