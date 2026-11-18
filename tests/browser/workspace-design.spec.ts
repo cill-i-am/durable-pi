@@ -26,6 +26,69 @@ async function openSettings(page: Page, mobile: boolean) {
   await expect(settingsFront(page)).toBeVisible()
 }
 
+test("assistant action targets stay distinct and centered in compact sidebar rows", async ({
+  page,
+  isMobile,
+}) => {
+  const name =
+    "Navi — planning family holidays, meals and everything in between"
+  await page.route("**/api/agent/bots", async (route) => {
+    const response = await route.fetch()
+    const body = await response.json()
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        agents: body.agents.map((agent: { name: string }) => ({
+          ...agent,
+          name,
+        })),
+      },
+    })
+  })
+  await signIn(page)
+  await page.goto("/agents/navi")
+  if (isMobile)
+    await page.getByRole("button", { name: "Toggle Sidebar" }).click()
+  const action = page.getByRole("button", {
+    name: `Actions for ${name}`,
+    exact: true,
+  })
+  const row = page
+    .locator('[data-slot="sidebar-menu-item"]')
+    .filter({ has: action })
+  for (const width of isMobile ? [390, 320] : [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    await row.hover()
+    const target = (await action.boundingBox())!
+    const container = (await row.boundingBox())!
+    expect(target.width).toBeGreaterThanOrEqual(24)
+    expect(target.height).toBeGreaterThanOrEqual(24)
+    const label = (await row
+      .locator('[data-slot="sidebar-menu-button"] > span:last-child')
+      .boundingBox())!
+    expect(label.x + label.width).toBeLessThanOrEqual(target.x - 4)
+    expect(
+      Math.abs(
+        target.y + target.height / 2 - container.y - container.height / 2
+      ),
+      JSON.stringify({ target, container })
+    ).toBeLessThan(1)
+    await page.mouse.click(
+      target.x + target.width / 2 - 11,
+      target.y + target.height / 2
+    )
+    const menu = page.getByRole("menu", {
+      name: `Actions for ${name}`,
+      exact: true,
+    })
+    await expect(menu).toBeVisible()
+    await expect(page).toHaveURL(/\/agents\/navi$/)
+    await menu.press("Escape")
+    await expect(action).toBeFocused()
+  }
+})
+
 test("settings after hiding a retained workbench keep it closed and return to the same draft", async ({
   page,
   isMobile,
