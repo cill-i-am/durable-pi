@@ -8,7 +8,7 @@ import {
 } from "@workspace/ui/components/field"
 import { Redacted } from "effect"
 import { QRCodeSVG } from "qrcode.react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { authClient } from "@/auth/client"
 import { CopyButton } from "@/components/copy-button"
@@ -79,9 +79,36 @@ export function FactorSettings({
     factor.send({ type: "SUBMIT", secret: Redacted.make({ password, code }) })
   }
   const title = factorTitle(view)
+  const heading = useRef<HTMLHeadingElement>(null)
+  const ready = !!factor.snapshot
+  useEffect(() => {
+    if (!ready) return
+    const target = heading.current
+    target?.focus()
+    // Native drawer focus recovery follows removal of the previous control.
+    // Keep the new heading focused unless the user has chosen another control.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const active = document.activeElement
+        if (
+          target?.isConnected &&
+          (active === document.body ||
+            active === target.closest('[role="dialog"]'))
+        )
+          target.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [ready, title])
   return (
     <section className="settings-factor space-y-6">
-      <h2 className="text-md font-semibold">{title}</h2>
+      <h2
+        ref={heading}
+        tabIndex={-1}
+        className="text-md font-semibold outline-none"
+      >
+        {title}
+      </h2>
       {view.kind === "manage" ? (
         <div className="space-y-4">
           <p className="text-sm leading-6 text-muted-foreground">

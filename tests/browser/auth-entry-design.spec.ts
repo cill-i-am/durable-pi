@@ -223,3 +223,109 @@ test("unsupported passkeys leave password sign-in available", async ({
     .click()
   await expect(page).toHaveURL(/\/agents$/)
 })
+
+test("two-factor detail focuses its heading and returns to its security opener", async ({
+  page,
+  isMobile,
+}) => {
+  const writes: unknown[] = []
+  await page.route("**/api/auth/get-session**", async (route) => {
+    const response = await route.fetch()
+    const data = await response.json()
+    await route.fulfill({
+      response,
+      json: data?.user
+        ? { ...data, user: { ...data.user, twoFactorEnabled: true } }
+        : data,
+    })
+  })
+  await page.route("**/api/auth/two-factor/**", async (route) => {
+    writes.push(route.request().postDataJSON())
+    await route.fulfill({
+      status: 400,
+      json: { message: "No changes in this read-only fixture" },
+    })
+  })
+  await page.goto("/settings/security")
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill("browser-smoke@example.invalid")
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill("Disposable browser fixture password 2026!")
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  for (const width of isMobile ? [390, 320] : [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    const manage = page.getByRole("button", { name: "Manage", exact: true })
+    await manage.click()
+    await expect(
+      page.getByRole("heading", {
+        name: "Manage two-factor authentication",
+        exact: true,
+      })
+    ).toBeFocused()
+    await page
+      .getByRole("button", { name: "Generate new recovery codes", exact: true })
+      .click()
+    await expect(
+      page.getByRole("heading", {
+        name: "Replace your recovery codes?",
+        exact: true,
+      })
+    ).toBeFocused()
+    const currentPassword = page.getByLabel("Current password", { exact: true })
+    await expect(currentPassword).toHaveValue("")
+    await currentPassword.fill("Synthetic current password")
+    await expect(currentPassword).toBeFocused()
+    await page
+      .getByRole("button", { name: "Back to account security", exact: true })
+      .click()
+    await expect(manage).toBeFocused()
+  }
+  expect(writes).toEqual([])
+})
+
+test("model sign-in restoration errors keep readable width and contextual status", async ({
+  page,
+  isMobile,
+}) => {
+  await page.route("**/api/agent/model-account**", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: "Synthetic restoration failure" },
+    })
+  )
+  await page.goto("/family/model-access")
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill("browser-smoke@example.invalid")
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill("Disposable browser fixture password 2026!")
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  const failure = page
+    .getByRole("alert")
+    .filter({ hasText: "Could not restore the previous sign-in" })
+  await expect(failure).toBeVisible()
+  for (const width of isMobile ? [390, 320] : [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    const dimensions = await failure.evaluate((el) => ({
+      width: el.getBoundingClientRect().width,
+      available: el.parentElement!.clientWidth,
+      height: el.getBoundingClientRect().height,
+    }))
+    expect(
+      Math.abs(dimensions.width - dimensions.available)
+    ).toBeLessThanOrEqual(1)
+    expect(dimensions.height).toBeLessThan(200)
+    await expect(
+      page.getByRole("button", { name: "Sign in with ChatGPT", exact: true })
+    ).toBeInViewport()
+    await expect(
+      page.getByText(
+        "Sign in to ChatGPT, then paste the final return address here to finish.",
+        { exact: true }
+      )
+    ).toHaveCount(0)
+  }
+})

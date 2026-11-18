@@ -74,6 +74,13 @@ function useModelSignIn(
     ? `ChatGPT connected as ${snapshot.context.connected}. Your family uses this connection.`
     : ""
   const loading = !snapshot || snapshot.matches("restoring")
+  const status =
+    saved ||
+    (loading
+      ? "Checking for an unfinished sign-in…"
+      : attempt
+        ? "Sign in to ChatGPT, then paste the final return address here to finish."
+        : "")
   const working =
     !!snapshot &&
     ["starting", "exchanging", "reconciling", "cancelling"].some((state) =>
@@ -125,6 +132,7 @@ function useModelSignIn(
     error,
     requestError: snapshot?.context.requestError ?? false,
     saved,
+    status,
     loading,
     working,
     expired,
@@ -153,6 +161,7 @@ export function ChatGPTReconnect({
     error,
     requestError,
     saved,
+    status,
     loading,
     working,
     expired,
@@ -173,12 +182,11 @@ export function ChatGPTReconnect({
   )
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <p role="status" className="settings-description">
-        {saved ||
-          (loading
-            ? "Checking for an unfinished sign-in…"
-            : "Sign in to ChatGPT, then paste the final return address here to finish.")}
-      </p>
+      {status && (
+        <p role="status" className="settings-description">
+          {status}
+        </p>
+      )}
       {saved ? (
         <div className="flex flex-wrap gap-3">
           <Button

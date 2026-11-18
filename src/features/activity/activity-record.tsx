@@ -5,10 +5,15 @@ import {
 } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import { DataLoading } from "@workspace/ui/components/data-loading"
-import { Separator } from "@workspace/ui/components/separator"
 import { useIsMobile } from "@workspace/ui/hooks/use-mobile"
 import { Schema } from "effect"
-import { ArrowLeft, ArrowUpRight, Brain, Wrench } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Brain,
+  ChevronRight,
+  Wrench,
+} from "lucide-react"
 
 import { ActivityConversation, type ActivityEntry } from "@/activity/contracts"
 import { CopyButton } from "@/components/copy-button"
@@ -20,6 +25,11 @@ import {
   CodeBlockActions,
   CodeBlockContent,
 } from "@/components/ui/code-block"
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"
 import {
   Sheet,
   SheetBody,
@@ -122,16 +132,6 @@ export function ActivityRecord({
       )}
       {record && (
         <div className="flex min-w-0 flex-col gap-4 wrap-anywhere">
-          {record.run && (
-            <>
-              <RunTimeline
-                key={record.run.runId}
-                run={record.run}
-                agentId={entry.agent.id}
-              />
-              <Separator />
-            </>
-          )}
           {record.status !== "done" && (
             <p className="text-xs text-muted-foreground">{record.status}</p>
           )}
@@ -149,7 +149,13 @@ export function ActivityRecord({
               <AlertDescription>{record.error}</AlertDescription>
             </Alert>
           )}
-          <Trace role="group" aria-label="Saved agent activity">
+          {!!record.answer && (
+            <div className="activity-record-reply">
+              <p className="text-sm text-muted-foreground">Saved reply</p>
+              <Markdown text={record.answer} />
+            </div>
+          )}
+          <Trace role="group" aria-label="Saved assistant activity">
             {record.activity
               .filter((item) => item.type !== "text")
               .map((item) =>
@@ -237,11 +243,23 @@ export function ActivityRecord({
                 )
               )}
           </Trace>
-          {!!record.answer && (
-            <div className="activity-record-reply">
-              <p className="text-sm text-muted-foreground">Saved reply</p>
-              <Markdown text={record.answer} />
-            </div>
+          {record.run && (
+            <Collapsible className="border-t pt-2">
+              <CollapsibleTrigger
+                className="group"
+                render={<Button variant="ghost" size="sm" />}
+              >
+                <ChevronRight className="transition-transform duration-150 group-data-panel-open:rotate-90 motion-reduce:transition-none" />{" "}
+                Run details
+              </CollapsibleTrigger>
+              <CollapsibleContent keepMounted className="pt-4">
+                <RunTimeline
+                  key={record.run.runId}
+                  run={record.run}
+                  agentId={entry.agent.id}
+                />
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </div>
       )}

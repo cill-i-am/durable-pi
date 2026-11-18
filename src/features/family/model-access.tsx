@@ -98,10 +98,7 @@ export function ModelAccess({
                   : "Checking…"}
             </Badge>
           </div>
-          <p>
-            Provided by {owner ? "you" : family.ownerName}. Everyone’s agents
-            use this connection.
-          </p>
+          <p>Provided by {owner ? "you" : family.ownerName}.</p>
           {owner && (
             <ChatGPTReconnect
               onPendingChange={setReconnectPending}
@@ -135,19 +132,18 @@ export function ModelAccess({
           </Alert>
         )}
         <div>
-          <h3>Your models, your choices</h3>
+          <h3>Model defaults</h3>
           <p className="settings-description">
-            Each person chooses model defaults for their own agents. ChatGPT
+            Each person chooses model defaults for their own assistants. ChatGPT
             plan limits are shared across the family.
           </p>
         </div>
         <div className="family-privacy">
           <LockKeyhole />
           <div>
-            <h3>Shared access. Private work.</h3>
+            <h3>Privacy</h3>
             <p>
-              This connection gives your agents model access. Your chats, files,
-              memory and connected accounts stay private.
+              Your chats, files, memory and connected accounts stay private.
             </p>
           </div>
         </div>

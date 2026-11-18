@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   BookOpen,
   ChevronRight,
-  Globe,
   Plug,
   Play,
   Settings2,
@@ -910,37 +909,30 @@ function AgentSettings({
     )
   if (category === "access")
     return (
-      <>
-        <div className="settings-network-link">
-          <div className="settings-network-copy">
-            <Globe />
-            <span>Browser and terminal internet access</span>
-          </div>
-          <div className="settings-network-actions">
-            <Button
-              size="sm"
-              variant="link"
-              onClick={() => onWorkbench("browser")}
-            >
-              Browser
-            </Button>
-            <Button
-              size="sm"
-              variant="link"
-              onClick={() => onWorkbench("terminal")}
-            >
-              Terminal
-            </Button>
-          </div>
+      <AccessPanel
+        open
+        agentId={agent.id}
+        agentName={agent.name}
+        onSaved={reload}
+        onPendingChange={onPendingChange}
+      >
+        <div className="settings-workbench-actions">
+          <Button
+            size="sm"
+            variant="link"
+            onClick={() => onWorkbench("browser")}
+          >
+            Browser
+          </Button>
+          <Button
+            size="sm"
+            variant="link"
+            onClick={() => onWorkbench("terminal")}
+          >
+            Terminal
+          </Button>
         </div>
-        <AccessPanel
-          open
-          agentId={agent.id}
-          agentName={agent.name}
-          onSaved={reload}
-          onPendingChange={onPendingChange}
-        />
-      </>
+      </AccessPanel>
     )
   return null
 }

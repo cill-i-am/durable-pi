@@ -1,12 +1,13 @@
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import { DataLoading } from "@workspace/ui/components/data-loading"
+import { Input } from "@workspace/ui/components/input"
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
-import { Check, RefreshCw } from "lucide-react"
-import { useEffect } from "react"
+import { Check, RefreshCw, Search } from "lucide-react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 
 import { SettingsSection } from "@/components/settings-section"
 
@@ -18,12 +19,14 @@ export function AccessPanel({
   agentName,
   open,
   onSaved,
+  children,
 }: {
   onPendingChange?: (pending: boolean) => void
   agentId: string
   agentName: string
   open: boolean
   onSaved: () => void
+  children?: ReactNode
 }) {
   const { policies, busy, error, loading, update, refresh } = useAccess(
     agentId,
@@ -31,6 +34,14 @@ export function AccessPanel({
     onSaved
   )
   const pending = !!busy
+  const [query, setQuery] = useState("")
+  const filter = useRef<HTMLInputElement>(null)
+  const normalized = query.trim().toLowerCase()
+  const shown = policies?.filter((tool) =>
+    `${tool.name} ${tool.title ?? ""} ${tool.description}`
+      .toLowerCase()
+      .includes(normalized)
+  )
   useEffect(() => {
     onPendingChange?.(pending)
     return () => onPendingChange?.(false)
@@ -39,13 +50,26 @@ export function AccessPanel({
     <SettingsSection
       open={open}
       title="Tool access"
-      description={
-        <>
-          Choose what {agentName} can do. Permissions apply to this assistant
-          only.
-        </>
-      }
+      description={`Permissions apply to ${agentName} only.`}
     >
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <div className="relative min-w-0 flex-[1_1_240px]">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 z-1 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            ref={filter}
+            className="pl-9"
+            aria-label="Filter tools"
+            placeholder="Filter tools…"
+            maxLength={200}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        {children}
+      </div>
       <div className="settings-panel-body">
         {error && (
           <Alert className="my-3">
@@ -67,7 +91,7 @@ export function AccessPanel({
           <DataLoading loading label="Loading tool access" layout="form" />
         )}
         <div className="divide-y">
-          {policies?.map((tool) => (
+          {shown?.map((tool) => (
             <section
               key={tool.name}
               className="settings-access-row"
@@ -114,6 +138,20 @@ export function AccessPanel({
             </section>
           ))}
         </div>
+        {normalized && shown?.length === 0 && (
+          <div role="status" className="flex flex-col items-center gap-4 py-8">
+            <h3 className="text-sm font-medium">No matching tools</h3>
+            <Button
+              variant="outline"
+              onClick={() => {
+                filter.current?.focus()
+                setQuery("")
+              }}
+            >
+              Clear filter
+            </Button>
+          </div>
+        )}
       </div>
       <div className="settings-panel-footer space-y-2">
         <p>
