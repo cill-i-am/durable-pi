@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test"
 
+import type { ActivityConversation } from "../../src/activity/contracts"
+import type { RunActivity } from "../../src/activity/run"
+
 const agent = { id: "home", name: "Personal assistant" }
 const at = "2026-10-30T10:43:00.000Z"
 const reference = "11111111-1111-4111-8111-111111111111"
@@ -24,7 +27,7 @@ const saved = {
   status: "done",
   error: null,
   activity: [],
-}
+} satisfies ActivityConversation
 async function signIn(
   page: Page,
   path = "/agents/home/activity?filter=attention"
@@ -40,7 +43,8 @@ async function signIn(
 }
 async function fixture(
   page: Page,
-  read: "saved" | "unavailable" | "held" = "saved"
+  read: "saved" | "unavailable" | "held" = "saved",
+  details: ActivityConversation = saved
 ) {
   const writes: string[] = []
   const aborted: string[] = []
@@ -62,7 +66,7 @@ async function fixture(
       if (read === "held") return
       return route.fulfill(
         available
-          ? { json: saved }
+          ? { json: details }
           : {
               status: 503,
               json: {
@@ -202,5 +206,109 @@ test("hiding the retained Activity tab releases a held record observation withou
   await expect(
     page.getByRole("tab", { name: "Activity", exact: true })
   ).toHaveCount(1)
+  expect(f.writes).toEqual([])
+})
+
+test("saved conversation prioritizes its content and keeps run diagnostics expandable", async ({
+  page,
+  isMobile,
+}) => {
+  const run: RunActivity = {
+    botId: "home",
+    runId: reference,
+    sessionId: null,
+    status: "done",
+    createdAt: at,
+    startedAt: at,
+    finishedAt: at,
+    totals: {
+      modelRequests: 0,
+      usageReportedRequests: 0,
+      knownInputTokens: 0,
+      knownCachedInputTokens: 0,
+      knownOutputTokens: 0,
+    },
+    events: [
+      {
+        key: "saved-run",
+        at,
+        kind: "run",
+        title: "Run ended",
+        status: "done",
+        reference,
+        finishedAt: at,
+        detail: null,
+      },
+    ],
+    next: null,
+  }
+  const f = await fixture(page, "saved", {
+    ...saved,
+    run,
+    activity: [
+      {
+        id: "saved-tool",
+        type: "tool",
+        name: "search_notes",
+        input: "{}",
+        output: "Synthetic saved result",
+        status: "done",
+      },
+    ],
+  })
+  await signIn(page)
+  await page.getByRole("button", { name: /Recorded Lisbon request/ }).click()
+  const record = page.getByRole(isMobile ? "dialog" : "region", {
+    name: "Saved conversation",
+    exact: true,
+  })
+  await expect(
+    record.getByText("Saved private reply", { exact: true })
+  ).toBeVisible()
+  const details = record.getByRole("button", {
+    name: "Run details",
+    exact: true,
+  })
+  const reply = record.getByText("Saved private reply", { exact: true })
+  const tools = record.getByRole("group", {
+    name: "Saved assistant activity",
+    exact: true,
+  })
+  expect(
+    await reply.evaluate((element) =>
+      Boolean(
+        element.compareDocumentPosition(
+          document.querySelector('[aria-label="Saved assistant activity"]')!
+        ) & Node.DOCUMENT_POSITION_FOLLOWING
+      )
+    )
+  ).toBe(true)
+  await expect(tools).toContainText("search_notes")
+  await expect(details).toHaveAttribute("aria-expanded", "false")
+  await expect(
+    record.getByRole("region", { name: "Run timeline", exact: true })
+  ).not.toBeVisible()
+  for (const width of isMobile ? [390, 320] : [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(
+      record.getByText("Original private request", { exact: true })
+    ).toBeInViewport()
+    await expect(
+      record.getByText("Saved private reply", { exact: true })
+    ).toBeInViewport()
+  }
+  await details.press("Enter")
+  await expect(
+    record.getByRole("region", { name: "Run timeline", exact: true })
+  ).toBeVisible()
+  await expect(record.getByLabel("Durable run records")).toContainText(
+    "Run ended"
+  )
+  await details.press("Enter")
+  await expect(details).toBeFocused()
+  await expect(details).toHaveAttribute("aria-expanded", "false")
+  await expect(
+    record.getByRole("region", { name: "Run timeline", exact: true })
+  ).not.toBeVisible()
   expect(f.writes).toEqual([])
 })
