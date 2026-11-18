@@ -107,7 +107,7 @@ export function activityQueryMachine(work: ActivityQueryWork) {
           REFRESH: ({ context, event }) =>
             event.key === context.view.key && context.view.interval !== null
               ? { context: { ...context, queued: true } }
-              : undefined,
+              : {},
           CLEAR: {},
           WAKE: {},
         },

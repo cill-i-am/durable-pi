@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai"
 import { defineTool } from "@earendil-works/pi-durable"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { createEffectActor, waitFor } from "@xstate/effect"
 import { Schema, Effect } from "effect"
 
@@ -73,8 +73,8 @@ export function routineTools(
       name: "list_routines",
       description:
         "List this bot's routines with current revisions, schedule and pause status. Use read_routine before editing. Schedules run on Cloudflare with the browser closed; existing tool approvals apply.",
-      parameters: Type.Object({
-        offset: Type.Optional(Type.Integer({ minimum: 0 })),
+      parameters: ToolSchema.obj({
+        offset: ToolSchema.opt(ToolSchema.int({ minimum: 0 })),
       }),
       replay: "safe",
       execute: async ({ offset = 0 }) => {
@@ -89,7 +89,7 @@ export function routineTools(
       name: "read_routine",
       description:
         "Read one of this bot's routines and its instructions before editing.",
-      parameters: Type.Object({ id: Type.String() }),
+      parameters: ToolSchema.obj({ id: ToolSchema.str() }),
       replay: "safe",
       execute: async ({ id }) =>
         result((await run(store.get(id))) ?? { error: "Routine not found." }),
@@ -98,13 +98,16 @@ export function routineTools(
       name: "save_routine",
       description:
         "Create or edit a scheduled routine for this bot. Requires owner approval by default. schedule is JSON {type:'once',at:UnixMilliseconds} or {type:'interval',at:UnixMilliseconds,minutes:15..10080} or {type:'webhook'} for incoming events only. Webhook keys must be enabled by the owner in the UI; never ask for or disclose them in chat. A new first run must be in the future. Intervals are elapsed minutes, not timezone calendar rules. Reuse id and current expectedRevision when editing; omit id and use revision 0 for new. status active or paused. Missed intervals coalesce; at most one routine runs per bot, with a ten-minute budget. Existing tool grants and Ask approvals remain enforced. Outputs appear in this bot's conversation. No email or push notifications are sent automatically.",
-      parameters: Type.Object({
-        id: Type.Optional(Type.String()),
-        expectedRevision: Type.Integer({ minimum: 0 }),
-        title: Type.String({ minLength: 1, maxLength: 80 }),
-        prompt: Type.String({ minLength: 1, maxLength: 12000 }),
-        schedule: Type.String({ maxLength: 500 }),
-        status: Type.Union([Type.Literal("active"), Type.Literal("paused")]),
+      parameters: ToolSchema.obj({
+        id: ToolSchema.opt(ToolSchema.str()),
+        expectedRevision: ToolSchema.int({ minimum: 0 }),
+        title: ToolSchema.str({ minLength: 1, maxLength: 80 }),
+        prompt: ToolSchema.str({ minLength: 1, maxLength: 12000 }),
+        schedule: ToolSchema.str({ maxLength: 500 }),
+        status: ToolSchema.union([
+          ToolSchema.lit("active"),
+          ToolSchema.lit("paused"),
+        ]),
       }),
       replay: "safe",
       execute: async (args, api, execution) => {
@@ -129,13 +132,13 @@ export function routineTools(
       name: "set_routine_status",
       description:
         "Pause, resume or archive this bot's routine. Pausing cancels unadmitted work; an already admitted run can finish within its budget. Archive is recoverable by restoring to paused. Requires owner approval by default.",
-      parameters: Type.Object({
-        id: Type.String(),
-        expectedRevision: Type.Integer({ minimum: 0 }),
-        status: Type.Union([
-          Type.Literal("active"),
-          Type.Literal("paused"),
-          Type.Literal("archived"),
+      parameters: ToolSchema.obj({
+        id: ToolSchema.str(),
+        expectedRevision: ToolSchema.int({ minimum: 0 }),
+        status: ToolSchema.union([
+          ToolSchema.lit("active"),
+          ToolSchema.lit("paused"),
+          ToolSchema.lit("archived"),
         ]),
       }),
       replay: "safe",

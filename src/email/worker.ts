@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 
-import type { EmailEnv } from "../../alchemy.run"
+import type { EmailEnv } from "../../stacks/resources/channels"
 import { ownerAccounts } from "../auth/adapters/accounts"
 import { receiveCloudflareEmail } from "./adapters/incoming"
 import { EmailRejected } from "./contracts"

@@ -108,7 +108,7 @@ export class ConversationControlProbe extends DurableObject<
   )
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: ({ storage, context }) => {
+    harness: ({ storage, context, onWake }) => {
       const models = createModels(),
         provider = fauxProvider({
           provider: "openai",
@@ -127,6 +127,7 @@ export class ConversationControlProbe extends DurableObject<
       return Harness.open(
         storage,
         {
+          onWake,
           models,
           registry: createRegistry(),
           settings: {

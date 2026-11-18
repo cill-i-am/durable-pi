@@ -108,7 +108,7 @@ export class MailboxBot extends DurableObject<Env> {
   readonly models = createModels()
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: async ({ storage, context }) => {
+    harness: async ({ storage, context, onWake }) => {
       const faux = fauxProvider({
         provider: "openai",
         models: [{ id: "gpt-6-luna", contextWindow: 8192, maxTokens: 2048 }],
@@ -132,13 +132,14 @@ export class MailboxBot extends DurableObject<Env> {
       const harness = await Harness.open(
         storage,
         {
+          onWake,
           models: this.models,
           registry: createRegistry(),
           settings: {
             ...agentSettings(() =>
               this.models.getModel("openai", "gpt-6-luna")
             ),
-            retry: { enabled: false },
+            retry: { enabled: true, maxRetries: 2, baseDelayMs: 10 },
           },
         },
         context

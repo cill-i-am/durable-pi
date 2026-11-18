@@ -1,6 +1,5 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
@@ -13,6 +12,7 @@ import {
   createRegistry,
   defineTool,
 } from "@earendil-works/pi-durable"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { PiHarness } from "agents/harness/pi"
 import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
 import { DurableObject } from "cloudflare:workers"
@@ -62,7 +62,7 @@ export class LoopBot extends DurableObject<Record<string, never>> {
   )
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: ({ storage, context }) => {
+    harness: ({ storage, context, onWake }) => {
       const models = createModels()
       const faux = fauxProvider({ tokensPerSecond: 100000 })
       models.setProvider(faux.provider)
@@ -113,7 +113,7 @@ export class LoopBot extends DurableObject<Record<string, never>> {
             defineTool({
               name: "check",
               description: "Synthetic failure",
-              parameters: Type.Object({ value: Type.String() }),
+              parameters: ToolSchema.obj({ value: ToolSchema.str() }),
               replay: "safe",
               execute: async () => ({
                 content: [{ type: "text", text: "Synthetic failure" }],
@@ -126,6 +126,7 @@ export class LoopBot extends DurableObject<Record<string, never>> {
       return Harness.open(
         storage,
         {
+          onWake,
           models,
           registry,
           settings: {

@@ -3,7 +3,7 @@ import { APIError, getSessionFromCtx } from "better-auth/api"
 import { organization } from "better-auth/plugins"
 import { Schema } from "effect"
 
-import type { WebsiteEnv } from "../../../alchemy.run"
+import type { WebsiteEnv } from "../../../stacks/resources/website"
 import { FAMILY_ID } from "../contracts"
 import type { FamilyDirectory } from "./directory"
 import { invitationEmail } from "./mail"

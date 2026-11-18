@@ -1,12 +1,14 @@
 import assert from "node:assert/strict"
 import { setImmediate } from "node:timers/promises"
 
+import type { Context } from "@earendil-works/chord/context"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import {
   createModels,
   fauxAssistantMessage,
   fauxProvider,
 } from "@earendil-works/pi-ai"
+import type { SubmissionDraft } from "@earendil-works/pi-durable"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { MemoryStorage } from "@earendil-works/pi-durable/storage/memory"
 import { Effect } from "effect"
@@ -106,9 +108,7 @@ export async function characterizeLocalHeldDispatch(scenario: Scenario) {
                 }
               }
               if (member === "submit") {
-                return async (
-                  ...input: Parameters<NativeConversation["submit"]>
-                ) => {
+                return async (...input: [SubmissionDraft, Context]) => {
                   assert.equal(input[0].requestId, expectedRequest)
                   submitEntries++
                   order.push("native-submit-entered")

@@ -1,10 +1,10 @@
-import { Type } from "@earendil-works/pi-ai"
 import {
   defineTool,
   hook,
   GenerationTask,
   type ToolExecutionApi,
 } from "@earendil-works/pi-durable"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Clock, Effect } from "effect"
 
 import type { BackgroundInput } from "../background"
@@ -30,12 +30,12 @@ export function backgroundTool(
     description:
       "Start one bounded group of up to three independent background drafting or analysis tasks when the user requested work that can continue after your reply. Uses supplied text references only, no tools or live retrieval. Inherits the current model and returns an acceptance receipt immediately; findings arrive later in this bot's chat. Put all constraints and completion criteria in each brief. Existing approvals apply. Do not create recursive background work from a child report.",
     replay: "safe",
-    parameters: Type.Object({
-      objective: Type.String({ minLength: 1, maxLength: 500 }),
-      tasks: Type.Array(
-        Type.Object({
-          name: Type.String({ minLength: 1, maxLength: 80 }),
-          task: Type.String({ minLength: 1, maxLength: 8000 }),
+    parameters: ToolSchema.obj({
+      objective: ToolSchema.str({ minLength: 1, maxLength: 500 }),
+      tasks: ToolSchema.arr(
+        ToolSchema.obj({
+          name: ToolSchema.str({ minLength: 1, maxLength: 80 }),
+          task: ToolSchema.str({ minLength: 1, maxLength: 8000 }),
         }),
         { minItems: 1, maxItems: 3 }
       ),
@@ -68,23 +68,25 @@ export function delegationTool(
       ? "Start up to three research or drafting agents and return immediately. Use list_agents, send_message and get_last_message to coordinate while you keep working. Children receive only selected read tools and can message their parent and peers. Their findings arrive in this session. Agents expire after ten minutes; Stop cancels them. No recursive delegation or outside actions."
       : "Run one bounded group of up to three independent research/drafting tasks for this request. Give each a distinct name, concrete brief with constraints, and explicit read-tool list. Inherits the parent model; no recursive delegation or outside actions. Returns combined findings once. Owner can inspect, steer or stop children in Activity.",
     replay: "safe",
-    parameters: Type.Object({
-      objective: Type.String({ minLength: 1, maxLength: 500 }),
-      tasks: Type.Array(
-        Type.Object({
-          name: Type.String({ minLength: 1, maxLength: 80 }),
-          task: Type.String({ minLength: 1, maxLength: 8000 }),
-          tools: Type.Array(
-            Type.Union(
-              [
-                "zoom",
-                "date",
-                "search_memory",
-                "list_files",
-                "read_file",
-                "view_image",
-                "read_note",
-              ].map((name) => Type.Literal(name))
+    parameters: ToolSchema.obj({
+      objective: ToolSchema.str({ minLength: 1, maxLength: 500 }),
+      tasks: ToolSchema.arr(
+        ToolSchema.obj({
+          name: ToolSchema.str({ minLength: 1, maxLength: 80 }),
+          task: ToolSchema.str({ minLength: 1, maxLength: 8000 }),
+          tools: ToolSchema.arr(
+            ToolSchema.union(
+              (
+                [
+                  "zoom",
+                  "date",
+                  "search_memory",
+                  "list_files",
+                  "read_file",
+                  "view_image",
+                  "read_note",
+                ] as const
+              ).map((name) => ToolSchema.lit(name))
             ),
             { maxItems: 6 }
           ),

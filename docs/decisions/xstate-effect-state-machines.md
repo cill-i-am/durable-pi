@@ -98,3 +98,9 @@ Earlier historical review advice treating handwritten reducers as an alternative
 The supported runtime now uses Effect 4.1.1, XState 6.0.0-alpha.71, `@xstate/effect` 1.0.0-alpha.10, Pi 1.4.0, and Agents 0.32.0. Existing application records from the versions above remain accepted under their original workflow and schema versions. New records identify the current libraries. Unknown future versions still fail explicitly; this upgrade neither resets state nor changes resource identities. Pi's own SQLite schema upgrade prevents a code-only rollback to Pi 1.3 or earlier.
 
 The Effect host now wraps routed failures in `EffectFailure`; the UI unwraps the original Cause before displaying expected errors. Effect 4.1 promotes checked failures combined with defects to defects while retaining their values and annotations. Recovery tests assert that both original failures survive and that cleanup still joins. Socket tests synchronize on acquisition completion rather than assuming an external side effect causes an actor snapshot notification.
+
+## Dependency upgrade, 18 November 2026
+
+The runtime uses Effect 4.1.4, XState 6.0.0-alpha.73, `@xstate/effect` 1.0.0-alpha.12, Pi 1.5.2, and Agents 0.33.0. Historical application records retain their accepted version literals and identities. Native Pi live documents and tasks migrate independently; see [the upgrade notes](../dependency-modernization.md) before deployment or rollback.
+
+A dynamic transition returning `undefined` can fall through to a parent handler. Pagination explicitly consumes duplicate refreshes with an empty transition while a read is running. Cancellation tests require retained interruption Causes after joined cleanup, and runtime fixtures pass PiHarness's `onWake` into `Harness.open`. Production already forwarded that hook and enabled bounded retries.

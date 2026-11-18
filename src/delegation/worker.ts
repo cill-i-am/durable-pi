@@ -14,7 +14,7 @@ import {
   Scope,
 } from "effect"
 
-import type { AgentEnv } from "../../alchemy.run"
+import type { AgentEnv } from "../../stacks/resources/agent"
 import { agentSettings } from "../agent/compaction"
 import type { PersonalAgent } from "../agent/worker"
 import {
@@ -184,7 +184,7 @@ export class BackgroundGroup
             return this.models.getModel("openai", this.pin.route.model)
           }),
           onWake,
-          onReport: (error) => reportHarness(error, "background"),
+          onReport: ({ error }) => reportHarness(error, "background"),
         },
         context
       )

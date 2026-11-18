@@ -3,9 +3,9 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import { Type } from "@earendil-works/pi-ai"
 import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Clock, Effect } from "effect"
 import { expect, it, vi } from "vitest"
 
@@ -107,7 +107,7 @@ it("carries a composer override into native Pi Responses and preserves selection
       defineTool({
         name: "save_result",
         description: "Save one synthetic result",
-        parameters: Type.Object({}),
+        parameters: ToolSchema.obj({}),
         replay: "unsafe",
         execute: async () => {
           toolCalls++

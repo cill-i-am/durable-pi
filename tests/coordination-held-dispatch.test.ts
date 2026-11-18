@@ -1,11 +1,13 @@
 import { setImmediate } from "node:timers/promises"
 
+import type { Context } from "@earendil-works/chord/context"
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
 } from "@earendil-works/pi-ai"
+import type { SubmissionDraft } from "@earendil-works/pi-durable"
 import {
   Harness,
   createRegistry,
@@ -77,7 +79,7 @@ it.each(["held-before-stop", "stop-before-dispatch"])(
             return new Proxy(child, {
               get(native, operation) {
                 if (operation === "submit")
-                  return async (...input: Parameters<typeof child.submit>) => {
+                  return async (...input: [SubmissionDraft, Context]) => {
                     expect(input[0].requestId).toBe(request)
                     order.push("submit-entered")
                     entered.resolve()

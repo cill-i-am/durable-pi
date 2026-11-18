@@ -102,8 +102,9 @@ export function GoodHooks({value}: {value: string}) {
       })
     )
     const lint = spawnSync(
-      join(root, "node_modules/.bin/oxlint"),
+      join(root, "node_modules/.bin/effect-tsgo"),
       [
+        "oxlint",
         "--config",
         join(directory, "oxlint.config.ts"),
         "--threads",

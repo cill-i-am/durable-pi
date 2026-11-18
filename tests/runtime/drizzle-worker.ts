@@ -462,11 +462,11 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
             })
             return prepared as typeof piStorage
           },
-          harness: ({ storage: piStorage, context }) => {
+          harness: ({ storage: piStorage, context, onWake }) => {
             retainedByFactory = piStorage
             return Harness.open(
               piStorage,
-              { models: createModels(), registry: createRegistry() },
+              { models: createModels(), registry: createRegistry(), onWake },
               context
             )
           },

@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai"
 import { defineTool } from "@earendil-works/pi-durable"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 
 import { preserveFatal } from "../../shared/effect"
@@ -48,8 +48,8 @@ export function terminalTools(
       name: "run_command",
       description:
         "Run a Linux shell command in this bot's private Cloudflare container. Node and Python are available. Outbound internet follows the owner-controlled Terminal settings; application/model credentials are never provided. Only /workspace is restored between commands; excludes node_modules, .git and .cache. 30-second execution budget, 64,000 output characters and 8 MiB compressed checkpoint. Completion waits for container cleanup. All background processes end after the command. Stop or a failed checkpoint restores the previous saved workspace. Inspect Terminal for saved command/status; never repeat an interrupted command blindly.",
-      parameters: Type.Object({
-        command: Type.String({ minLength: 1, maxLength: 16000 }),
+      parameters: ToolSchema.obj({
+        command: ToolSchema.str({ minLength: 1, maxLength: 16000 }),
       }),
       replay: "safe",
       execute: (args, api, execution) =>

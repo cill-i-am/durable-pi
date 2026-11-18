@@ -18,6 +18,9 @@ const native = vi.hoisted(() => ({
 }))
 vi.mock("cloudflare:workers", () => ({
   tracing: {
+    getActiveSpan: () => ({
+      spanContext: () => ({ spanId: native.context!.getStore() }),
+    }),
     startActiveSpan(name: string, body: (span: unknown) => unknown) {
       const row = {
         name,
@@ -29,6 +32,7 @@ vi.mock("cloudflare:workers", () => ({
       return native.context!.run(name, () =>
         body({
           isTraced: true,
+          setStatus: vi.fn(),
           setAttribute: (key: string, value: unknown) => {
             Object.assign(row.attributes, { [key]: value })
           },

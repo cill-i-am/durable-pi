@@ -10,9 +10,9 @@ The pinned `@better-auth/passkey` plugin owns challenges, signed cookies, creden
 
 Enrollment requires a live family membership and the native plugin's fresh browser session. Key management uses live membership and the plugin's ownership checks. An admin cannot inspect or change another person's keys. Passkey sign-in proves identity; the existing family admission checks still control workspace access.
 
-Both ceremonies request device verification, and both verified callbacks reject a response whose verified `userVerified` flag is false. This server check is necessary because this plugin version calls the verifier with optional user verification even when registration options require it. The authentication-options hook also changes the native default from `preferred` to `required`. Password sign-in retains its existing two-factor challenge; passkey sign-in requires verified device unlock.
+Both ceremonies require device verification through `authenticatorSelection.userVerification`. The pinned 1.7.25 plugin uses this setting in its browser options and server verification for registration and authentication. The older application callbacks and authentication-options rewrite are removed. Password sign-in retains its existing two-factor challenge; passkey sign-in requires verified device unlock.
 
-The Vite server build bundles `@better-auth/passkey` with Better Auth. Externalizing it creates separate `APIError` constructors and hides callback rejection codes behind generic failures. The built-site browser suite checks the intended 403 recovery response as well as rejection itself.
+The Vite server build bundles `@better-auth/passkey` with Better Auth so its errors share the same `APIError` constructor. The built-site browser suite checks native verification rejection codes and confirms that rejected assertions create no session and rejected registration creates no credential.
 
 ## Chat and recovery
 

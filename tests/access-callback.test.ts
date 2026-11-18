@@ -4,7 +4,6 @@ import { join } from "node:path"
 
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
@@ -17,6 +16,7 @@ import {
   type ToolExecutionResult,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Cause, Effect } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
@@ -85,7 +85,7 @@ async function fixture(
     defineTool({
       name: "checked",
       description: "Synthetic operation",
-      parameters: Type.Object({}),
+      parameters: ToolSchema.obj({}),
       execute,
     })
   )
@@ -101,7 +101,7 @@ async function fixture(
       defineTool({
         name: "driver",
         description: "Call with a real invocation API",
-        parameters: Type.Object({}),
+        parameters: ToolSchema.obj({}),
         execute: async (_args, api, context) => {
           if (options.legacyReceipt)
             await Effect.runPromise(

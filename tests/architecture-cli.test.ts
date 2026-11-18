@@ -42,8 +42,8 @@ test("the CI lint entry point rejects lifecycle boundary violations", () => {
   const lint = (code: string) => {
     writeFileSync(file, code)
     return spawnSync(
-      resolve(root, "node_modules/.bin/oxlint"),
-      ["--config", "oxlint.config.ts", "--deny-warnings", file],
+      resolve(root, "node_modules/.bin/effect-tsgo"),
+      ["oxlint", "--config", "oxlint.config.ts", "--deny-warnings", file],
       { encoding: "utf8", cwd: directory }
     )
   }

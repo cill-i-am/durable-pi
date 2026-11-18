@@ -4,19 +4,14 @@ import { join } from "node:path"
 
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
+import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Clock, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
@@ -26,6 +21,7 @@ import {
   placedInputs,
   replySettled,
 } from "../src/conversations/adapters/pi-reply"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { MAX_VISION_BYTES } from "../src/workspace/files"
 import { database } from "./database"
@@ -64,7 +60,7 @@ describe("native Pi steering with SQLite persistence", () => {
           defineTool({
             name: "read_file",
             description: "Read a synthetic file",
-            parameters: Type.Object({}),
+            parameters: ToolSchema.obj({}),
             replay: "safe",
             execute: async (_args, _api, context) => {
               toolEntered.resolve()
@@ -180,7 +176,7 @@ describe("native Pi steering with SQLite persistence", () => {
           }),
           conversation: async () => conversation,
           session: () => ({
-            events: () => watchEvents(harness, conversation.id, ctx),
+            watch: () => conversation.watch(ctx),
           }),
         }))
         let receipt = await conversation.submit(command, ctx)
@@ -192,8 +188,8 @@ describe("native Pi steering with SQLite persistence", () => {
           const withdrawn = await receipt.status(ctx)
           expect(withdrawn.status).toBe("unanswered")
           expect(withdrawn.entry).toBeUndefined()
-          const stoppedStream = await watchEvents(harness, conversation.id, ctx)
-          expect(stoppedStream.snapshot.run).toBeUndefined()
+          const stoppedStream = await conversation.watch(ctx)
+          expect(snapshotFromView(stoppedStream.value).run).toBeUndefined()
           const records = new Map([
             [root.id, await initial.status(ctx)],
             [steer.id, withdrawn],
@@ -202,12 +198,12 @@ describe("native Pi steering with SQLite persistence", () => {
             replySettled(
               { ...root, status: "stopping" },
               Effect.runSync(store.members(root.id)),
-              { snapshot: stoppedStream.snapshot, records }
+              { snapshot: snapshotFromView(stoppedStream.value), records }
             )
           ).toBe(true)
           const archived = archiveEntries(
             root,
-            stoppedStream.snapshot.entries,
+            snapshotFromView(stoppedStream.value).entries,
             placedInputs(Effect.runSync(store.members(root.id)), records)
           )
           expect(archived.map((item) => item.kind)).toEqual([
@@ -252,7 +248,7 @@ describe("native Pi steering with SQLite persistence", () => {
         expect((await receipt.wait(ctx)).status).toBe("done")
         expect((await initial.wait(ctx)).status).toBe("done")
         await conversation.waitForIdle(ctx)
-        const stream = await watchEvents(harness, conversation.id, ctx)
+        const stream = await conversation.watch(ctx)
         const records = new Map([
           [root.id, await initial.status(ctx)],
           [steer.id, await receipt.status(ctx)],
@@ -260,7 +256,7 @@ describe("native Pi steering with SQLite persistence", () => {
         const members = Effect.runSync(store.members(root.id))
         const archived = archiveEntries(
           root,
-          stream.snapshot.entries,
+          snapshotFromView(stream.value).entries,
           placedInputs(members, records)
         )
         expect(archived.map((item) => item.kind)).toEqual([
@@ -273,9 +269,14 @@ describe("native Pi steering with SQLite persistence", () => {
         expect(archived.map((item) => item.text)).toContain("use blue")
         expect(JSON.stringify(archived)).not.toContain("PRIVATE MEMORY VIEW")
         expect(
-          replySettled(root, members, { snapshot: stream.snapshot, records })
+          replySettled(root, members, {
+            snapshot: snapshotFromView(stream.value),
+            records,
+          })
         ).toBe(true)
-        const entryIds = stream.snapshot.entries.map((entry) => entry.id)
+        const entryIds = snapshotFromView(stream.value).entries.map(
+          (entry) => entry.id
+        )
         await stream.stop()
         const observed = await Effect.runPromise(
           execution.observe(
@@ -299,9 +300,11 @@ describe("native Pi steering with SQLite persistence", () => {
         const replay = await restored.submit(command, ctx)
         expect(replay.id).toBe(receipt.id)
         expect((await replay.wait(ctx)).status).toBe("done")
-        const restoredStream = await watchEvents(harness, restored.id, ctx)
+        const restoredStream = await restored.watch(ctx)
         expect(
-          restoredStream.snapshot.entries.map((entry) => entry.id)
+          snapshotFromView(restoredStream.value).entries.map(
+            (entry) => entry.id
+          )
         ).toEqual(entryIds)
         await restoredStream.stop()
         expect(faux.state.callCount).toBe(2)

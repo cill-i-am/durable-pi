@@ -32,7 +32,7 @@ import {
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import type { AgentEnv } from "../../alchemy.run"
+import type { AgentEnv } from "../../stacks/resources/agent"
 import {
   connectionRequest,
   connectionResponse,
@@ -3249,7 +3249,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               : undefined
           }),
           onWake,
-          onReport: (error) => reportHarness(error, "personal"),
+          onReport: ({ error }) => reportHarness(error, "personal"),
         },
         context
       )
@@ -4774,7 +4774,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             this.conversationService
               .active()
               .pipe(Effect.map((turn) => turn?.session_id ?? undefined)),
-          watch: (id) => this.harness.session(id).events(),
+          watch: (id) => this.harness.session(id).watch(),
           subscribe: (listener) => {
             this.conversationListeners.add(listener)
             return () => this.conversationListeners.delete(listener)

@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai"
 import { defineTool } from "@earendil-works/pi-durable"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import type { Effect } from "effect"
 
 import type { ExecutionOperations } from "../execution"
@@ -16,9 +16,9 @@ export function executionTools(
       name: "run_code",
       description:
         "Run bounded JavaScript for calculations or JSON transformations in an isolated Cloudflare Worker. Code is an async function body with input (parsed JSON) and console.log; return a JSON-serializable result. No network, files, application bindings, packages or credentials. Maximum 1 second CPU and 10 seconds elapsed; results/logs are bounded. Never include secrets. A saved run is visible in Code.",
-      parameters: Type.Object({
-        code: Type.String({ minLength: 1, maxLength: 16384 }),
-        data: Type.String({
+      parameters: ToolSchema.obj({
+        code: ToolSchema.str({ minLength: 1, maxLength: 16384 }),
+        data: ToolSchema.str({
           maxLength: 32768,
           description:
             "JSON input as a string, e.g. [1,2,3]. Use null when unused.",

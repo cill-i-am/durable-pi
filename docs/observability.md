@@ -6,7 +6,7 @@ Use Cloudflare Workers Observability for request traces and operational errors. 
 
 | Concern | Owner | Configuration |
 | --- | --- | --- |
-| Worker logs, native distributed traces and sampling | Alchemy → Cloudflare | `alchemy.run.ts`, all five production Workers |
+| Worker logs, native distributed traces and sampling | Alchemy → Cloudflare | `stacks/resources/worker-settings.ts` and per-Worker overrides |
 | Effect spans | Alchemy's native Cloudflare tracer | `src/observability/worker.ts`, built within each invocation or job |
 | Model usage, command results and recovery decisions | Existing domain records | Observers emit structured events after persistence |
 | Issues and email notifications | Cloudflare Workers Issues | Native issue detection plus an account notification policy |
@@ -14,7 +14,7 @@ Use Cloudflare Workers Observability for request traces and operational errors. 
 
 Logs and traces start at 100% sampling to establish a baseline for this personal application. This is a tunable operating decision, not a measured optimum. Revisit volume and billing before reducing sampling. Container stdout remains disabled; terminal receipts produce structured outcome events instead.
 
-Alchemy 2.0.0-beta.81 supplies `Cloudflare.Telemetry()` and the native Effect tracer. Its automatic handler wiring applies to Alchemy-generated Worker and Durable Object handlers. Our Pi and Sandbox classes have existing native lifecycles. The package patch exposes the existing tracer subpath, without modifying its implementation. `runObserved` is the Promise bridge for these host callbacks; long-lived Durable Object runtimes do not retain invocation tracing context. No OpenTelemetry exporter, collector or flush loop is added.
+Alchemy 2.0.0-beta.87 supplies `Cloudflare.Telemetry()` and the native Effect tracer. Its automatic handler wiring applies to Alchemy-generated Worker and Durable Object handlers. Our Pi and Sandbox classes have existing native lifecycles. The provider package exports the tracer subpath directly; no Alchemy patch is required. `runObserved` is the Promise bridge for these host callbacks; long-lived Durable Object runtimes do not retain invocation tracing context. No OpenTelemetry exporter, collector or flush loop is added.
 
 Alchemy's native tracer forwards scalar attributes and `effect.exit` (`success`, `failure`, `interrupted`). Native Cloudflare trace IDs and Effect IDs differ. Use the Cloudflare trace association and durable run/operation IDs for correlation, not an assumed equality between their trace IDs. The short `Inference.dispatch` span identifies the model request. Its duration is dispatch instrumentation time, not model response time. Native provider-fetch spans may be siblings under the invocation. Durable inference records own response duration and usage.
 

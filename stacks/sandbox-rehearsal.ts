@@ -2,7 +2,7 @@ import * as Cloudflare from "@alchemy.run/cloudflare"
 import * as Alchemy from "alchemy"
 import * as Effect from "effect/Effect"
 
-import { NativeTerminalWorker } from "../alchemy.run"
+import { NativeTerminalWorker } from "./resources/terminal"
 
 // This stack owns its own namespace and local R2 state. It does not switch
 // production traffic or import checkpoints from the existing Sandbox class.

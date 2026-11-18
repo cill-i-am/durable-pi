@@ -116,7 +116,7 @@ export class RoutinesProbe extends DurableObject<Record<string, never>> {
   private holdRoutineDispatch = false
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: ({ storage, context }) => {
+    harness: ({ storage, context, onWake }) => {
       const models = createModels(),
         provider = fauxProvider({
           provider: "openai",
@@ -135,6 +135,7 @@ export class RoutinesProbe extends DurableObject<Record<string, never>> {
       return Harness.open(
         storage,
         {
+          onWake,
           models,
           registry: createRegistry(),
           settings: {

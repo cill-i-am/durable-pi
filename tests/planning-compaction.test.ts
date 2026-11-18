@@ -8,20 +8,16 @@ import {
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
-  Type,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
+import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 import { expect, it } from "vitest"
 
 import { agentSettings, contextProjectionBytes } from "../src/agent/compaction"
 import { originalTranscript } from "../src/conversations/adapters/pi-reply"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { piPlans } from "../src/planning/adapters/pi"
 import { planContextHook, planTools } from "../src/planning/adapters/tools"
 
@@ -110,7 +106,7 @@ it.each([8192, contextProjectionBytes(8192)])(
         defineTool({
           name: "read_page",
           description: "Read a synthetic page",
-          parameters: Type.Object({}),
+          parameters: ToolSchema.obj({}),
           replay: "safe",
           execute: async () => {
             calls++
@@ -196,8 +192,11 @@ it.each([8192, contextProjectionBytes(8192)])(
       expect(requests).toBe(8)
       expect(Math.max(...projectionBytes)).toBeLessThanOrEqual(budget)
       expect(summaries).toBeGreaterThan(0)
-      const events = await watchEvents(harness, conversation.id, ctx)
-      const original = await originalTranscript(conversation, events.snapshot)
+      const events = await conversation.watch(ctx)
+      const original = await originalTranscript(
+        conversation,
+        snapshotFromView(events.value)
+      )
       expect(JSON.stringify(original)).not.toContain("Durable planning context")
       await events.stop()
       await harness.close(ctx)

@@ -2,7 +2,7 @@ import { Agent } from "agents"
 import { createChatSdkState } from "agents/chat-sdk"
 import { Schema } from "effect"
 
-import type { AgentEnv } from "../../alchemy.run"
+import type { AgentEnv } from "../../stacks/resources/agent"
 import { whatsappChat, whatsappConfigured } from "./adapters/chat"
 import { whatsappRpc } from "./adapters/rpc"
 import {

@@ -3,7 +3,7 @@ import * as Alchemy from "alchemy"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 
-import { NativeTerminalWorker, TerminalWorker } from "../alchemy.run"
+import { NativeTerminalWorker, TerminalWorker } from "./resources/terminal"
 
 export const SandboxRehearsal = Cloudflare.Worker("SandboxRehearsal", {
   main: "./src/terminal/adapters/rehearsal-worker.ts",

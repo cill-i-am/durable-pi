@@ -1,4 +1,7 @@
-import type { AgentEventStream } from "@earendil-works/pi-durable"
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
+import { fauxAssistantMessage } from "@earendil-works/pi-ai"
+import type { EntryRecord } from "@earendil-works/pi-durable"
+import type { ConversationWatch } from "@earendil-works/pi-durable"
 import { Cause, Effect, Exit, Layer, Logger, ManagedRuntime } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -10,6 +13,8 @@ import type {
   ChatState,
   ConversationFrame,
 } from "../src/conversations/contracts"
+import { ConversationLatency } from "../src/conversations/latency"
+import { conversationView } from "./pi-view"
 
 const initial: ChatState = {
   turns: [],
@@ -35,22 +40,13 @@ function deferred<TValue>() {
   return { promise, resolve }
 }
 function watch(
-  stop = vi.fn(async () => ({ reason: "stopped" as const }))
-): AgentEventStream {
+  stop = vi.fn(async () => ({ kind: "stopped" as const }))
+): ConversationWatch {
   return {
-    snapshot: {
-      type: "snapshot",
-      nestedTools: [],
-      entries: [],
-      tools: [],
-      compactions: [],
-      inbox: [],
-      agent: {},
-      usage: { models: {}, tools: {} },
-    },
+    value: conversationView(),
     start: vi.fn(),
     stop,
-    closed: Promise.resolve({ reason: "stopped" }),
+    closed: Promise.resolve({ kind: "stopped" }),
   }
 }
 
@@ -139,14 +135,14 @@ describe("conversation stream", () => {
 
   it("joins late acquisition and delayed closure before reader cancellation completes", async () => {
     const started = deferred<void>(),
-      acquired = deferred<AgentEventStream>(),
+      acquired = deferred<ConversationWatch>(),
       stopping = deferred<void>(),
       released = deferred<void>()
     const stream = watch(
       vi.fn(async () => {
         stopping.resolve()
         await released.promise
-        return { reason: "stopped" as const }
+        return { kind: "stopped" as const }
       })
     )
     const snapshot = vi.fn(() => Effect.succeed(initial)),
@@ -187,7 +183,7 @@ describe("conversation stream", () => {
       vi.fn(async () => {
         entered.resolve()
         await released.promise
-        return { reason: "stopped" as const }
+        return { kind: "stopped" as const }
       })
     )
     const controller = new AbortController()
@@ -223,7 +219,7 @@ describe("conversation stream", () => {
         vi.fn(async () => {
           stopping.resolve()
           await released.promise
-          return { reason: "stopped" as const }
+          return { kind: "stopped" as const }
         })
       ),
       second = watch()
@@ -310,7 +306,7 @@ describe("conversation stream", () => {
       vi.fn(async () => {
         stopping.resolve()
         await released.promise
-        return { reason: "stopped" as const }
+        return { kind: "stopped" as const }
       })
     )
     const runtime = ManagedRuntime.make(Layer.empty)
@@ -387,11 +383,11 @@ describe("conversation stream", () => {
   })
   it("releases a Pi watch that attaches after the HTTP client leaves", async () => {
     const entered = deferred<void>()
-    let attach!: (watch: AgentEventStream) => void
-    const pending = new Promise<AgentEventStream>((resolve) => {
+    let attach!: (watch: ConversationWatch) => void
+    const pending = new Promise<ConversationWatch>((resolve) => {
       attach = resolve
     })
-    const stop = vi.fn(async () => ({ reason: "stopped" as const }))
+    const stop = vi.fn(async () => ({ kind: "stopped" as const }))
     const start = vi.fn()
     const controller = new AbortController()
     const response = conversationEvents(
@@ -410,19 +406,10 @@ describe("conversation stream", () => {
     await entered.promise
     controller.abort()
     attach({
-      snapshot: {
-        type: "snapshot",
-        nestedTools: [],
-        entries: [],
-        tools: [],
-        compactions: [],
-        inbox: [],
-        agent: {},
-        usage: { models: {}, tools: {} },
-      },
+      value: conversationView(),
       start,
       stop,
-      closed: Promise.resolve({ reason: "stopped" }),
+      closed: Promise.resolve({ kind: "stopped" }),
     })
     await Promise.resolve()
     await Promise.resolve()
@@ -488,3 +475,55 @@ it.each(["acquire", "stop"])(
     )
   }
 )
+
+it("observes committed first text when Pi folds away the live partial, without counting old history", async () => {
+  const latency = new ConversationLatency()
+  const native = vi.spyOn(latency, "native")
+  const entry = (id: number): EntryRecord => ({
+    id: id as EntryRecord["id"],
+    conversationId: 0 as EntryRecord["conversationId"],
+    kind: "pi.assistant",
+    model: [fauxAssistantMessage(`Answer ${id}`)],
+  })
+  let listener!: Parameters<ConversationWatch["start"]>[0]
+  const stream: ConversationWatch = {
+    ...watch(),
+    value: conversationView([entry(1)]),
+    start: (next) => {
+      listener = next
+    },
+  }
+  const response = conversationEvents(
+    {
+      latency,
+      snapshot: () => Effect.succeed(initial),
+      activeSession: () => Effect.succeed("session"),
+      watch: async () => stream,
+      subscribe: () => () => {},
+    },
+    new AbortController().signal
+  )
+  const reader = response.body!.getReader()
+  try {
+    await frame(reader)
+    expect(native).not.toHaveBeenCalled()
+    await listener(
+      { kind: "value", value: stream.value, ops: [], retired: false },
+      BACKGROUND_CONTEXT
+    )
+    expect(native).not.toHaveBeenCalled()
+    const value = conversationView([entry(1), entry(2)])
+    await listener(
+      { kind: "value", value, ops: [], retired: false },
+      BACKGROUND_CONTEXT
+    )
+    expect(native).toHaveBeenCalledExactlyOnceWith("session")
+    await listener(
+      { kind: "value", value, ops: [], retired: false },
+      BACKGROUND_CONTEXT
+    )
+    expect(native).toHaveBeenCalledOnce()
+  } finally {
+    await reader.cancel()
+  }
+})

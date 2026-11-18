@@ -1,9 +1,11 @@
+import type { Context } from "@earendil-works/chord/context"
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
 import {
   createModels,
   fauxAssistantMessage,
   fauxProvider,
 } from "@earendil-works/pi-ai"
+import type { SubmissionDraft } from "@earendil-works/pi-durable"
 import {
   Harness,
   createRegistry,
@@ -72,7 +74,7 @@ export class CoordinationProbe extends DurableObject<Record<string, never>> {
   readonly store = new CoordinationStore(this.db)
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: ({ storage, context: nativeContext }) => {
+    harness: ({ storage, context: nativeContext, onWake }) => {
       const models = createModels()
       const provider = fauxProvider({
         provider: "openai",
@@ -96,6 +98,7 @@ export class CoordinationProbe extends DurableObject<Record<string, never>> {
       return Harness.open(
         storage,
         {
+          onWake,
           models,
           registry: this.registry,
           settings: {
@@ -118,7 +121,7 @@ export class CoordinationProbe extends DurableObject<Record<string, never>> {
             return new Proxy(child, {
               get: (native, operation) => {
                 if (operation === "submit")
-                  return async (...input: Parameters<typeof child.submit>) => {
+                  return async (...input: [SubmissionDraft, Context]) => {
                     const id = input[0].requestId
                     if (id === this.heldRequest) {
                       this.trace("submit-held")

@@ -1,13 +1,14 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai"
-import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
+import type { EntryRecord } from "@earendil-works/pi-durable"
 import { describe, expect, it } from "vitest"
 
 import {
   piTimeline,
   displayAnswer,
 } from "../src/conversations/adapters/pi-timeline"
+import type { PiSnapshot } from "../src/conversations/adapters/pi-view"
 
-const assistant: AssistantMessage = {
+const assistant = {
   role: "assistant",
   api: "openai-responses",
   provider: "openai",
@@ -40,7 +41,7 @@ const assistant: AssistantMessage = {
       arguments: { path: "MEMORY.md" },
     },
   ],
-}
+} satisfies AssistantMessage
 function entry(id: number, model: EntryRecord["model"]): EntryRecord {
   return {
     id: id as EntryRecord["id"],
@@ -80,14 +81,10 @@ describe("Pi display projection", () => {
     expect(JSON.stringify(result)).not.toContain("PRIVATE_")
   })
   it("shows in-flight provider text and limits tool previews", () => {
-    const snapshot: SnapshotEvent = {
-      type: "snapshot",
-      nestedTools: [],
+    const snapshot: PiSnapshot = {
       entries: [],
       compactions: [],
-      inbox: [],
-      agent: {},
-      usage: { models: {}, tools: {} },
+
       generation: { attempt: 1, message: assistant },
       tools: [
         {
@@ -110,16 +107,11 @@ describe("Pi display projection", () => {
     })
   })
   it("preserves disclosure identities when partial output commits", () => {
-    const live: SnapshotEvent = {
-      type: "snapshot",
-      nestedTools: [],
+    const live: PiSnapshot = {
       entries: [],
       generation: { attempt: 1, message: assistant },
       tools: [],
       compactions: [],
-      inbox: [],
-      agent: {},
-      usage: { models: {}, tools: {} },
     }
     const before = piTimeline([], live)
     const after = piTimeline([entry(22, [assistant])])

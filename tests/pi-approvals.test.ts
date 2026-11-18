@@ -4,25 +4,21 @@ import { join } from "node:path"
 
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
+import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { guardedTools } from "../src/access/adapters/pi"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { database } from "./database"
 
 describe("native Pi tool approvals", () => {
@@ -105,7 +101,7 @@ describe("native Pi tool approvals", () => {
                         properties: { value: { type: "string" } },
                         required: ["value"],
                       }
-                    : Type.Object({ value: Type.String() }),
+                    : ToolSchema.obj({ value: ToolSchema.str() }),
                 replay: "safe",
                 execute: async (_args, _api, context) => {
                   calls++
@@ -227,15 +223,15 @@ describe("native Pi tool approvals", () => {
             ).status
           ).toBe("done")
         }
-        const events = await watchEvents(harness, conversation.id, ctx)
+        const events = await conversation.watch(ctx)
         if (scenario === "dispatch-interrupted")
-          expect(JSON.stringify(events.snapshot.entries)).toContain(
-            "outcome is unknown"
-          )
+          expect(
+            JSON.stringify(snapshotFromView(events.value).entries)
+          ).toContain("outcome is unknown")
         if (scenario === "large-result")
-          expect(JSON.stringify(events.snapshot.entries)).toContain(
-            "durable_output_truncated"
-          )
+          expect(
+            JSON.stringify(snapshotFromView(events.value).entries)
+          ).toContain("durable_output_truncated")
         await events.stop()
         expect((await conversation.submit(command, ctx)).id).toBe(first.id)
         expect(calls).toBe(expectedCalls[scenario])

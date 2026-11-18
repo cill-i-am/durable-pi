@@ -1,7 +1,7 @@
 diff --git a/dist/harness/pi/index.d.ts b/dist/harness/pi/index.d.ts
 --- a/dist/harness/pi/index.d.ts
 +++ b/dist/harness/pi/index.d.ts
-@@ -156,6 +156,8 @@
+@@ -175,6 +175,8 @@
  };
  /** `PiHarness`'s options. Only `harness`, which opens pi, is required. */
  type PiHarnessOptions = {
@@ -13,7 +13,7 @@ diff --git a/dist/harness/pi/index.d.ts b/dist/harness/pi/index.d.ts
 diff --git a/dist/harness/pi/index.js b/dist/harness/pi/index.js
 --- a/dist/harness/pi/index.js
 +++ b/dist/harness/pi/index.js
-@@ -447,7 +447,8 @@
+@@ -446,7 +446,8 @@
  }
  async function _doOpen(onClose) {
  	await _classPrivateFieldGet2(_lastClose, this);

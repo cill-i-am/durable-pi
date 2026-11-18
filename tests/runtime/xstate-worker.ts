@@ -43,7 +43,7 @@ export class XStateProbe extends DurableObject<Record<string, never>> {
   readonly db = nativeDatabase(this.ctx.storage, this.scope)
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,
-    harness: ({ storage, context }) => {
+    harness: ({ storage, context, onWake }) => {
       const models = createModels()
       const provider = fauxProvider({ tokensPerSecond: 100000 })
       models.setProvider(provider.provider)
@@ -56,6 +56,7 @@ export class XStateProbe extends DurableObject<Record<string, never>> {
       return Harness.open(
         storage,
         {
+          onWake,
           models,
           registry: createRegistry(),
           settings: {

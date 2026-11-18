@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect"
 
-import type { WebsiteEnv } from "../../../alchemy.run"
+import type { WebsiteEnv } from "../../../stacks/resources/website"
 import { createAuth, sameOrigin } from "../../auth/server"
 import { jsonRequest } from "../../shared/http"
 import { familyDirectory } from "./directory"

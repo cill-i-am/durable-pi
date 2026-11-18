@@ -4,7 +4,6 @@ import { join } from "node:path"
 
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
@@ -13,13 +12,10 @@ import {
   type Message,
   type FauxResponseFactory,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
+import type { UsageState } from "@earendil-works/pi-durable"
+import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Clock, Effect, ManagedRuntime } from "effect"
 import { expect, it } from "vitest"
 
@@ -34,6 +30,7 @@ import {
   replySettled,
 } from "../src/conversations/adapters/pi-reply"
 import { piTimeline } from "../src/conversations/adapters/pi-timeline"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
 import { MemoryRepository } from "../src/memory/repository"
@@ -207,7 +204,7 @@ it.each(["continue", "restart", "cancel"])(
           defineTool({
             name: "save_receipt",
             description: "Save one approved receipt",
-            parameters: Type.Object({ page: Type.Number() }),
+            parameters: ToolSchema.obj({ page: ToolSchema.num() }),
             replay: "unsafe",
             execute: async () => {
               mutations++
@@ -228,7 +225,7 @@ it.each(["continue", "restart", "cancel"])(
           defineTool({
             name: "read_page",
             description: "Read source without changing it",
-            parameters: Type.Object({ page: Type.Number() }),
+            parameters: ToolSchema.obj({ page: ToolSchema.num() }),
             replay: "safe",
             execute: async ({ page }) => {
               reads++
@@ -334,9 +331,9 @@ it.each(["continue", "restart", "cancel"])(
       releaseTool.resolve()
       await enteredSummary.promise
       if (scenario !== "continue") {
-        const live = await watchEvents(harness, conversation.id, ctx)
-        expect(live.snapshot.compactions).toEqual([
-          expect.objectContaining({ blocking: true, reason: "threshold" }),
+        const live = await conversation.watch(ctx)
+        expect(snapshotFromView(live.value).compactions).toEqual([
+          expect.objectContaining({ blocking: true, trigger: "threshold" }),
         ])
         await live.stop()
         await harness.close(ctx)
@@ -362,8 +359,8 @@ it.each(["continue", "restart", "cancel"])(
       expect(Effect.runSync(accessStore.get(approval.id))).toMatchObject({
         status: "done",
       })
-      const events = await watchEvents(harness, conversation.id, ctx)
-      const working = events.snapshot
+      const events = await conversation.watch(ctx)
+      const working = snapshotFromView(events.value)
       await events.stop()
       const originals = await originalTranscript(conversation, working)
       if (scenario === "cancel") {
@@ -385,7 +382,11 @@ it.each(["continue", "restart", "cancel"])(
       expect(
         working.entries.some((entry) => entry.kind === "pi.compaction")
       ).toBe(true)
-      expect(originals.length).toBeGreaterThan(working.entries.length)
+      expect(originals.map((entry) => entry.id)).toEqual(
+        working.entries
+          .filter((entry) => entry.kind !== "pi.compaction")
+          .map((entry) => entry.id)
+      )
       expect(originals.some((entry) => entry.kind === "pi.compaction")).toBe(
         false
       )
@@ -488,7 +489,9 @@ it.each(["continue", "restart", "cancel"])(
         .flatMap((message) =>
           message.role === "assistant" ? [message.usage] : []
         )
-      const native = working.usage.models["faux/small"]!
+      const native = (events.value.docs["pi.usage"] as UsageState).models[
+        "faux/small"
+      ]!
       expect(native.totalTokens).toBe(
         [...assistantUsage, ...summaryUsage].reduce(
           (sum, usage) => sum + usage.totalTokens,

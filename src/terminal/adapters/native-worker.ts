@@ -10,7 +10,7 @@ import {
   Scope,
 } from "effect"
 
-import type { NativeTerminalEnv } from "../../../alchemy.run"
+import type { NativeTerminalEnv } from "../../../stacks/resources/terminal"
 import { reportTerminal } from "../../observability/events"
 import { WorkerTelemetry } from "../../observability/worker"
 import { makeDurableObjectSqlite } from "../../storage/durable-object"

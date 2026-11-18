@@ -2,11 +2,9 @@ import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import type {
   EntryRecord,
   SubmissionRecord,
-  SnapshotEvent,
   Conversation,
   Cursor,
 } from "@earendil-works/pi-durable"
-import type { PiHarness } from "agents/harness/pi"
 
 import {
   replyProvenance,
@@ -14,43 +12,18 @@ import {
 } from "../../messages/identity"
 import { messageArchiveText } from "../../workspace/files"
 import type { Turn } from "../turns"
-
-export async function readPiReply(
-  harness: PiHarness,
-  root: Turn,
-  members: readonly Turn[]
-) {
-  const sessionId = root.session_id!
-  const storage = await harness.storage()
-  const conversation = await harness.conversation(sessionId)
-  const stream = await harness.session(sessionId).events()
-  const snapshot = stream.snapshot
-  await stream.stop()
-  const records = new Map<string, SubmissionRecord>()
-  for (const member of members) {
-    const record = await storage.submissionByRequest(
-      conversation.id,
-      member.id,
-      BACKGROUND_CONTEXT
-    )
-    if (record) records.set(member.id, record)
-  }
-  return {
-    records,
-    snapshot: {
-      ...snapshot,
-      entries: await originalTranscript(conversation, snapshot),
-    },
-  }
-}
+import type { PiSnapshot } from "./pi-view"
 
 export async function originalTranscript(
   conversation: Pick<Conversation, "entries">,
-  snapshot: Pick<SnapshotEvent, "entries">,
+  snapshot: Pick<PiSnapshot, "entries" | "before">,
   signal?: AbortSignal
 ): Promise<readonly EntryRecord[]> {
   signal?.throwIfAborted()
-  if (!snapshot.entries.some((entry) => entry.head !== undefined))
+  if (
+    snapshot.before === undefined &&
+    !snapshot.entries.some((entry) => entry.head !== undefined)
+  )
     return snapshot.entries
   const tail = snapshot.entries.reduce((latest, entry) =>
     entry.id > latest.id ? entry : latest
@@ -91,7 +64,7 @@ export function replySettled(
   members: readonly Turn[],
   reply: {
     records: ReadonlyMap<string, SubmissionRecord>
-    snapshot: SnapshotEvent
+    snapshot: PiSnapshot
   }
 ) {
   if (reply.snapshot.run) return false

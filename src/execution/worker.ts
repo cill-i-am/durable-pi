@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 
-import type { ExecutionEnv } from "../../alchemy.run"
+import type { ExecutionEnv } from "../../stacks/resources/services"
 import { runObserved } from "../observability/worker"
 import { preserveFatal } from "../shared/effect"
 import { executeCode, type ExecutionLoader } from "./adapters/dynamic-worker"

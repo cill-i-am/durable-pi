@@ -8,15 +8,10 @@ import {
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
-  Type,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  watchEvents,
-  defineTool,
-} from "@earendil-works/pi-durable"
+import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Effect } from "effect"
 import { expect, it, vi } from "vitest"
 
@@ -24,6 +19,7 @@ import { guardedTools } from "../src/access/adapters/pi"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { builtInTools } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { plansRequest } from "../src/planning/adapters/http"
 import {
   piPlans,
@@ -380,7 +376,7 @@ it("uses native tools in a multi-step run, injects one fresh context per request
       defineTool({
         name: "save_draft",
         description: "Fixture action",
-        parameters: Type.Object({}),
+        parameters: ToolSchema.obj({}),
         execute: async () => {
           actions++
           const steer = crypto.randomUUID()
@@ -488,12 +484,12 @@ it("uses native tools in a multi-step run, injects one fresh context per request
     expect((await run(plans.read(id))).plan.inputRevision).toBe(1)
     for (const request of requests)
       expect(request.match(/Durable planning context/g)).toHaveLength(1)
-    const events = await watchEvents(harness, conversation.id, ctx)
-    expect(JSON.stringify(events.snapshot.entries)).not.toContain(
-      "Durable planning context"
-    )
-    const results = events.snapshot.entries
-      .flatMap((entry) => entry.model ?? [])
+    const events = await conversation.watch(ctx)
+    expect(
+      JSON.stringify(snapshotFromView(events.value).entries)
+    ).not.toContain("Durable planning context")
+    const results = snapshotFromView(events.value)
+      .entries.flatMap((entry) => entry.model ?? [])
       .filter((message) => message.role === "toolResult")
     expect(results).toHaveLength(3)
     expect(JSON.stringify(results)).not.toContain('"objective"')

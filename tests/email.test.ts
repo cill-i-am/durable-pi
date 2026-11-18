@@ -273,6 +273,7 @@ describe("inbound MIME boundary", () => {
       setReject: (value: string) => {
         rejection = value
       },
+      canBeForwarded: true,
       forward: async () => ({ messageId: "fixture" }),
       reply: async () => ({ messageId: "fixture" }),
     }

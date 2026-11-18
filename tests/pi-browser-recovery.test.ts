@@ -4,19 +4,14 @@ import { join } from "node:path"
 
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
-  Type,
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
+import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import * as ToolSchema from "@earendil-works/pi-schema"
 import { Clock, Effect } from "effect"
 import { expect, it } from "vitest"
 
@@ -34,6 +29,7 @@ import { BrowserStore } from "../src/browser/adapters/sqlite"
 import { BrowserWorkspace } from "../src/browser/browser"
 import { BrowserFailure } from "../src/browser/contracts"
 import { runRecoveryHook } from "../src/conversations/adapters/pi-recovery"
+import { snapshotFromView } from "../src/conversations/adapters/pi-view"
 import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
@@ -187,7 +183,7 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
             defineTool({
               name: "browser_open",
               description: "Synthetic browser",
-              parameters: Type.Object({ url: Type.String() }),
+              parameters: ToolSchema.obj({ url: ToolSchema.str() }),
               replay: "safe",
               execute: async ({ url }) =>
                 Effect.runPromise(
@@ -225,8 +221,8 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
       const submitted = await conversation.submit(command, ctx)
       await submitted.wait(ctx)
       await conversation.waitForIdle(ctx)
-      const watch = await watchEvents(harness, conversation.id, ctx)
-      const entries = watch.snapshot.entries
+      const watch = await conversation.watch(ctx)
+      const entries = snapshotFromView(watch.value).entries
       const results = entries.filter((e) => e.kind === "pi.tool-result")
       expect(results).toHaveLength(1)
       expect(JSON.stringify(results)).not.toContain(
