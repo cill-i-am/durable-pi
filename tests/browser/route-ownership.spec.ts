@@ -31,6 +31,51 @@ const destinations = [
   },
 ] as const
 
+test("command search reopens a retained workbench with focus on its selected tool", async ({
+  page,
+  isMobile,
+}) => {
+  await openChat(page)
+  await page.goto("/agents/navi/activity")
+  await expect(
+    page.getByRole("dialog", { name: "Navi workbench", exact: true })
+  ).toBeVisible()
+  await page
+    .getByRole("button", { name: "Hide workbench", exact: true })
+    .click()
+  const composer = page.getByRole("textbox", {
+    name: "Message Navi",
+    exact: true,
+  })
+  await composer.fill("Keep this draft while opening Routines")
+  await page.keyboard.press("Control+k")
+  const search = page.getByRole("combobox", {
+    name: "Search assistants and commands",
+    exact: true,
+  })
+  await search.fill("Routines")
+  await expect(
+    page.getByRole("option", { name: "Routines", exact: true })
+  ).toBeVisible()
+  await search.press("Enter")
+  await expect(
+    page.getByRole("button", { name: "New routine", exact: true })
+  ).toBeVisible()
+  if (isMobile)
+    await expect(
+      page.getByRole("dialog", { name: "Navi workbench", exact: true })
+    ).toBeFocused()
+  else {
+    const selected = page.getByRole("tab", { name: "Routines", exact: true })
+    await expect(selected).toHaveAttribute("aria-selected", "true")
+    await expect(selected).toBeFocused()
+  }
+  await page
+    .getByRole("button", { name: "Hide workbench", exact: true })
+    .click()
+  await expect(composer).toHaveValue("Keep this draft while opening Routines")
+})
+
 test("merged raw query keys cannot replace a global setting's workbench backdrop", async ({
   page,
 }) => {

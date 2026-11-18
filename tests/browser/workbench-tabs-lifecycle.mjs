@@ -150,7 +150,20 @@ if (process.argv.includes("--serve")) {
     await page
       .getByRole("tab", { name: "Files", exact: true, selected: true })
       .waitFor()
+    const filesTab = page.getByRole("tab", { name: "Files", exact: true })
+    await filesTab.focus()
     await page.evaluate(() => window.fixture.lock(true))
+    await expect(filesTab).toHaveAttribute("aria-disabled", "true")
+    await expect(filesTab).toBeFocused()
+    await page.keyboard.press("ArrowRight")
+    await expect(filesTab).toHaveAttribute("aria-selected", "true")
+    const lockedRoutes = await page.evaluate(() => window.fixture.routes.length)
+    await filesTab.press("Enter")
+    await expect(filesTab).toHaveAttribute("aria-selected", "true")
+    assert.equal(
+      await page.evaluate(() => window.fixture.routes.length),
+      lockedRoutes
+    )
     assert.equal(await by("Close Files tab").isDisabled(), true)
     assert.equal(await by("Hide workbench").isDisabled(), true)
     assert.equal(await by("Open a tool").isDisabled(), true)
