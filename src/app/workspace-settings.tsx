@@ -426,6 +426,7 @@ function SettingsNavigation({
                     className: "settings-nav-item",
                   })}
                   key={item.id}
+                  activeOptions={{ exact: true }}
                   aria-label={item.title}
                   aria-current={
                     selected.category === item.id ? "page" : undefined

@@ -92,6 +92,38 @@ test("assistant action targets stay distinct and centered in compact sidebar row
   }
 })
 
+test("settings navigation marks only Model access current on its Family child route", async ({
+  page,
+  isMobile,
+}) => {
+  await signIn(page)
+  await openSettings(page, isMobile)
+  await page.getByRole("link", { name: "Model access", exact: true }).click()
+  await expect(
+    page.getByRole("heading", { name: "Model access", exact: true })
+  ).toBeVisible()
+  const sections = page.getByRole("navigation", {
+    name: "Settings sections",
+    exact: true,
+    includeHidden: true,
+  })
+  await expect(sections.locator('[aria-current="page"]')).toHaveCount(1)
+  await expect(
+    sections.getByRole("link", {
+      name: "Model access",
+      exact: true,
+      includeHidden: true,
+    })
+  ).toHaveAttribute("aria-current", "page")
+  await expect(
+    sections.getByRole("link", {
+      name: "Family",
+      exact: true,
+      includeHidden: true,
+    })
+  ).not.toHaveAttribute("aria-current", "page")
+})
+
 test("settings after hiding a retained workbench keep it closed and return to the same draft", async ({
   page,
   isMobile,
