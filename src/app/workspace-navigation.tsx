@@ -20,6 +20,7 @@ import {
   Search,
   Settings2,
   TerminalSquare,
+  X,
 } from "lucide-react"
 import { useRef } from "react"
 
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/command"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogTitle,
   DialogDescription,
@@ -149,7 +151,7 @@ export function WorkspaceNavigation({
   const commands = [
     { id: "create", label: "New assistant", icon: Plus },
     { id: "settings", label: "Settings", icon: Settings2 },
-    ...destinations,
+    ...(selected ? destinations : []),
   ] as const
   return (
     <>
@@ -301,10 +303,19 @@ export function WorkspaceNavigation({
             searchable in each assistant&apos;s memory.
           </DialogDescription>
           <Command loop>
-            <CommandInput
-              placeholder="Search assistants and commands…"
-              aria-label="Search assistants and commands"
-            />
+            <div className="workspace-command-input-row">
+              <CommandInput
+                placeholder="Search assistants and commands…"
+                aria-label="Search assistants and commands"
+              />
+              <DialogClose
+                render={<Button variant="ghost" size="icon" />}
+                className="workspace-command-close"
+                aria-label="Close search"
+              >
+                <X aria-hidden="true" />
+              </DialogClose>
+            </div>
             <CommandList>
               <CommandEmpty>No matching assistants or commands.</CommandEmpty>
               <CommandGroup heading="Assistants">
@@ -341,12 +352,7 @@ export function WorkspaceNavigation({
                     key={item.id}
                     value={`command:${item.id}`}
                     keywords={[item.label]}
-                    disabled={
-                      locked ||
-                      (!selected &&
-                        item.id !== "create" &&
-                        item.id !== "settings")
-                    }
+                    disabled={locked}
                     onSelect={() => run(item.id)}
                   >
                     <item.icon />

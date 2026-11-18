@@ -97,8 +97,10 @@ test("an unsent app form retains its exact DOM across tool switches and hide unt
   await page
     .getByRole("button", { name: "Open workbench", exact: true })
     .click()
-  // Reopening selects the frame's default tool. The retained app must survive
-  // both the hidden interval and restoring its own tab.
+  await expect(
+    page.getByRole("tabpanel", { name: "Apps", exact: true })
+  ).toBeVisible()
+  // Reopening restores the selected tool and the exact unsent form.
   await retained()
   await selectTab(page, "Apps", isMobile)
   await retained()

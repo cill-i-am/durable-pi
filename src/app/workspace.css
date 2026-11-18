@@ -141,6 +141,33 @@
   gap: 0;
   max-width: 520px;
 }
+.workspace-command[data-slot="dialog-content"][data-overlay-mobile]
+  > .responsive-overlay-body {
+  padding: 0 0 env(safe-area-inset-bottom);
+  gap: 0;
+}
+.workspace-command [data-slot="command"] {
+  padding: 0;
+  border-radius: 0 !important;
+}
+.workspace-command-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-command-input-row > [data-slot="command-input-wrapper"] {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+.workspace-command-close {
+  display: none;
+}
+.workspace-command [data-slot="command-item"] {
+  min-height: 36px;
+}
 .workspace-command-footer {
   display: flex;
   align-items: center;
@@ -278,6 +305,19 @@
   }
 }
 @media (max-width: 767px) {
+  .workspace-command-close {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+  }
+  .workspace-command [data-slot="input-group"],
+  .workspace-command [data-slot="command-item"] {
+    min-height: 44px;
+  }
+  .workspace-command-footer {
+    display: none;
+  }
   .workspace-shell {
     padding: 0;
     background: var(--background);

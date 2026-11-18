@@ -142,6 +142,8 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   "@modelcontextprotocol/client@2.4.0": patches/@modelcontextprotocol__client@2.4.0.patch
   agents@0.33.0: patches/agents@0.33.0.patch
+  # Backport native selected-item IDs from dip/cmdk#411 until a release includes it.
+  cmdk@1.1.1: patches/cmdk@1.1.1.patch
   zod@4.6.7: patches/zod@4.6.7.patch
 
 # Align native fixtures and Alchemy's Container API with the current Workers types.
