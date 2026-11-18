@@ -103,11 +103,9 @@ export function useRoutines(
   useLayoutEffect(() => {
     if (actor) Effect.runFork(send(actor, { type: "VIEW", view }))
   }, [actor, view])
-  const busy =
-    !!snapshot &&
-    (snapshot.matches("submitting") ||
-      snapshot.matches("resolving") ||
-      snapshot.matches("stopping"))
+  const busy = (["submitting", "resolving", "stopping"] as const).some(
+    (state) => snapshot?.matches(state)
+  )
   const attempt = snapshot?.context.attempt ?? null,
     stopId = snapshot?.context.stopId ?? null
   const pending = routinePending(busy, attempt, stopId)
@@ -121,6 +119,7 @@ export function useRoutines(
       : Promise.resolve(false)
   return {
     data: snapshot?.context.data ?? { routines: [], runs: [] },
+    hasData: snapshot?.context.data != null,
     loading:
       !snapshot ||
       (snapshot.context.data === null && snapshot.matches("loading")),
