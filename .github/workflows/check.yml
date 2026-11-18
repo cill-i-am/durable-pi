@@ -176,6 +176,7 @@ jobs:
           path: dist/client/assets/*.js.map
           retention-days: 90
           if-no-files-found: error
+          overwrite: true
       - name: Configure native issue detection
         run: node --import tsx scripts/configure-observability.ts
         env:
