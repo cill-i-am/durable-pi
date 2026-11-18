@@ -40,16 +40,19 @@
   scrollbar-width: none;
 }
 .workbench-tabs-layout {
+  display: grid;
   position: relative;
   width: max-content;
 }
-.workbench-tabs {
-  display: flex;
+.workbench-tabs,
+.workbench-tab-close-controls {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  grid-template-columns: subgrid;
 }
 .workbench-tab-close-controls {
-  position: absolute;
-  inset: 0;
-  display: flex;
+  z-index: 1;
   pointer-events: none;
 }
 .workbench-close-tab-slot {
@@ -57,7 +60,7 @@
   align-items: center;
   justify-content: end;
   flex-shrink: 0;
-  width: 104px;
+  min-width: 0;
   height: 36px;
   padding-inline-end: 7px;
 }
@@ -68,8 +71,9 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  width: 104px;
-  min-width: 0;
+  width: max-content;
+  min-width: 104px;
+  max-width: 176px;
   height: 36px;
   gap: 4px;
   padding-inline: 12px 34px;

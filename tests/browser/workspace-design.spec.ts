@@ -26,6 +26,134 @@ async function openSettings(page: Page, mobile: boolean) {
   await expect(settingsFront(page)).toBeVisible()
 }
 
+test("short workbench tab names fit beside their own close controls", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Desktop browser-style tab strip")
+  await signIn(page)
+  await page.goto("/agents/navi")
+  await page
+    .getByRole("button", { name: "Open workbench", exact: true })
+    .click()
+  await page.getByRole("button", { name: "Open a tool", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Checklists", exact: true }).click()
+  const tab = page.getByRole("tab", { name: "Checklists", exact: true })
+  for (const width of [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(tab).toBeVisible()
+    const label = await tab.evaluate((node) => ({
+      width: node.clientWidth,
+      content: node.scrollWidth,
+    }))
+    expect(label.content).toBeLessThanOrEqual(label.width)
+    const frame = (await tab.locator("..").boundingBox())!
+    const close = (await page
+      .getByRole("button", { name: "Close Checklists tab", exact: true })
+      .boundingBox())!
+    expect(close.x).toBeGreaterThan(frame.x)
+    expect(close.x + close.width).toBeLessThanOrEqual(frame.x + frame.width)
+  }
+})
+
+test("command search exposes its selected option after mounting, filtering and clearing", async ({
+  page,
+  isMobile,
+}) => {
+  await signIn(page)
+  await page.goto("/agents/navi")
+  await expect(
+    page.getByRole("textbox", { name: "Message Navi", exact: true })
+  ).toBeVisible()
+  await page.keyboard.press("ControlOrMeta+k")
+  const search = page.getByRole("combobox", {
+    name: "Search assistants and commands",
+    exact: true,
+  })
+  const selected = page.locator('[cmdk-item][aria-selected="true"]')
+  const expectSelection = async () => {
+    await expect(selected).toHaveCount(1)
+    await expect(search).toHaveAttribute(
+      "aria-activedescendant",
+      (await selected.getAttribute("id"))!
+    )
+  }
+  if (isMobile) await search.click()
+  await expect(search).toBeFocused()
+  await expectSelection()
+  await search.fill("Routines")
+  await expect(selected).toHaveText("Routines")
+  await expectSelection()
+  await search.press("ArrowDown")
+  await expectSelection()
+  await search.fill("no-such-assistant-or-command")
+  await expect(
+    page.getByText("No matching assistants or commands.")
+  ).toBeVisible()
+  await expect(selected).toHaveCount(0)
+  await expect(search).not.toHaveAttribute("aria-activedescendant", /.+/)
+  await search.fill("")
+  await expectSelection()
+  await search.press("ArrowDown")
+  await expectSelection()
+})
+
+test("command search is compact, has a mobile close action and omits unavailable tools", async ({
+  page,
+  isMobile,
+}) => {
+  await signIn(page)
+  await page.keyboard.press("ControlOrMeta+k")
+  const dialog = page.getByRole("dialog", {
+    name: "Search assistants and commands",
+    exact: true,
+  })
+  const search = dialog.getByRole("combobox")
+  if (isMobile) await search.click()
+  await expect(search).toBeFocused()
+  const body = await dialog
+    .locator(".responsive-overlay-body")
+    .evaluate((node) => ({
+      padding: getComputedStyle(node).padding,
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+    }))
+  expect(body.padding).toBe("0px")
+  expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth)
+  await search.fill("Routines")
+  await expect(dialog.getByRole("option")).toHaveCount(0)
+  await expect(
+    dialog.getByText("No matching assistants or commands.")
+  ).toBeVisible()
+  await search.fill("Settings")
+  await expect(
+    dialog.getByRole("option", { name: "Settings", exact: true })
+  ).toBeVisible()
+  if (isMobile) {
+    const close = dialog.getByRole("button", {
+      name: "Close search",
+      exact: true,
+    })
+    await expect(close).toBeVisible()
+    const bounds = (await close.boundingBox())!
+    expect(bounds.width).toBeGreaterThanOrEqual(44)
+    expect(bounds.height).toBeGreaterThanOrEqual(44)
+    await expect(dialog.locator(".workspace-command-footer")).toBeHidden()
+    await close.click()
+    await expect(dialog).toBeHidden()
+  } else {
+    await expect(dialog.locator(".workspace-command-footer")).toBeVisible()
+    await search.press("Escape")
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByRole("button", {
+        name: "Search assistants and commands",
+        exact: true,
+      })
+    ).toBeFocused()
+  }
+})
+
 test("assistant action targets stay distinct and centered in compact sidebar rows", async ({
   page,
   isMobile,

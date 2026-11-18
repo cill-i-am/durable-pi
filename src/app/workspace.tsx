@@ -578,7 +578,9 @@ function AgentWorkspace({
   )
   const results = useRecordedResults(resultSources)
   const [resultTabs, setResultTabs] = useState<readonly string[]>([])
+  const openedTabs = useRef<readonly WorkbenchTab[]>([])
   const onTabsChange = useCallback((tabs: readonly WorkbenchTab[]) => {
+    openedTabs.current = tabs
     const next = tabs.filter(isResultTab).map((tab) => tab.slice(7))
     setResultTabs((current) =>
       current.length === next.length &&
@@ -670,6 +672,23 @@ function AgentWorkspace({
     if (tab && isResultTab(tab)) openResult(tab.slice(7))
     else openWorkbench(tab)
   }
+  function reopenWorkbench() {
+    if (objectPending) {
+      openWorkbench("objects")
+      return
+    }
+    const retained =
+      renderedWorkbench === "results"
+        ? presence.search.item
+          ? resultTab(presence.search.item)
+          : null
+        : renderedWorkbench
+    openTab(
+      retained && openedTabs.current.includes(retained)
+        ? retained
+        : (openedTabs.current.at(-1) ?? "files")
+    )
+  }
   function appendResultPrompt(prompt: string) {
     if (locked || agent.status === "archived") return
     void composerDraft.update((draft) => ({
@@ -736,7 +755,7 @@ function AgentWorkspace({
                 objectPending={objectPending}
                 editingLocked={editingLocked}
                 workbenchTrigger={workbenchTrigger}
-                openWorkbench={openWorkbench}
+                onOpen={reopenWorkbench}
               />
             }
           />
@@ -1116,14 +1135,14 @@ function WorkbenchToggle({
   objectPending,
   editingLocked,
   workbenchTrigger,
-  openWorkbench,
+  onOpen,
 }: {
   workbench: Workbench | null
   recoverChecklist: boolean
   objectPending: boolean
   editingLocked: boolean
   workbenchTrigger: React.Ref<HTMLButtonElement>
-  openWorkbench: (value: Workbench | null) => void
+  onOpen: () => void
 }) {
   return (
     (!workbench || recoverChecklist) && (
@@ -1138,7 +1157,7 @@ function WorkbenchToggle({
               aria-label={
                 objectPending ? "Recover checklist save" : "Open workbench"
               }
-              onClick={() => openWorkbench(objectPending ? "objects" : "files")}
+              onClick={onOpen}
             />
           }
         >

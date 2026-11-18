@@ -45,6 +45,20 @@ test("private participants have keyboard names and return focus to the chat", as
   await expect(sheet.getByRole("listitem")).toHaveCount(2)
   if (isMobile) {
     await expect(sheet).toHaveAttribute("data-overlay-mobile", "true")
+    const heading = (await sheet
+      .getByRole("heading", { name: "People in this chat" })
+      .boundingBox())!
+    const close = (await sheet
+      .getByRole("button", { name: "Close", exact: true })
+      .boundingBox())!
+    const participant = (await sheet
+      .getByRole("listitem")
+      .first()
+      .boundingBox())!
+    expect(close.width).toBeGreaterThanOrEqual(44)
+    expect(close.height).toBeGreaterThanOrEqual(44)
+    expect(close.y).toBeLessThan(heading.y + heading.height)
+    expect(close.y + close.height).toBeLessThanOrEqual(participant.y)
     await sheet.getByRole("button", { name: "Close", exact: true }).click()
   } else {
     await expect(sheet).not.toHaveAttribute("aria-modal", "true")

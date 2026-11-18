@@ -83,6 +83,12 @@ function ContextualPopoverContent({
           titleClassName="overlay-title contextual-popover-mobile-title"
           finalFocus={() => window.matchMedia("(max-width: 767px)").matches}
         >
+          <ResponsiveOverlay.Close
+            render={<Button variant="ghost" size="icon" aria-label="Close" />}
+            className="overlay-close"
+          >
+            <XIcon aria-hidden="true" />
+          </ResponsiveOverlay.Close>
           <PopoverPrimitive.Positioner className="responsive-popup-positioner">
             <PopoverPrimitive.Popup
               role="presentation"
@@ -95,14 +101,6 @@ function ContextualPopoverContent({
                 className
               )}
             >
-              <ResponsiveOverlay.Close
-                render={
-                  <Button variant="ghost" size="icon" aria-label="Close" />
-                }
-                className="overlay-close"
-              >
-                <XIcon aria-hidden="true" />
-              </ResponsiveOverlay.Close>
               {children}
             </PopoverPrimitive.Popup>
           </PopoverPrimitive.Positioner>

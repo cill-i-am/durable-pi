@@ -372,7 +372,12 @@ export function WorkbenchPanel({
               )}
               <header className="workbench-header">
                 <div ref={tabScroller} className="workbench-tabs-scroller">
-                  <div className="workbench-tabs-layout">
+                  <div
+                    className="workbench-tabs-layout"
+                    style={{
+                      gridTemplateColumns: `repeat(${Math.max(1, tabs.tabs.length)}, minmax(104px, max-content))`,
+                    }}
+                  >
                     <div
                       ref={tablist}
                       role="tablist"
