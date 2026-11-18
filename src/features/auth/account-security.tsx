@@ -2,7 +2,7 @@ import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import { DataLoading } from "@workspace/ui/components/data-loading"
 import { Monitor, ShieldCheck } from "lucide-react"
-import { useEffect, useRef, type ReactNode } from "react"
+import { useEffect, useRef, type ReactNode, type Ref } from "react"
 
 import { authClient } from "@/auth/client"
 
@@ -125,6 +125,32 @@ export function AccountSecurity({
     twoFactorEnabled,
     locked,
   } = useSecurityView(onClose, onPendingChange)
+  const factorOpener = useRef<HTMLButtonElement>(null)
+  const restoreFactorFocus = useRef(false)
+  useEffect(() => {
+    if (factorView || locked || !restoreFactorFocus.current) return
+    restoreFactorFocus.current = false
+    const target = factorOpener.current
+    target?.focus()
+    // The mobile drawer can restore its popup after the focused detail is
+    // removed. Reconcile that native restoration while the same view is closed.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const state = auth.actor?.getSnapshot()
+        const active = document.activeElement
+        if (
+          state?.status === "active" &&
+          !state.context.factorView &&
+          target?.isConnected &&
+          !target.disabled &&
+          (active === document.body ||
+            active === target.closest('[role="dialog"]'))
+        )
+          target.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [factorView, locked, auth.actor])
   return (
     <AccountSecurityFrame>
       {factorView ? (
@@ -133,12 +159,14 @@ export function AccountSecurity({
             auth.send({ type: "CHILD_BUSY", child: "factor", busy })
           }
           onDone={() => {
+            restoreFactorFocus.current = true
             auth.send({ type: "FACTOR", open: false })
           }}
         />
       ) : (
         <>
           <TwoFactorCard
+            ref={factorOpener}
             enabled={twoFactorEnabled}
             pending={locked}
             onManage={() => auth.send({ type: "FACTOR", open: true })}
@@ -316,10 +344,12 @@ function AccountSecurityFrame({ children }: { children: ReactNode }) {
 }
 
 function TwoFactorCard({
+  ref,
   enabled,
   pending,
   onManage,
 }: {
+  ref: Ref<HTMLButtonElement>
   enabled: boolean
   pending: boolean
   onManage: () => void
@@ -341,6 +371,7 @@ function TwoFactorCard({
         </p>
       </div>
       <Button
+        ref={ref}
         className="max-sm:col-span-2 max-sm:w-full"
         variant={enabled ? "outline" : "default"}
         disabled={pending}

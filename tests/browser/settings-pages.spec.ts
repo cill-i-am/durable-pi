@@ -136,8 +136,8 @@ test("settings rows stack when the sidebars narrow the desktop pane", async ({
       ],
       [
         "/agents/navi/settings/access",
-        ".settings-network-copy > span",
-        ".settings-network-actions",
+        'input[aria-label="Filter tools"]',
+        ".settings-workbench-actions",
       ],
     ] as const) {
       await page.goto(path)
