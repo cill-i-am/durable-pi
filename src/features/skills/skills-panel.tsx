@@ -697,7 +697,7 @@ function SkillEditor({
       </Field>
       <p className="text-xs text-muted-foreground">
         {draft.body.length.toLocaleString()}/16,000 characters. Keep secrets out
-        of skills. Saving creates a revision; bots stay on their selected
+        of skills. Saving creates a revision; assistants stay on their selected
         versions.
       </p>
       <div className="flex gap-2">

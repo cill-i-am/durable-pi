@@ -72,8 +72,8 @@ export function WebhookPanel({
       </div>
       <p className="text-sm text-muted-foreground">
         Let a service trigger these instructions with a JSON event. Anyone with
-        the key can trigger this routine while it is active. The bot&apos;s
-        existing permissions and approvals still apply.
+        the key can trigger this routine while it is active. The
+        assistant&apos;s existing permissions and approvals still apply.
       </p>
       {error && (
         <Alert>

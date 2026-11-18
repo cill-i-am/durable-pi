@@ -264,7 +264,7 @@ function AppForm({
           </Button>
           {submitted && (
             <p className="text-xs text-muted-foreground" role="status">
-              Saved. An update is queued for this bot.
+              Saved. An update is queued for this assistant.
             </p>
           )}
         </FieldGroup>

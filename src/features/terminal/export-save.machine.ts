@@ -65,7 +65,7 @@ export function exportSaveMachine(work: {
                     file: null,
                     failure: undefined,
                     message:
-                      "Saved to this bot’s Files. You can preview, download or attach it there.",
+                      "Saved to this assistant’s Files. You can preview, download or attach it there.",
                   },
                 }
               : {

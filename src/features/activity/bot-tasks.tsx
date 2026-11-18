@@ -51,7 +51,7 @@ export function BotTasks({
       Schema.decodeUnknownSync(MailboxView)(
         await activityJsonRequest(agentId, "communication", signal)
       ),
-    errorMessage: "Bot tasks could not reconnect.",
+    errorMessage: "Assistant tasks could not reconnect.",
   })
   const state = query.data
   const controls = useMailboxControl(agentId, state, query.refresh)
@@ -62,21 +62,21 @@ export function BotTasks({
   useEffect(() => setOrigin(null), [agentId])
   const recovery = state?.recovery
   const name = (id: string) =>
-    agents.find((a) => a.id === id)?.name ?? "Archived bot"
+    agents.find((a) => a.id === id)?.name ?? "Archived assistant"
   return (
     <section
       className="flex min-w-0 flex-col gap-3"
-      aria-label="Bot communication"
+      aria-label="Assistant communication"
     >
       <div className="flex min-w-0 flex-col gap-3" hidden={!!origin && !mobile}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-medium">Bot tasks</h3>
+          <h3 className="text-sm font-medium">Assistant tasks</h3>
           <Badge variant="outline">Text-only · private</Badge>
         </div>
         <p className="text-xs text-muted-foreground">
-          Recent requests between your bots. Accepted means saved; completed
-          means a result is available. No files or action permissions are
-          shared.
+          Recent requests between your assistants. Accepted means saved;
+          completed means a result is available. No files or action permissions
+          are shared.
         </p>
         {recovery && (
           <Alert>
@@ -111,14 +111,16 @@ export function BotTasks({
             </AlertDescription>
           </Alert>
         )}
-        {!state && !error && <DataLoading loading label="Loading bot tasks" />}
+        {!state && !error && (
+          <DataLoading loading label="Loading assistant tasks" />
+        )}
         {state && !state.tasks.length && (
           <Empty>
             <EmptyHeader>
-              <EmptyTitle>No bot tasks yet</EmptyTitle>
+              <EmptyTitle>No assistant tasks yet</EmptyTitle>
               <EmptyDescription>
-                Ask this agent to consult one of your other bots. You can
-                inspect and stop its requests here.
+                Ask this assistant to consult one of your other assistants. You
+                can inspect and stop its requests here.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -142,7 +144,7 @@ export function BotTasks({
                 <span className="text-sm wrap-anywhere">
                   {payload.kind === "task" || payload.kind === "question"
                     ? payload.objective
-                    : "Bot task"}
+                    : "Assistant task"}
                 </span>
                 <span className="flex flex-wrap gap-2">
                   <Badge variant="secondary">
@@ -179,9 +181,9 @@ export function BotTasks({
                     <Alert>
                       <AlertTitle>Result not confirmed</AlertTitle>
                       <AlertDescription>
-                        The result is saved, but returning it to this bot could
-                        not be confirmed. Retrying uses the saved result and
-                        original task.
+                        The result is saved, but returning it to this assistant
+                        could not be confirmed. Retrying uses the saved result
+                        and original task.
                         <Button
                           variant="outline"
                           size="sm"

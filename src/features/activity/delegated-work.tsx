@@ -193,7 +193,7 @@ export function DelegationGroup({
           <p className="text-xs">
             {group.background
               ? "Shared: a text reference snapshot and each child’s brief. No tools or live retrieval. Up to 12 requests per child and 10 minutes per group. Send revised requirements with the child’s steering control."
-              : "Shared: this bot’s reference context and parent steering. Selected read tools only. Up to 12 model requests per child and 10 minutes per group; stopping the parent stops its children."}
+              : "Shared: this assistant’s reference context and parent steering. Selected read tools only. Up to 12 model requests per child and 10 minutes per group; stopping the parent stops its children."}
           </p>
         </TraceCollapsibleContent>
       </TraceCollapsible>

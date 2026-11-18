@@ -118,7 +118,7 @@ export function RunTimeline({
             One run can span several traces.
           </p>
           <dl className="flex min-w-0 flex-col gap-1 break-all">
-            <dt>Bot instance</dt>
+            <dt>Assistant instance</dt>
             <dd>
               <code>{run.botId}</code>
             </dd>

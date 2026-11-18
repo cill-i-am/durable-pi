@@ -733,7 +733,7 @@ function messageText(
     case "whatsapp":
       return `WhatsApp · ${turn.text}`
     case "communication":
-      return "Bot task result"
+      return "Assistant task result"
     case "background":
       return `Background findings · group ${turn.origin.groupId}`
     default:
