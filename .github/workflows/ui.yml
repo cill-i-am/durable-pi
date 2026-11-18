@@ -38,7 +38,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @workspace/ui typecheck
-      - run: pnpm exec oxlint packages/ui --config oxlint.config.ts --deny-warnings
+      - run: pnpm exec effect-tsgo oxlint packages/ui --config oxlint.config.ts --deny-warnings
       - run: pnpm exec oxfmt --check packages/ui
       - run: pnpm test:ui
       - run: pnpm build:storybook
