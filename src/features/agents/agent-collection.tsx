@@ -58,13 +58,10 @@ export function AgentCollection({
           className="assistant-collection-views"
           aria-label="Assistant lists"
         >
-          <Link to="/agents" aria-current={!archived ? "page" : undefined}>
+          <Link to="/agents" activeOptions={{ exact: true }}>
             Active<span className="sr-only"> assistants</span>
           </Link>
-          <Link
-            to="/agents/archived"
-            aria-current={archived ? "page" : undefined}
-          >
+          <Link to="/agents/archived" activeOptions={{ exact: true }}>
             Archived<span className="sr-only"> assistants</span>
           </Link>
         </nav>
@@ -106,9 +103,11 @@ export function AgentCollection({
                     {agent.name}
                   </Link>
                 )}
-                <p className="assistant-collection-description">
-                  {agent.instructions || "Your personal assistant"}
-                </p>
+                {agent.instructions.trim() && (
+                  <p className="assistant-collection-description">
+                    {agent.instructions}
+                  </p>
+                )}
               </div>
               <div className="assistant-collection-actions">
                 {!archived && onEdit && (
