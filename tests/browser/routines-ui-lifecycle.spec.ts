@@ -358,6 +358,27 @@ test("resolve reads the current webhook before revealing the exact already-appli
   ).toEqual({ operationId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" })
 })
 
+test("leaving a routine draft restores focus to the list action", async ({
+  page,
+}) => {
+  await page.goto(`${address}/?ui=1`)
+  const create = page.getByRole("button", { name: "New routine", exact: true })
+  await create.click()
+  await expect(
+    page.getByRole("textbox", { name: "Name", exact: true })
+  ).toBeFocused()
+  await page
+    .getByRole("button", { name: "All routines", exact: true })
+    .press("Enter")
+  await expect(create).toBeFocused()
+  const writes = await page.evaluate(() =>
+    (window as unknown as ProbeWindow).calls.filter(
+      (call) => call.body !== null
+    )
+  )
+  expect(writes).toEqual([])
+})
+
 test("actual routine editor retains a lost save until the explicit same-change retry completes", async ({
   page,
 }) => {
