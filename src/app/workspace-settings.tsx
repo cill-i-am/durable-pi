@@ -369,6 +369,7 @@ function SettingsNavigation({
   const active = context.location.settingsFrames.some(
     (frame) => frame.id === root.id
   )
+  const disabled = context.locked || !active
   const destinations = useRef(
     new Map<string, ReturnType<Location["settingsLink"]>>()
   )
@@ -430,7 +431,8 @@ function SettingsNavigation({
                   aria-current={
                     selected.category === item.id ? "page" : undefined
                   }
-                  disabled={context.locked || !active}
+                  disabled={disabled}
+                  tabIndex={disabled ? -1 : undefined}
                 >
                   {mobile && global && item.id === "account" ? (
                     <UserAvatar

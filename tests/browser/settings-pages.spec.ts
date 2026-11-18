@@ -16,6 +16,37 @@ async function signIn(page: Page) {
   ).toBeVisible()
 }
 
+test("restoring Channels retains keyboard focus in the settings navigation", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Desktop settings retain the navigation beside the page")
+  await signIn(page)
+  await page
+    .getByRole("button", { name: "Account menu for Bench", exact: true })
+    .click()
+  await page.getByRole("menuitem", { name: "Settings", exact: true }).click()
+  const navigation = settingsFront(page).getByRole("navigation", {
+    name: "Settings sections",
+    exact: true,
+  })
+  const original = await navigation.elementHandle()
+  const channels = navigation.getByRole("link", {
+    name: "Channels",
+    exact: true,
+  })
+  await channels.press("Enter")
+  await expect(
+    settingsFront(page).getByRole("heading", { name: "Channels", exact: true })
+  ).toBeVisible()
+  await expect(channels).toBeFocused()
+  expect(await original!.evaluate((node) => node.isConnected)).toBe(true)
+  await channels.press("Tab")
+  await expect(
+    navigation.getByRole("link", { name: "Family", exact: true })
+  ).toBeFocused()
+})
+
 test("desktop settings are non-modal pages inside the shell and retain the chat draft", async ({
   page,
   isMobile,
