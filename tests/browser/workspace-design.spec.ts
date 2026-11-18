@@ -48,6 +48,9 @@ test("assistant action targets stay distinct and centered in compact sidebar row
   })
   await signIn(page)
   await page.goto("/agents/navi")
+  await expect(
+    page.getByRole("textbox", { name: `Message ${name}`, exact: true })
+  ).toHaveAttribute("placeholder", "Message…")
   if (isMobile)
     await page.getByRole("button", { name: "Toggle Sidebar" }).click()
   const action = page.getByRole("button", {
