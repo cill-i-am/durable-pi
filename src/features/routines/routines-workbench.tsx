@@ -106,7 +106,10 @@ function RoutinesWorkbenchOwner({
   )
   const editor = routineEditorSelection(newEditor, selectedRoutine, webhook)
   const hook = webhook ? selectedRoutine : undefined
+  const newRoutineButton = useRef<HTMLButtonElement>(null)
+  const restoreListFocus = useRef(false)
   function setEditor(value: { key: string; routine?: Routine } | null) {
+    if (value === null) restoreListFocus.current = true
     if (value?.routine) {
       setNewEditor(null)
       onSelect(value.routine.id)
@@ -121,6 +124,25 @@ function RoutinesWorkbenchOwner({
   const [hookPending, setHookPending] = useState(false)
   const locked = routinesLocked(actions, hookPending)
   const editing = editor !== null
+  useEffect(() => {
+    if (editing || locked || !restoreListFocus.current) return
+    restoreListFocus.current = false
+    const target = newRoutineButton.current
+    target?.focus()
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        if (
+          target?.isConnected &&
+          !target.disabled &&
+          (document.activeElement === document.body ||
+            document.activeElement ===
+              target.closest('[data-slot="sheet-content"]'))
+        )
+          target.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [editing, locked])
   useEffect(() => {
     onPendingChange(mutationPending || locked || editing)
     return () => onPendingChange(false)
@@ -252,6 +274,7 @@ function RoutinesWorkbenchOwner({
         </h2>
         {!editor && (
           <Button
+            ref={newRoutineButton}
             size="sm"
             variant="outline"
             disabled={locked}

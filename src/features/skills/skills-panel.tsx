@@ -49,10 +49,18 @@ function SkillLibraryPanel({ onPendingChange, open }: SkillsPanelProps) {
   const view = useSkillView()
   const { draft, history, historyBusy, importing, hosted: hostedImport } = view
   const input = useRef<HTMLInputElement>(null)
+  const newButton = useRef<HTMLButtonElement>(null)
+  const opener = useRef<HTMLElement | null>(null)
+  const restoreFocus = useRef(false)
   const setDraft = (value: SaveSkill | null) => {
-    if (!value) view.event({ type: "CANCEL" })
-    else if (draft) view.setFields(value)
-    else view.event({ type: "EDIT", draft: value })
+    if (!value) {
+      restoreFocus.current = true
+      view.event({ type: "CANCEL" })
+    } else if (draft) view.setFields(value)
+    else {
+      opener.current = document.activeElement as HTMLElement
+      view.event({ type: "EDIT", draft: value })
+    }
   }
   const cannotReplace =
     state.busy ||
@@ -62,7 +70,28 @@ function SkillLibraryPanel({ onPendingChange, open }: SkillsPanelProps) {
     importing ||
     hostedImport
   const leaveView = () => view.event({ type: "LEAVE" })
-  const newSkill = () =>
+  useEffect(() => {
+    if (cannotReplace || !restoreFocus.current) return
+    restoreFocus.current = false
+    const target = opener.current?.isConnected
+      ? opener.current
+      : newButton.current
+    target?.focus()
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        if (
+          target?.isConnected &&
+          (document.activeElement === document.body ||
+            document.activeElement ===
+              target.closest('[data-slot="dialog-content"]'))
+        )
+          target.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [cannotReplace])
+  const newSkill = () => {
+    opener.current = newButton.current
     view.event({
       type: "EDIT",
       draft: {
@@ -72,6 +101,7 @@ function SkillLibraryPanel({ onPendingChange, open }: SkillsPanelProps) {
         body: "",
       },
     })
+  }
   const versions = (skill: Skill) => view.event({ type: "HISTORY", skill })
   const editing = draft !== null
   useEffect(() => {
@@ -124,7 +154,12 @@ function SkillLibraryPanel({ onPendingChange, open }: SkillsPanelProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button size="sm" disabled={cannotReplace} onClick={newSkill}>
+          <Button
+            ref={newButton}
+            size="sm"
+            disabled={cannotReplace}
+            onClick={newSkill}
+          >
             <Plus />
             New
           </Button>
@@ -213,42 +248,39 @@ function SkillLibraryPanel({ onPendingChange, open }: SkillsPanelProps) {
               </details>
             ))}
           </section>
-        ) : (
-          <div className="divide-y">
-            {state.library
-              .filter((skill) => skill.archived === showArchived)
-              .map((skill) => (
-                <SkillRow
-                  key={skill.id}
-                  skill={skill}
-                  state={state}
-                  assignment={false}
-                  historyBusy={historyBusy || importing}
-                  onEdit={() => {
-                    leaveView()
-                    setDraft({
-                      id: skill.id,
-                      expectedRevision: skill.revision,
-                      name: skill.name,
-                      body: skill.body,
-                      source: skill.source,
-                    })
-                  }}
-                  onHistory={() => void versions(skill)}
-                />
-              ))}
-            {state.ready &&
-              !state.library.some(
-                (skill) => skill.archived === showArchived
-              ) && (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  {showArchived
-                    ? "No archived skills."
-                    : "No skills yet. Create a skill or import instructions."}
-                </p>
-              )}
-          </div>
-        )}
+        ) : null}
+        <div className="divide-y" hidden={!!draft || !!history || hostedImport}>
+          {state.library
+            .filter((skill) => skill.archived === showArchived)
+            .map((skill) => (
+              <SkillRow
+                key={skill.id}
+                skill={skill}
+                state={state}
+                assignment={false}
+                historyBusy={historyBusy || importing}
+                onEdit={() => {
+                  leaveView()
+                  setDraft({
+                    id: skill.id,
+                    expectedRevision: skill.revision,
+                    name: skill.name,
+                    body: skill.body,
+                    source: skill.source,
+                  })
+                }}
+                onHistory={() => void versions(skill)}
+              />
+            ))}
+          {state.ready &&
+            !state.library.some((skill) => skill.archived === showArchived) && (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                {showArchived
+                  ? "No archived skills."
+                  : "No skills yet. Create a skill or import instructions."}
+              </p>
+            )}
+        </div>
       </div>
       <p className="settings-panel-footer">
         Editing or archiving a library skill leaves pinned assistant revisions

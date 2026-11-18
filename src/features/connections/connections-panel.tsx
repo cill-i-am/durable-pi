@@ -11,7 +11,13 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { ArrowUpRight, Plug, RefreshCw, X } from "lucide-react"
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react"
 
 import {
   executorDefaultTools,
@@ -427,6 +433,28 @@ function ConnectionForm({
   setDraft: Dispatch<SetStateAction<ReturnType<typeof newDraft> | null>>
 }) {
   const draftDisabled = state.busy || state.uncertain?.action === "add"
+  const addButton = useRef<HTMLButtonElement>(null)
+  const restoreFocus = useRef(false)
+  useEffect(() => {
+    if (draft || disabled || !restoreFocus.current) return
+    restoreFocus.current = false
+    const target = addButton.current
+    target?.focus()
+    // A native drawer may restore its popup after the cancelled form unmounts.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        if (
+          target?.isConnected &&
+          !target.disabled &&
+          (document.activeElement === document.body ||
+            document.activeElement ===
+              target.closest('[data-slot="dialog-content"]'))
+        )
+          target.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [draft, disabled])
   return draft ? (
     <form
       className="settings-form"
@@ -485,7 +513,10 @@ function ConnectionForm({
             size="sm"
             variant="ghost"
             disabled={draftDisabled}
-            onClick={() => setDraft(null)}
+            onClick={() => {
+              restoreFocus.current = true
+              setDraft(null)
+            }}
           >
             Cancel
           </Button>
@@ -494,6 +525,7 @@ function ConnectionForm({
     </form>
   ) : (
     <Button
+      ref={addButton}
       variant="outline"
       disabled={disabled || !!state.uncertain || state.connections.length >= 20}
       onClick={() => setDraft(newDraft())}

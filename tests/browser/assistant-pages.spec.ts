@@ -14,6 +14,26 @@ async function signIn(page: Page) {
 
 const returnTo = "/agents/navi/files?tab=trash"
 
+test("clearing an empty assistant search returns keyboard focus to the filter", async ({
+  page,
+}) => {
+  await signIn(page)
+  const filter = page.getByRole("textbox", {
+    name: "Filter assistants",
+    exact: true,
+  })
+  await filter.fill("no-matching-assistant")
+  await page
+    .getByRole("button", { name: "Clear filter", exact: true })
+    .press("Enter")
+  await expect(filter).toHaveValue("")
+  await expect(filter).toBeFocused()
+  await expect(
+    page.getByRole("link", { name: "Navi", exact: true })
+  ).toBeVisible()
+  await expect(page).not.toHaveURL(/\?q=/)
+})
+
 test("All assistants opens the active directory from chat and from the archive", async ({
   page,
   isMobile,
