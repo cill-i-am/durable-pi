@@ -126,7 +126,7 @@
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
-.workbench-tab:disabled,
+.workbench-tab[aria-disabled="true"],
 .workbench-close-tab:disabled,
 .workbench-open-tab-row > button:disabled {
   opacity: 0.5;
@@ -255,7 +255,7 @@
     color: var(--foreground);
   }
   .workbench-tab-frame:not([data-active="true"]):has(
-      .workbench-tab:not(:disabled):hover
+      .workbench-tab:not([aria-disabled="true"]):hover
     ) {
     background: var(--control-hover);
   }
