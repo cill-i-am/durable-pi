@@ -185,10 +185,19 @@ export function WorkbenchPanel({
       if (offset) strip.scrollBy({ left: offset, behavior: "instant" })
     }
     revealActiveTab()
+    const focused = document.activeElement
+    if (
+      !disabled &&
+      tablist.current?.contains(focused) &&
+      focused?.getAttribute("aria-selected") === "false"
+    )
+      tab.querySelector<HTMLButtonElement>('[role="tab"]')?.focus({
+        preventScroll: true,
+      })
     const resize = new ResizeObserver(revealActiveTab)
     resize.observe(strip)
     return () => resize.disconnect()
-  }, [open, value, tabs.tabs])
+  }, [open, value, tabs.tabs, disabled])
   const closeTab = (panel: WorkbenchTab, mobile = false) => {
     if (disabled) return
     const index = tabs.tabs.indexOf(panel)
@@ -388,9 +397,11 @@ export function WorkbenchPanel({
                               aria-selected={panel === value}
                               aria-controls={`${id}-panel-${panel}`}
                               tabIndex={panel === value ? 0 : -1}
-                              disabled={disabled}
+                              aria-disabled={disabled}
                               className="workbench-tab"
-                              onClick={() => tabs.select(panel)}
+                              onClick={() => {
+                                if (!disabled) tabs.select(panel)
+                              }}
                               onKeyDown={(event) => keyboard(event, panel)}
                             >
                               {tool.label}
