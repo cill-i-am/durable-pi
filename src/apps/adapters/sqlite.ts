@@ -125,7 +125,7 @@ export class AppStore implements AppLedger {
         const app = yield* this.get(id)
         if (!app)
           return yield* new AppConflict({
-            message: "This app is unavailable in this bot.",
+            message: "This app is unavailable for this assistant.",
           })
         const versions = yield* this.query((orm) =>
           orm

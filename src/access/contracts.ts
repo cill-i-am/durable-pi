@@ -73,20 +73,22 @@ export class AccessStorageError extends Schema.TaggedError<AccessStorageError>()
 ) {}
 
 export const builtInTools = [
-  ...["list_agents", "list_sessions", "get_last_message", "send_message"].map(
-    (name) => ({
-      name,
-      title: name.replaceAll("_", " "),
-      description:
-        "Coordinate with permitted agents in this bot's sessions. No additional action permissions.",
-      mode: "allow" as const,
-    })
-  ),
+  ...[
+    { name: "list_agents", title: "List assistants" },
+    { name: "list_sessions", title: "List sessions" },
+    { name: "get_last_message", title: "Read latest message" },
+    { name: "send_message", title: "Send a message" },
+  ].map((tool) => ({
+    ...tool,
+    description:
+      "Coordinate with permitted assistants in this assistant's sessions. No additional action permissions.",
+    mode: "allow" as const,
+  })),
   {
     name: "spawn_agents",
-    title: "Start collaborating agents",
+    title: "Start collaborating assistants",
     description:
-      "Start up to three bounded research or drafting agents with selected read tools. They can communicate while the parent continues.",
+      "Start up to three bounded research or drafting assistants with selected read tools. They can communicate while the parent continues.",
     mode: "ask",
   },
   {
@@ -128,7 +130,7 @@ export const builtInTools = [
     name: "search_products",
     title: "Search for products",
     description:
-      "Search Google Shopping in the bot's browser using its saved internet settings. No purchases.",
+      "Search Google Shopping in the assistant's browser using its saved internet settings. No purchases.",
     mode: "allow",
   },
   {
@@ -166,41 +168,41 @@ export const builtInTools = [
   },
   {
     name: "discover_bots",
-    title: "Discover bots",
-    description: "List other active bots owned by this account.",
+    title: "Discover assistants",
+    description: "List other active assistants owned by this account.",
     mode: "allow",
   },
   {
     name: "delegate_bot",
-    title: "Contact another bot",
+    title: "Contact another assistant",
     description:
-      "Send a bounded text-only question or drafting task to another owned bot. No file, object or action grants.",
+      "Send a bounded text-only question or drafting task to another owned assistant. No file, object or action grants.",
     mode: "ask",
   },
   {
     name: "list_tasks",
     title: "Read task status",
-    description: "Read unfinished work across your account's agents.",
+    description: "Read unfinished work across your account's assistants.",
     mode: "allow",
   },
   {
     name: "stop_task",
     title: "Stop a task",
     description:
-      "Request cancellation of one explicit task across your account's agents.",
+      "Request cancellation of one explicit task across your account's assistants.",
     mode: "allow",
   },
   {
     name: "check_bot_task",
-    title: "Read bot task",
-    description: "Inspect this bot's durable task result.",
+    title: "Read assistant task",
+    description: "Inspect this assistant's durable task result.",
     mode: "allow",
   },
   {
     name: "background_tasks",
     title: "Background drafting",
     description:
-      "Start bounded drafting tasks using supplied text only; no child tools or outside actions. Findings arrive later in this bot.",
+      "Start bounded drafting tasks using supplied text only; no child tools or outside actions. Findings arrive later in this assistant.",
     mode: "ask",
   },
   {
@@ -220,13 +222,13 @@ export const builtInTools = [
   {
     name: "read_plan",
     title: "Read task plan",
-    description: "Inspect this bot's saved task plans and revisions.",
+    description: "Inspect this assistant's saved task plans and revisions.",
     mode: "allow",
   },
   {
     name: "list_objects",
     title: "List working objects",
-    description: "List this bot's private persistent checklists.",
+    description: "List this assistant's private persistent checklists.",
     mode: "allow",
   },
   {
@@ -239,14 +241,14 @@ export const builtInTools = [
     name: "create_checklist",
     title: "Create checklist",
     description:
-      "Create a private checklist that you and this bot can maintain.",
+      "Create a private checklist that you and this assistant can maintain.",
     mode: "allow",
   },
   {
     name: "update_checklist",
     title: "Edit checklist",
     description:
-      "Update, archive or restore this bot's checklist with revision checks.",
+      "Update, archive or restore this assistant's checklist with revision checks.",
     mode: "allow",
   },
   {
@@ -259,7 +261,7 @@ export const builtInTools = [
   {
     name: "list_routines",
     title: "List routines",
-    description: "Read this bot's scheduled work.",
+    description: "Read this assistant's scheduled work.",
     mode: "allow",
   },
   {
@@ -294,14 +296,14 @@ export const builtInTools = [
     name: "get_model_settings",
     title: "Read model settings",
     description:
-      "Read this agent's model defaults and shared ChatGPT availability.",
+      "Read this assistant's model defaults and shared ChatGPT availability.",
     mode: "allow",
   },
   {
     name: "set_model_settings",
     title: "Change model defaults",
     description:
-      "Change this private agent's model defaults. Running jobs keep their model.",
+      "Change this private assistant's model defaults. Running jobs keep their model.",
     mode: "ask",
   },
   {
@@ -326,7 +328,7 @@ export const builtInTools = [
   {
     name: "list_apps",
     title: "List private apps",
-    description: "List this bot's generated apps.",
+    description: "List this assistant's generated apps.",
     mode: "allow",
   },
   {
@@ -359,13 +361,13 @@ export const builtInTools = [
     name: "browser_open",
     title: "Open browser page",
     description:
-      "Navigate this bot's Cloudflare browser using its saved internet settings.",
+      "Navigate this assistant's Cloudflare browser using its saved internet settings.",
     mode: "ask",
   },
   {
     name: "browser_read",
     title: "Read browser page",
-    description: "Read this bot's current browser page and screenshot.",
+    description: "Read this assistant's current browser page and screenshot.",
     mode: "ask",
   },
   {
@@ -377,53 +379,64 @@ export const builtInTools = [
   },
   {
     name: "list_files",
-    description: "List this bot's private files.",
+    title: "List files",
+    description: "List this assistant's private files.",
     mode: "allow",
   },
   {
     name: "read_file",
-    description: "Read this bot's text and extracted documents.",
+    title: "Read a file",
+    description: "Read this assistant's text and extracted documents.",
     mode: "allow",
   },
   {
     name: "share_file",
     title: "Include file in reply",
     description:
-      "Include a file from this agent's private files in its reply across connected surfaces.",
+      "Include a file from this assistant's private files in its reply across connected surfaces.",
     mode: "allow",
   },
   {
     name: "share_image",
     title: "Include image in reply",
     description:
-      "Include an image from this agent's private files in its reply across connected surfaces.",
+      "Include an image from this assistant's private files in its reply across connected surfaces.",
     mode: "allow",
   },
   {
     name: "view_image",
     title: "Inspect image",
     description:
-      "Inspect a bounded preview of an image in this agent's private files.",
+      "Inspect a bounded preview of an image in this assistant's private files.",
     mode: "allow",
   },
   {
     name: "zoom",
-    description: "Read this bot's archived messages and summaries.",
+    title: "Read archived messages",
+    description: "Read this assistant's archived messages and summaries.",
     mode: "allow",
   },
-  { name: "date", description: "Read a message timestamp.", mode: "allow" },
+  {
+    name: "date",
+    title: "Read message time",
+    description: "Read a message timestamp.",
+    mode: "allow",
+  },
   {
     name: "search_memory",
-    description: "Search this bot's conversation archive.",
+    title: "Search memory",
+    description: "Search this assistant's conversation archive.",
     mode: "allow",
   },
   {
     name: "read_note",
-    description: "Read this bot's memory notes.",
+    title: "Read a note",
+    description: "Read this assistant's memory notes.",
     mode: "allow",
   },
   {
     name: "write_note",
+    title: "Write a note",
     description: "Save or replace a private memory note.",
     mode: "allow",
   },

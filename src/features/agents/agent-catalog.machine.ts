@@ -90,7 +90,7 @@ export function agentCatalogMachine(
                   ? event.output.value
                   : context.agents,
                 error: Exit.isFailure(event.output)
-                  ? "Could not load your bots. Try again."
+                  ? "Could not load your assistants. Try again."
                   : "",
                 failure: Exit.isFailure(event.output)
                   ? event.output.cause

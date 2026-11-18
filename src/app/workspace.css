@@ -108,6 +108,11 @@
 .workspace-sidebar .workspace-new-assistant {
   background: var(--accent);
 }
+.workspace-sidebar
+  [data-slot="sidebar-menu-item"]:has(> [data-sidebar="menu-action"])
+  > [data-slot="sidebar-menu-button"] {
+  padding-inline-end: 36px;
+}
 .workspace-sidebar-heading {
   padding: 0 8px 8px;
   color: var(--muted-foreground);
@@ -285,6 +290,18 @@
   .workspace-family,
   .workspace-account {
     min-height: 44px;
+  }
+  .workspace-sidebar [data-sidebar="menu-action"] {
+    top: 0;
+    width: 44px;
+  }
+  .workspace-sidebar [data-sidebar="menu-action"]::after {
+    display: none;
+  }
+  .workspace-sidebar
+    [data-slot="sidebar-menu-item"]:has(> [data-sidebar="menu-action"])
+    > [data-slot="sidebar-menu-button"] {
+    padding-inline-end: 56px;
   }
   .workspace-startup-sidebar {
     display: none;

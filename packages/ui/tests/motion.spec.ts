@@ -792,9 +792,11 @@ test.describe("motion contracts", () => {
         (node) => node.getBoundingClientRect().left
       )
       const original = await thumb.elementHandle()
-      await rapidClicks(page, track, 1)
-      await expect(track).toBeChecked()
-      const before = await sampleThumbOffsets(track, 2)
+      const firstFrames = await armReducedFrames(track, [
+        '[data-slot="switch-thumb"]',
+      ])
+      const before = await activateAndSampleThumbOffsets(track, 20)
+      expect(before.every((value) => value.checked)).toBe(true)
       expect(
         before.some((value) => Math.abs(value.absoluteLeft - initial) > 0.5),
         "The native checked thumb must actually be moving before reduction"
@@ -803,9 +805,6 @@ test.describe("motion contracts", () => {
         Math.abs(before.at(-1)!.offset - before.at(-1)!.endpoint),
         "The preference change must interrupt an unfinished spring"
       ).toBeGreaterThan(0.25)
-      const firstFrames = await armReducedFrames(track, [
-        '[data-slot="switch-thumb"]',
-      ])
       await page.emulateMedia({ reducedMotion: "reduce" })
       await expect(track).toHaveAttribute("data-motion-reduced", "true")
       for (const sample of await reducedFrames(page, firstFrames)) {
@@ -1419,13 +1418,20 @@ function assertImmediateSpatialStop(frames: readonly ReducedFrame[]) {
     ).toBe(false)
   }
 }
-async function sampleThumbOffsets(track: Locator, count: number) {
+async function activateAndSampleThumbOffsets(track: Locator, count: number) {
   return track.evaluate(async (node, frames) => {
     const samples: {
+      checked: boolean
       absoluteLeft: number
       offset: number
       endpoint: number
     }[] = []
+    const initial = node
+      .querySelector('[data-slot="switch-thumb"]')!
+      .getBoundingClientRect().left
+    // Sample native activation in this renderer. Host input and assertion
+    // roundtrips can outlast the spring before its first observation.
+    ;(node as HTMLElement).click()
     for (let n = 0; n < frames; n++) {
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
@@ -1443,13 +1449,23 @@ async function sampleThumbOffsets(track: Locator, count: number) {
       const right =
         Number.parseFloat(style.borderRightWidth) +
         Number.parseFloat(style.paddingRight)
-      samples.push({
+      const sample = {
+        checked,
         absoluteLeft: thumb.left,
         offset: thumb.left - outer.left,
         endpoint: (rtl ? checked : !checked)
           ? left
           : outer.width - right - thumb.width,
-      })
+      }
+      samples.push(sample)
+      // React can commit before Motion's first advancing frame. Return as soon
+      // as the native thumb is moving and still short of its checked endpoint.
+      if (
+        checked &&
+        Math.abs(sample.absoluteLeft - initial) > 0.5 &&
+        Math.abs(sample.offset - sample.endpoint) > 0.25
+      )
+        break
     }
     return samples
   }, count)

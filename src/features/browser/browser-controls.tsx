@@ -80,8 +80,8 @@ export function BrowserControls({
         <summary className="cursor-pointer">Using remote controls</summary>
         <p className="mt-2 max-w-prose leading-relaxed">
           Click the page to focus a field. Tab field moves the remote focus;
-          Type inserts text. What you type here is not added to chat. The bot
-          can inspect the page after you return control.
+          Type inserts text. What you type here is not added to chat. The
+          assistant can inspect the page after you return control.
         </p>
       </details>
       <div className="flex flex-wrap gap-1.5">

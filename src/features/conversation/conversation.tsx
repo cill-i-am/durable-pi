@@ -506,9 +506,7 @@ function Composer({
           onChange={(event) => setDraft(event.target.value)}
           maxLength={30_000}
           placeholder={
-            active && !stopping
-              ? "Add a thought while I work…"
-              : `Message ${name}…`
+            active && !stopping ? "Add a thought while I work…" : "Message…"
           }
           rows={1}
           onKeyDown={(event) => {
@@ -733,7 +731,7 @@ function messageText(
     case "whatsapp":
       return `WhatsApp · ${turn.text}`
     case "communication":
-      return "Bot task result"
+      return "Assistant task result"
     case "background":
       return `Background findings · group ${turn.origin.groupId}`
     default:

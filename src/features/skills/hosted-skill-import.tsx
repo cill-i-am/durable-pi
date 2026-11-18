@@ -177,7 +177,7 @@ export function SkillSourceLabel({ source }: { source?: SkillSource }) {
             <p>
               {references.length} reference{" "}
               {references.length === 1 ? "file remains" : "files remain"} on the
-              provider. To let this bot read them, select the connection’s
+              provider. To let this assistant read them, select the connection’s
               skills tool in Connections and review its access in Tool access.
             </p>
             <ul className="list-inside list-disc">

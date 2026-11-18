@@ -34,6 +34,38 @@ test("clearing an empty assistant search returns keyboard focus to the filter", 
   await expect(page).not.toHaveURL(/\?q=/)
 })
 
+test("assistant descriptions display only supplied purpose text", async ({
+  page,
+}) => {
+  let instructions = ""
+  await page.route("**/api/agent/bots", async (route) => {
+    const response = await route.fetch()
+    const body = await response.json()
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        agents: body.agents.map((agent: object) => ({
+          ...agent,
+          instructions,
+        })),
+      },
+    })
+  })
+  await signIn(page)
+  const descriptions = page.locator(".assistant-collection-description")
+  await expect(descriptions).toHaveCount(0)
+  instructions = "   "
+  await page.reload()
+  await expect(
+    page.getByRole("heading", { name: "Assistants", exact: true })
+  ).toBeVisible()
+  await expect(descriptions).toHaveCount(0)
+  instructions = "Keep our family travel plans organised."
+  await page.reload()
+  await expect(descriptions).toHaveText([instructions])
+})
+
 test("All assistants opens the active directory from chat and from the archive", async ({
   page,
   isMobile,
@@ -50,7 +82,13 @@ test("All assistants opens the active directory from chat and from the archive",
   await expect(
     active.getByRole("link", { name: "Navi", exact: true })
   ).toBeVisible()
+  const views = page.getByRole("navigation", { name: "Assistant lists" })
+  await expect(views.locator('[aria-current="page"]')).toHaveCount(1)
   await active.getByRole("link", { name: "Archived assistants" }).click()
+  await expect(views.locator('[aria-current="page"]')).toHaveCount(1)
+  await expect(
+    views.getByRole("link", { name: "Archived assistants" })
+  ).toHaveAttribute("aria-current", "page")
   await page.getByRole("link", { name: "Active assistants" }).click()
   await expect(active).toBeVisible()
   await page.goto("/agents/")

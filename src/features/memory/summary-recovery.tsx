@@ -14,6 +14,7 @@ import { agentApi } from "@/http/client"
 import type { SummaryIssue } from "@/memory/domain"
 import { nativeOperation } from "@/shared/interop"
 
+import { messageRangeLabel } from "./range-label"
 import { makeSummaryRecovery } from "./summary-recovery-owner"
 import {
   currentRecoveryRequest,
@@ -199,10 +200,8 @@ function OwnedSummaryRecovery({
           <AlertTitle>Memory summaries paused</AlertTitle>
           <AlertDescription className="flex min-w-0 flex-col gap-2">
             <p>
-              These summaries are paused. Original messages and completed
-              summaries remain saved. Check the ChatGPT connection and the
-              Memory summaries job default. Retrying a summary explicitly starts
-              a new attempt with that setting.
+              Original messages and completed summaries are saved. Check model
+              access before retrying. Retrying starts a new summary attempt.
             </p>
             {paused.map((issue) => {
               const input = {
@@ -225,7 +224,7 @@ function OwnedSummaryRecovery({
                   request &&
                   recoveryRequestKey(request) === recoveryRequestKey(input)
                     ? "Retrying…"
-                    : `Retry summary ${issue.start}+${issue.count}`}
+                    : `Retry summary · ${messageRangeLabel(issue)}`}
                 </Button>
               )
             })}

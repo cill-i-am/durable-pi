@@ -15,7 +15,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@workspace/ui/components/tabs"
-import { Search, ChevronDown } from "lucide-react"
+import { Search, ChevronDown, ChevronRight } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { Markdown } from "@/components/markdown"
@@ -30,6 +30,7 @@ import { agentUrl } from "@/http/client"
 import { BackupRecovery } from "./backup-recovery"
 import { MemoryImport } from "./memory-import"
 import type { MemoryQuery } from "./query.machine"
+import { messageRangeLabel } from "./range-label"
 import { SummaryRecovery } from "./summary-recovery"
 import { useMemoryQuery } from "./use-memory-query"
 
@@ -151,7 +152,7 @@ export function MemoryWorkbench({
                     <EmptyHeader>
                       <EmptyTitle>No saved notes</EmptyTitle>
                       <EmptyDescription>
-                        Ask your agent to save a preference or useful fact.
+                        Ask your assistant to save a preference or useful fact.
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
@@ -306,9 +307,9 @@ function MemoryTree({ agentId }: { agentId: string }) {
           disabled={pending}
           onClick={() => void open([])}
         >
-          Root summaries
+          {selected ? "All summaries" : "Refresh summaries"}
         </Button>
-        {selected && (
+        {trail.length > 1 && (
           <Button
             variant="ghost"
             size="sm"
@@ -333,10 +334,7 @@ function MemoryTree({ agentId }: { agentId: string }) {
       )}
       {selected && (
         <article>
-          <h3>
-            {selected.start}+{selected.count} · {selected.count}{" "}
-            {selected.count === 1 ? "message" : "messages"}
-          </h3>
+          <h3>{messageRangeLabel(selected)}</h3>
           <p className="message-text">{selected.text}</p>
         </article>
       )}
@@ -355,7 +353,7 @@ function MemoryTree({ agentId }: { agentId: string }) {
               disabled={pending}
               onClick={() => void open([...trail, part])}
             >
-              Open {part.start}+{part.count}
+              {messageRangeLabel(part)} <ChevronRight data-icon="inline-end" />
             </Button>
             <p className="message-text">{part.text}</p>
           </article>

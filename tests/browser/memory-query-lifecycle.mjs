@@ -148,7 +148,7 @@ try {
             0
           )
           await p
-            .getByRole("button", { name: "Open 10+2", exact: true })
+            .getByRole("button", { name: "Messages 11–12", exact: true })
             .click()
           await p.waitForFunction(() => window.calls.length === 4)
           await p.evaluate(() =>
@@ -159,7 +159,7 @@ try {
           )
           await p.getByText("Child summary", { exact: true }).waitFor()
           await p
-            .getByRole("button", { name: "Open 10+1", exact: true })
+            .getByRole("button", { name: "Message 11", exact: true })
             .click()
           await p.waitForFunction(() => window.calls.length === 5)
           await p.evaluate(() => window.calls[4].fail())
@@ -174,7 +174,7 @@ try {
             1
           )
           await p
-            .getByRole("button", { name: "Root summaries", exact: true })
+            .getByRole("button", { name: "All summaries", exact: true })
             .click()
           await p.waitForFunction(() => window.calls.length === 6)
           await p.evaluate(() =>
@@ -270,7 +270,9 @@ try {
             { start: 1, count: 2, text: "Initial tree" },
           ])
         )
-        await p.getByRole("button", { name: "Open 1+2", exact: true }).click()
+        await p
+          .getByRole("button", { name: "Messages 2–3", exact: true })
+          .click()
         await p.waitForFunction(() => window.calls.length === 2)
         await p.getByRole("button", { name: "Unmount", exact: true }).click()
         await p.evaluate(() => new Promise((r) => setTimeout(r, 30)))

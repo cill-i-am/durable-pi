@@ -106,7 +106,7 @@ async function recoveryPage(page: Page, initial: MailboxView) {
     .getByLabel("Password", { exact: true })
     .fill("Disposable browser fixture password 2026!")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  const mailbox = page.getByRole("region", { name: "Bot communication" })
+  const mailbox = page.getByRole("region", { name: "Assistant communication" })
   await expect(mailbox).toBeVisible()
   return {
     mailbox,

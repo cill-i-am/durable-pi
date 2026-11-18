@@ -75,3 +75,72 @@ test("long app forms scroll to their action while workbench controls stay visibl
   ).toBeInViewport({ ratio: 1 })
   expect(writes).toEqual([])
 })
+
+test("routine read failures keep unknown data distinct from an empty list", async ({
+  page,
+}) => {
+  let available = false
+  const writes: string[] = []
+  await page.route("**/api/agent/routines?**", async (route) => {
+    if (route.request().method() !== "GET")
+      writes.push(route.request().method())
+    await route.fulfill(
+      available
+        ? { json: { routines: [], runs: [] } }
+        : { status: 503, json: { error: "Synthetic routine read failure" } }
+    )
+  })
+  await page.goto("/agents/navi/routines")
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill("browser-smoke@example.invalid")
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill("Disposable browser fixture password 2026!")
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  const panel = page.getByRole("tabpanel", { name: "Routines", exact: true })
+  const retry = panel.getByRole("button", {
+    name: "Retry routines",
+    exact: true,
+  })
+  await expect(retry).toBeVisible()
+  await expect(
+    panel.getByRole("heading", { name: "No routines yet", exact: true })
+  ).toHaveCount(0)
+  await expect(
+    panel.getByRole("heading", { name: "Recent runs", exact: true })
+  ).toHaveCount(0)
+  available = true
+  await retry.click()
+  await expect(
+    panel.getByRole("heading", { name: "No routines yet", exact: true })
+  ).toBeVisible()
+  await expect(
+    panel.getByRole("heading", { name: "Recent runs", exact: true })
+  ).toBeVisible()
+  await expect(retry).toHaveCount(0)
+  expect(writes).toEqual([])
+})
+
+test("routine timing guidance follows the selected schedule", async ({
+  page,
+}) => {
+  await page.goto("/agents/navi/routines")
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill("browser-smoke@example.invalid")
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill("Disposable browser fixture password 2026!")
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.getByRole("button", { name: "New routine", exact: true }).click()
+  const explanation = page.getByText(
+    "Repeats use elapsed time, including across clock changes.",
+    { exact: false }
+  )
+  await expect(explanation).toHaveCount(0)
+  await page.getByRole("button", { name: "Repeat", exact: true }).click()
+  await expect(explanation).toBeVisible()
+  await page.getByRole("button", { name: "Events", exact: true }).click()
+  await expect(explanation).toHaveCount(0)
+})

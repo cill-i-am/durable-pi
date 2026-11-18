@@ -33,9 +33,10 @@ async function recoveryPage(page: Page, memory: Memory = initial) {
   const posts: { path: string; agent: string | null; body: unknown }[] = []
   const pending: { url: string; release: (status: number) => void }[] = []
   page.on("pageerror", (error) => errors.push(error.message))
+  const fixtureOrigin = new URL(test.info().project.use.baseURL!).origin
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url())
-    if (url.origin === "http://127.0.0.1:4399") return route.fallback()
+    if (url.origin === fixtureOrigin) return route.fallback()
     external.push(url.href)
     return route.abort()
   })
@@ -140,7 +141,7 @@ for (const staleStatus of [200, 409]) {
         exact: true,
       })
       const summary = f.recovery.getByRole("button", {
-        name: "Retry summary 0+2",
+        name: "Retry summary · Messages 1–2",
         exact: true,
       })
       await expect(scheduler).toBeEnabled()
@@ -232,10 +233,12 @@ test("paused summaries preserve their operation ID after an uncertain response a
   })
   try {
     const summary = f.recovery.getByRole("button", {
-      name: "Retry summary 0+2",
+      name: "Retry summary · Messages 1–2",
       exact: true,
     })
-    await expect(f.recovery).toContainText("explicitly starts a new attempt")
+    await expect(f.recovery).toContainText(
+      "Retrying starts a new summary attempt"
+    )
     await expect(f.recovery).not.toContainText("three unsuccessful attempts")
     await expect(summary).toBeEnabled()
     expect(f.posts).toEqual([])
@@ -464,4 +467,37 @@ test("backup scheduler exhaustion offers exact epoch recovery without starting a
   } finally {
     f.releaseAll()
   }
+})
+
+test("memory recovery names source messages and uses available model guidance", async ({
+  page,
+  isMobile,
+}) => {
+  const f = await recoveryPage(page, {
+    ...initial,
+    compactionRecovery: undefined,
+  })
+  await expect(f.recovery).not.toContainText("job default")
+  await expect(
+    f.recovery.getByRole("button", {
+      name: "Retry summary · Messages 1–2",
+      exact: true,
+    })
+  ).toBeVisible()
+  for (const width of isMobile ? [390, 320] : [1280, 800, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(
+      f.recovery.getByRole("button", {
+        name: "Retry summary · Messages 1–2",
+        exact: true,
+      })
+    ).toBeInViewport()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth
+      )
+    ).toBeLessThanOrEqual(1)
+  }
+  expect(f.posts).toEqual([])
+  expect(f.external).toEqual([])
 })
