@@ -247,7 +247,13 @@ export function DataTableView({
             </Button>
           )}
         </div>
-        <Table>
+        <Table
+          containerProps={{
+            tabIndex: 0,
+            role: "region",
+            "aria-label": `${title}. Scroll horizontally to see all columns.`,
+          }}
+        >
           <TableCaption className="sr-only">
             {title}. Use column buttons to sort.
           </TableCaption>
@@ -268,6 +274,7 @@ export function DataTableView({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="max-w-none whitespace-nowrap"
                       onClick={header.column.getToggleSortingHandler()}
                       aria-label={`Sort by ${header.column.columnDef.header}`}
                     >

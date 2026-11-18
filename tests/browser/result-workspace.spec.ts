@@ -182,6 +182,44 @@ test("recorded result filters and unfinished filter input survive promotion, hid
   expect(evidence.reads()).toBe(0)
 })
 
+test("generated table headers stay readable and scroll by keyboard in narrow views", async ({
+  page,
+}) => {
+  await fixture(page)
+  for (const promoted of [false, true]) {
+    if (promoted)
+      await page
+        .getByRole("button", { name: "Open in workbench", exact: true })
+        .click()
+    const table = page.getByRole("region", {
+      name: `${title}. Scroll horizontally to see all columns.`,
+      exact: true,
+    })
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(table).toBeVisible()
+      await expect(table).toHaveAttribute("tabindex", "0")
+      const heading = table.getByRole("button", {
+        name: "Sort by Amount (EUR)",
+        exact: true,
+      })
+      await expect(heading).toHaveCSS("white-space", "nowrap")
+      expect((await heading.boundingBox())!.height).toBeLessThanOrEqual(44)
+      expect(
+        await table.evaluate((node) => node.scrollWidth > node.clientWidth)
+      ).toBe(true)
+      await table.focus()
+      await table.press("ArrowRight")
+      await expect
+        .poll(() => table.evaluate((node) => node.scrollLeft))
+        .toBeGreaterThan(0)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(width)
+    }
+  }
+})
+
 test("a result deep link reload reads only its recorded tool and unavailable identities retain a safe return", async ({
   page,
 }) => {
