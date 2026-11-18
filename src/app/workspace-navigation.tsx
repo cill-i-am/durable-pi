@@ -449,6 +449,7 @@ function AssistantNavigationItem({
           render={
             <SidebarMenuAction
               showOnHover
+              className="w-6"
               aria-label={`Actions for ${agent.name}`}
             />
           }
