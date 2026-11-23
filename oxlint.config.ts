@@ -1,6 +1,7 @@
 import { correctness } from "@effect/tsgo/oxlint-presets"
 import { defineConfig, type OxlintConfig } from "oxlint"
 import core from "ultracite/oxlint/core"
+import landmines from "ultracite/oxlint/landmines"
 import { jsPluginSettings } from "ultracite/oxlint/js-plugins"
 import react from "ultracite/oxlint/react"
 import tanstack from "ultracite/oxlint/tanstack"
@@ -76,6 +77,7 @@ const reactRules: NonNullable<OxlintConfig["rules"]> = {
 export default defineConfig({
   extends: [
     tanstack,
+    landmines,
     {
       ...core,
       rules: Object.fromEntries(
@@ -108,6 +110,7 @@ export default defineConfig({
     "./scripts/architecture-rules.mjs",
     "oxlint-plugin-effect/plugin",
     ...(tanstackAddOn.jsPlugins ?? []),
+    ...(landmines.jsPlugins ?? []),
   ],
   settings: jsPluginSettings,
   rules: {
