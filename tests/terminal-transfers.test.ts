@@ -220,11 +220,13 @@ describe("private terminal file transfer", () => {
   })
   it("does not publish file bytes after a cancelled export finishes late", async () => {
     const f = fixture()
+    const writing = Promise.withResolvers<void>()
     let resolve!: (value: typeof checkpoint) => void
     f.exports.write = vi.fn(
       () =>
         new Promise((r) => {
           resolve = r
+          writing.resolve()
         })
     )
     const task = await Effect.runPromise(
@@ -233,7 +235,8 @@ describe("private terminal file transfer", () => {
         exportPlan({ id, path: "/workspace/result.txt" })
       )
     )
-    await vi.waitFor(() => expect(f.exports.write).toHaveBeenCalledOnce())
+    await writing.promise
+    expect(f.exports.write).toHaveBeenCalledOnce()
     await Effect.runPromise(f.terminal.cancel(id))
     resolve(checkpoint)
     await task.completion
@@ -243,11 +246,13 @@ describe("private terminal file transfer", () => {
   })
   it("fences an exported-file receipt when archival overtakes the storage write", async () => {
     const f = fixture()
+    const writing = Promise.withResolvers<void>()
     let resolve!: (value: typeof checkpoint) => void
     f.exports.write = vi.fn(
       () =>
         new Promise((r) => {
           resolve = r
+          writing.resolve()
         })
     )
     const task = await Effect.runPromise(
@@ -256,7 +261,8 @@ describe("private terminal file transfer", () => {
         exportPlan({ id, path: "/workspace/result.txt" })
       )
     )
-    await vi.waitFor(() => expect(f.exports.write).toHaveBeenCalledOnce())
+    await writing.promise
+    expect(f.exports.write).toHaveBeenCalledOnce()
     Effect.runSync(f.repository.configure(3, true, 2))
     resolve(checkpoint)
     await task.completion

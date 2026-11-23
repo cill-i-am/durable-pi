@@ -14,14 +14,20 @@ function deferred<T>() {
 }
 it("waits for old session reads and defers polling until the replacement cookie arrives", async () => {
   const oldRead = deferred<Response>(),
-    verify = deferred<Response>()
+    verify = deferred<Response>(),
+    reading = deferred<void>(),
+    verifying = deferred<void>()
   let cookie = "old"
   const calls: string[] = []
   const nativeFetch = vi.fn(async (input: string | URL | Request) => {
     const path = String(input)
     calls.push(path)
-    if (calls.length === 1) return oldRead.promise
+    if (calls.length === 1) {
+      reading.resolve()
+      return oldRead.promise
+    }
     if (path.endsWith("verify-totp")) {
+      verifying.resolve()
       await verify.promise
       cookie = "new"
       return new Response("verified")
@@ -32,12 +38,12 @@ it("waits for old session reads and defers polling until the replacement cookie 
   const before = fetch("/api/auth/get-session")
   const changing = fetch("/api/auth/two-factor/verify-totp", { method: "POST" })
   const during = fetch("/api/auth/get-session")
-  // Actor admission is asynchronous; observe native entry before checking the barrier.
-  await vi.waitFor(() => expect(calls).toHaveLength(1))
+  await reading.promise
   expect(calls).toEqual(["/api/auth/get-session"])
   oldRead.resolve(new Response("old"))
   await before
-  await vi.waitFor(() => expect(calls).toHaveLength(2))
+  await verifying.promise
+  expect(calls).toHaveLength(2)
   expect(calls[1]).toBe("/api/auth/two-factor/verify-totp")
   verify.resolve(new Response())
   await changing
