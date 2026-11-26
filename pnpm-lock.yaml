@@ -173,7 +173,7 @@ settings:
 
 overrides:
   workerd: 1.20261117.1
-  '@alchemy.run/cloudflare-runtime@2.0.0-beta.87>unenv': 2.0.0-rc.24
+  '@alchemy.run/cloudflare-runtime@2.0.0-beta.87>unenv': 2.0.0-rc.25
 
 patchedDependencies:
   '@modelcontextprotocol/client@2.4.0': 1c92abfe7d9c92bc2e4a89df3bf48301c013a0e3babcdd1bbceb3b60b768009c
@@ -4282,30 +4282,48 @@ packages:
     resolution: {integrity: sha512-wfzYR0qEXUm6zJA0+hEwQGkYphhPahuzD3yrJ1s/SGV/b8b5Zv7ZzV6xHUolDI5AcuqNE9Kxji8VI0knebfhGA==}
     cpu: [arm64]
     os: [darwin]
+    deprecated: |-
+      Deprecated in favor of official @effect/tsgo (https://github.com/Effect-TS/tsgo) which ships first-party tsrs support
+          (effect-tsgo tsrs).
 
   '@yielded/effect-tsrs-darwin-x64@0.2.3':
     resolution: {integrity: sha512-CP8tmyZx4eZcQn1K1AUMV5g2E6EB0EA6zKZ/otYqQ/Sh5RX/TKC2GX/x93UJiAaCCAuG1eAQ63ZQRx6ACKkfSw==}
     cpu: [x64]
     os: [darwin]
+    deprecated: |-
+      Deprecated in favor of official @effect/tsgo (https://github.com/Effect-TS/tsgo) which ships first-party tsrs support
+          (effect-tsgo tsrs).
 
   '@yielded/effect-tsrs-linux-arm64@0.2.3':
     resolution: {integrity: sha512-zXXYAymwF6DQMiEXygA/AVv6mWC2gpFET0UzkUIzn+QRwnEIq9RF05SNwMr6CpiAJxGQcsaB+p/U49DdsYIlDA==}
     cpu: [arm64]
     os: [linux]
+    deprecated: |-
+      Deprecated in favor of official @effect/tsgo (https://github.com/Effect-TS/tsgo) which ships first-party tsrs support
+          (effect-tsgo tsrs).
 
   '@yielded/effect-tsrs-linux-x64@0.2.3':
     resolution: {integrity: sha512-R/peZOwSG1pDX9VOqWEEVBslGYqA2kwemWo+ik81AHeuI3BdC2r8vu6DX8uUmZuw+HG6GUdfJjlZl+828DUkiA==}
     cpu: [x64]
     os: [linux]
+    deprecated: |-
+      Deprecated in favor of official @effect/tsgo (https://github.com/Effect-TS/tsgo) which ships first-party tsrs support
+          (effect-tsgo tsrs).
 
   '@yielded/effect-tsrs-win32-x64@0.2.3':
     resolution: {integrity: sha512-ev+HHGlKelDaw9sMtQEkYJE2N1tg8dC/9EwTslVvt22XtD/VQhkXFjAlLTIxEO3xZzXiQsdFHWb8RX+CJLF8FQ==}
     cpu: [x64]
     os: [win32]
+    deprecated: |-
+      Deprecated in favor of official @effect/tsgo (https://github.com/Effect-TS/tsgo) which ships first-party tsrs support
+          (effect-tsgo tsrs).
 
   '@yielded/effect-tsrs@0.2.3':
     resolution: {integrity: sha512-UKEo439hWTpRuFJFjqHpNas3Z1ZVxYV6Mg/A1k3B1lH8PF11JGXKT8Ja+yAa73QDPuFxNFMCQErFUCOSw7wQwQ==}
     engines: {node: '>=22.14'}
+    deprecated: |-
+      Deprecated in favor of official @effect/tsgo (https://github.com/Effect-TS/tsgo) which ships first-party tsrs support
+          (effect-tsgo tsrs).
     hasBin: true
 
   accepts@1.3.8:
@@ -7023,6 +7041,9 @@ packages:
   unenv@2.0.0-rc.24:
     resolution: {integrity: sha512-i7qRCmY42zmCwnYlh9H2SvLEypEFGye5iRmEMKjcGi7zk9UquigRjFtTLz0TYqr0ZGLZhaMHl/foy1bZR+Cwlw==}
 
+  unenv@2.0.0-rc.25:
+    resolution: {integrity: sha512-oXXwuT7VhhvYRQdoy9H0f3Qqgo6kTo0Zbh/OzUxFkeSoZ6LtovJjV9Ocd3SnmKmRLndIS8yPFxo1cJbaexhRVA==}
+
   unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
@@ -7432,7 +7453,7 @@ snapshots:
   '@alchemy.run/cloudflare-runtime@2.0.0-beta.87(@distilled.cloud/cloudflare@1.0.0-rc.20(effect@4.1.4))(@effect/platform-bun@4.1.4(effect@4.1.4))(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1(@opentelemetry/api@1.10.0)))(@types/node@26.6.6)(@typescript/typescript6@6.0.2)(effect@4.1.4)(rolldown@1.2.16)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@alchemy.run/node-utils': 2.0.0-beta.87
-      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261117.1)
+      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.25)(workerd@1.20261117.1)
       '@distilled.cloud/cloudflare': 1.0.0-rc.20(effect@4.1.4)
       '@puppeteer/browsers': 3.2.7(yauzl@3.4.0)
       capnp-es: 0.0.16(@typescript/typescript6@6.0.2)
@@ -7440,7 +7461,7 @@ snapshots:
       magic-string: 0.30.21
       mime: 4.1.2
       sharp: 0.35.5(@types/node@26.6.6)
-      unenv: 2.0.0-rc.24
+      unenv: 2.0.0-rc.25
       workerd: 1.20261117.1
       yauzl: 3.4.0
     optionalDependencies:
@@ -8261,6 +8282,12 @@ snapshots:
   '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261117.1)':
     dependencies:
       unenv: 2.0.0-rc.24
+    optionalDependencies:
+      workerd: 1.20261117.1
+
+  '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.25)(workerd@1.20261117.1)':
+    dependencies:
+      unenv: 2.0.0-rc.25
     optionalDependencies:
       workerd: 1.20261117.1
 
@@ -13593,6 +13620,10 @@ snapshots:
   undici@8.12.4: {}
 
   unenv@2.0.0-rc.24:
+    dependencies:
+      pathe: 2.0.3
+
+  unenv@2.0.0-rc.25:
     dependencies:
       pathe: 2.0.3
 
